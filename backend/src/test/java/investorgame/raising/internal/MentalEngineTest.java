@@ -34,7 +34,7 @@ class MentalEngineTest {
     company.capital = 150_000_000L;
     company.era = "plain";
     ENGINE.mental.initWeapons(company);
-    ENGINE.startYear(company, new HashSeededRandom(seed));
+    ENGINE.begin(company);
     ENGINE.hire(company, stats(50));
     ENGINE.place(company, Map.of(1, "bio"));
     return company;
@@ -79,19 +79,19 @@ class MentalEngineTest {
   }
 
   @Test
-  void EX_디펜스는_분기에_한_번_적을_많이_잡을수록_뽑기권을_더_준다() {
+  void EX_디펜스는_하루에_한_번_적을_많이_잡을수록_뽑기권을_더_준다() {
     CompanyProperties.Stages rule = PROPERTIES.mental().stages();
     CompanyState c = company(9);
     int before = c.weaponTickets;
-    ENGINE.mental.reportEx(c, rule.exKillsPerTicket() * 10);
+    ENGINE.mental.reportEx(c, rule.exKillsPerTicket() * 10, "2026-11-15");
     assertThat(c.weaponTickets).isEqualTo(before + rule.exMaxTickets());
-    assertThat(ENGINE.mental.stagesView(c).exAvailable()).isFalse();
-    ENGINE.mental.reportEx(c, 999);
+    assertThat(ENGINE.mental.stagesView(c, "2026-11-15").exAvailable()).isFalse();
+    ENGINE.mental.reportEx(c, 999, "2026-11-15");
     assertThat(c.weaponTickets).as("두 번째는 없다").isEqualTo(before + rule.exMaxTickets());
 
     CompanyState few = company(10);
     int fewBefore = few.weaponTickets;
-    ENGINE.mental.reportEx(few, 0);
+    ENGINE.mental.reportEx(few, 0, "2026-11-15");
     assertThat(few.weaponTickets).isEqualTo(fewBefore + 1);
   }
 
@@ -106,9 +106,9 @@ class MentalEngineTest {
     CompanyState old = company(2);
     old.weapons = null;
     old.weapon = null;
-    assertThat(ENGINE.mental.adopt(old, new HashSeededRandom(2))).isTrue();
+    assertThat(ENGINE.mental.adopt(old)).isTrue();
     assertThat(old.weapon.kind).isEqualTo(MentalEngine.PISTOL);
-    assertThat(ENGINE.mental.adopt(old, new HashSeededRandom(2))).as("이미 있으면 그대로").isFalse();
+    assertThat(ENGINE.mental.adopt(old)).as("이미 있으면 그대로").isFalse();
   }
 
   @Test
@@ -223,7 +223,7 @@ class MentalEngineTest {
       CompanyState c = company(4);
       CompanyState.Weapon weapon = new CompanyState.Weapon("rifle", grade);
       c.weapons.add(weapon);
-      ENGINE.mental.adopt(c, new HashSeededRandom(4));
+      ENGINE.mental.adopt(c);
       assertThat(c.weapons).contains(weapon);
       ENGINE.mental.equip(c, "rifle", grade);
       assertThat(c.weapon).isSameAs(weapon);
@@ -284,13 +284,13 @@ class MentalEngineTest {
     c.weapon = c.weapons.getFirst();
     c.lastWeaponDraw = c.weapon;
     c.weaponTickets = 99;
-    assertThat(ENGINE.mental.adopt(c, new HashSeededRandom(4))).isTrue();
+    assertThat(ENGINE.mental.adopt(c)).isTrue();
     assertThat(c.weapon.same("pistol", "F")).isTrue();
     assertThat(c.weapons).hasSize(1);
     assertThat(c.lastWeaponDraw).isNull();
     assertThat(c.weaponTickets).isEqualTo(PROPERTIES.mental().weaponGacha().startTickets());
     assertThat(c.capital).isEqualTo(capital);
-    assertThat(ENGINE.mental.adopt(c, new HashSeededRandom(4))).isFalse();
+    assertThat(ENGINE.mental.adopt(c)).isFalse();
   }
 
   @Test
@@ -331,5 +331,164 @@ class MentalEngineTest {
     assertThatThrownBy(() -> ENGINE.mental.equip(c, "smg", "XX"))
         .isInstanceOf(InvalidRequestException.class);
     assertThat(c.weapon.kind).isEqualTo("smg");
+  }
+
+  @Test
+  void 스테이지는_차례로_열리고_처음_깨면_자본과_뽑기권_별을_처음_얻으면_뽑기권을_더_준다() {
+    CompanyState c = company(8);
+    CompanyProperties.Stages rule = PROPERTIES.mental().stages();
+    assertThatThrownBy(() -> ENGINE.mental.reportStage(c, 2, true, 3))
+        .as("아직 안 열린 스테이지")
+        .isInstanceOf(InvalidRequestException.class);
+    long capital = (long) c.capital;
+    int tickets = c.weaponTickets;
+    ENGINE.mental.reportStage(c, 1, false, 0);
+    assertThat(ENGINE.mental.bestStage(c)).as("못 깨면 그대로").isZero();
+    assertThat(c.capital).isEqualTo(capital);
+
+    ENGINE.mental.reportStage(c, 1, true, 2);
+    assertThat(ENGINE.mental.bestStage(c)).isEqualTo(1);
+    assertThat(c.capital).isEqualTo(capital + rule.capitalPerStage());
+    assertThat(c.weaponTickets).isEqualTo(tickets + rule.clearTickets() + 2 * rule.starTickets());
+    assertThat(c.lastStage.firstClear).isTrue();
+
+    // 다시 깨면 늘어난 별만큼만, 자본은 없다
+    ENGINE.mental.reportStage(c, 1, true, 3);
+    assertThat(c.capital).isEqualTo(capital + rule.capitalPerStage());
+    assertThat(c.lastStage.firstClear).isFalse();
+    assertThat(c.lastStage.tickets).isEqualTo(rule.starTickets());
+    assertThat(c.stageStars).containsExactly(3);
+    ENGINE.mental.reportStage(c, 1, true, 1);
+    assertThat(c.lastStage.tickets).as("별이 줄면 아무것도 없다").isZero();
+    assertThat(c.stageStars).containsExactly(3);
+
+    for (int stage = 2; stage < rule.perChapter(); stage++) {
+      ENGINE.mental.reportStage(c, stage, true, 1);
+    }
+    ENGINE.mental.reportStage(c, rule.perChapter(), true, 1);
+    assertThat(c.lastStage.tickets)
+        .as("보스 스테이지")
+        .isEqualTo(rule.bossTickets() + rule.starTickets());
+    // 챕터 보스를 깨면 다음 챕터가 열린다 (407번): 2-1을 깰 수 있고, 그 다음 칸(2-3)은 아직이다.
+    assertThat(ENGINE.mental.stagesView(c, "2026-11-15").last())
+        .isEqualTo(rule.perChapter() * rule.chapters());
+    ENGINE.mental.reportStage(c, rule.perChapter() + 1, true, 1);
+    assertThat(ENGINE.mental.bestStage(c)).isEqualTo(rule.perChapter() + 1);
+    assertThat(c.lastStage.firstClear).isTrue();
+    assertThatThrownBy(() -> ENGINE.mental.reportStage(c, rule.perChapter() + 3, true, 1))
+        .as("아직 안 열린 스테이지")
+        .isInstanceOf(InvalidRequestException.class);
+    // 마지막 챕터 보스 너머는 없다.
+    for (int stage = rule.perChapter() + 2; stage <= ENGINE.mental.lastStage(); stage++) {
+      ENGINE.mental.reportStage(c, stage, true, 1);
+    }
+    assertThatThrownBy(() -> ENGINE.mental.reportStage(c, ENGINE.mental.lastStage() + 1, true, 1))
+        .as("마지막 챕터 너머")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(ENGINE.mental.bonusPercent(c)).as("강화율 상한은 그대로").isEqualTo(rule.maxBonus());
+    assertThat(ENGINE.mental.stageLabel(3)).isEqualTo("1-3");
+    assertThat(ENGINE.mental.stageLabel(rule.perChapter() + 1)).isEqualTo("2-1");
+  }
+
+  @Test
+  void 전투_강화는_자본으로_끝없이_사고_값은_완만하게_오른다() {
+    CompanyState c = company(5);
+    CompanyProperties.Upgrades rule = PROPERTIES.mental().upgrades();
+    assertThat(MentalEngine.UPGRADES)
+        .as("고양이 속도 강화는 뺐고(394번) 체력(410번)과 치명타 피해(487번)를 넣었다")
+        .containsExactly("damage", "fire", "hp", "buy", "crit");
+    assertThat(rule.stepPercent())
+        .as("공격력·체력 3%, 연사 2%, 치명타 피해 6% (492번)")
+        .containsEntry("damage", 3)
+        .containsEntry("fire", 2)
+        .containsEntry("hp", 3)
+        .containsEntry("buy", 3)
+        .containsEntry("crit", 6);
+    assertThat(rule.maxPercent()).as("연사만 100%에서 멈춘다 (487번)").containsOnly(Map.entry("fire", 100));
+    long before = (long) c.capital;
+    assertThat(ENGINE.mental.buyUpgrade(c, "damage", 1)).isEqualTo(1);
+    assertThat(c.capital).isEqualTo(before - rule.basePrice());
+    // 단계마다 몇 %씩만 오른다: 두 배씩이면 끝없이 살 수 없다.
+    assertThat(ENGINE.mental.upgradePrice(0)).isEqualTo(rule.basePrice());
+    assertThat(ENGINE.mental.upgradePrice(1)).isEqualTo(1_040_000L);
+    assertThat(ENGINE.mental.upgradePrice(100))
+        .as("100단계째 약 0.5억")
+        .isBetween(40_000_000.0, 60_000_000.0);
+    assertThat(ENGINE.mental.upgradePrice(200))
+        .as("200단계째 약 25억")
+        .isBetween(2_000_000_000.0, 3_000_000_000.0);
+    assertThat(ENGINE.mental.upgradePrice(5_000))
+        .as("long을 넘어도 값은 단계를 따라 계속 오른다")
+        .isGreaterThan(1e90);
+    CompanyView.BattleUpgrade damage = view(c, "damage");
+    assertThat(damage.level()).isEqualTo(1);
+    assertThat(damage.bonusPercent()).isEqualTo(3);
+    assertThat(damage.nextBonusPercent()).isEqualTo(6);
+    assertThat(damage.price().longValue()).isEqualTo((long) ENGINE.mental.upgradePrice(1));
+    assertThat(damage.priceGrowthPercent()).isEqualTo(rule.priceGrowthPercent());
+
+    // 꾹 눌러 모은 단계는 묶어 산다. 최대 단계는 없다. 자본은 실수라(505번) 정수 계산이 정확한 2^53 아래로 둔다.
+    c.capital = 1_000_000_000_000_000L;
+    double wallet = c.capital;
+    long expected = 0;
+    for (int level = 0; level < 250; level++) {
+      expected += (long) ENGINE.mental.upgradePrice(level);
+    }
+    assertThat(ENGINE.mental.buyUpgrade(c, "hp", 100)).isEqualTo(100);
+    assertThat(ENGINE.mental.buyUpgrade(c, "hp", 100)).isEqualTo(100);
+    assertThat(ENGINE.mental.buyUpgrade(c, "hp", 50)).isEqualTo(50);
+    assertThat(c.battleLevels.get("hp")).isEqualTo(250);
+    assertThat(wallet - c.capital).as("묶어 사도 한 단계씩 산 값의 합").isEqualTo(expected);
+    assertThat(view(c, "hp").bonusPercent()).isEqualTo(750);
+    assertThat(view(c, "hp").maxLevel()).as("0이면 끝없이 산다").isZero();
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", 0))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", rule.maxBatch() + 1))
+        .isInstanceOf(InvalidRequestException.class);
+
+    // 연사는 100%(50단계)에서 멈춘다 (487·492번): 넘치게 보내도 상한까지만 사고, 닿은 뒤에는 400.
+    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 30)).isEqualTo(30);
+    long atThirty = (long) c.capital;
+    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).as("남은 20단계만 산다").isEqualTo(20);
+    long twenty = 0;
+    for (int level = 30; level < 50; level++) {
+      twenty += (long) ENGINE.mental.upgradePrice(level);
+    }
+    assertThat(atThirty - c.capital).isEqualTo(twenty);
+    assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);
+    assertThat(view(c, "fire").nextBonusPercent()).isEqualTo(100);
+    assertThat(view(c, "fire").maxLevel()).isEqualTo(50);
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", 1))
+        .isInstanceOf(InvalidRequestException.class);
+    // 상한이 생기기 전에 넘겨 산 단계는 상한으로 읽는다.
+    c.battleLevels.put("fire", 250);
+    assertThat(view(c, "fire").level()).isEqualTo(50);
+    assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);
+
+    // 치명타 피해는 한 단계에 6%씩 끝없이 (487·492번).
+    assertThat(ENGINE.mental.buyUpgrade(c, "crit", 5)).isEqualTo(5);
+    assertThat(view(c, "crit").bonusPercent()).isEqualTo(30);
+    assertThat(view(c, "crit").maxLevel()).isZero();
+
+    // 자본이 닿는 데까지만 산다. 한 단계도 못 사면 400.
+    CompanyState poor = company(6);
+    poor.capital = rule.basePrice() + 1_040_000L + 1_000L;
+    assertThat(ENGINE.mental.buyUpgrade(poor, "fire", 10)).as("두 단계까지만 닿는다").isEqualTo(2);
+    assertThat(poor.capital).isEqualTo(1_000L);
+    assertThat(poor.battleLevels.get("fire")).isEqualTo(2);
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "fire", 1))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "speed", 1))
+        .as("고양이 속도 강화는 없다")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "armor", 1))
+        .isInstanceOf(InvalidRequestException.class);
+
+    // 체력(최대 멘탈)도 같은 규칙으로 산다 (410번).
+    CompanyState tough = company(7);
+    assertThat(ENGINE.mental.buyUpgrade(tough, "hp", 3)).isEqualTo(3);
+    assertThat(view(tough, "hp").bonusPercent()).isEqualTo(9);
+    assertThat(view(tough, "hp").price().longValue())
+        .isEqualTo((long) ENGINE.mental.upgradePrice(3));
   }
 }

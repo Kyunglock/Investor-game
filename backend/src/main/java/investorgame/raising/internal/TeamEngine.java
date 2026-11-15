@@ -1,16 +1,11 @@
 package investorgame.raising.internal;
 
 import investorgame.common.Korean;
-import investorgame.common.StatCodes;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.content.ContentCatalog;
 import investorgame.content.RaisingContent;
 import investorgame.raising.internal.CompanyState.Employee;
-import investorgame.raising.internal.CompanyState.Report;
-import investorgame.raising.internal.CompanyState.Result;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

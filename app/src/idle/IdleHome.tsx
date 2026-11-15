@@ -2,9 +2,12 @@ import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { useRaisingStore } from '@web/features/raising/store'
 import { type ReactNode, useEffect, useState } from 'react'
+import { rate } from '../app/income'
+import { meetingReady } from '../app/meeting'
 import { Sheet } from '../app/Sheet'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 import { useAppUi } from '../app/ui'
+import { useCountUp } from '../app/useCountUp'
 import { idleThreat } from '../mental/assault'
 import { idleBuyOrderDamage } from '../mental/buyWall'
 import { heroOf } from '../mental/hero'
@@ -17,6 +20,7 @@ import { IdleCats } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
 import { IdleSandbox } from './IdleSandbox'
 import { IdleIcon, type IdleIconName } from './icons'
+import { OfflineIncome } from './OfflineIncome'
 import './idle-home.css'
 
 type Menu = 'battle' | 'growth' | 'cats' | 'company'
@@ -97,6 +101,10 @@ export function IdleHome({
     setPart(nextPart)
   }
   const idle = company.idle
+  // 자본은 1초마다 서버에서 새로 온다 (#803): 숫자가 그 사이를 굴러가며 계속 불어난다.
+  const capital = useCountUp(company.capital)
+  // 종목회의를 열거나 이어 갈 수 있으면 회사 메뉴에 점을 단다 (#803).
+  const meeting = meetingReady(company)
   useEffect(() => {
     if (menu === 'battle' || menu === 'company') return
     const previous = useAppUi.getState().modalBack
@@ -131,6 +139,14 @@ export function IdleHome({
           <span>{item.label}</span>
           {item.key === 'growth' && affordable && (
             <i className="idle-dot" role="img" aria-label="강화 가능" />
+          )}
+          {item.key === 'company' && meeting && (
+            <i
+              className="idle-dot"
+              role="img"
+              aria-label="종목회의 가능"
+              data-testid="meeting-dot"
+            />
           )}
         </button>
       ))}
@@ -185,8 +201,14 @@ export function IdleHome({
               aria-label={`보유 자본 ${money(company.capital)}`}
             >
               <span className="idle-coin">₩</span>
-              {/* 테스트판의 지갑은 떨어지지 않는다 (499번). */}
-              <b>{company.sandboxInfinite ? '∞' : money(company.capital)}</b>
+              <span className="idle-cash-lines">
+                {/* 테스트판의 지갑은 떨어지지 않는다 (499번). */}
+                <b>{company.sandboxInfinite ? '∞' : money(capital)}</b>
+                {/* 회사가 1초에 버는 돈 (#803). */}
+                {idle?.income && (
+                  <small data-testid="idle-income">+{rate(idle.income.perSecond)}/초</small>
+                )}
+              </span>
             </div>
             {/* 상태 줄은 없앴다 (493번): 평소엔 벽 번호만, 전투가 멈춘 때만 그 까닭을 여기에 보인다. */}
             <strong
@@ -226,6 +248,7 @@ export function IdleHome({
         </>
       )}
       {nav}
+      <OfflineIncome company={company} />
       {menu !== 'battle' && menu !== 'company' && (
         <Sheet
           title={menus.find((m) => m.key === menu)?.label}

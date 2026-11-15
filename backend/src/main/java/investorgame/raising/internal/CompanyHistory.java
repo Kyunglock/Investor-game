@@ -4,7 +4,6 @@ import investorgame.common.Korean;
 import investorgame.content.ContentCatalog;
 import investorgame.content.RaisingContent;
 import investorgame.raising.internal.CompanyState.Employee;
-import investorgame.raising.internal.CompanyState.Settlement;
 import java.util.List;
 import java.util.Map;
 

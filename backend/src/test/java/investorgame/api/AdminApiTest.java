@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -41,4 +40,32 @@ class AdminApiTest {
         .andExpect(status().isForbidden());
   }
 
+  /** 숨은 값(시드·회사 상태 JSON)은 없다. */
+  @Test
+  void 차린_회사가_세션과_함께_기록에_보인다() throws Exception {
+    Cookie cookie =
+        mvc.perform(post("/api/sessions")).andReturn().getResponse().getCookie(SessionCookies.NAME);
+    Cookie session = new Cookie(cookie.getName(), cookie.getValue());
+    String companyId =
+        JsonPath.read(
+            mvc.perform(post("/api/company").cookie(session))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(),
+            "$.companyId");
+
+    String at = "$.companies[?(@.companyId == '%s')]";
+    mvc.perform(get("/api/admin/plays").header(AdminController.TOKEN_HEADER, "test-admin-token"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath(at + ".status", companyId).value("ACTIVE"))
+        .andExpect(jsonPath(at + ".number", companyId).value(1))
+        .andExpect(jsonPath(at + ".year", companyId).doesNotExist())
+        .andExpect(jsonPath(at + ".settled", companyId).doesNotExist())
+        .andExpect(jsonPath(at + ".grade", companyId).value("F"))
+        .andExpect(jsonPath(at + ".seed", companyId).doesNotExist())
+        .andExpect(jsonPath(at + ".state", companyId).doesNotExist())
+        .andExpect(jsonPath("$.sessions[0].companies").isNumber())
+        .andExpect(jsonPath("$.sessions[?(@.firstIp == '127.0.0.1')]").isNotEmpty())
+        .andExpect(jsonPath("$.runs").doesNotExist());
+  }
 }

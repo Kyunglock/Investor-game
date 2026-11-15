@@ -526,6 +526,9 @@ class InvestEngine {
     return behavior.hint(insight, c.invest.up ? Direction.UP : Direction.DOWN, rng);
   }
 
+  /** 회의 한 번의 판돈은 건물 판돈의 이만큼의 하나다. 분기마다 한 번 열던 때(한 해 넷)의 크기를 그대로 둔다 (523번). */
+  private static final int MEETING_SHARE = 4;
+
   /**
    * 사장이 고른다. 돈을 굴리는 직원마다 꼬드김(줏대) → 손 뒤집힘(자리 능력치) 순으로 굴린다. 꼬드김에 넘어가면 단골 인물 말대로(사라면 사고 팔라면 판다), 뒤집히면
    * "제가 알아서 할게요" 하고 제 판단대로 한다(제 판단이 사장과 같으면 그대로다). 맞으면 회의만의 수익률(388번, 기사가 클수록 크게, 최대 +300%), 틀리면
@@ -579,7 +582,7 @@ class InvestEngine {
                 / PERCENT
                 * properties.invest().meetingStakePercent()
                 / PERCENT
-                / CompanyEngine.QUARTERS);
+                / MEETING_SHARE);
     // 종목 회의만의 수익률 (388번): 데스크 몫과 떼어 내 기사의 크기로 정한다. 누가 어느 자리에 앉았든 같다.
     int gainBp = gainBp(c.invest);
     int stubborn = big ? properties.invest().bigStubbornPercent() : PERCENT;

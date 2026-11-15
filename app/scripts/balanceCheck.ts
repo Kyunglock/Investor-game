@@ -28,8 +28,6 @@ try {
       const company = {
         ...structuredClone(fixture),
         invest: null,
-        lastSettlement: null,
-        mental: { genre: 'DEFENSE', headline: '', done: false },
         stages: {
           best: stage - 1,
           last: 10,

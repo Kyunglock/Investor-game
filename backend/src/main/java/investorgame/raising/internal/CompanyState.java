@@ -540,5 +540,4 @@ class CompanyState {
     /** 첫인사 (349번): 버릇대로 한마디. 이 칸을 더하기 전의 뽑기면 null. */
     String hello;
   }
-
 }

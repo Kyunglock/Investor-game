@@ -1,6 +1,5 @@
 package investorgame.raising.internal;
 
-import investorgame.common.Korean;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;

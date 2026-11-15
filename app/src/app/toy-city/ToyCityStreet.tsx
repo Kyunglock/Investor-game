@@ -512,7 +512,7 @@ export function ToyCityStreet({
   const targetY =
     560 + 10 * after.scale - (targetSide === 'left' ? 250 : 242) - 7 * after.scale - 70
   const plan = company.upgrade
-  const showGoal = onUpgrade && plan && !transition && company.status !== 'ENDED' && !company.broke
+  const showGoal = onUpgrade && plan && !transition
   // 부딪힘 연출: 우리 건물은 골목만큼 내달려 옆 건물에 닿는다. 효과는 카메라 축척(k)을 되돌려 화면에서 같은 크기로 그린다.
   const beforeGap = 28 / before.scale
   const k = 1 / after.scale
@@ -731,11 +731,9 @@ export function ToyCityStreet({
             <span>목표 자본</span>
             <strong>{money(plan.needed)}</strong>
             <small>
-              {plan.left != null
-                ? `공사 ${plan.left}년 남음`
-                : plan.affordable
-                  ? '확장 가능!'
-                  : `${money(Math.max(0, plan.needed - company.capital))} 더 필요`}
+              {plan.affordable
+                ? '확장 가능!'
+                : `${money(Math.max(0, plan.needed - company.capital))} 더 필요`}
             </small>
           </button>
         </foreignObject>

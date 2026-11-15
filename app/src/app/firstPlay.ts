@@ -3,15 +3,9 @@ import type { Company } from '@web/api/client'
 export type FirstPlayStep = 'welcome' | 'team' | 'ready' | 'play' | 'done'
 export const FIRST_PLAY_KEY = 'investor-game.first-play.v1'
 
-export function firstQuarter(c: Company) {
-  return (
-    c.status !== 'ENDED' &&
-    c.number === 1 &&
-    c.year === 1 &&
-    c.quarter === 1 &&
-    !c.lastQuarter &&
-    !c.lastSettlement
-  )
+/** 첫 회사에서 종목회의를 아직 한 번도 정하지 않았다 (#803): 분기가 없어져, 첫 판은 첫 회의를 정하기 전까지다. */
+export function firstMeeting(c: Company) {
+  return c.number === 1 && c.invest?.outcome == null
 }
 
 export function readFirstPlay(c: Company): FirstPlayStep {
@@ -35,5 +29,5 @@ export function saveFirstPlay(c: Company, step: FirstPlayStep) {
 
 /** 예전 설명 도중에 나갔어도 미클리어라면 첫 스테이지부터 이어 간다. */
 export function needsFirstStage(c: Company): boolean {
-  return firstQuarter(c) && readFirstPlay(c) !== 'done' && (c.assaults?.best ?? 0) === 0
+  return firstMeeting(c) && readFirstPlay(c) !== 'done' && (c.assaults?.best ?? 0) === 0
 }

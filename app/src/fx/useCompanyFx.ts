@@ -9,7 +9,6 @@ import { sfx } from './sound'
 
 const signed = (n: number) => `${n > 0 ? '+' : ''}${money(n)}`
 const capitalEl = () => document.querySelector('[data-testid="company-capital"]')
-const settleEl = () => document.querySelector('[data-testid="settle"]')
 
 /** 일어난 일 하나를 효과로 (decisions.md 310번). */
 export function playEvent(e: FxEvent) {
@@ -29,43 +28,8 @@ export function playEvent(e: FxEvent) {
     case 'left':
       fx.burstAt(document.querySelector('[data-testid="hud"]'), 'smoke')
       return
-    case 'quarter':
-      if (e.crash) {
-        fx.flashScreen('rgba(195,58,44,0.35)')
-        sfx.thud()
-        haptic.heavy()
-      } else if (e.delta >= 0) {
-        fx.burstAt(settleEl(), 'sparks')
-        sfx.cash()
-        haptic.medium()
-      } else {
-        fx.burstAt(settleEl(), 'smoke')
-        sfx.thud()
-        haptic.medium()
-      }
-      return
-    case 'year-end':
-      fx.flashScreen(e.delta >= 0 ? 'rgba(224,180,74,0.35)' : 'rgba(45,95,166,0.35)')
-      if (e.delta >= 0) {
-        sfx.cash()
-      } else {
-        sfx.thud()
-      }
-      if (e.achieved.length > 0) {
-        fx.burstAt(null, 'confetti')
-        sfx.fanfare()
-      }
-      haptic.success()
-      return
     case 'grade-up':
-      // 확장을 사서 오른 것이면 건물 확장 연출(ToyCityMove)이 힘 모으기·쾅·축하를 차례로 낸다: 여기서 먼저 터뜨리면 겹친다 (399번).
-      if (e.scene) {
-        return
-      }
-      fx.burstAt(null, 'confetti')
-      fx.flashScreen('rgba(245,211,107,0.4)')
-      sfx.fanfare()
-      haptic.success()
+      // 건물은 확장을 사서만 오르고(#803), 건물 확장 연출(ToyCityMove)이 힘 모으기·쾅·축하를 차례로 낸다: 여기서 먼저 터뜨리면 겹친다 (399번).
       return
     case 'grade-down':
       fx.burstAt(null, 'smoke')
@@ -80,11 +44,6 @@ export function playEvent(e: FxEvent) {
       fx.burstAt(null, 'confetti')
       sfx.fanfare()
       haptic.success()
-      return
-    case 'broke':
-      fx.flashScreen('rgba(139,35,66,0.5)')
-      sfx.thud()
-      haptic.error()
       return
   }
 }

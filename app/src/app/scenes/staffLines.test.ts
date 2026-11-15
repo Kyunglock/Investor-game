@@ -5,7 +5,6 @@ const cat = (extra: Partial<Speaker> = {}): Speaker => ({
   id: 1,
   overallGrade: 'C',
   morale: 0,
-  deskYears: 1,
   leader: true,
   ...extra,
 })
@@ -17,10 +16,9 @@ describe('사무실 말풍선 (decisions.md 412번)', () => {
     expect(deskLine(cat({ morale: 2 }))).toBe('오늘 촉이 아주 좋아요!')
   })
 
-  it('등급 높은 팀장, 오래 앉은 사람, 사기 높은 사람', () => {
-    expect(deskLine(cat({ overallGrade: 'A' }))).toBe('이번 분기 제가 맡을게요!')
-    expect(deskLine(cat({ overallGrade: 'GOD' }))).toBe('이번 분기 제가 맡을게요!')
-    expect(deskLine(cat({ deskYears: 3 }))).toBe('이 자리는 눈 감고도 해요')
+  it('등급 높은 팀장, 사기 높은 사람', () => {
+    expect(deskLine(cat({ overallGrade: 'A' }))).toBe('이번 회의는 제가 맡을게요!')
+    expect(deskLine(cat({ overallGrade: 'GOD' }))).toBe('이번 회의는 제가 맡을게요!')
     expect(deskLine(cat({ morale: 1 }))).toBe('팀 분위기 최고예요!')
   })
 

@@ -954,13 +954,14 @@ class CompanyEngine {
   }
 
   /**
-   * 종목회의의 기회를 지금 시각까지 센다 (523번): interval-minutes마다 하나, max까지. 처음 세는 회사는 시작 기회를 받는다. 상한에 찬 동안 흐른 시간은
-   * 버린다(상한에서 하나를 쓰면 그때부터 다시 센다).
+   * 종목회의의 기회를 지금 시각까지 센다 (523번): interval-minutes마다 하나, max까지. 처음 세는 회사는 시작 기회를 받는다. 상한에 찬 동안 흐른
+   * 시간은 버린다(상한에서 하나를 쓰면 그때부터 다시 센다).
    */
   void accrueMeetings(CompanyState company, long now) {
     CompanyProperties.Meetings rule = properties.meetings();
     if (company.meetingAt <= 0) {
-      company.meetingChances = Math.min(rule.max(), Math.max(company.meetingChances, rule.startChances()));
+      company.meetingChances =
+          Math.min(rule.max(), Math.max(company.meetingChances, rule.startChances()));
       company.meetingAt = now;
       return;
     }

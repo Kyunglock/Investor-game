@@ -97,12 +97,6 @@
 .office-room-sub b {
   color: var(--office-ink);
 }
-.office-room-sub .office-up {
-  color: #d24b3a;
-}
-.office-room-sub .office-down {
-  color: #3b6fc4;
-}
 
 /* 벽과 바닥, 책상 한 줄에 넷까지 */
 .office-floor,

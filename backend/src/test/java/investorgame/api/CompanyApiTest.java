@@ -69,28 +69,6 @@ class CompanyApiTest {
             .andExpect(status().isOk()));
   }
 
-  private ResultActions settle(int year, int quarter) throws Exception {
-    return postJson("/api/company/settle", "{\"year\":%d,\"quarter\":%d}".formatted(year, quarter));
-  }
-
-  /** 한 해의 남은 분기를 모두 넘긴다 (decisions.md 268번). 마지막 응답(연말 결산)을 돌려준다. */
-  private ResultActions settleYear(int year) throws Exception {
-    int quarter =
-        json(mvc.perform(get("/api/company").cookie(session))).read("$.quarter", Integer.class);
-    ResultActions last = null;
-    for (int q = quarter; q <= 4; q++) {
-      // 분기 넘기기를 누르면 직원이 종목을 물어 올 수 있다 (267·382번): 회의가 열렸으면 지켜보고 넘긴다.
-      Boolean ready =
-          json(mvc.perform(post("/api/company/scout").cookie(session)).andExpect(status().isOk()))
-              .read("$.invest.ready", Boolean.class);
-      if (Boolean.TRUE.equals(ready)) {
-        decide("BUY");
-      }
-      last = settle(year, q).andExpect(status().isOk());
-    }
-    return last;
-  }
-
   /** 무기는 무기 뽑기권으로 뽑는다. 다 쓰면 400, 모자란 합성도 400 (decisions.md 366번). */
   @Test
   void 옛_무기는_진행중이거나_끝난_회사에서도_한번만_초기화한다() throws Exception {
@@ -344,5 +322,236 @@ class CompanyApiTest {
             .getCookie(SessionCookies.NAME);
     assertThat(ensured).as("유효한 세션이면 새로 발급하지 않고 만료만 늘린다").isNotNull();
     assertThat(ensured.getValue()).isEqualTo(session.getValue());
+  }
+
+  /** 분기·결산 없이 직원마다 초당 돈을 번다 (decisions.md 523번). */
+  @Test
+  void 회사를_차리고_직원을_뽑으면_초당_수입이_보이고_분기와_결산은_없다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.year").doesNotExist())
+        .andExpect(jsonPath("$.quarter").doesNotExist())
+        .andExpect(jsonPath("$.status").doesNotExist())
+        .andExpect(jsonPath("$.broke").doesNotExist())
+        .andExpect(jsonPath("$.lastQuarter").doesNotExist())
+        .andExpect(jsonPath("$.lastSettlement").doesNotExist())
+        .andExpect(jsonPath("$.meetings.chances").value(1))
+        .andExpect(jsonPath("$.meetings.max").value(3))
+        .andExpect(jsonPath("$.idle.income.staffPerSecond").value(0))
+        .andExpect(jsonPath("$.idle.offline").doesNotExist());
+    // 회사는 세션마다 하나고 끝나지 않는다: 다시 차릴 수 없다.
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isBadRequest());
+
+    DocumentContext hired = draw(2);
+    List<Number> incomes = hired.read("$.employees[*].incomePerSecond");
+    assertThat(incomes).hasSize(2).allMatch(income -> income.doubleValue() > 0);
+    double staff = hired.read("$.idle.income.staffPerSecond", Double.class);
+    assertThat(staff).isEqualTo(incomes.stream().mapToDouble(Number::doubleValue).sum());
+    assertThat(hired.read("$.idle.income.perSecond", Double.class)).isGreaterThan(staff);
+
+    // 접속 신호: 시작하고 한 번 보내면 그 사이의 수입이 자본에 들어온다(줄지 않는다).
+    double before = hired.read("$.capital", Double.class);
+    String run = java.util.UUID.randomUUID().toString();
+    postJson(
+            "/api/company/idle",
+            "{\"runId\":\"%s\",\"sequence\":0,\"action\":\"start\",\"hits\":[]}".formatted(run))
+        .andExpect(status().isOk());
+    DocumentContext beat =
+        json(
+            postJson(
+                    "/api/company/idle",
+                    "{\"runId\":\"%s\",\"sequence\":1,\"action\":\"tick\",\"hits\":[]}"
+                        .formatted(run))
+                .andExpect(status().isOk()));
+    assertThat(beat.read("$.capital", Double.class)).isGreaterThanOrEqualTo(before);
+
+    // 없앤 길: 분기 넘기기·종목 발굴·분기 멘탈 전투.
+    postJson("/api/company/settle", "{\"year\":1,\"quarter\":1}")
+        .andExpect(status().is4xxClientError());
+    mvc.perform(post("/api/company/scout").cookie(session)).andExpect(status().is4xxClientError());
+    postJson("/api/company/mental", "{}").andExpect(status().is4xxClientError());
+  }
+
+  /** 종목회의는 기회를 써서 연다 (523번): 새 회사는 한 번을 가지고 시작한다. */
+  @Test
+  void 종목회의는_기회_하나를_써서_열고_정하면_바로_자본에_들어간다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
+    DocumentContext hired = draw(1);
+    int id = hired.read("$.employees[0].id", Integer.class);
+    // 돈을 굴리는 자리에 아무도 없으면 열 수 없고 기회도 쓰지 않는다.
+    mvc.perform(post("/api/company/invest/open").cookie(session))
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/placement", "{\"seats\":[{\"employeeId\":" + id + ",\"desk\":\"day\"}]}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.meetings.chances").value(1));
+
+    DocumentContext opened =
+        json(
+            mvc.perform(post("/api/company/invest/open").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(opened.read("$.meetings.chances", Integer.class)).isZero();
+    assertThat(opened.read("$.meetings.nextSeconds", Long.class)).isBetween(1L, 3600L);
+    assertThat(opened.read("$.invest.ready", Boolean.class)).isTrue();
+    assertThat(opened.read("$.invest.convened", Boolean.class)).isTrue();
+    String title = opened.read("$.invest.title", String.class);
+    // 정하지 않은 회의가 있으면 다시 열어도 그 회의다.
+    mvc.perform(post("/api/company/invest/open").cookie(session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.invest.title").value(title))
+        .andExpect(jsonPath("$.meetings.chances").value(0));
+
+    DocumentContext decided = decide("BUY");
+    assertThat(decided.read("$.invest.outcome", Object.class)).isNotNull();
+    assertThat(decided.read("$.capital", Double.class)).isGreaterThanOrEqualTo(0);
+    // 기회가 없으면 다음 회의는 아직 못 연다.
+    mvc.perform(post("/api/company/invest/open").cookie(session))
+        .andExpect(status().isBadRequest());
+  }
+
+  /** 파산·엔딩·시대의 끝으로 멈췄던 회사도 되살려 이어서 한다 (523번). */
+  @Test
+  void 끝났던_옛_회사는_자본과_직원을_지킨_채_되살아난다() throws Exception {
+    String id =
+        json(mvc.perform(post("/api/company").cookie(session))).read("$.companyId", String.class);
+    draw(2);
+    jdbc.sql(
+            """
+        UPDATE raising_company SET status = 'ENDED',
+          state = state || CAST(:old AS jsonb)
+        WHERE id = CAST(:id AS uuid)
+        """)
+        .param("id", id)
+        .param(
+            "old",
+            """
+            {"realtime":false,"closed":true,"finished":true,"year":4,"quarter":3,"capital":777000000,
+             "phase":"crash","crashQuarter":3,"quarters":[{"year":4,"quarter":1}],
+             "settlements":[{"year":3}],"meetingAt":0,"meetingChances":0}
+            """)
+        .update();
+    mvc.perform(get("/api/company").cookie(session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.companyId").value(id))
+        .andExpect(jsonPath("$.capital").value(777000000))
+        .andExpect(jsonPath("$.employees.length()").value(2))
+        .andExpect(jsonPath("$.meetings.chances").value(1))
+        .andExpect(jsonPath("$.year").doesNotExist());
+    assertThat(
+            jdbc.sql("SELECT status FROM raising_company WHERE id = CAST(:id AS uuid)")
+                .param("id", id)
+                .query(String.class)
+                .single())
+        .isEqualTo("ACTIVE");
+    assertThat(
+            jdbc.sql(
+                    """
+                SELECT (state ? 'quarters') OR (state ? 'settlements') OR (state ? 'quarter')
+                FROM raising_company WHERE id = CAST(:id AS uuid)
+                """)
+                .param("id", id)
+                .query(Boolean.class)
+                .single())
+        .as("분기·결산 기록은 저장에서 사라진다")
+        .isFalse();
+    // 되살아난 회사로 이어서 한다: 뽑기도 된다.
+    draw(1);
+  }
+
+  @Test
+  void 전투_강화를_묶어_사고_자본이_닿는_데까지만_오른다() throws Exception {
+    String id =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
+            .read("$.companyId", String.class);
+    DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
+    List<String> kinds = opened.read("$.battleUpgrades[*].kind");
+    assertThat(kinds).containsExactly("damage", "fire", "hp", "buy", "crit");
+    assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
+    assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
+    assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(3);
+    assertThat(opened.read("$.battleUpgrades[0].maxLevel", Integer.class))
+        .as("공격력은 끝없이 산다")
+        .isZero();
+    assertThat(opened.read("$.battleUpgrades[1].maxLevel", Integer.class))
+        .as("연사는 100%(50단계)에서 멈춘다 (487·492번)")
+        .isEqualTo(50);
+    long capital = opened.read("$.capital", Long.class);
+
+    DocumentContext one =
+        json(
+            postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\"}")
+                .andExpect(status().isOk()));
+    assertThat(one.read("$.battleUpgrades[0].level", Integer.class)).isEqualTo(1);
+    assertThat(one.read("$.capital", Long.class)).isEqualTo(capital - 1_000_000L);
+    DocumentContext five =
+        json(
+            postJson("/api/company/battle-upgrade", "{\"kind\":\"fire\",\"levels\":5}")
+                .andExpect(status().isOk()));
+    assertThat(five.read("$.battleUpgrades[1].level", Integer.class)).isEqualTo(5);
+    assertThat(five.read("$.battleUpgrades[1].bonusPercent", Integer.class)).isEqualTo(10);
+    long spent = capital - five.read("$.capital", Long.class);
+    assertThat(spent).as("1b + 연사 다섯 단계").isGreaterThan(6_000_000L).isLessThan(7_000_000L);
+
+    postJson("/api/company/battle-upgrade", "{\"kind\":\"speed\"}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/battle-upgrade", "{\"kind\":\"fire\",\"levels\":0}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/battle-upgrade", "{\"kind\":\"fire\",\"levels\":101}")
+        .andExpect(status().isBadRequest());
+
+    // 자본이 닿는 데까지만 산다: 한 단계 값(1b) 반 남짓이면 열 단계를 보내도 한 단계만 오르고, 바닥이면 400.
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{capital}', '1500000')"
+                + " WHERE id = CAST(:id AS uuid)")
+        .param("id", id)
+        .update();
+    DocumentContext partial =
+        json(
+            postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\",\"levels\":10}")
+                .andExpect(status().isOk()));
+    assertThat(partial.read("$.battleUpgrades[0].level", Integer.class)).isEqualTo(2);
+    assertThat(partial.read("$.capital", Long.class)).isEqualTo(1_500_000L - 1_040_000L);
+    postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\"}")
+        .andExpect(status().isBadRequest());
+  }
+
+  /**
+   * 랜드마크 타워 (decisions.md 276·296·374번): 건물은 저절로 오르지 않고 이사 비용을 내고 올라간다. Z(자본 100조 원)로 이사해도 엔딩 없이 축하
+   * 한 줄과 연표만 남고, 회사는 ZZ로 이어 간다. 옛 엔딩으로 멈췄던 회사도 다시 움직인다.
+   */
+  @Test
+  void 랜드마크_타워에_올라도_엔딩_없이_이어_간다() throws Exception {
+    String id =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
+            .read("$.companyId", String.class);
+    // 돈이 모자라면 못 간다: 반지하(F)에서 상가(E)로 가려면 2억 5천만이 있어야 한다.
+    postJson("/api/company/upgrade", "{}").andExpect(status().isBadRequest());
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{capital}', '200000000000000')"
+                + " WHERE id = CAST(:id AS uuid)")
+        .param("id", id)
+        .update();
+    // 자본이 넉넉해도 건물은 저절로 오르지 않는다 (296번).
+    DocumentContext rich = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(rich.read("$.grade", String.class)).isEqualTo("F");
+    assertThat(rich.read("$.upgrade.affordable", Boolean.class)).isTrue();
+    assertThat(rich.read("$.upgrade.to", String.class)).isEqualTo("E");
+    assertThat(rich.read("$.upgrade.cost", Long.class)).isEqualTo(18_000_000L);
+    // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 공사 기간 없이 누를 때마다 바로 옮긴다 (405번).
+    DocumentContext moved = json(mvc.perform(get("/api/company").cookie(session)));
+    for (int i = 0; i < 60 && !"Z".equals(moved.read("$.grade", String.class)); i++) {
+      String to = moved.read("$.upgrade.to", String.class);
+      moved = json(postJson("/api/company/upgrade", "{}").andExpect(status().isOk()));
+      assertThat(moved.read("$.grade", String.class)).isEqualTo(to);
+    }
+    assertThat(moved.read("$.grade", String.class)).isEqualTo("Z");
+    Map<String, Object> company = moved.read("$");
+    assertThat(company).doesNotContainKey("ending");
+    assertThat(moved.read("$.upgrade.to", String.class)).as("Z 다음 건물").isEqualTo("ZZ");
+    List<?> kinds = moved.read("$.history.timeline[*].kind");
+    assertThat(kinds.stream().map(String::valueOf)).contains("grow", "ending");
+    // 회사는 멈추지 않는다: 계속 뽑는다.
+    DocumentContext after = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(after.read("$.gacha.tickets", Integer.class)).as("이사할 때마다 받았다").isPositive();
+    drawRequest(1, after.read("$.gacha.draws", Integer.class)).andExpect(status().isOk());
   }
 }

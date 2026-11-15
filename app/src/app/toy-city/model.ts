@@ -26,18 +26,7 @@ export function officeGeometry(grade: Grade, seats: number) {
 
 export function growthProgress(company: Company): { percent: number; label: string } {
   const plan = company.upgrade
-  if (plan?.left != null) {
-    const percent = Math.min(
-      100,
-      Math.max(0, ((plan.years - plan.left) / Math.max(1, plan.years)) * 100),
-    )
-    return { percent, label: `공사 중 · 완공까지 ${plan.left}년` }
-  }
-  if (!plan)
-    return {
-      percent: 100,
-      label: company.status === 'ENDED' ? '지난 회사의 기록' : '최고 단계에 도착했어요',
-    }
+  if (!plan) return { percent: 100, label: '최고 단계에 도착했어요' }
   const percent = Math.min(100, Math.max(0, (company.capital / Math.max(1, plan.needed)) * 100))
   return {
     percent,

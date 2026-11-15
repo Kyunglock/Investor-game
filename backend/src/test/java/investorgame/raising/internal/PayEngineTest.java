@@ -3,12 +3,10 @@ package investorgame.raising.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import investorgame.behavior.internal.TestBehavior;
-import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.json.JsonMapper;
 
 /** 사기 (decisions.md 270번, #325). 연봉·연봉 협상·사표는 뺐다(383번). */
 class PayEngineTest {
@@ -29,7 +27,7 @@ class PayEngineTest {
     c.year = year;
     c.capital = capital;
     c.era = "plain";
-    ENGINE.startYear(c, new HashSeededRandom(seed));
+    ENGINE.begin(c);
     return c;
   }
 

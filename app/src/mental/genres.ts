@@ -1,10 +1,8 @@
-import type { Company } from '@web/api/client'
-
-export type Genre = NonNullable<Company['mental']>['genre']
+export type Genre = 'ASSAULT' | 'DEFENSE'
 
 /**
- * 장르 둘 (decisions.md 328·329·331·332번): 그 분기 이벤트가 정한다. 플레이어는 고르지 않는다. 적은 둘 다 위에서 내려오고, 플레이어는 둘 다 아래에
- * 붙박이로 서서 누른 쪽을 쏜다(걷지 않는다).
+ * 장르 둘 (decisions.md 328·329·331·332번): 분기마다 서버가 정하던 것은 없어졌고(#803), 멘탈 전투 창이 늘 디펜스로 연다. 적은 둘 다 위에서 내려오고,
+ * 플레이어는 둘 다 아래에 붙박이로 서서 누른 쪽을 쏜다(걷지 않는다).
  */
 export interface GenreSpec {
   name: string

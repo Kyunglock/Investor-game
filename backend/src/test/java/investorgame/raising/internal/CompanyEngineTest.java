@@ -50,32 +50,6 @@ class CompanyEngineTest {
     return company;
   }
 
-  /** 투자 회의는 지켜본다로 넘기고 한 해를 결산한다. 결산 규칙만 볼 때 쓴다. */
-  private static CompanyState.Settlement settleYear(CompanyState company, HashSeededRandom random) {
-    if (ENGINE.invest.open(company)) {
-      ENGINE.invest.decide(company, InvestEngine.BUY, random);
-    }
-    return ENGINE.settle(company, random);
-  }
-
-  @Test
-  void 사장의_사재로_직원_없이_F등급_자리_네_개로_열리고_채용권을_받는다() {
-    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
-    assertThat(company.capital).isEqualTo(100_000_000);
-    assertThat(company.employees).isEmpty();
-    assertThat(company.opening).contains("100b로");
-    assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
-    assertThat(ENGINE.draw(company, 1, new HashSeededRandom(1)).getFirst().name).isEqualTo("박한결");
-    assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
-    assertThat(ENGINE.seats(company.capital)).isEqualTo(4);
-    assertThat(ENGINE.grade(120_000_000)).as("E는 1.2억부터 (#344)").isEqualTo("E");
-    assertThat(ENGINE.grade(119_999_999)).isEqualTo("F");
-    assertThat(ENGINE.grade(300_000_000)).isEqualTo("D");
-    assertThat(ENGINE.grade(200_000_000)).isEqualTo("E");
-    assertThat(ENGINE.seats(200_000_000)).isEqualTo(6);
-    assertThat(company.wantedDesk).isNotNull();
-  }
-
   @Test
   void 자리_수를_넘게_앉힐_수_없다() {
     // F 회사는 자리 넷 (287번): 다섯을 앉히면 400, 넷이면 다섯째는 쉰다.
@@ -113,63 +87,6 @@ class CompanyEngineTest {
         .isEqualTo(CompanyEngine.DESK_CAP);
   }
 
-  @Test
-  /** 매각을 뺐다(236번): 세 해가 지나도 회사는 끝나지 않고 다음 해 연초 회의가 온다. */
-  void 세_해를_넘겨도_회사가_이어지고_같은_시드면_같은_결과다() {
-    long[] capitals = new long[2];
-    for (int k = 0; k < 2; k++) {
-      CompanyState company = open(9, stats(50, 50, 50, 50), 100_000_000);
-      ENGINE.place(company, Map.of(1, "bio"));
-      for (int year = 1; year <= PROPERTIES.turns() + 2; year++) {
-        CompanyState.Settlement s = settleYear(company, new HashSeededRandom(9));
-        assertThat(s.year).isEqualTo(year);
-        assertThat(s.fee).as("수수료는 시장과 상관없이 들어온다").isPositive();
-        assertThat(s.lines).isNotEmpty();
-      }
-      assertThat(company.year).isEqualTo(PROPERTIES.turns() + 3);
-      assertThat(company.invest).as("다음 해 투자 회의가 온다").isNotNull();
-      assertThat(company.tickets)
-          .as("분기·연말마다 채용권을 받는다")
-          .isGreaterThan(PROPERTIES.gacha().startTickets());
-      capitals[k] = (long) company.capital;
-    }
-    assertThat(capitals[0]).isEqualTo(capitals[1]);
-  }
-
-  /** 자리에 맞는 사람을 앉히고, 리서치 팀이 형광펜을 빌려주고, 리스크 관리 팀이 꼬드김을 막으면 결과가 좋아진다 (4.2절). */
-  @Test
-  void 배치가_결과를_바꾼다() {
-    Map<String, Integer> patient = stats(20, 90, 20, 20);
-    Map<String, Integer> analyst = stats(95, 20, 20, 20);
-    Map<String, Integer> steady = stats(20, 20, 20, 95);
-    double fit = average(patient, "bio", null, null);
-    double misfit = average(patient, "day", null, null);
-    double withResearch = average(patient, "bio", analyst, "research");
-    double withRisk = average(patient, "bio", steady, "risk");
-    assertThat(fit).as("인내심 좋은 사람은 바이오 데스크").isGreaterThan(misfit);
-    assertThat(withResearch).as("리서치 팀이 형광펜을 빌려준다").isGreaterThan(fit);
-    assertThat(withRisk).as("리스크 관리 팀이 꼬드김을 막는다").isGreaterThan(fit);
-  }
-
-  /** 1년 결산의 평균 수익(판돈 대비). */
-  private static double average(
-      Map<String, Integer> trader, String desk, Map<String, Integer> helper, String helperDesk) {
-    long sum = 0;
-    int trials = 3000;
-    for (int seed = 0; seed < trials; seed++) {
-      CompanyState company = open(seed, trader, 1_000_000_000L);
-      Map<Integer, String> placements = new HashMap<>(Map.of(1, desk));
-      if (helper != null) {
-        ENGINE.hire(company, helper);
-        placements.put(2, helperDesk);
-      }
-      ENGINE.place(company, placements);
-      CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
-      sum += s.results.getFirst().pnl * 10_000 / s.results.getFirst().stake;
-    }
-    return sum / (double) trials;
-  }
-
   /** 매각과 재창업 (9절): 시대가 끝나기 전에는 SSS 이상이어야 팔 수 있고, 팔면 명성이 오르고 공동창업자와 다른 시대의 새 회사를 F에서 차린다. */
   @Test
   void 회사를_팔면_공동창업자와_새_시대의_F_회사를_차린다() {
@@ -202,237 +119,6 @@ class CompanyEngineTest {
     assertThat(next.met).as("만난 사람 수(이름)를 이어 센다").isEqualTo(company.met);
   }
 
-  /**
-   * 직원 등급은 뽑은 그대로 간다 (decisions.md 421번, #582): 폭락장을 버티거나 한 해 일해도 오르지 않는다. 능력치·SSS 위 단계 모두 그대로고 등급이
-   * 바뀌었다는 소식 줄도 없다.
-   */
-  @Test
-  void 직원_등급은_결산으로_오르지도_떨어지지도_않는다() {
-    List<Map<String, Integer>> kinds =
-        List.of(stats(10, 10, 10, 10), stats(30, 30, 30, 30), stats(55, 55, 55, 55), all(95));
-    for (int seed = 0; seed < 40; seed++) {
-      Map<String, Integer> start = new HashMap<>(kinds.get(seed % kinds.size()));
-      CompanyState company = open(seed, start, 1_000_000_000L);
-      CompanyState.Employee e = company.employees.getFirst();
-      e.rank = seed % 3 == 0 && CompanyEngine.overallGrade(e.stats).equals("SSS") ? 2 : 0;
-      int rank = e.rank;
-      Map<String, Integer> before = new HashMap<>(e.stats);
-      ENGINE.place(company, Map.of(e.id, "bio"));
-      for (int year = 0; year < 8; year++) {
-        CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed * 31L + year));
-        assertThat(s.lines)
-            .as("등급이 바뀌었다는 소식이 없다")
-            .noneMatch(
-                line ->
-                    line.contains("일하며 자랐다")
-                        || line.contains("올라섰다! 종합")
-                        || line.contains("등급이 내려갔다")
-                        || line.contains("한 띠 내려갔다")
-                        || line.contains("되찾았다 (")
-                        || line.contains("실전 경험"));
-      }
-      assertThat(e.stats).as("능력치 그대로").isEqualTo(before);
-      assertThat(e.rank).as("SSS 위 단계 그대로").isEqualTo(rank);
-    }
-  }
-
-  /** XS 큰손·XSS 철벽·GOD 신의 손 (decisions.md 289번): ZZZ 위 직원 등급. 회사 등급은 ZZZ까지다. */
-  @Test
-  void XS_XSS_GOD_효과() {
-    Map<String, Integer> ace = stats(95, 95, 95, 95);
-    assertThat(averageWithRank(ace, 7, null))
-        .as("XS 큰손은 더 번다")
-        .isGreaterThan(averageWithRank(ace, 6, null));
-    // 456번: 운용에 손실이 없어 틀려도 덜 잃는 XSS 철벽은 더 줄일 손실이 없다.
-    assertThat(averageWithRank(ace, 8, null))
-        .as("XSS 철벽은 잃을 것이 없어 큰손과 같다")
-        .isEqualTo(averageWithRank(ace, 7, null));
-    assertThat(teammateFlips(9)).as("GOD 신의 손이면 모두 덜 흔들린다").isLessThan(teammateFlips(8));
-
-    Map<String, Integer> top = new HashMap<>(ace);
-    top.put("luck", 95);
-    assertThat(CompanyEngine.gradeOf(top, 7)).isEqualTo("XS");
-    assertThat(CompanyEngine.gradeOf(top, 8)).isEqualTo("XSS");
-    assertThat(CompanyEngine.gradeOf(top, 9)).isEqualTo("GOD");
-    CompanyState company = open(1, top, 100_000_000);
-    CompanyState.Employee god = company.employees.getFirst();
-    god.rank = 9;
-    assertThat(ENGINE.effectsOf(god)).endsWith("큰손", "철벽", "신의 손");
-    assertThat(ENGINE.grade(Long.MAX_VALUE)).as("회사 등급은 ZZZ까지").isEqualTo("ZZZ");
-  }
-
-  /** 등급 효과 (decisions.md 289·387번): 종합 등급이 높을수록 맞혔을 때 더 번다. 등급은 뽑은 그대로라(421번) 자라는 확률은 효과 줄에 없다. */
-  @Test
-  void 등급마다_더_버는_몫이_다르다() {
-    Map<String, Integer> rookie =
-        new HashMap<>(
-            Map.of("insight", 10, "patience", 10, "courage", 10, "conviction", 10, "luck", 10));
-    CompanyState probe = open(1, rookie, 100_000_000);
-    CompanyState.Employee f = probe.employees.getFirst();
-    assertThat(ENGINE.perkGainPercent(f)).isEqualTo(10);
-    assertThat(ENGINE.perkLine(f.stats, 0))
-        .as("F는 손 뒤집힘 보정도 이름 붙은 효과도 없다")
-        .isEqualTo("새내기 · 맞히면 1.1배 번다(+10%)");
-    assertThat(ENGINE.perkLine(all(85), 0))
-        .isEqualTo("스타 · 맞히면 13.8배 번다(+1,280%) · 손 뒤집힘 −50% · 방패: 한 분기에 잃으면 손실의 3할을 막는다");
-    Map<String, Integer> legend = stats(95, 95, 95, 95);
-    legend = new HashMap<>(legend);
-    legend.put("luck", 95);
-    assertThat(ENGINE.perkLine(legend, 0))
-        .startsWith("레전드 · 맞히면 26.6배 번다(+2,560%) · 손 뒤집힘 −60% · 전설의 촉")
-        .doesNotContain("실전 경험")
-        .doesNotContain("자란다");
-    assertThat(ENGINE.perkLine(legend, 9)).startsWith("GOD · 맞히면 13,108.2배 번다(+1,310,720%)");
-    assertThat(ENGINE.drawnPerk("D")).isEqualTo("맞히면 1.4배");
-    assertThat(ENGINE.drawnPerk("SS")).isEqualTo("맞히면 13.8배 · 방패");
-    assertThat(ENGINE.drawnPerk("X")).isEqualTo("맞히면 52.2배 · 확신");
-    assertThat(averageWithRank(stats(55, 55, 55, 55), 0, null))
-        .as("같은 능력치라도 등급이 같으니 같다: 효과는 등급을 따라간다")
-        .isEqualTo(averageWithRank(stats(55, 55, 55, 55), 0, null));
-  }
-
-  /**
-   * 더 버는 몫은 등급마다 두 배다 (decisions.md 387번, 사용자 결정): F 10% · E 20% · D 40% · C 80% · B 160% · A 320%
-   * · S 640% · SS 1,280% · SSS 2,560%, 그 위(X~GOD)도 단계마다 두 배. 같은 회사·같은 자리에서 한 등급 높은 직원이 한 해에 훨씬 더
-   * 번다.
-   */
-  @Test
-  void 더_버는_몫이_등급마다_두_배다() {
-    List<String> ladder = CompanyEngine.LADDER;
-    assertThat(ENGINE.gainPercentOf("F")).isEqualTo(10);
-    for (int i = 1; i < ladder.size(); i++) {
-      assertThat(ENGINE.gainPercentOf(ladder.get(i)))
-          .as(ladder.get(i))
-          .isEqualTo(ENGINE.gainPercentOf(ladder.get(i - 1)) * 2);
-    }
-    assertThat(ENGINE.gainPercentOf("SS")).isEqualTo(1280);
-    assertThat(ENGINE.gainPercentOf("SSS")).isEqualTo(2560);
-    double b = averageWithRank(stats(55, 55, 55, 55), 0, null);
-    double a = averageWithRank(stats(65, 65, 65, 65), 0, null);
-    double ss = averageWithRank(all(85), 0, null);
-    assertThat(a).as("A는 B보다 한 해에 훨씬 더 번다").isGreaterThan(b * 1.5);
-    assertThat(ss).as("SS는 B의 세 배 넘게 번다").isGreaterThan(b * 3);
-  }
-
-  /** 높은 등급일수록 판단이 흔들리지 않는다 (decisions.md 387번): 같은 시드로 손 뒤집힘 보정을 끈 엔진과 견준다. */
-  @Test
-  void 높은_등급일수록_손이_덜_뒤집힌다() {
-    CompanyEngine plain =
-        withPerks(
-            p ->
-                new CompanyProperties.Perks(
-                    p.gainPercent(),
-                    Map.of(),
-                    p.readBonus(),
-                    p.stopLossPercent(),
-                    p.pullGainPercent(),
-                    p.shieldPercent()));
-    // 인내심(바이오 데스크가 원하는 능력치)이 낮은 SS 직원: 자주 뒤집힐 사람이 반만 뒤집힌다.
-    Map<String, Integer> shaky =
-        Map.of("insight", 100, "patience", 30, "courage", 100, "conviction", 100, "luck", 100);
-    assertThat(CompanyEngine.overallGrade(shaky)).isEqualTo("SS");
-    assertThat(flips(ENGINE, shaky)).isLessThan(flips(plain, shaky) * 7 / 10);
-  }
-
-  /**
-   * 이름 붙은 등급 효과 (decisions.md 387번): A 손절은 손이 뒤집혀도 덜 잃고, S 끌어주기는 같은 데스크 동료가 더 벌고, SS 방패는 잃은 분기의 손실을
-   * 줄인다. 같은 시드로 그 효과만 끈 엔진과 견준다.
-   */
-  @Test
-  void A_손절_S_끌어주기_SS_방패() {
-    CompanyEngine noStopLoss =
-        withPerks(
-            p ->
-                new CompanyProperties.Perks(
-                    p.gainPercent(),
-                    p.flipPercent(),
-                    p.readBonus(),
-                    100,
-                    p.pullGainPercent(),
-                    p.shieldPercent()));
-    Map<String, Integer> veteran =
-        Map.of("insight", 80, "patience", 20, "courage", 80, "conviction", 80, "luck", 50);
-    assertThat(CompanyEngine.overallGrade(veteran)).isEqualTo("A");
-    assertThat(yearPnl(ENGINE, veteran, null, false))
-        .as("A 손절: 운용에 손실이 없어(456번) 줄일 것이 없다")
-        .isEqualTo(yearPnl(noStopLoss, veteran, null, false));
-
-    CompanyEngine noPull =
-        withPerks(
-            p ->
-                new CompanyProperties.Perks(
-                    p.gainPercent(),
-                    p.flipPercent(),
-                    p.readBonus(),
-                    p.stopLossPercent(),
-                    0,
-                    p.shieldPercent()));
-    Map<String, Integer> rookie = stats(30, 30, 30, 30);
-    Map<String, Integer> ace = stats(75, 75, 75, 75);
-    assertThat(yearPnl(ENGINE, rookie, ace, true))
-        .as("S 끌어주기: 같은 데스크 동료가 더 번다")
-        .isGreaterThan(yearPnl(noPull, rookie, ace, true));
-    assertThat(yearPnl(ENGINE, rookie, ace, false))
-        .as("다른 데스크면 붙지 않는다")
-        .isEqualTo(yearPnl(noPull, rookie, ace, false));
-
-    CompanyEngine noShield =
-        withPerks(
-            p ->
-                new CompanyProperties.Perks(
-                    p.gainPercent(),
-                    p.flipPercent(),
-                    p.readBonus(),
-                    p.stopLossPercent(),
-                    p.pullGainPercent(),
-                    0));
-    Map<String, Integer> star = all(85);
-    assertThat(yearPnl(ENGINE, star, null, false))
-        .as("SS 방패: 운용에 손실이 없어(456번) 막을 것이 없다")
-        .isEqualTo(yearPnl(noShield, star, null, false));
-  }
-
-  /** 첫 직원(바이오 데스크)이 한 해 번 돈의 합, 300판. mate는 같은 데스크(sameDesk) 또는 단타 데스크에 앉는 동료다. */
-  private static long yearPnl(
-      CompanyEngine engine,
-      Map<String, Integer> first,
-      Map<String, Integer> mate,
-      boolean sameDesk) {
-    long sum = 0;
-    for (int seed = 0; seed < 300; seed++) {
-      CompanyState company = engine.open(new HashSeededRandom(seed), 1_000_000_000L);
-      engine.hire(company, first);
-      if (mate != null) {
-        engine.hire(company, mate);
-        engine.place(company, Map.of(1, "bio", 2, sameDesk ? "bio" : "day"));
-      } else {
-        engine.place(company, Map.of(1, "bio"));
-      }
-      if (engine.invest.open(company)) {
-        engine.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(seed));
-      }
-      sum += engine.settle(company, new HashSeededRandom(seed)).results.getFirst().pnl;
-    }
-    return sum;
-  }
-
-  /** 바이오 데스크에 혼자 앉은 직원이 한 해에 뒤집힌 횟수의 합, 1,000판. */
-  private static int flips(CompanyEngine engine, Map<String, Integer> stats) {
-    int flips = 0;
-    for (int seed = 0; seed < 1000; seed++) {
-      CompanyState company = engine.open(new HashSeededRandom(seed), 1_000_000_000L);
-      engine.hire(company, stats);
-      engine.place(company, Map.of(1, "bio"));
-      company.phase = "normal";
-      if (engine.invest.open(company)) {
-        engine.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(seed));
-      }
-      CompanyState.Result r = engine.settle(company, new HashSeededRandom(seed)).results.getFirst();
-      flips += r.flips.values().stream().mapToInt(Integer::intValue).sum();
-    }
-    return flips;
-  }
-
   /** 등급 효과 수치만 바꾼 엔진 (387번). 같은 시드로 효과를 켜고 끈 결과를 견준다. */
   static CompanyEngine withPerks(java.util.function.UnaryOperator<CompanyProperties.Perks> change) {
     try {
@@ -450,36 +136,6 @@ class CompanyEngineTest {
     } catch (ReflectiveOperationException e) {
       throw new IllegalStateException(e);
     }
-  }
-
-  private static double averageWithRank(Map<String, Integer> stats, int rank, String phase) {
-    long sum = 0;
-    int trials = 2000;
-    for (int seed = 0; seed < trials; seed++) {
-      CompanyState company = open(seed, stats, 1_000_000_000L);
-      company.employees.getFirst().rank = rank;
-      if (phase != null) {
-        company.phase = phase;
-      }
-      ENGINE.place(company, Map.of(1, "bio"));
-      CompanyState.Result r = settleYear(company, new HashSeededRandom(seed)).results.getFirst();
-      sum += r.pnl * 10_000 / r.stake;
-    }
-    return sum / (double) trials;
-  }
-
-  /** 같은 바이오 데스크에 앉은 팀원(능력치 낮음)이 한 해에 뒤집힌 횟수의 합. 옆자리의 단계만 바꾼다. */
-  private static int teammateFlips(int neighborRank) {
-    int flips = 0;
-    for (int seed = 0; seed < 1000; seed++) {
-      CompanyState company = open(seed, stats(95, 95, 95, 95), 1_000_000_000L);
-      company.employees.getFirst().rank = neighborRank;
-      ENGINE.hire(company, stats(10, 10, 10, 10));
-      ENGINE.place(company, Map.of(1, "bio", 2, "bio"));
-      CompanyState.Result teammate = settleYear(company, new HashSeededRandom(seed)).results.get(1);
-      flips += teammate.flips.values().stream().mapToInt(Integer::intValue).sum();
-    }
-    return flips;
   }
 
   /**
@@ -591,46 +247,6 @@ class CompanyEngineTest {
         .anyMatch(t -> t.text != null && t.text.contains("특급 인재") && t.text.contains(e.name));
   }
 
-  /** 섹터 데스크 (4.2·9.4절): 그 시대에 뜨는 섹터 데스크에 그 자리가 원하는 능력치가 좋은 사람을 앉히면 결과가 좋아진다. */
-  @Test
-  void 시대에_뜨는_섹터_데스크에_맞는_사람을_앉히면_결과가_좋아진다() {
-    Map<String, Integer> brave = stats(50, 30, 85, 30);
-    double chipInBoom = yearly(brave, "semiconductor", "chip-boom", null);
-    assertThat(chipInBoom)
-        .as("반도체 붐 시대엔 반도체 데스크가 뜬다")
-        .isGreaterThan(yearly(brave, "semiconductor", "plain", null))
-        .isGreaterThan(yearly(brave, "day", "chip-boom", null));
-    assertThat(chipInBoom)
-        .as("용기가 원하는 자리에 인내심 낮은 사람이 맞다")
-        .isGreaterThan(yearly(brave, "energy", "chip-boom", null));
-
-    Map<String, Integer> steady = stats(50, 30, 30, 85);
-    assertThat(yearly(steady, "food", "long-winter", null))
-        .as("긴 겨울엔 식품 데스크가 뜬다")
-        .isGreaterThan(yearly(steady, "food", "plain", null));
-
-    assertThat(yearly(brave, "game", "plain", "game"))
-        .as("관심 섹터가 같은 데스크면 조금 더 번다")
-        .isGreaterThan(yearly(brave, "game", "plain", null));
-  }
-
-  /** 시대와 관심 섹터를 정해 한 해 결산한 평균 수익(판돈 대비, 만분율). 투자 회의는 지켜본다. */
-  private static double yearly(
-      Map<String, Integer> trader, String desk, String era, String interest) {
-    long sum = 0;
-    int trials = 3000;
-    for (int seed = 0; seed < trials; seed++) {
-      CompanyState company = open(seed, trader, 1_000_000_000L);
-      company.era = era;
-      ENGINE.startYear(company, new HashSeededRandom(seed));
-      company.employees.getFirst().sector = interest;
-      ENGINE.place(company, Map.of(company.employees.getFirst().id, desk));
-      CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
-      sum += s.results.getFirst().pnl * 10_000 / s.results.getFirst().stake;
-    }
-    return sum / (double) trials;
-  }
-
   @Test
   void 연초_회의에_이번_시대에_뜨는_섹터가_보이고_뽑은_사람은_관심_섹터를_안고_온다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
@@ -693,40 +309,6 @@ class CompanyEngineTest {
     assertThat(stood).extracting(e -> e.id).containsExactly(staff.get(4).id);
     assertThat(staff.get(0).desk).isEqualTo("bio");
     assertThat(staff.get(1).desk).isEqualTo("bio");
-  }
-
-  /**
-   * 연말 결산서의 장부가 맞는다 (#314, decisions.md 251번): 연초 자본은 연초 회의 때의 자본이다. 채용 뽑기는 돈이 들지 않아(312번) 인사 비용이
-   * 없다. 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 = 연말 자본.
-   */
-  @Test
-  void 연말_결산서의_연초_자본은_연초_회의_때의_자본이고_장부가_맞는다() {
-    for (long seed = 1; seed <= 20; seed++) {
-      CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
-      HashSeededRandom random = new HashSeededRandom(seed);
-      for (int year = 1; year <= 4; year++) {
-        long start = (long) company.capital;
-        if (company.tickets > 0 && company.employees.size() < ENGINE.seats(company)) {
-          CompanyState.Employee hired = drawOne(company);
-          Map<Integer, String> seats = new HashMap<>();
-          company.employees.forEach(e -> seats.put(e.id, e.desk));
-          seats.put(hired.id, "day");
-          if (seats.values().stream().filter(d -> d != null).count() <= ENGINE.seats(company)) {
-            ENGINE.place(company, seats);
-          }
-        }
-        CompanyState.Settlement s = settleYear(company, random);
-        assertThat(s.capitalBefore).isEqualTo(start);
-        assertThat(s.hiring).as("뽑기는 돈이 들지 않는다").isZero();
-        long staff = s.results.stream().mapToLong(r -> r.pnl).sum();
-        long invest = s.investTotal == null ? 0 : s.investTotal;
-        if (s.capitalAfter > 0) {
-          assertThat(s.capitalBefore + invest + staff + s.fee - s.hiring - s.moving)
-              .as("%d번 시드 %d년 차 장부", seed, year)
-              .isEqualTo(s.capitalAfter);
-        }
-      }
-    }
   }
 
   /** 판돈은 자본이 아니라 건물의 값이다 (411번): 자본을 전투 강화·이사에 다 써도 버는 양이 그대로다. */
@@ -852,37 +434,6 @@ class CompanyEngineTest {
     assertThat(c.recentLines).hasSize(CompanyEngine.RECENT_LINES).doesNotContain("가");
   }
 
-  /** 한 해를 넘긴다: 분기마다 직원이 종목을 물어 왔으면 지켜본다. */
-  private static CompanyState.Settlement year(CompanyState c, long seed) {
-    HashSeededRandom random = new HashSeededRandom(seed);
-    int year = c.year;
-    while (c.year == year) {
-      ENGINE.scout.discover(c, random);
-      if (ENGINE.invest.open(c)) {
-        ENGINE.invest.decide(c, InvestEngine.BUY, random);
-      }
-      ENGINE.settleQuarter(c, random);
-    }
-    return c.settlements.getLast();
-  }
-
-  /** 386번: 돈을 굴린 사람이 모두 폭락장 손익 절반 이하인 자리에 앉은 분기만 방어로 친다. 아무도 안 굴렸으면 방어가 아니다. */
-  @Test
-  void 모두_식품_금융에_앉은_분기만_방어다() {
-    CompanyState.Quarter q = new CompanyState.Quarter();
-    assertThat(ENGINE.braced(q)).as("돈 굴린 사람이 없다").isFalse();
-    CompanyState.Result food = new CompanyState.Result();
-    food.desk = "food";
-    CompanyState.Result finance = new CompanyState.Result();
-    finance.desk = "finance";
-    q.results.addAll(List.of(food, finance));
-    assertThat(ENGINE.braced(q)).isTrue();
-    CompanyState.Result chip = new CompanyState.Result();
-    chip.desk = "semiconductor";
-    q.results.add(chip);
-    assertThat(ENGINE.braced(q)).as("한 사람이라도 폭락에 크게 빠지는 자리면 방어가 아니다").isFalse();
-  }
-
   /** 옛 저장 상태에 직원 합성 기록(합성 횟수·방금 한 합성·합성으로 처음 만든 등급)이 남아 있어도 읽힌다 (384번). */
   @Test
   void 옛_저장_상태의_합성_기록은_무시하고_읽는다() {
@@ -901,4 +452,77 @@ class CompanyEngineTest {
     assertThat(c.employees).singleElement().satisfies(e -> assertThat(e.quirk).isEqualTo("gut"));
   }
 
+  @Test
+  void 사장의_사재로_직원_없이_F등급_자리_네_개로_열리고_채용권을_받는다() {
+    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
+    assertThat(company.capital).isEqualTo(100_000_000);
+    assertThat(company.employees).isEmpty();
+    assertThat(company.opening).contains("100b로");
+    assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
+    assertThat(ENGINE.draw(company, 1, new HashSeededRandom(1)).getFirst().name).isEqualTo("박한결");
+    assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
+    assertThat(ENGINE.seats(company.capital)).isEqualTo(4);
+    assertThat(ENGINE.grade(120_000_000)).as("E는 1.2억부터 (#344)").isEqualTo("E");
+    assertThat(ENGINE.grade(119_999_999)).isEqualTo("F");
+    assertThat(ENGINE.grade(300_000_000)).isEqualTo("D");
+    assertThat(ENGINE.grade(200_000_000)).isEqualTo("E");
+    assertThat(ENGINE.seats(200_000_000)).isEqualTo(6);
+  }
+
+  /** 인사 직원 (6.3절, decisions.md 312번): 뽑기의 중심이 인사 직원보다 두 단계 아래까지 오르고, 연말에 채용권을 한 장 더 받는다. */
+  @Test
+  void 인사팀이_뽑기를_돕는다() {
+    Map<String, Integer> sharp = stats(92, 92, 92, 92);
+    CompanyState company = open(3, sharp, 100_000_000);
+    ENGINE.place(company, Map.of(1, "hr"));
+    assertThat(ENGINE.hrCap(company.employees.getFirst())).as("평균 84(SS)의 두 단계 아래").isEqualTo("A");
+    assertThat(ENGINE.rateGrade(company, ENGINE.rates().get(1))).as("중심이 A로 오른다").isEqualTo("A");
+    int sum = 0;
+    int count = 0;
+    for (int round = 0; round < 60; round++) {
+      company.tickets = 5;
+      for (CompanyState.Drawn d : ENGINE.draw(company, 5, new HashSeededRandom(round))) {
+        sum += CompanyEngine.LADDER.indexOf(d.grade);
+        count++;
+      }
+      company.employees.removeIf(e -> e.id != 1);
+    }
+    assertThat(sum / (double) count).as("중심이 A 언저리로 오른다").isGreaterThan(4.3);
+  }
+
+  /**
+   * 옛 저장 상태에 이직 제안(걸린 제안·증권사마다 손을 뻗은 횟수·떠난 사람의 데려간 증권사와 소식)이 남아 있어도 읽히고, 연표에 남은 옛 이직 줄은 그대로다
+   * (385번). 아무도 떠나지 않는다.
+   */
+  @Test
+  void 옛_저장_상태의_이직_제안은_무시하고_읽는다() {
+    CompanyState c = ENGINE.open(new HashSeededRandom(6), ENGINE.openingCapital());
+    ENGINE.hire(c, stats(60, 60, 60, 60));
+    ENGINE.hire(c, stats(70, 70, 70, 70));
+    JsonMapper json = JsonMapper.builder().build();
+    ObjectNode node = json.valueToTree(c);
+    int target = c.employees.getLast().id;
+    node.set(
+        "poach",
+        json.readTree(
+            "{\"employeeId\": "
+                + target
+                + ", \"transferFee\": 1350000000, \"rival\": \"존버캐피탈\", \"count\": 2}"));
+    node.set("poachCounts", json.readTree("{\"존버캐피탈\": 2}"));
+    node.set(
+        "alumni",
+        json.readTree(
+            "[{\"name\": \"류소울\", \"from\": 1, \"to\": 2, \"grade\": \"S\","
+                + " \"rival\": \"존버캐피탈\", \"reported\": false}]"));
+    node.set(
+        "timeline",
+        json.readTree("[{\"year\": 2, \"kind\": \"left\", \"text\": \"류소울이(가) 존버캐피탈(으)로 떠났다.\"}]"));
+    CompanyState old = json.treeToValue(node, CompanyState.class);
+    assertThat(old.employees).hasSize(2);
+    assertThat(old.alumni).singleElement().satisfies(a -> assertThat(a.name).isEqualTo("류소울"));
+    assertThat(old.timeline).anyMatch(e -> e.text.contains("존버캐피탈"));
+    // 옮긴 뒤에도 그대로다: 아무도 떠나지 않는다.
+    ENGINE.adoptRealtime(old);
+    assertThat(old.employees).as("아무도 떠나지 않는다").hasSize(2);
+  }
 }

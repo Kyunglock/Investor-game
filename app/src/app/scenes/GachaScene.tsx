@@ -16,9 +16,7 @@ type Part = 'draw' | 'dex'
  */
 export function GachaScene({ company }: { company: Company }) {
   const [part, setPart] = useState<Part>('draw')
-  if (company.status === 'ENDED') {
-    return <p className="text-[13px] text-ink/60">끝난 회사는 사람을 뽑지 않습니다.</p>
-  }
+
   const parts: { id: Part; label: string; badge?: string }[] = [
     { id: 'draw', label: '뽑기' },
     { id: 'dex', label: `도감 ${collected(company)}/${company.gacha.collection.length}` },
@@ -130,7 +128,7 @@ function DrawPart({ company }: { company: Company }) {
         </p>
       ) : (
         <p className="text-[12px] text-ink/60">
-          분기를 넘길 때마다, 연말·업적·이사 때 채용권을 받습니다.
+          회사를 차릴 때와 건물을 올릴 때 채용권을 받습니다.
           {company.meeting?.hrCap && ` 인사팀 덕에 ${company.meeting.hrCap} 언저리까지 나옵니다.`}
         </p>
       )}

@@ -63,7 +63,7 @@ async function assaultCheck() {
     page.on('pageerror', (e) => errors.push(e.message))
     await page.addInitScript(() => localStorage.setItem('investor-game.tutorial', 'done'))
     await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (route) =>
-      route.fulfill({ json: { ...structuredClone(fixture), invest: null, lastSettlement: null } }),
+      route.fulfill({ json: { ...structuredClone(fixture), invest: null } }),
     )
     await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
     await page.evaluate(
@@ -446,8 +446,6 @@ try {
   let company = {
     ...structuredClone(fixture),
     invest: null,
-    lastSettlement: null,
-    mental: { genre: 'DEFENSE', headline: '불안한 소문이 거리를 가득 채웠어요', done: false },
     stages: {
       best: 0,
       last: 10,
@@ -484,7 +482,6 @@ try {
         count: 1,
       },
     ],
-    upgrade: { ...fixture.upgrade, years: 2, left: null },
   }
   let reports = 0
   await page.route(/\/api\/(company|sessions)(\/|$|\?)/, async (route) => {
@@ -814,8 +811,7 @@ try {
   assert.equal(reports, 2)
   await page.getByTestId('mental-done').click()
   await expect(page.getByTestId('mental-result')).toHaveCount(0)
-  // 두 장르 모두 같은 방어선·로딩 복구를 지원한다.
-  company = { ...company, mental: { ...company.mental, genre: 'ASSAULT', done: false } }
+  // 서버가 분기마다 정하던 장르는 없어졌다 (#803): 디펜스 판에서 로딩 복구를 본다.
   const enemyAsset = /\/assets\/enemies(?:-[\w-]+)?\.png$/
   await page.route(enemyAsset, (route) => route.fulfill({ status: 404, body: '' }))
   await page.reload()

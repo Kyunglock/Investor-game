@@ -79,25 +79,28 @@ export function InvestWindow({
   const [debated, setDebated] = useState(skipped || !debateFirst)
   // 펼쳐 둔 토론이 끝나기를 기다리는 중: 이때만 고르기를 잠근다.
   const waiting = debateFirst && debateOpen && !debated
+  // 회사는 1초마다 새 객체로 온다(자동 전투의 박동): 타이머가 그때마다 다시 걸리지 않게 길이(숫자)와 정했는지(참·거짓)만 본다.
+  const debateMs = teamClashMs(debate)
   useEffect(() => {
     // 토론은 결정 화면에서 펼쳐야 시작한다: 분석을 읽는 동안 저절로 끝나 버리지 않게.
     if (!debateFirst || debated || !debateOpen || step !== 'decide') {
       return
     }
-    const id = setTimeout(() => setDebated(true), teamClashMs(debate))
+    const id = setTimeout(() => setDebated(true), debateMs)
     return () => clearTimeout(id)
-  }, [debateFirst, debated, debateOpen, debate, step])
+  }, [debateFirst, debated, debateOpen, debateMs, step])
   // 맡겼으면(279·285번) 매수파·매도파가 먼저 토론하며 맞붙고, 그 뒤에 차트가 그려진다.
   const lead = outcome?.delegated && debateOpen ? teamClashMs(outcome.debate) : 0
   const show = chartTimeline(1, CHART_MS, skipped, lead)
   const [finished, setFinished] = useState(skipped)
+  const decided = Boolean(outcome)
   useEffect(() => {
-    if (!outcome || finished || hold) {
+    if (!decided || finished || hold) {
       return
     }
     const id = setTimeout(() => setFinished(true), show.end)
     return () => clearTimeout(id)
-  }, [outcome, finished, show.end, hold])
+  }, [decided, finished, show.end, hold])
   // 빨리 보기 (395번): 결과면 차트를 다 그린 모습으로, 토론 중이면 다 오간 모습으로 넘긴다.
   const skip = () => {
     setSkipped(true)

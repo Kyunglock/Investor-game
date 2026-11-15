@@ -21,7 +21,7 @@ import { RecordScene } from './scenes/RecordScene'
 import { StaffScene } from './scenes/StaffScene'
 import { type Tab, tabBadge, tabFromWeb, useAppUi } from './ui'
 import { useCountUp } from './useCountUp'
-import { ActionBar, Windows } from './Windows'
+import { Windows } from './Windows'
 
 const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   { id: 'office', label: '사무실', icon: BuildingIcon },
@@ -32,8 +32,8 @@ const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
 ]
 
 /**
- * 앱 화면의 틀 (decisions.md 309·310번): 위에 회사 머리띠(건물·해·분기·자본), 가운데 장면 하나, 아래에 분기 넘기기 버튼과 다섯 탭. 문서처럼 길게 내리지 않고
- * 장면을 옆으로 밀어 가며 본다. 장면 안에서만 스크롤한다. 폭락·손실이면 화면이 흔들리고(FxLayer), 자본은 숫자가 굴러간다.
+ * 앱 화면의 틀 (decisions.md 309·310번, #803): 위에 회사 머리띠(건물·자본), 가운데 장면 하나, 아래에 다섯 탭. 문서처럼 길게 내리지 않고
+ * 장면을 옆으로 밀어 가며 본다. 장면 안에서만 스크롤한다. 자본은 숫자가 굴러간다.
  */
 export function Shell({ company }: { company: Company }) {
   const idleBattle = useIdleBattle(company.companyId)
@@ -48,8 +48,7 @@ export function Shell({ company }: { company: Company }) {
   const modalBack = useAppUi((s) => s.modalBack)
   const webTab = useRaisingStore((s) => s.tab)
   const screen = useRef<HTMLDivElement>(null)
-  const ended = company.status === 'ENDED'
-  // 웹의 튜토리얼·결산이 가리키는 탭(store.tab)을 따라간다.
+  // 웹의 튜토리얼이 가리키는 탭(store.tab)을 따라간다.
   useEffect(() => {
     const t = tabFromWeb(webTab)
     if (t) {
@@ -88,7 +87,7 @@ export function Shell({ company }: { company: Company }) {
     const t = setTimeout(() => setOpened(null), 2200)
     return () => clearTimeout(t)
   }, [unlocked, tutorialOn])
-  const key = `${company.companyId}-${company.year}-${company.quarter}-${company.employees.map((e) => e.id).join('.')}`
+  const key = `${company.companyId}-${company.employees.map((e) => e.id).join('.')}`
   return (
     <div
       ref={screen}
@@ -127,8 +126,6 @@ export function Shell({ company }: { company: Company }) {
       </main>
       {tab !== 'office' && (
         <div className="safe-bottom">
-          {/* 이슈 탭은 종목회의 칸이 분기 넘기기를 맡는다 (474번). */}
-          {tab !== 'record' && tab !== 'issue' && <ActionBar company={company} />}
           <nav
             className="grid grid-cols-5 gap-1 border-(--outline) border-t-[3px] bg-white px-1.5 pt-1.5 pb-1"
             aria-label="회사 일"
@@ -136,7 +133,6 @@ export function Shell({ company }: { company: Company }) {
             {TABS.map((t) => {
               const badge = tabBadge(company, t.id)
               const on = tab === t.id
-              const hidden = ended && t.id === 'market'
               const locked = t.id !== 'office' && !unlocked.includes(t.id)
               const Icon = t.icon
               return (
@@ -145,7 +141,7 @@ export function Shell({ company }: { company: Company }) {
                   type="button"
                   role="tab"
                   aria-selected={on}
-                  disabled={hidden || locked}
+                  disabled={locked}
                   onClick={() => {
                     if (!on) {
                       sfx.tap()
@@ -205,21 +201,17 @@ export function Shell({ company }: { company: Company }) {
   )
 }
 
-/** 머리띠: 건물 이름과 해·분기, 굴러가는 자본, 소리 끄기. */
+/** 머리띠: 건물 이름, 굴러가는 자본, 소리 끄기. */
 function Hud({ company }: { company: Company }) {
   const capital = useCountUp(company.capital)
   const [muted, setMutedState] = useState(isMuted)
-  const ended = company.status === 'ENDED'
   return (
     <header
       className="mx-3 mt-2 mb-1 flex items-center justify-between gap-2 rounded-2xl border-[3px] border-(--outline) bg-white px-3 py-1.5 text-ink shadow-[0_4px_0_var(--outline)]"
       data-testid="hud"
     >
       <div className="min-w-0">
-        <p className="text-[11px] text-ink/55">
-          {company.number}호 회사 ·{' '}
-          {ended ? '끝난 회사' : `${company.year}년 차 ${company.quarter}분기`}
-        </p>
+        <p className="text-[11px] text-ink/55">{company.number}호 회사</p>
         <p className="truncate font-game text-[19px] leading-tight" data-testid="company-building">
           {officeName(company.grade)}
         </p>

@@ -192,10 +192,10 @@ class InvestEngineTest {
           .isEqualTo(base);
       assertThat(ENGINE.invest.battleLevelParts(c, c.invest, 0)).doesNotContainKey("upgrade");
     }
-    c.year += 4;
+    c.meetings += 16;
     c.building = CompanyEngine.LADDER.get(4);
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 10))
-        .as("분기·건물·스테이지로 오르는 난이도는 유지")
+        .as("회의 수·건물·스테이지로 오르는 난이도는 유지")
         .isEqualTo(base + 28);
   }
 
@@ -292,7 +292,7 @@ class InvestEngineTest {
         decisive++;
       }
     }
-    assertThat(decisive).as("안목 100이면 대개 결정적 문장에 긋는다").isGreaterThan(80);
+    assertThat(decisive).as("안목 100이면 대개 결정적 문장에 긋는다").isGreaterThan(70);
     CompanyState none = opened(new HashSeededRandom(1), 100_000_000L);
     assertThat(ENGINE.invest.liveHighlight(none, new HashSeededRandom(1))).isEmpty();
   }

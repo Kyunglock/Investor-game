@@ -34,7 +34,7 @@ import { ENEMIES } from './enemies'
 import { FirstClear } from './FirstClear'
 import { GunSprite } from './GunSprite'
 import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './gameSpeed'
-import { BATTLE_SECONDS } from './genres'
+import { BATTLE_SECONDS, type Genre } from './genres'
 import { StagePortrait } from './StagePortrait'
 import { GRADE_BADGE } from './WeaponInventory'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
@@ -42,8 +42,6 @@ import './stage.css'
 import { type Hero, heroOf, type Weapon } from './hero'
 import { WallGainFlight } from './WallGainFlight'
 import { priceRise, queueWallGain, shownPrice, type WallGain } from './wallGain'
-
-type Genre = NonNullable<Company['mental']>['genre']
 
 /**
  * 멘탈 전투 창 (decisions.md 328·330·339·345·346·369번): 스테이지 선택에서 고른 판(번호 스테이지 = 전진 모드, EX = 디펜스)의 출전 화면, 무기 고르기,
@@ -103,7 +101,8 @@ export function MentalWindow({
     () => (stageNumber === null ? undefined : stageSpec(stageNumber, perChapter)),
     [stageNumber, perChapter],
   )
-  const genre: Genre = company.mental?.genre ?? 'DEFENSE'
+  // 분기마다 서버가 정하던 장르는 없어졌다 (#803): 늘 디펜스 바닥이다.
+  const genre: Genre = 'DEFENSE'
   const [saved, setSaved] = useState(false)
 
   const back = useEffectEvent(() => {
@@ -232,7 +231,7 @@ export function MentalWindow({
                     ? '멘탈 보호 스테이지'
                     : entry.kind === 'invest'
                       ? `종목 회의 뒤 전투 · 세기 ${entry.level}`
-                      : 'EX 도전 · 분기에 한 번'}
+                      : 'EX 도전 · 하루에 한 번'}
               </span>
               <h2>
                 {entry.kind === 'assault'
@@ -252,9 +251,7 @@ export function MentalWindow({
                   다 막고 판돈 10% 더
                 </p>
               )}
-              {entry.kind !== 'invest' && entry.kind !== 'assault' && (
-                <p>{company.mental?.headline ?? '흔들리지 않는 마음으로'}</p>
-              )}
+              {entry.kind !== 'invest' && entry.kind !== 'assault' && <p>흔들리지 않는 마음으로</p>}
             </header>
             <div className="stage-hero-card">
               {mode !== 'assault' && (
@@ -265,9 +262,9 @@ export function MentalWindow({
                 </span>
               )}
               {entry.kind === 'invest' && (
-                // 회의 뒤 전투의 세기와 오른 이유 (#594): 해·분기 하나가 한 스테이지라 분기를 넘길수록 매도벽이 세진다.
+                // 회의 뒤 전투의 세기와 오른 이유 (#594).
                 <span className="stage-level" data-testid="stage-level">
-                  {company.year}년 {company.quarter}분기 스테이지 · 세기 {entry.level}
+                  세기 {entry.level}
                   {levelWhy(company.invest?.outcome?.battle?.levelParts)}
                 </span>
               )}
@@ -960,7 +957,7 @@ function CardPick({
 
 /**
  * 한 판: Phaser를 늦게 불러 컨테이너에 띄우고, 그 위에 멘탈(화면 하단)·레벨(왼쪽 세로)·시간(오른쪽 위)과 큰 알림을 그린다. 레벨이 오르면 전투 위에 카드 고르기가 뜬다. 오른쪽 위 Ⅱ로 언제든
- * 나갈 수 있다(345번): 전투를 멈추고 물은 뒤 나가면 강화 없이 결산이다.
+ * 나갈 수 있다(345번): 전투를 멈추고 물은 뒤 나가면 보상 없이 돌아간다.
  */
 function Battle({
   mode,
@@ -984,7 +981,7 @@ function Battle({
   pauseRequest: number
   onPick: (card: Card) => void
   onDone: (outcome: Outcome) => void
-  /** 싸우다 나간다 (345번): 이번 분기 강화 없이 결산으로. */
+  /** 싸우다 나간다 (345번): 보상 없이 돌아간다. */
   onQuit: () => void
 }) {
   const host = useRef<HTMLDivElement>(null)
@@ -1084,7 +1081,7 @@ function Battle({
               다시 불러오기
             </button>
             <button type="button" className="stage-skip" onClick={onQuit}>
-              이번 분기는 쉬어가기
+              이번에는 쉬어가기
             </button>
           </div>
         </div>

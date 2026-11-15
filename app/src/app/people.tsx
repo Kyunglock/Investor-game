@@ -10,6 +10,7 @@ import {
   seatOne,
 } from '@web/features/raising/placement'
 import { useRaisingStore } from '@web/features/raising/store'
+import { rate } from './income'
 
 export type Employee = Company['employees'][number]
 export type Desk = Company['desks'][number]
@@ -50,7 +51,16 @@ export function StatGrid({ grades, size = 14 }: { grades: Record<string, string>
   )
 }
 
-/** 직원 한 명의 상세: 이름·직함·차림새·효과·관심 섹터·사기와 능력치 다섯. */
+/** 직원이 1초에 버는 돈 한 줄 (#803): 직원 상세와 자리 시트의 직원 줄이 같이 쓴다. 자리와 상관없이 번다. */
+export function IncomeTag({ employee: e }: { employee: Employee }) {
+  return (
+    <span className="whitespace-nowrap font-mono-num text-[11px] text-teal" data-testid="income">
+      초당 +{rate(e.incomePerSecond)}
+    </span>
+  )
+}
+
+/** 직원 한 명의 상세: 이름·직함·차림새·효과·관심 섹터·사기와 초당 수입, 능력치 다섯. */
 export function EmployeeDetail({ employee: e, company }: { employee: Employee; company: Company }) {
   const desk = company.desks.find((d) => d.code === e.desk)
   return (
@@ -73,13 +83,12 @@ export function EmployeeDetail({ employee: e, company }: { employee: Employee; c
         {ATTIRE_NAMES[attireOf(e.overallGrade)]}
         {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
         {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
-        {e.deskYears > 0 && ` · 같은 자리 ${e.deskYears}년`}
-        {e.settled && ' · 손에 익음'}
+
         {e.morale !== 0 && ` · ${MORALE[e.morale]}`}
       </p>
       <p className="mt-0.5 text-[12px] text-teal">등급 효과 · {e.perk}</p>
       <p className="mt-0.5 text-[12px]">
-        {desk ? `${desk.name}${e.leader ? ' 팀장' : ''}` : '쉬는 중'}
+        {desk ? `${desk.name}${e.leader ? ' 팀장' : ''}` : '쉬는 중'} · <IncomeTag employee={e} />
       </p>
       <div className="mt-2">
         <StatGrid grades={e.grades} />

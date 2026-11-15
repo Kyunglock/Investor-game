@@ -9,6 +9,7 @@ import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
 import investorgame.raising.CompanyService.IdleHit;
+import investorgame.raising.CompanyView;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -57,8 +58,7 @@ class RealtimeTest {
     assertThat(company.incomeOf(low)).isEqualTo(lowBase * (1 + 50 / 100.0));
     assertThat(company.incomeOf(high)).isEqualTo(highBase * (1 + 450 / 100.0));
     assertThat(highBase).as("높은 등급일수록 기본값이 크다").isGreaterThan(lowBase);
-    assertThat(company.staffIncome(c))
-        .isEqualTo(company.incomeOf(low) + company.incomeOf(high));
+    assertThat(company.staffIncome(c)).isEqualTo(company.incomeOf(low) + company.incomeOf(high));
     // 자리는 수입과 상관없다: 앉혀도 같다.
     double before = company.staffIncome(c);
     company.place(c, Map.of(low.id, "day"));
@@ -86,7 +86,8 @@ class RealtimeTest {
     assertThat(c.capital - before).isCloseTo(2 * (20_000 + staff), offset(1.0));
     // 화면의 초당 수입은 실제 1초에 버는 돈이고 직원의 몫이 따로 보인다.
     CompanyView.Idle view = idle.view(c);
-    assertThat(view.income().perSecond().doubleValue()).isCloseTo(2 * (20_000 + staff), offset(1.0));
+    assertThat(view.income().perSecond().doubleValue())
+        .isCloseTo(2 * (20_000 + staff), offset(1.0));
     assertThat(view.income().staffPerSecond().doubleValue()).isCloseTo(2 * staff, offset(1.0));
     assertThat(idle.incomeOf(c, e)).isCloseTo(2 * staff, offset(1e-6));
     // 멘탈 보호 보너스: 깬 스테이지만큼 회사 수입 전체에 곱한다.

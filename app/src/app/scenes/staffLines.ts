@@ -7,7 +7,6 @@ export type Speaker = {
   overallGrade: Grade
   /** 사기 −2(바닥) ~ 2(의욕 넘침), decisions.md 270번 */
   morale: number
-  deskYears: number
   leader: boolean
 }
 
@@ -19,16 +18,15 @@ const PLAIN = [
 ]
 
 /**
- * 사무실 팀장의 말풍선 (decisions.md 412번): 사기·같은 자리 햇수·등급으로 고른다. 같은 직원은 늘 같은 말을 한다(번호로 고르니 다시 그려도 그대로).
+ * 사무실 팀장의 말풍선 (decisions.md 412번): 사기·등급으로 고른다. 같은 직원은 늘 같은 말을 한다(번호로 고르니 다시 그려도 그대로).
  */
 export function deskLine(e: Speaker): string {
   if (e.morale <= -2) return '요즘 손이 자꾸 떨려요…'
   if (e.morale < 0) return '분위기 좀 띄워 주세요'
   if (e.morale >= 2) return '오늘 촉이 아주 좋아요!'
   if (e.leader && EMPLOYEE_LADDER.indexOf(e.overallGrade) >= EMPLOYEE_LADDER.indexOf('A')) {
-    return '이번 분기 제가 맡을게요!'
+    return '이번 회의는 제가 맡을게요!'
   }
-  if (e.deskYears >= 3) return '이 자리는 눈 감고도 해요'
   if (e.morale >= 1) return '팀 분위기 최고예요!'
   return PLAIN[Math.abs(e.id) % PLAIN.length]
 }

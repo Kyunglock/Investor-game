@@ -7,7 +7,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -127,7 +126,8 @@ class CompanyController {
   record ReleaseRequest(@NotNull Integer employeeId) {}
 
   /**
-   * 종목회의를 연다 (decisions.md 249·523번): 기회 하나를 써서 직원이 종목을 물어 오고 한마디와 형광펜을 굳힌다. 정하지 않은 회의가 있으면 그 회의로 돌아간다.
+   * 종목회의를 연다 (decisions.md 249·523번): 기회 하나를 써서 직원이 종목을 물어 오고 한마디와 형광펜을 굳힌다. 정하지 않은 회의가 있으면 그 회의로
+   * 돌아간다.
    */
   @PostMapping("/invest/open")
   CompanyView convene(@CookieValue(name = SessionCookies.NAME, required = false) String token) {

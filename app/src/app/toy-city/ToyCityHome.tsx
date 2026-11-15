@@ -4,17 +4,22 @@ import { drawable } from '@web/features/raising/gachaRules'
 import { nextStep, officeName } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
-import { tutorialStep, unlockedFeatures, useTutorial } from '@web/features/raising/tutorial'
+import {
+  TUTORIAL_STEPS,
+  tutorialStep,
+  unlockedFeatures,
+  useTutorial,
+} from '@web/features/raising/tutorial'
 import { useEffect, useState } from 'react'
 import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
 import { chapterName, stageLabel } from '../../mental/advance'
-import { FIRST_PLAY_KEY, firstQuarter } from '../firstPlay'
+import { FIRST_PLAY_KEY, firstMeeting } from '../firstPlay'
 import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
 import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
 import { useCountUp } from '../useCountUp'
-import { ActionBar } from '../Windows'
+import { OfficeSupport } from '../Windows'
 import { BattleUpgrades } from './BattleUpgrades'
 import { growthProgress } from './model'
 import { StreetLife } from './StreetLife'
@@ -82,8 +87,6 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
   const staffSpot = useTutorialSpot(company, 'staff')
   const settleSpot = useTutorialSpot(company, 'settle')
   const progress = growthProgress(company)
-  const ended = company.status === 'ENDED'
-  const unavailable = ended || Boolean(company.broke)
   const assigned = company.employees.filter((e) => e.desk).length
   const resting = company.employees.length - assigned
   const plan = company.upgrade
@@ -99,7 +102,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
       sfx.tap()
       setHireNote(
         company.gacha.tickets < 1
-          ? '채용권이 없어요 · 분기를 넘기면 받아요'
+          ? '채용권이 없어요 · 건물을 올리면 받아요'
           : '자리가 꽉 찼어요 · 건물을 올려 자리를 늘려요',
       )
       return
@@ -117,7 +120,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
         rise={rivalRise}
         onRiseDone={() => useAppUi.getState().setRivalRise(null)}
       />
-      {/* 살아 있는 거리 (#597): 날씨·계절·구름·행인. 전투·확장 연출 중에는 멈춘다. */}
+      {/* 살아 있는 거리 (#597): 계절·구름·행인. 전투·확장 연출 중에는 멈춘다. */}
       <StreetLife company={company} paused={Boolean(battle) || Boolean(rivalRise)} />
       <div className="toy-growth">
         <div
@@ -129,9 +132,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
         >
           <i style={{ width: `${progress.percent}%` }} />
         </div>
-        <span data-testid={plan?.left != null ? 'construction' : 'growth-progress'}>
-          {progress.label}
-        </span>
+        <span data-testid="growth-progress">{progress.label}</span>
       </div>
       <div className="toy-tools">
         <button
@@ -182,32 +183,29 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
         <p>돌파 지원 · 사무실 관리</p>
         <h1 data-testid="company-building">{officeName(company.grade)}</h1>
         <span>
-          {ended ? '끝난 회사' : `${company.year}년 차 ${company.quarter}분기`} · 자리 {assigned} /{' '}
-          {company.seats}
+          자리 {assigned} / {company.seats}
         </span>
       </header>
-      {tutorialOn && !ended && !firstQuarter(company) && (
+      {/* 첫 종목회의를 정하기 전까지는 첫 판의 흐름이 이끈다 (#803): 그 뒤에 남은 걸음만 한 줄로 보인다. */}
+      {tutorialOn && !firstMeeting(company) && (
         <div className="toy-tutorial" data-testid="tutorial" data-step={tutorial.id}>
           <span>
-            {firstQuarter(company)
-              ? '첫 게임 안내 · 직접 선택하면 시작해요'
-              : `${tutorial.n}/5 · ${tutorial.short}`}
+            {tutorial.n}/{TUTORIAL_STEPS} · {tutorial.short}
           </span>
           <button
             type="button"
             onClick={() => useTutorial.getState().finish()}
             data-testid="tutorial-finish"
           >
-            {tutorial.n === 5 ? '끝내기' : '건너뛰기'}
+            {tutorial.n === TUTORIAL_STEPS ? '끝내기' : '건너뛰기'}
           </button>
         </div>
       )}
       <nav className="toy-side toy-left" aria-label="회사 일">
         {MENU.map(({ tab, text, Icon }) => {
-          // 종목회의가 이슈 탭에 있으므로(474번) 분기 넘기기가 열리면 이슈 탭도 연다.
+          // 종목회의가 이슈 탭에 있으므로(474번) 종목회의가 열리면 이슈 탭도 연다. 튜토리얼의 종목회의 걸음은 이 메뉴를 거쳐 회의 칸의 버튼으로 이어진다.
           const locked =
-            (!unlocked.includes(tab) && !(tab === 'issue' && unlocked.includes('settle'))) ||
-            (ended && tab === 'market')
+            !unlocked.includes(tab) && !(tab === 'issue' && unlocked.includes('settle'))
           const badge = tabBadge(company, tab)
           return (
             <button
@@ -230,22 +228,14 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
         <button
           type="button"
           className={`toy-menu toy-expand ${upgradeSpot}`}
-          disabled={unavailable || !plan || upgradeLocked}
+          disabled={!plan || upgradeLocked}
           onClick={() => setPanel('upgrade')}
           data-testid="open-upgrade"
           data-locked={upgradeLocked || undefined}
         >
           <ToyIcon kind="upgrade" />
           <span>건물 올리기</span>
-          <small>
-            {upgradeLocked
-              ? '잠김'
-              : plan?.left != null
-                ? '공사 중'
-                : plan?.affordable
-                  ? '확장 가능'
-                  : '성장 목표'}
-          </small>
+          <small>{upgradeLocked ? '잠김' : plan?.affordable ? '확장 가능' : '성장 목표'}</small>
         </button>
       </div>
       <div className="toy-speech" role="status">
@@ -258,7 +248,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
               : '첫 동료를 기다리고 있어요'}
       </div>
       <div className="toy-bottom">
-        <ActionBar company={company} variant="toy" connected={connected} />
+        <OfficeSupport company={company} connected={connected} />
       </div>
       {panel && (
         <Sheet
@@ -285,36 +275,31 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
                   ? officeName(plan.to)
                   : '사무실을 더 넓혀요'}
               </p>
-              {plan?.left != null ? (
-                <p>완공까지 {plan.left}년 · 연말 결산마다 공사가 진행됩니다.</p>
-              ) : (
-                plan && (
-                  <>
-                    <p>
-                      확장 비용 {money(plan.cost)} · 자본 {money(plan.needed)}부터
-                    </p>
-                    <p className="mt-2 text-sm text-muted">
-                      {plan.affordable
-                        ? '성장할 준비가 됐어요.'
-                        : `${money(Math.max(0, plan.needed - company.capital))}을 더 모으면 확장할 수 있어요.`}
-                      {plan.years > 0 && ` 공사 기간은 ${plan.years}년입니다.`}
-                    </p>
-                    <button
-                      type="button"
-                      className="toy-sheet-action"
-                      disabled={unavailable || busy || !plan.affordable || upgradeLocked}
-                      data-testid="upgrade"
-                      onClick={async () => {
-                        sfx.stamp()
-                        haptic.heavy()
-                        await useRaisingStore.getState().upgrade()
-                        if (!useRaisingStore.getState().error) setPanel(null)
-                      }}
-                    >
-                      {busy ? '처리 중…' : plan.years > 0 ? '공사 시작' : '건물 확장하기'}
-                    </button>
-                  </>
-                )
+              {plan && (
+                <>
+                  <p>
+                    확장 비용 {money(plan.cost)} · 자본 {money(plan.needed)}부터
+                  </p>
+                  <p className="mt-2 text-sm text-muted">
+                    {plan.affordable
+                      ? '성장할 준비가 됐어요.'
+                      : `${money(Math.max(0, plan.needed - company.capital))}을 더 모으면 확장할 수 있어요.`}
+                  </p>
+                  <button
+                    type="button"
+                    className="toy-sheet-action"
+                    disabled={busy || !plan.affordable || upgradeLocked}
+                    data-testid="upgrade"
+                    onClick={async () => {
+                      sfx.stamp()
+                      haptic.heavy()
+                      await useRaisingStore.getState().upgrade()
+                      if (!useRaisingStore.getState().error) setPanel(null)
+                    }}
+                  >
+                    {busy ? '처리 중…' : '건물 확장하기'}
+                  </button>
+                </>
               )}
               {error && (
                 <p role="alert" className="mt-2 text-red-pen">
@@ -323,8 +308,8 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
               )}
             </>
           )}
-          {panel === 'stage' && <StageSelect company={company} disabled={unavailable} />}
-          {panel === 'assault' && <AssaultSelect company={company} disabled={unavailable} />}
+          {panel === 'stage' && <StageSelect company={company} />}
+          {panel === 'assault' && <AssaultSelect company={company} />}
           {panel === 'side' && <SideGames company={company} onMental={() => setPanel('stage')} />}
           {panel === 'battle' && <BattleUpgrades company={company} />}
           {panel === 'settings' && (
@@ -363,7 +348,7 @@ function SideGames({ company, onMental }: { company: Company; onMental: () => vo
       <section>
         <h3>멘탈 보호 스테이지</h3>
         <p className="text-sm text-muted">
-          몰려오는 불안을 막아 멘탈벽을 지켜요. 깬 만큼 매 분기 직원들이 더 벌어요.
+          몰려오는 불안을 막아 멘탈벽을 지켜요. 깬 만큼 회사의 초당 수입이 늘어요.
         </p>
         <button
           type="button"
@@ -379,7 +364,7 @@ function SideGames({ company, onMental }: { company: Company; onMental: () => vo
           <strong>멘탈 보호 ▶</strong>
           <em>
             {stages && stages.best > 0
-              ? `${stageLabel(stages.best, stages.perChapter)}까지 · 분기 +${stages.bonusPercent}%`
+              ? `${stageLabel(stages.best, stages.perChapter)}까지 · 초당 수입 +${stages.bonusPercent}%`
               : '1-1부터'}
             {stages?.exAvailable ? ' · EX 가능' : ''}
           </em>
@@ -393,7 +378,7 @@ function SideGames({ company, onMental }: { company: Company; onMental: () => vo
  * 매도벽 돌파 스테이지 선택 (#698): 주 게임. 1-1부터 차례로 열리고 챕터 끝은 보스다. 스테이지 번호가 매도벽의 세기라 뒤로 갈수록 세진다. 처음 깨면
  * 자본과 무기 뽑기권, 별을 더 얻으면 뽑기권을 받는다.
  */
-function AssaultSelect({ company, disabled }: { company: Company; disabled: boolean }) {
+function AssaultSelect({ company }: { company: Company }) {
   const assaults = company.assaults
   const per = assaults?.perChapter ?? 10
   const last = assaults?.last ?? per
@@ -453,7 +438,7 @@ function AssaultSelect({ company, disabled }: { company: Company; disabled: bool
               <button
                 type="button"
                 className={`toy-stage-pick ${boss ? 'is-boss' : ''} ${stars > 0 ? 'is-cleared' : ''}`}
-                disabled={disabled || locked}
+                disabled={locked}
                 data-testid="assault-stage"
                 data-stage={n}
                 data-stars={stars}
@@ -477,10 +462,10 @@ function AssaultSelect({ company, disabled }: { company: Company; disabled: bool
 
 /**
  * 스테이지 선택 (decisions.md 369·407번): 번호 스테이지를 골라 전진 모드로 들어간다. 깬 다음 스테이지까지 열리고, 챕터 마지막은 보스. 보스를 깨면
- * 다음 챕터가 열린다. 챕터는 ‹ › 로 넘겨 보고, 처음에는 지금 깰 차례인 챕터가 보인다. 별과 분기 강화율이 보이고, 아래에 분기에 한 번 하는 EX
- * 디펜스가 있다.
+ * 다음 챕터가 열린다. 챕터는 ‹ › 로 넘겨 보고, 처음에는 지금 깰 차례인 챕터가 보인다. 별과 초당 수입 보너스가 보이고, 아래에 하루에 한 번 하는 EX
+ * 디펜스가 있다 (#803).
  */
-function StageSelect({ company, disabled }: { company: Company; disabled: boolean }) {
+function StageSelect({ company }: { company: Company }) {
   const stages = company.stages
   const per = stages?.perChapter ?? 10
   const open = stages ? Math.min(stages.best + 1, stages.last) : 1
@@ -529,7 +514,7 @@ function StageSelect({ company, disabled }: { company: Company; disabled: boolea
       <p className="text-sm text-muted" data-testid="stage-bonus">
         {chapter > openChapter
           ? `챕터 ${chapter - 1} 보스를 깨면 열린다`
-          : `마친 최고 수련만큼 매 분기 직원들이 더 번다: 지금 +${stages.bonusPercent}%`}
+          : `마친 최고 수련만큼 회사의 초당 수입이 늘어요: 지금 초당 수입 +${stages.bonusPercent}%`}
       </p>
       <ol className="toy-stage-grid" data-testid="stage-grid">
         {numbers.map((n) => {
@@ -541,7 +526,7 @@ function StageSelect({ company, disabled }: { company: Company; disabled: boolea
               <button
                 type="button"
                 className={`toy-stage-pick ${boss ? 'is-boss' : ''} ${stars > 0 ? 'is-cleared' : ''}`}
-                disabled={disabled || locked}
+                disabled={locked}
                 data-testid="stage"
                 data-stage={n}
                 data-stars={stars}
@@ -563,10 +548,10 @@ function StageSelect({ company, disabled }: { company: Company; disabled: boolea
         type="button"
         className="toy-sheet-action"
         data-testid="stage-ex"
-        disabled={disabled || !stages.exAvailable}
+        disabled={!stages.exAvailable}
         onClick={() => start({ kind: 'ex' })}
       >
-        {stages.exAvailable ? 'EX 디펜스 · 분기에 한 번 · 무기 뽑기권' : 'EX 디펜스는 다음 분기에'}
+        {stages.exAvailable ? 'EX 디펜스 · 하루에 한 번 · 무기 뽑기권' : 'EX 디펜스는 내일 다시'}
       </button>
     </>
   )

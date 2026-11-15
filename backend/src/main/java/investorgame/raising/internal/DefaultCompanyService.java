@@ -42,8 +42,8 @@ class DefaultCompanyService implements CompanyService {
   }
 
   /**
-   * 옛 회사를 지금 규칙으로 옮겨 저장한다: 채용 뽑기 전에 차린 회사면 처음 채용권을 주고 도감을 채우고(decisions.md 312번), 무기 뽑기 전에 차린 회사면 처음
-   * 무기 뽑기권을 주고(328·366번), 분기·결산이 있던 때의 회사면 실시간 구조로 옮긴다(523번).
+   * 옛 회사를 지금 규칙으로 옮겨 저장한다: 채용 뽑기 전에 차린 회사면 처음 채용권을 주고 도감을 채우고(decisions.md 312번), 무기 뽑기 전에 차린 회사면
+   * 처음 무기 뽑기권을 주고(328·366번), 분기·결산이 있던 때의 회사면 실시간 구조로 옮긴다(523번).
    */
   private CompanyRepository.Row adopt(CompanyRepository.Row row) {
     CompanyState c = row.state();
@@ -68,9 +68,7 @@ class DefaultCompanyService implements CompanyService {
     return locked;
   }
 
-  /**
-   * 끝난 회사를 되살린다 (523번): 파산·엔딩·시대의 끝으로 멈췄던 회사도 이어서 한다. 회사는 세션마다 하나고 더는 끝나지 않는다.
-   */
+  /** 끝난 회사를 되살린다 (523번): 파산·엔딩·시대의 끝으로 멈췄던 회사도 이어서 한다. 회사는 세션마다 하나고 더는 끝나지 않는다. */
   private CompanyRepository.Row resume(CompanyRepository.Row row) {
     if (!"ENDED".equals(row.status())) {
       return row;

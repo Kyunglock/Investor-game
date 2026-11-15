@@ -69,14 +69,7 @@ export function WeaponInventory({ company }: { company: Company }) {
     }
   }, [])
   const draw = async () => {
-    if (
-      drawing.current ||
-      useRaisingStore.getState().busy ||
-      ended ||
-      !armory ||
-      armory.tickets <= 0
-    )
-      return
+    if (drawing.current || useRaisingStore.getState().busy || !armory || armory.tickets <= 0) return
     drawing.current = true
     const id = Date.now()
     setReveal({ id, result: null })
@@ -98,13 +91,7 @@ export function WeaponInventory({ company }: { company: Company }) {
   }
   // 10연속 (517번): 열 장을 한 번에 쓰고, 상자가 열리면 열 개가 차례로 나온다.
   const drawTen = async () => {
-    if (
-      drawing.current ||
-      useRaisingStore.getState().busy ||
-      ended ||
-      !armory ||
-      armory.tickets < TEN
-    )
+    if (drawing.current || useRaisingStore.getState().busy || !armory || armory.tickets < TEN)
       return
     drawing.current = true
     const id = Date.now()
@@ -158,7 +145,6 @@ export function WeaponInventory({ company }: { company: Company }) {
   }))
   // 칸이 작아 칸에는 그림·등급·수만 있다: 고른 무기(처음엔 든 무기)의 정보와 장착·합성은 위 칸에서 한다 (493번).
   const shown = weapons.find((w) => w.kind === picked?.kind && w.grade === picked.grade) ?? equipped
-  const ended = company.status === 'ENDED'
   // 고양이가 빌려 든 무기 (488번): 칸에 든 고양이 이름을 보인다. 사장냥이 들면 고양이는 내려놓는다.
   const holdersOf = (w: Weapon) =>
     company.idle?.cats.filter(
@@ -213,7 +199,7 @@ export function WeaponInventory({ company }: { company: Company }) {
               type="button"
               className="weapon-equip"
               data-testid="weapon-equip"
-              disabled={busy || ended || shown.equipped}
+              disabled={busy || shown.equipped}
               onClick={() => {
                 sfx.tap()
                 haptic.light()
@@ -227,7 +213,7 @@ export function WeaponInventory({ company }: { company: Company }) {
                 type="button"
                 className="weapon-merge"
                 data-testid="weapon-merge"
-                disabled={busy || ended}
+                disabled={busy}
                 onClick={() => {
                   sfx.levelUp()
                   haptic.medium()
@@ -260,7 +246,7 @@ export function WeaponInventory({ company }: { company: Company }) {
                       data-code={cat.code}
                       aria-pressed={held}
                       aria-label={`${cat.name}${held ? ' 이 무기 장착 중, 누르면 내려놓기' : '에게 쥐여 주기'}`}
-                      disabled={busy || ended || (!held && free < 1)}
+                      disabled={busy || (!held && free < 1)}
                       onClick={() => {
                         sfx.tap()
                         haptic.light()
@@ -292,7 +278,7 @@ export function WeaponInventory({ company }: { company: Company }) {
           type="button"
           className="weapon-draw"
           data-testid="weapon-draw"
-          disabled={busy || Boolean(reveal || ten) || ended || !armory || armory.tickets <= 0}
+          disabled={busy || Boolean(reveal || ten) || !armory || armory.tickets <= 0}
           onClick={() => void draw()}
         >
           무기 뽑기
@@ -301,7 +287,7 @@ export function WeaponInventory({ company }: { company: Company }) {
           type="button"
           className="weapon-draw weapon-draw-ten"
           data-testid="weapon-draw-ten"
-          disabled={busy || Boolean(reveal || ten) || ended || !armory || armory.tickets < TEN}
+          disabled={busy || Boolean(reveal || ten) || !armory || armory.tickets < TEN}
           onClick={() => void drawTen()}
         >
           10연속

@@ -1001,7 +1001,7 @@
 
 /*
  * 살아 있는 거리 (#597, decisions.md 432번): 거리 그림 위의 HTML 층. 움직임은 모두 transform·opacity라 합성 층에서 돈다(#586과 같은 원칙).
- * 날씨는 지난 분기 손익, 계절은 지금 분기. 앱이 뒤로 가거나 확장 연출 중이면 멈춘다(data-paused).
+ * 날씨는 늘 맑고 계절은 달력의 달을 따른다 (#803). 앱이 뒤로 가거나 확장 연출 중이면 멈춘다(data-paused).
  */
 .toy-life {
   position: absolute;

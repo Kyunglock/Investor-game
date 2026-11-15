@@ -51,6 +51,11 @@ tasks.named('processResources') {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 실패한 테스트는 기댓값과 실제 값까지 로그에 남긴다: CI 로그만 보고도 원인을 안다.
+	testLogging {
+		events 'failed'
+		exceptionFormat 'full'
+	}
 }
 
 spotless {

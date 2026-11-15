@@ -1,13 +1,10 @@
+import type { Company, Grade } from '../../frontend/src/api/client.ts'
+
 /**
  * 화면을 눈으로 보기 위한 가짜 회사 (scripts/shot.ts). 서버 없이 Playwright가 /api/company에 이 값을 돌려준다. 규칙·숫자는 아무 뜻 없는 보기용이다.
+ * 계약(Company)에 맞는지 타입으로 본다: 분기·결산·파산은 없고, 회사는 초마다 벌며 종목회의는 기회로 연다 (#803).
  */
-const g = (
-  insight: string,
-  patience: string,
-  courage: string,
-  conviction: string,
-  luck: string,
-) => ({
+const g = (insight: Grade, patience: Grade, courage: Grade, conviction: Grade, luck: Grade) => ({
   insight,
   patience,
   courage,
@@ -125,11 +122,11 @@ const QUIRKS = [
 const employee = (
   id: number,
   name: string,
-  overallGrade: string,
-  grades: Record<string, string>,
+  overallGrade: Grade,
+  grades: Record<string, Grade>,
   desk: string | null,
-  extra: Record<string, unknown> = {},
-) => ({
+  extra: Partial<Company['employees'][number]> = {},
+): Company['employees'][number] => ({
   id,
   name,
   overallGrade,
@@ -139,11 +136,11 @@ const employee = (
   desk,
   sector: null,
   sectorName: null,
-  deskYears: 1,
-  settled: false,
   leader: false,
   morale: 0,
   role: null,
+  // 직원이 1초에 버는 돈 (#803): 보기용으로 번호에 따라 조금씩 다르게 둔다.
+  incomePerSecond: 1200 + id * 350,
   // 버릇 (decisions.md 349번): 서버처럼 번호로 정한다.
   quirk: QUIRKS[(id * 7 + 3) % QUIRKS.length][0],
   quirkName: QUIRKS[(id * 7 + 3) % QUIRKS.length][1],
@@ -152,60 +149,19 @@ const employee = (
 
 export const company = {
   companyId: '00000000-0000-0000-0000-000000000001',
-  status: 'ACTIVE',
   number: 1,
   era: { code: 'ai', name: 'AI 반도체 시대', description: '반도체가 뜨고 바이오는 조용하다.' },
   opening: null,
-  year: 3,
-  quarter: 2,
-  // 지난 분기 팀장 보고: 인력 관리의 팀 방이 팀 손익을 보인다 (decisions.md 412번).
-  lastQuarter: {
-    year: 3,
-    quarter: 1,
-    capitalBefore: 380_000_000,
-    capitalAfter: 412_500_000,
-    fee: 10_000_000,
-    staff: 22_500_000,
-    hiring: 0,
-    moving: 0,
-    upgrades: 0,
-    rewards: 0,
-    invest: null,
-    crash: false,
-    lines: [],
-    reports: [
-      {
-        desk: 'semiconductor',
-        deskName: '반도체 데스크',
-        leaderId: 1,
-        leader: '김대리',
-        head: '반도체 데스크 팀장 김대리',
-        pnl: 120_000_000,
-        text: '이번 분기는 반도체가 받쳐 줬습니다.',
-      },
-      {
-        desk: 'bio',
-        deskName: '바이오 데스크',
-        leaderId: 2,
-        leader: '박과장',
-        head: '바이오 데스크 팀장 박과장',
-        pnl: -8_000_000,
-        text: '임상 결과를 기다리는 중입니다.',
-      },
-    ],
-  },
   capital: 412_500_000,
   grade: 'E',
   nextGradeCapital: 600_000_000,
   upgrade: { to: 'D', cost: 150_000_000, needed: 750_000_000, affordable: false },
-  broke: null,
   seats: 6,
   employees: [
     employee(1, '김대리', 'B', g('B', 'A', 'C', 'B', 'D'), 'semiconductor', {
       leader: true,
       sector: 'semiconductor',
       sectorName: '반도체',
-      deskYears: 2,
     }),
     employee(2, '박과장', 'C', g('C', 'C', 'B', 'D', 'C'), 'bio', { leader: true, morale: -1 }),
     employee(3, '이사원', 'D', g('A', 'D', 'E', 'D', 'C'), 'research', { leader: true }),
@@ -216,14 +172,11 @@ export const company = {
   ],
   desks,
   meeting: {
-    omen: '여의도 술자리마다 "이번엔 다르다"는 말이 돈다.',
     hrCap: null,
-    earlyOmen: null,
-    forecast: null,
-    wanted: '올해는 용기 있는 사람이 필요하다. 반도체 데스크가 뜬다.',
     hot: '반도체 섹터에 시대 보너스가 붙는다.',
-    eraEnding: '내년에는 시대가 바뀐다. 다음 시대에 맞을 사람을 미리 생각하자.',
   },
+  // 종목회의의 기회 (#803): 한 시간에 하나씩, 세 개까지.
+  meetings: { chances: 2, max: 3, nextSeconds: 1500 },
   gacha: {
     tickets: 6,
     roster: 7,
@@ -272,26 +225,28 @@ export const company = {
       },
       { employeeId: 8, name: '오세진', grade: 'C', star: false, fresh: true, perk: '맞히면 1.8배' },
     ],
-    collection: [
-      'F',
-      'E',
-      'D',
-      'C',
-      'B',
-      'A',
-      'S',
-      'SS',
-      'SSS',
-      'X',
-      'XX',
-      'XXX',
-      'Z',
-      'ZZ',
-      'ZZZ',
-      'XS',
-      'XSS',
-      'GOD',
-    ].map((grade, i) => ({ grade, count: [3, 6, 4, 2, 1, 0, 1][i] ?? 0 })),
+    collection: (
+      [
+        'F',
+        'E',
+        'D',
+        'C',
+        'B',
+        'A',
+        'S',
+        'SS',
+        'SSS',
+        'X',
+        'XX',
+        'XXX',
+        'Z',
+        'ZZ',
+        'ZZZ',
+        'XS',
+        'XSS',
+        'GOD',
+      ] as Grade[]
+    ).map((grade, i) => ({ grade, count: [3, 6, 4, 2, 1, 0, 1][i] ?? 0 })),
   },
   history: {
     timeline: [
@@ -300,15 +255,34 @@ export const company = {
       { year: 2, kind: 'best', text: '김대리가 한 해 120b를 벌었다.', grade: null },
     ],
     achievements: [
-      { code: 'first-hire', name: '첫 직원', description: '공채에서 처음 뽑았다', year: 1 },
-      { code: 'first-move', name: '첫 이사', description: '다음 건물로 갔다', year: 2 },
+      {
+        code: 'first-hire',
+        name: '첫 직원',
+        description: '공채에서 처음 뽑았다',
+        year: 1,
+        fail: false,
+      },
+      {
+        code: 'first-move',
+        name: '첫 이사',
+        description: '다음 건물로 갔다',
+        year: 2,
+        fail: false,
+      },
       {
         code: 'crash-survivor',
         name: '폭락장 생존',
         description: '폭락장을 손실 없이 버텼다',
         year: null,
+        fail: false,
       },
-      { code: 'landmark', name: '랜드마크', description: '랜드마크 타워에 올랐다', year: null },
+      {
+        code: 'landmark',
+        name: '랜드마크',
+        description: '랜드마크 타워에 올랐다',
+        year: null,
+        fail: false,
+      },
     ],
     hall: [
       { name: '김대리', from: 1, to: null, totalPnl: 180_000_000, grade: 'B' },
@@ -316,59 +290,4 @@ export const company = {
     ],
   },
   invest: null,
-  lastSettlement: {
-    year: 2,
-    phase: 'boom',
-    omen: null,
-    capitalBefore: 210_000_000,
-    capitalAfter: 380_000_000,
-    fee: 6_300_000,
-    hiring: 8_000_000,
-    moving: 0,
-    upgrades: 0,
-    rewards: 0,
-    invest: { title: '반도체 수출 사상 최대', total: 48_000_000 },
-    quarters: [
-      {
-        quarter: 1,
-        capitalBefore: 210_000_000,
-        capitalAfter: 240_000_000,
-        crash: false,
-      },
-      {
-        quarter: 2,
-        capitalBefore: 240_000_000,
-        capitalAfter: 225_000_000,
-        crash: true,
-      },
-      {
-        quarter: 3,
-        capitalBefore: 225_000_000,
-        capitalAfter: 300_000_000,
-        crash: false,
-      },
-      {
-        quarter: 4,
-        capitalBefore: 300_000_000,
-        capitalAfter: 380_000_000,
-        crash: false,
-      },
-    ],
-    gradeBefore: 'F',
-    gradeAfter: 'E',
-    achieved: ['첫 이사'],
-    results: [
-      {
-        employeeId: 1,
-        name: '김대리',
-        desk: 'semiconductor',
-        stake: 100_000_000,
-        pnl: 120_000_000,
-        flips: 0,
-      },
-      { employeeId: 2, name: '박과장', desk: 'bio', stake: 60_000_000, pnl: -4_000_000, flips: 1 },
-    ],
-    lines: ['김대리가 반도체 데스크에서 크게 벌었다.', '박과장이 폭락장에 손이 뒤집혔다.'],
-    reports: [],
-  },
-}
+} satisfies Company

@@ -9,8 +9,8 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * 종목 발굴 (decisions.md 267번): 종목회의를 열 때 직원이 종목을 물어 온다. 기회를 쓴 회의는 꼭 열린다 (523번). 실제 콘텐츠와 application.yml 수치로
- * 돌린다.
+ * 종목 발굴 (decisions.md 267번): 종목회의를 열 때 직원이 종목을 물어 온다. 기회를 쓴 회의는 꼭 열린다 (523번). 실제 콘텐츠와
+ * application.yml 수치로 돌린다.
  */
 class ScoutEngineTest {
 
