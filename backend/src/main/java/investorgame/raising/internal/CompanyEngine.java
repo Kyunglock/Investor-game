@@ -88,6 +88,7 @@ class CompanyEngine {
     this.teams = new TeamEngine(this, content);
     this.history = new CompanyHistory(content);
     this.mental = new MentalEngine(content, properties);
+    this.pass = new PassRules(properties);
     this.quirks = new Quirks(content);
     this.teamGrade = new TeamGrade(this, content);
   }
@@ -97,6 +98,8 @@ class CompanyEngine {
 
   /** 멘탈 전투 (decisions.md 328번). */
   final MentalEngine mental;
+
+  final PassRules pass;
 
   /** 직원 버릇 (decisions.md 349번). */
   final Quirks quirks;

@@ -85,6 +85,24 @@ class SandboxController {
     return companies.sandboxCats(cookies.requirePlayer(token), request.level());
   }
 
+  /** 패스 경험치를 더한다 (decisions.md 529번). */
+  @PostMapping("/pass-exp")
+  CompanyView passExp(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody PassExpRequest request) {
+    return companies.sandboxPassExp(cookies.requirePlayer(token), request.exp());
+  }
+
+  record PassExpRequest(
+      @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(100000)
+          long exp) {}
+
+  /** 다음 시즌으로 넘긴다 (529번). */
+  @PostMapping("/next-season")
+  CompanyView nextSeason(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    return companies.sandboxNextSeason(cookies.requirePlayer(token));
+  }
+
   /** 하루가 지난 셈 친다: 출석 보상을 다시 받을 수 있다 (decisions.md 528번). */
   @PostMapping("/next-day")
   CompanyView nextDay(@CookieValue(name = SessionCookies.NAME, required = false) String token) {

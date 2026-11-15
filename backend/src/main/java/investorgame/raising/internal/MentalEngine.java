@@ -116,7 +116,8 @@ class MentalEngine {
     c.lastWeaponDraws = drawn;
   }
 
-  private CompanyState.Pulled drawOne(CompanyState c, SeededRandom random) {
+  /** 무기 하나를 뽑는다. 값은 여기서 받지 않는다: 다이아 뽑기(526번)와 시즌패스의 무기 보상(529번)이 함께 쓴다. */
+  CompanyState.Pulled drawOne(CompanyState c, SeededRandom random) {
     c.weaponDraws++;
     RandomGenerator rng = random.forKey("weapon-draw", c.weaponDraws);
     Map<String, Integer> weights = properties.mental().weaponGacha().gradeWeights();

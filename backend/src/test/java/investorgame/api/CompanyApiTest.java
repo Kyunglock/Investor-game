@@ -552,4 +552,38 @@ class CompanyApiTest {
     // 본 게임에서는 날짜를 넘기는 길이 없다.
     mvc.perform(post("/api/sandbox/next-day").cookie(session)).andExpect(status().isBadRequest());
   }
+
+  /** 시즌패스 (decisions.md 529번): 출석으로 얻은 경험치로 1단계를 받는다. */
+  @Test
+  void 시즌패스는_도달한_단계만_한_번_받는다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(opened.read("$.pass.step", Integer.class)).isZero();
+    assertThat(opened.read("$.pass.steps.length()", Integer.class)).isEqualTo(30);
+    assertThat(opened.read("$.pass.secondsLeft", Long.class)).isPositive();
+    postJson("/api/company/pass/claim", "{\"step\":1}").andExpect(status().isBadRequest());
+    mvc.perform(post("/api/company/pass/claim").cookie(session)).andExpect(status().isBadRequest());
+    // 출석하면 패스 경험치 100: 1단계에 닿는다.
+    DocumentContext attended =
+        json(
+            mvc.perform(post("/api/company/attendance").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(attended.read("$.pass.exp", Long.class)).isEqualTo(100);
+    assertThat(attended.read("$.pass.step", Integer.class)).isEqualTo(1);
+    assertThat(attended.read("$.pass.claimable", Integer.class)).isEqualTo(1);
+    long diamonds = attended.read("$.diamonds.amount", Long.class);
+    DocumentContext claimed =
+        json(
+            mvc.perform(post("/api/company/pass/claim").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(claimed.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 50);
+    assertThat(claimed.read("$.pass.steps[0].claimed", Boolean.class)).isTrue();
+    assertThat(claimed.read("$.pass.lastRewards[0].step", Integer.class)).isEqualTo(1);
+    postJson("/api/company/pass/claim", "{\"step\":1}").andExpect(status().isBadRequest());
+    postJson("/api/company/pass/claim", "{\"step\":2}").andExpect(status().isBadRequest());
+    // 본 게임에서는 경험치를 채우거나 시즌을 넘길 수 없다.
+    postJson("/api/sandbox/pass-exp", "{\"exp\":1000}").andExpect(status().isBadRequest());
+    mvc.perform(post("/api/sandbox/next-season").cookie(session))
+        .andExpect(status().isBadRequest());
+  }
 }

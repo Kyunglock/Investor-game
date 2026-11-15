@@ -73,6 +73,17 @@ public interface CompanyService {
   /** 오늘의 출석 보상을 받는다 (decisions.md 528번). 하루에 한 번, 한국 시간 자정 기준. 오늘 이미 받았으면 400. */
   CompanyView attend(UUID sessionId);
 
+  /**
+   * 시즌패스의 단계 보상을 받는다 (decisions.md 529번). step이 null이면 받을 수 있는 것을 모두 받는다. 도달하지 않았거나 이미 받았으면 400.
+   */
+  CompanyView claimPass(UUID sessionId, Integer step);
+
+  /** 테스트판: 패스 경험치를 더한다 (529번). 테스트판 회사가 아니면 400. */
+  CompanyView sandboxPassExp(UUID sessionId, long exp);
+
+  /** 테스트판: 다음 시즌으로 넘긴다 (529번). 테스트판 회사가 아니면 400. */
+  CompanyView sandboxNextSeason(UUID sessionId);
+
   /** 테스트판: 하루가 지난 셈 쳐서 출석 보상을 다시 받을 수 있게 한다 (528번). 테스트판 회사가 아니면 400. */
   CompanyView sandboxNextDay(UUID sessionId);
 
