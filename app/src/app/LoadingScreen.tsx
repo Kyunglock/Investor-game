@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { STAGE_ASSETS } from '../mental/assets'
+import loadingSquad from './assets/loading-squad.png'
 import './loading-screen.css'
 
 /** 기다리는 동안 한 줄씩 바뀌는 도움말 (517번). */
@@ -73,7 +73,7 @@ export function LoadingScreen({
   const percent = Math.round(shown)
   return (
     <div
-      className="loading-screen app-bg"
+      className="loading-screen"
       data-testid="loading"
       data-leaving={leaving}
       role="status"
@@ -86,24 +86,27 @@ export function LoadingScreen({
           <b>고양이</b>
         </h1>
         <div className="loading-screen-hero" aria-hidden="true">
-          <img src={STAGE_ASSETS.hero} alt="" draggable={false} />
-          <span className="loading-screen-shadow" />
+          <img src={loadingSquad} alt="" draggable={false} fetchPriority="high" />
         </div>
-        <p className="loading-screen-message">{message}</p>
-        <div
-          className="loading-screen-bar"
-          role="progressbar"
-          aria-label="접속 진행"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percent}
-        >
-          <span style={{ width: `${shown}%` }} />
-          <em>{percent}%</em>
+        <div className="loading-screen-footer">
+          <p className="loading-screen-message">{message}</p>
+          <p className="loading-screen-percent" aria-hidden="true">
+            {percent}%
+          </p>
+          <div
+            className="loading-screen-bar"
+            role="progressbar"
+            aria-label="접속 진행"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+          >
+            <span style={{ width: `${shown}%` }} />
+          </div>
+          <p className="loading-screen-tip" key={tip}>
+            <b>TIP</b> {TIPS[tip]}
+          </p>
         </div>
-        <p className="loading-screen-tip" key={tip}>
-          <b>TIP</b> {TIPS[tip]}
-        </p>
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-/* 로딩 화면 (decisions.md 517번) */
+/* B안 고양이 출동 로딩: 그림과 실제 진행 UI를 분리한다. */
 .loading-screen {
   position: fixed;
   inset: 0;
@@ -6,156 +6,123 @@
   display: grid;
   place-items: center;
   height: 100dvh;
-  padding: 24px 16px;
-  color: var(--outline);
-  transition:
-    opacity 0.45s ease,
-    transform 0.45s ease;
+  background: #f6bc60;
+  color: #663113;
+  transition: opacity 0.45s ease;
 }
-/* 다 받으면 살짝 커지며 사라지고, 그 아래 게임 화면이 드러난다. */
 .loading-screen[data-leaving="true"] {
   opacity: 0;
-  transform: scale(1.04);
   pointer-events: none;
 }
 .loading-screen-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: min(100%, 320px);
+  position: relative;
+  width: min(100%, 600px);
+  height: 100%;
+  overflow: hidden;
   text-align: center;
+  background: #ffbb50;
 }
+/* 그림 속 로고와 별개로 스크린리더에도 제목을 제공한다. */
 .loading-screen-title {
-  font-family: var(--font-game);
-  font-size: 22px;
-  line-height: 1.15;
-  font-weight: 400;
-  color: #fff;
-  text-shadow:
-    0 2px 0 var(--outline),
-    0 -1px 0 var(--outline),
-    2px 0 0 var(--outline),
-    -2px 0 0 var(--outline);
-}
-.loading-screen-title b {
-  display: block;
-  font-size: 46px;
-  font-weight: 400;
-  color: var(--gold-bright);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .loading-screen-hero {
-  position: relative;
-  display: grid;
-  place-items: center;
-  height: 150px;
-  margin: 18px 0 6px;
+  position: absolute;
+  inset: max(0px, env(safe-area-inset-top)) 0 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .loading-screen-hero img {
-  width: 112px;
-  animation: loading-hop 0.7s ease-in-out infinite alternate;
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  mask-image: linear-gradient(transparent, #000 6%, #000 90%, transparent);
 }
-.loading-screen-shadow {
+.loading-screen-footer {
   position: absolute;
-  bottom: 4px;
-  width: 70px;
-  height: 12px;
-  border-radius: 50%;
-  background: #2b234030;
-  animation: loading-shadow 0.7s ease-in-out infinite alternate;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px 24px max(20px, env(safe-area-inset-bottom));
+  background: linear-gradient(#ffbb5000, #ffbb50 24px);
+  font-family: var(--font-game, "Jua", sans-serif);
 }
 .loading-screen-message {
-  font-family: var(--font-game);
+  margin: 0;
   font-size: 17px;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.loading-screen-percent {
+  margin: 2px 0 10px;
+  font-size: 28px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 .loading-screen-bar {
-  position: relative;
   width: 100%;
-  height: 20px;
-  margin-top: 10px;
+  height: 24px;
   padding: 3px;
-  border: 2px solid var(--outline);
+  box-sizing: border-box;
+  border: 2px solid #fff5d7;
   border-radius: 999px;
-  background: #fffaf0;
-  box-shadow: 0 2px 0 var(--outline);
+  background: #ffedc6;
+  box-shadow:
+    0 3px 0 #c77726,
+    0 5px 12px #96501a25;
   overflow: hidden;
 }
 .loading-screen-bar span {
   display: block;
   height: 100%;
-  border-radius: 999px;
-  background: repeating-linear-gradient(-45deg, #ffd23f 0 8px, #ffb547 8px 16px) 0 0 / 22.6px 100%;
+  border-radius: inherit;
+  background: linear-gradient(#ffe16a, #ffad13 45%, #f4800c);
+  box-shadow: inset 0 1px 1px #ffffffb3;
   transition: width 0.18s linear;
-  animation: loading-stripes 0.6s linear infinite;
-}
-.loading-screen-bar em {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font:
-    700 9px / 1 "Noto Sans KR",
-    sans-serif;
-  font-style: normal;
-  color: var(--outline);
 }
 .loading-screen-tip {
-  min-height: 40px;
-  margin-top: 16px;
+  min-height: 38px;
+  margin: 16px 0 0;
   font-size: 12px;
   line-height: 1.6;
-  color: #3e3656;
   word-break: keep-all;
-  animation: loading-tip 0.4s ease-out both;
 }
 .loading-screen-tip b {
-  margin-right: 4px;
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: var(--outline);
-  color: var(--gold-bright);
-  font-size: 10px;
+  margin-right: 5px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: #fff2d5;
+  color: #6f3517;
+  font-size: 11px;
 }
-@keyframes loading-hop {
-  from {
-    transform: translateY(0) scale(1.04, 0.96);
+@media (max-height: 540px) and (min-width: 600px) {
+  .loading-screen-body {
+    width: 100%;
   }
-  to {
-    transform: translateY(-22px) scale(0.98, 1.02);
+  .loading-screen-hero {
+    right: 50%;
+    bottom: 0;
   }
-}
-@keyframes loading-shadow {
-  to {
-    transform: scale(0.7);
-    opacity: 0.6;
-  }
-}
-@keyframes loading-stripes {
-  to {
-    background-position: 22.6px 0;
-  }
-}
-@keyframes loading-tip {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
+  .loading-screen-footer {
+    left: 50%;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    background: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .loading-screen-hero img,
-  .loading-screen-shadow,
-  .loading-screen-bar span,
-  .loading-screen-bar em {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font:
-      700 9px / 1 "Noto Sans KR",
-      sans-serif;
-    font-style: normal;
-    color: var(--outline);
-  }
-  .loading-screen-tip {
-    animation: none;
+  .loading-screen,
+  .loading-screen-bar span {
+    transition: none;
   }
 }
