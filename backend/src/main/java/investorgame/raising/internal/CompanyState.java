@@ -28,6 +28,10 @@ class CompanyState {
     double damage;
     double nextDamage;
     double afterNextDamage;
+
+    /** Pierce damage on the walls after those two (530s: the screen breaks walls first, #781). */
+    double[] farDamage;
+
     int hitVersion;
     double[] hitCredits = new double[5];
     double earned;
