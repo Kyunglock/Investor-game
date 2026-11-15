@@ -453,6 +453,8 @@ try {
       stars: [] as number[],
       bonusPercent: 0,
       exAvailable: true,
+      diamondsLeft: [100, 100, 100, 100, 100, 100, 100, 100, 100, 200],
+      exDiamonds: 300,
       lastResult: null as null | Record<string, unknown>,
     },
     armory: { mergeCount: 2, lastDraw: null, lastDraws: [] },
@@ -603,7 +605,7 @@ try {
   )
   await page.screenshot({ path: resolve(out, 'weapons.png') })
   await page.getByRole('button', { name: '닫기' }).first().click()
-  await page.getByTestId('side-open').click()
+  await page.getByRole('button', { name: /^회사( 종목회의 가능| EX 디펜스 가능)?$/ }).click()
   await page.getByTestId('stage-open').click()
   await page.locator('[data-testid=stage][data-stage="1"]').click()
   await expect(page.getByTestId('mental-lobby')).toBeVisible()
@@ -817,7 +819,7 @@ try {
   const enemyAsset = /\/assets\/enemies(?:-[\w-]+)?\.png$/
   await page.route(enemyAsset, (route) => route.fulfill({ status: 404, body: '' }))
   await page.reload()
-  await page.getByTestId('side-open').click()
+  await page.getByRole('button', { name: /^회사( 종목회의 가능| EX 디펜스 가능)?$/ }).click()
   await page.getByTestId('stage-open').click()
   await page.locator('[data-testid=stage][data-stage="1"]').click()
   await page.getByTestId('mental-start').click()
