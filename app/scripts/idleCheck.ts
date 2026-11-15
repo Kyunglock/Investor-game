@@ -113,6 +113,8 @@ try {
           // A skill gains a level at cat level 10, 20, 30, 40 (decisions.md 534).
           skillLevel: 1,
           skillNextLevel: 10,
+          // 등급은 종마다 정해져 있다 (539번).
+          grade: code === 'night' || code === 'snow' ? 'A' : 'C',
           weapon: null as { kind: string; grade: string } | null,
         })),
       },

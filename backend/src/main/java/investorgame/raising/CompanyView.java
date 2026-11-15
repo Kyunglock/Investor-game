@@ -199,8 +199,9 @@ public record CompanyView(
    *
    * @param level 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다
    * @param isNew 처음 얻은 고양이
+   * @param grade 그 고양이의 등급 (539번)
    */
-  public record CatDraw(String code, int level, boolean isNew) {}
+  public record CatDraw(String code, int level, boolean isNew, String grade) {}
 
   /**
    * 액티브 스킬 하나 (decisions.md 503번): 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다(전투는 2배속).
@@ -221,6 +222,7 @@ public record CompanyView(
    * @param criticalPercent 이 고양이 총의 치명타 배율(%). 특성이 없으면 100
    * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
    * @param skill 이 고양이의 고유 스킬 코드(water·meteor·bolt·ram). 출전해 있는 동안 발동한다 (501번)
+   * @param grade 등급 C·B·A·S (539번). 종마다 정해져 있고, 높을수록 총이 세고 뽑기에서 드물다
    */
   public record IdleCat(
       String code,
@@ -234,7 +236,8 @@ public record CompanyView(
       String skill,
       String skillName,
       int skillLevel,
-      int skillNextLevel) {}
+      int skillNextLevel,
+      String grade) {}
 
   public record CatWeapon(String kind, String grade) {}
 

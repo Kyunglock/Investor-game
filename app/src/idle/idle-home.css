@@ -1819,3 +1819,46 @@
   font-weight: 700;
   opacity: 1;
 }
+
+/* 고양이 등급 (539번): C·B·A·S 글자 딱지. 격자와 출전 칸에는 오른쪽 위에 건다. */
+.idle-cat-grade {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 5px;
+  font:
+    800 10px / 15px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+  text-align: center;
+  color: #fff;
+  background: #8a97a8;
+}
+.idle-cat-grade.is-B {
+  background: #7c6ee6;
+}
+.idle-cat-grade.is-A {
+  background: #ee8a2b;
+}
+.idle-cat-grade.is-S {
+  color: #5a3a00;
+  background: linear-gradient(135deg, #ffe58a, #ffb93b);
+  box-shadow: 0 0 0 1px #fff3c4 inset;
+}
+.idle-cat-grade.is-locked {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+.idle-cat-grade-tag {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  min-width: 13px;
+  padding: 0 3px;
+  font-size: 9px;
+  line-height: 13px;
+  pointer-events: none;
+}
+.idle-cat-grid button[data-grade="S"].owned {
+  border-color: #e7b23c;
+}

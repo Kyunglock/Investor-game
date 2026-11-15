@@ -1303,6 +1303,11 @@ export interface components {
                 }[];
                 /** @description 마지막 고양이 뽑기(한 번 또는 10연속, 517번)에서 나온 고양이, 나온 차례대로 */
                 lastDraws?: {
+                    /**
+                     * @description 그 고양이의 등급 (539번)
+                     * @enum {string}
+                     */
+                    grade: "C" | "B" | "A" | "S";
                     /** @enum {string} */
                     code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
                     /** @description 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다 */
@@ -1361,6 +1366,11 @@ export interface components {
                     skillLevel: number;
                     /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
                     skillNextLevel: number;
+                    /**
+                     * @description 등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.4배 · A 2배 · S 3배) 뽑기에서 드물다
+                     * @enum {string}
+                     */
+                    grade: "C" | "B" | "A" | "S";
                     /** @description 든 무기. 없으면 null(기본 권총을 쏜다) */
                     weapon: {
                         /** @enum {string} */

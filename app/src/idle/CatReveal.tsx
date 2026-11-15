@@ -5,18 +5,12 @@ import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { CatPortrait, catTrait } from './CatPortrait'
+import { catRevealPlan } from './catGrade'
 import { SkillBadge } from './SkillBadge'
 import '../mental/weapon-reveal.css'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 export type CatDraw = { cat: Cat; isNew: boolean }
-
-/** 새 고양이는 긴 뜸 뒤 금빛으로, 이미 가진 고양이(레벨 업)는 짧게 나온다. 무기 뽑기의 S·D 등급 연출과 같은 세기다. */
-export function catRevealPlan(isNew: boolean) {
-  return isNew
-    ? { charge: 2100, power: 3, color: '#ffdd75', sound: 'S' as const }
-    : { charge: 650, power: 1, color: '#76ccff', sound: 'D' as const }
-}
 
 /**
  * 고양이 뽑기 연출 (decisions.md 508번): 무기 뽑기(WeaponReveal)와 같은 창·상자·빛을 쓴다. 상자가 떨다 열리고 고양이가 나온다. 결과는 이번
@@ -41,7 +35,7 @@ export function CatReveal({
   const [phase, setPhase] = useState<'charge' | 'open' | 'result'>('charge')
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const sounded = useRef(false)
-  const plan = catRevealPlan(result?.isNew ?? false)
+  const plan = catRevealPlan(result?.cat.grade ?? 'C', result?.isNew ?? false)
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     dialog.current?.showModal()
@@ -136,13 +130,14 @@ export function CatReveal({
               data-testid="cat-drawn"
               data-code={result.cat.code}
               data-new={result.isNew}
+              data-cat-grade={result.cat.grade}
               aria-live="polite"
             >
               <p className="weapon-reveal-new">
                 {result.isNew ? 'NEW! 새 고양이' : `레벨 업! Lv.${result.cat.level}`}
               </p>
-              <span className="weapon-reveal-grade">
-                고유 {result.cat.skillName} Lv.{result.cat.skillLevel}
+              <span className="weapon-reveal-grade" data-testid="cat-drawn-grade">
+                {result.cat.grade} 등급 · 고유 {result.cat.skillName} Lv.{result.cat.skillLevel}
               </span>
               <div className="weapon-reveal-art cat-reveal-art">
                 <CatPortrait code={result.cat.code} />

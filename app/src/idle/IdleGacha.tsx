@@ -9,7 +9,8 @@ import { TenBonus, type TenCard, TenReveal } from '../mental/TenReveal'
 import { type DrawResult, WeaponReveal } from '../mental/WeaponReveal'
 import { weaponRevealPlan } from '../mental/weaponRevealPlan'
 import { CatPortrait as Portrait } from './CatPortrait'
-import { type CatDraw, CatReveal, catRevealPlan } from './CatReveal'
+import { type CatDraw, CatReveal } from './CatReveal'
+import { CAT_ODDS, catRevealPlan } from './catGrade'
 
 type Kind = 'cat' | 'weapon'
 
@@ -99,12 +100,12 @@ export function IdleGacha({
           id,
           kind: 'cat',
           cards: draws.map((d, i) => {
-            const plan = catRevealPlan(d.isNew)
+            const plan = catRevealPlan(d.grade, d.isNew)
             const info = cats.find((c) => c.code === d.code)
             return {
               key: `${i}-${d.code}`,
               art: <Portrait code={d.code} />,
-              badge: `Lv.${d.level}`,
+              badge: `${d.grade} 등급 · Lv.${d.level}`,
               name: info?.name ?? d.code,
               note: d.isNew ? 'NEW!' : '레벨 업',
               isNew: d.isNew,
@@ -181,10 +182,10 @@ export function IdleGacha({
     kind === 'cat'
       ? drawn
         ? drawn.isNew
-          ? `${drawn.cat.name} 합류! 고유 스킬 ${drawn.cat.skillName}`
+          ? `${drawn.cat.grade} 등급 ${drawn.cat.name} 합류! 고유 스킬 ${drawn.cat.skillName}`
           : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}% · ${drawn.cat.skillName} Lv.${drawn.cat.skillLevel}`
         : canOne
-          ? `또 나오면 레벨이 올라요 · 10연차는 ${diamonds.tenCount}마리`
+          ? `${CAT_ODDS} · 또 나오면 레벨 업 · 10연차는 ${diamonds.tenCount}마리`
           : short
       : canOne
         ? `F~A 등급이 나와요 · S부터는 합쳐서 얻어요 · 10연차는 ${diamonds.tenCount}개`

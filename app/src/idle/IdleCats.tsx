@@ -93,6 +93,7 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
                 <span className="idle-cat-badge">
                   <SkillBadge skill={c.skill} level={c.skillLevel} size={22} />
                 </span>
+                <em className={`idle-cat-grade idle-cat-grade-tag is-${c.grade}`}>{c.grade}</em>
                 <small className="idle-cat-slot-name">{c.name}</small>
               </button>
             ) : (
@@ -112,6 +113,11 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
         <Portrait code={cat?.code} />
         <div className="idle-cat-info">
           <b>
+            {cat && (
+              <i className={`idle-cat-grade is-${cat.grade}`} data-testid="cat-grade">
+                {cat.grade}
+              </i>
+            )}{' '}
             {cat ? cat.name : hero.name} {cat && <small>Lv.{cat.level}</small>}
           </b>
           <small>
@@ -215,11 +221,12 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
                 className={`idle-cat-cell ${c.level > 0 ? 'owned' : ''} ${c.fielded ? 'fielded' : ''} ${picked === c.code ? 'is-picked' : ''}`}
                 data-testid="cat"
                 data-code={c.code}
+                data-grade={c.grade}
                 disabled={c.level < 1}
                 aria-label={
                   c.level > 0
-                    ? `${c.name} 레벨 ${c.level}${c.fielded ? ' 출전 중' : ''} · 고유 스킬 ${c.skillName}`
-                    : `${c.name} 아직 없음 · 고유 스킬 ${c.skillName}`
+                    ? `${c.grade} 등급 ${c.name} 레벨 ${c.level}${c.fielded ? ' 출전 중' : ''} · 고유 스킬 ${c.skillName}`
+                    : `${c.grade} 등급 ${c.name} 아직 없음 · 고유 스킬 ${c.skillName}`
                 }
                 onClick={() => pick(c.code)}
               >
@@ -228,6 +235,11 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
                 <span className="idle-cat-badge">
                   <SkillBadge skill={c.skill} level={c.skillLevel} size={18} locked={c.level < 1} />
                 </span>
+                <em
+                  className={`idle-cat-grade idle-cat-grade-tag is-${c.grade} ${c.level < 1 ? 'is-locked' : ''}`}
+                >
+                  {c.grade}
+                </em>
                 {c.level > 0 && <i>Lv.{c.level}</i>}
               </button>
             </li>

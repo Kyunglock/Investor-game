@@ -392,6 +392,48 @@ class IdleEngineTest {
   }
 
   @Test
+  void catsHaveAFixedGradeThatStrengthensTheirGunAndMakesThemRarer() {
+    // 고양이 등급 (539번): C 16 · B 12 · A 7 · S 4종. 총 공격력 C 1배 · B 1.4배 · A 2배 · S 3배(레벨 1이면 50%에 곱한다).
+    start(1);
+    var cats = engine.view(state).cats();
+    assertThat(cats).hasSize(39);
+    java.util.Map<String, Long> count =
+        cats.stream()
+            .collect(
+                java.util.stream.Collectors.groupingBy(
+                    c -> c.grade(), java.util.stream.Collectors.counting()));
+    assertThat(count)
+        .containsOnly(
+            java.util.Map.entry("C", 16L),
+            java.util.Map.entry("B", 12L),
+            java.util.Map.entry("A", 7L),
+            java.util.Map.entry("S", 4L));
+    java.util.function.Function<String, investorgame.raising.CompanyView.IdleCat> cat =
+        code ->
+            engine.view(state).cats().stream().filter(c -> c.code().equals(code)).findFirst().get();
+    // 특성으로 공격력이 붙지 않은 고양이끼리 견준다: 하늘냥 C, 카라멜냥 B, 바다냥 A, 별빛냥 S.
+    assertThat(cat.apply("sky").damagePercent()).isEqualTo(50);
+    assertThat(cat.apply("caramel").damagePercent()).isEqualTo(70);
+    assertThat(cat.apply("ocean").damagePercent()).isEqualTo(100);
+    assertThat(cat.apply("star").damagePercent()).isEqualTo(150);
+    // S는 스킬마다 하나다.
+    assertThat(cats.stream().filter(c -> c.grade().equals("S")).map(c -> c.skill()))
+        .containsExactlyInAnyOrder("water", "meteor", "bolt", "ram");
+    // 뽑기: 등급의 몫은 C 60 · B 28 · A 10 · S 2%이고 등급 안에서는 고르다.
+    var random = new HashSeededRandom(7);
+    java.util.Map<String, Integer> drawn = new java.util.HashMap<>();
+    int draws = 20_000;
+    for (int i = 0; i < draws; i++) {
+      drawn.merge(IdleEngine.catGrade(engine.grantCat(state, random).kind), 1, Integer::sum);
+    }
+    assertThat(drawn.get("C") * 100.0 / draws).isCloseTo(60, offset(2.0));
+    assertThat(drawn.get("B") * 100.0 / draws).isCloseTo(28, offset(2.0));
+    assertThat(drawn.get("A") * 100.0 / draws).isCloseTo(10, offset(1.5));
+    assertThat(drawn.get("S") * 100.0 / draws).isCloseTo(2, offset(0.7));
+    assertThat(engine.view(state).lastDraws()).isEmpty();
+  }
+
+  @Test
   void aWallPaysThirtySecondsOfItsTimeIncomeAndABossWallThreeTimes() {
     // 537번: 벽 보상은 벽 체력이 아니라 그 벽의 시간 수입을 따른다. 첫 벽 0.6b, 10벽(큰손) 2.61b × 물가.
     start(1);

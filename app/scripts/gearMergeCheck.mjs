@@ -93,6 +93,8 @@ function world() {
         skillName,
         skillLevel: code === 'night' ? 5 : Math.floor(i / 2) + 1,
         skillNextLevel: code === 'night' ? 0 : i + 2 + (i % 2),
+        // 등급은 종마다 정해져 있다 (539번).
+        grade: code === 'night' || code === 'snow' ? 'A' : 'C',
         weapon:
           code === 'sky'
             ? { kind: 'pistol', grade: 'E' }

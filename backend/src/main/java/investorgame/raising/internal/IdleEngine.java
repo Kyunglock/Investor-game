@@ -144,10 +144,45 @@ class IdleEngine {
     "레몬냥", "코코아냥", "로즈냥", "호랑냥", "구름냥", "별빛냥", "샴냥", "짝귀냥", "단풍냥", "세이지냥", "살구냥", "자두냥", "조각냥",
     "졸린냥", "산호냥", "트러플냥", "서리냥", "버터냥", "테라냥", "등꽃냥", "오드냥", "피스타냥", "모래냥", "볼터치냥", "청록냥", "오트냥"
   };
-  private static final int[] CAT_WEIGHTS = {
-    25, 25, 10, 15, 15, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
-    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10
-  };
+  // 고양이 등급 (decisions.md 539번): 종마다 정해져 있다. C 16 · B 12 · A 7 · S 4종이고 S는 스킬마다 하나다.
+  static final List<String> CAT_GRADES = List.of("C", "B", "A", "S");
+  private static final java.util.Set<String> GRADE_S =
+      java.util.Set.of("star", "silver", "wisteria", "frost");
+  private static final java.util.Set<String> GRADE_A =
+      java.util.Set.of("tiger", "panda", "night", "snow", "rose", "ocean", "siam");
+  private static final java.util.Set<String> GRADE_B =
+      java.util.Set.of(
+          "caramel", "mocha", "peach", "biscuit", "lemon", "cocoa", "cloud", "tilt", "russet",
+          "plum", "coral", "truffle");
+  // A grade's share of the draws (percent) and its cats' gun damage (x the level's power).
+  private static final int[] GRADE_PERCENT = {60, 28, 10, 2};
+  private static final double[] GRADE_DAMAGE = {1, 1.4, 2, 3};
+  private static final int[] CAT_GRADE = CATS.stream().mapToInt(IdleEngine::gradeIndex).toArray();
+  // Each grade's share is split evenly over its cats: percent x (all cats' common multiple) / n.
+  private static final int[] CAT_WEIGHTS = catWeights();
+
+  private static int gradeIndex(String code) {
+    return GRADE_S.contains(code) ? 3 : GRADE_A.contains(code) ? 2 : GRADE_B.contains(code) ? 1 : 0;
+  }
+
+  private static int[] catWeights() {
+    int[] count = new int[CAT_GRADES.size()];
+    for (int grade : CAT_GRADE) count[grade]++;
+    int common = 1;
+    for (int n : count) common *= n;
+    int[] weights = new int[CAT_GRADE.length];
+    for (int i = 0; i < weights.length; i++) {
+      weights[i] = GRADE_PERCENT[CAT_GRADE[i]] * (common / count[CAT_GRADE[i]]);
+    }
+    return weights;
+  }
+
+  /** A cat's grade letter (539). */
+  static String catGrade(String code) {
+    int at = CATS.indexOf(code);
+    return CAT_GRADES.get(at < 0 ? 0 : CAT_GRADE[at]);
+  }
+
   private static final double[] CAT_FIRE = {
     1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1,
     1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1
@@ -264,7 +299,7 @@ class IdleEngine {
       shooters.add(
           shooter(
               s.catWeapons.get(code),
-              damageUp * power(s.cats.get(code)) * CAT_DAMAGE[cat],
+              damageUp * power(s.cats.get(code)) * CAT_DAMAGE[cat] * GRADE_DAMAGE[CAT_GRADE[cat]],
               fireUp * CAT_FIRE[cat],
               criticalUp * CAT_CRITICAL[cat]));
     }
@@ -906,7 +941,12 @@ class IdleEngine {
                       code,
                       CAT_NAMES[cat],
                       level,
-                      (int) Math.round(100 * power(Math.max(1, level)) * CAT_DAMAGE[cat]),
+                      (int)
+                          Math.round(
+                              100
+                                  * power(Math.max(1, level))
+                                  * CAT_DAMAGE[cat]
+                                  * GRADE_DAMAGE[CAT_GRADE[cat]]),
                       (int) Math.round(100 * CAT_FIRE[cat]),
                       (int) Math.round(100 * CAT_CRITICAL[cat]),
                       s.fielded.contains(code),
@@ -914,7 +954,8 @@ class IdleEngine {
                       CODES[CAT_SKILL[cat]],
                       NAMES[CAT_SKILL[cat]],
                       skillLevel(Math.max(1, level)),
-                      nextSkillAt(Math.max(1, level)));
+                      nextSkillAt(Math.max(1, level)),
+                      CAT_GRADES.get(CAT_GRADE[cat]));
                 })
             .toList();
     return new CompanyView.Idle(
@@ -951,7 +992,7 @@ class IdleEngine {
         (s.lastDraws == null ? List.<CompanyState.Pulled>of() : s.lastDraws)
             .stream()
                 .filter(d -> CATS.contains(d.kind))
-                .map(d -> new CompanyView.CatDraw(d.kind, d.level, d.isNew))
+                .map(d -> new CompanyView.CatDraw(d.kind, d.level, d.isNew, catGrade(d.kind)))
                 .toList(),
         new CompanyView.Income(
             CompanyView.money(SPEED * incomeRate(c)),
