@@ -4,7 +4,7 @@ export type SkillCode = NonNullable<Company['idle']>['cats'][number]['skill']
 
 /**
  * 고양이 고유 스킬의 설명 (decisions.md 501·515·530번): 하는 일(does)과 레벨이 오르면 달라지는 점(grows), 세 단계의
- * 모습(tiers, 스킬 Lv.1·2·3부터. 배지 그림도 이 단계를 따른다, 531번). 스킬은 고양이 레벨이 둘 오를 때마다
+ * 모습(tiers, 스킬 Lv.1·2·3부터. 배지 그림도 이 단계를 따른다, 531번). 스킬은 고양이 레벨 10마다(Lv.10·20·30·40)
  * 한 레벨 오른다. 규칙은 mental/magic.ts에 있다.
  */
 export const SKILLS: Record<

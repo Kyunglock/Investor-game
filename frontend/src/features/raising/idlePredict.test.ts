@@ -171,29 +171,14 @@ describe('the screen breaks the wall first (decisions.md 532)', () => {
     expect(p.view(server(2), 300).wall).toBe(2)
   })
 
-  it.each([6, 16])('starts the circuit breaker at wall %i and breaks nothing past it', (wall) => {
+  it.each([6, 16])('does not start a circuit breaker at wall %i (switched off)', (wall) => {
     const p = new IdlePredictor()
     const s = server(wall - 1)
     p.add(bullet(wall - 1, idleMaxHp(wall - 1) + idleMaxHp(wall) + 50), 1000)
     const shown = p.view(s, 1000)
-    expect(shown.wall).toBe(wall)
-    expect(shown.circuitSeconds).toBe(4)
-    // What is left waits on the circuit wall, as on the server.
-    expect(shown.hp).toBe(0)
-    // Counted down at two game seconds a second, and held until the server's own halt arrives.
-    expect(p.view(s, 1500).circuitSeconds).toBe(3)
-    expect(p.view(s, 9000).circuitSeconds).toBeGreaterThan(0)
-    p.sent(1)
-    // The server broke the wall and halted: its time is used, counted down between heartbeats.
-    const halted = server(wall, idleMaxHp(wall) + 50, 1, [0, 0], 4)
-    expect(p.view(halted, 10000)).toMatchObject({ wall, circuitSeconds: 4 })
-    expect(p.view(halted, 11000).circuitSeconds).toBe(2)
-    expect(p.view({ ...halted }, 11500).circuitSeconds).toBe(1)
-    expect(p.view(halted, 12100)).toMatchObject({ wall: wall + 1, circuitSeconds: 0 })
-    // The halt is over on the server too: the waiting damage breaks the wall.
-    const open = server(wall + 1, 50, 3)
-    expect(p.view(open, 13000)).toMatchObject({ wall: wall + 1, circuitSeconds: 0 })
-    expect(p.view(open, 13000).hp).toBeCloseTo(idleMaxHp(wall + 1) - 50, 9)
+    // What is left goes on past the wall that used to halt trading.
+    expect(shown).toMatchObject({ wall: wall + 1, circuitSeconds: 0 })
+    expect(shown.hp).toBeCloseTo(idleMaxHp(wall + 1) - 50, 9)
   })
 
   it('does not halt again for the last moments of a halt that ran out here', () => {

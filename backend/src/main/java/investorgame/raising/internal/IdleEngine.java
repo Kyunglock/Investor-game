@@ -18,6 +18,10 @@ class IdleEngine {
   private final CompanyEngine engine;
   private final String serverId = UUID.randomUUID().toString();
   private static final double SPEED = 2;
+
+  /** 서킷브레이커(484번)는 꺼 두었다: 6·16·26…번째 벽에서 거래를 멈추지 않는다. 저장된 정지 시간은 흘러 풀린다. */
+  static final boolean CIRCUIT_ENABLED = false;
+
   // Credit buckets: the bullet, the four cat skills, the buy barrage (decisions.md 503), and the
   // buy wall's own buy orders (514).
   private static final int KINDS = 7;
@@ -72,7 +76,7 @@ class IdleEngine {
   // hit as a multiple of the boss cat's gun, and hits on the wall per cast (meteors per cast; a
   // bolt and one chain per lightning stroke). The level follows the cat's level.
   private static final int SKILL_MAX_LEVEL = 5;
-  private static final int SKILL_CAT_LEVELS = 2;
+  private static final int SKILL_CAT_LEVELS = 10;
   private static final double[][] COOLDOWNS = {
     {2.4, 2.1, 1.8, 1.6, 1.4},
     {3.6, 3.3, 3, 2.8, 2.6},
@@ -373,15 +377,15 @@ class IdleEngine {
     return SPEED * total;
   }
 
-  /** A cat's skill level (515): one more for every two cat levels, up to five. */
+  /** A cat's skill level (515, 534): one more at cat level 10, 20, 30 and 40, up to five. */
   static int skillLevel(int catLevel) {
-    return Math.min(SKILL_MAX_LEVEL, 1 + Math.max(0, catLevel - 1) / SKILL_CAT_LEVELS);
+    return Math.min(SKILL_MAX_LEVEL, 1 + Math.max(0, catLevel) / SKILL_CAT_LEVELS);
   }
 
   /** The cat level at which the skill next levels up, or 0 at the top level. */
   private static int nextSkillAt(int catLevel) {
     int level = skillLevel(catLevel);
-    return level >= SKILL_MAX_LEVEL ? 0 : 1 + level * SKILL_CAT_LEVELS;
+    return level >= SKILL_MAX_LEVEL ? 0 : level * SKILL_CAT_LEVELS;
   }
 
   /**
@@ -585,7 +589,7 @@ class IdleEngine {
       s.damage = queued[0] + left;
       System.arraycopy(queued, 1, queued, 0, queued.length - 1);
       queued[queued.length - 1] = 0;
-      if (s.wall % 10 == 6) {
+      if (CIRCUIT_ENABLED && s.wall % 10 == 6) {
         s.circuitSeconds = 4;
         s.hitCredits = new double[KINDS];
       }

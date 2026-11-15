@@ -1318,7 +1318,7 @@ components:
                   fielded: { type: boolean }
                   skill: { type: string, enum: [water, meteor, bolt, ram], description: 이 고양이의 고유 스킬 (501번). 출전해 있는 동안 발동한다 }
                   skillName: { type: string }
-                  skillLevel: { type: integer, description: 고유 스킬의 레벨 1~5 (515번). 고양이 레벨이 둘 오를 때마다 하나 오른다 }
+                  skillLevel: { type: integer, description: 고유 스킬의 레벨 1~5 (515번). 고양이 Lv.10·20·30·40에 하나씩 오른다 (534번) }
                   skillNextLevel: { type: integer, description: 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 }
                   weapon:
                     description: 든 무기. 없으면 null(기본 권총을 쏜다)

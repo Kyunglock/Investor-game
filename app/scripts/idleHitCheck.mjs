@@ -68,7 +68,6 @@ function mockServer(wall, credit = 1) {
       s.wall++
       s.damage = s.queued.shift() + left
       s.queued.push(0)
-      if (s.wall % 10 === 6) s.circuitSeconds = 4
     }
   }
   return {
@@ -574,11 +573,10 @@ try {
     // With a slow answer the screen is ahead of the server when it breaks a wall.
     if (delay >= 700) assert(run.ahead > 0, `the screen waited for the server (delay ${delay})`)
   }
-  // Into the circuit breaker at wall 6: trading halts on screen at the break, before the server
-  // says so, for about its two seconds plus the wait for the server's own halt, then goes on.
-  const circuit = await realRun(browser, { delay: 300, wall: 5, until: 6 })
-  assert(circuit.stall < 100, `a wall stood bottomed out for ${circuit.stall} ms at the circuit`)
-  assert(circuit.halted > 1500 && circuit.halted < 6000, `halted for ${circuit.halted} ms`)
+  // The circuit breaker is switched off: wall 6 breaks like any other and trading never halts.
+  const circuit = await realRun(browser, { delay: 300, wall: 5, until: 7 })
+  assert(circuit.stall < 100, `a wall stood bottomed out for ${circuit.stall} ms at wall 6`)
+  assert.equal(circuit.halted, 0, `halted for ${circuit.halted} ms`)
   // A server that credits half of what it is sent: the checks in realRun (no wall comes back,
   // no health rises, the HUD never goes back) hold while the screen runs ahead on debt.
   const half = await realRun(browser, { delay: 300, until: 3, credit: 0.5 })

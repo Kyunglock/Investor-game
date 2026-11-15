@@ -5,6 +5,9 @@ describe('서킷브레이커', () => {
   it('중간 벽 이후 한 번만 예약한다', () => {
     expect(CIRCUIT_BREAKER.afterWalls).toEqual([5])
   })
+  it('지금은 꺼 두었다', () => {
+    expect(CIRCUIT_BREAKER.enabled).toBe(false)
+  })
   it('4초 동안 멘탈 20%를 회복하고 벽 조립 후 거래를 재개한다', () => {
     const c = new CircuitBreaker(100, 200)
     expect(c.step(2)).toBeCloseTo(20)

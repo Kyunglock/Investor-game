@@ -100,9 +100,9 @@ try {
           fielded: false,
           skill,
           skillName,
-          // A skill gains a level with every two cat levels (decisions.md 515).
+          // A skill gains a level at cat level 10, 20, 30, 40 (decisions.md 534).
           skillLevel: 1,
-          skillNextLevel: 3,
+          skillNextLevel: 10,
           weapon: null as { kind: string; grade: string } | null,
         })),
       },
@@ -279,7 +279,7 @@ try {
       width === 390 ? 'skill-badge-glint' : 'none',
     )
     await expect(detail.getByTestId('cat-skill-next')).toHaveText(
-      '고양이 Lv.3에 스킬 Lv.2 · 앞으로 2레벨',
+      '고양이 Lv.10에 스킬 Lv.2 · 앞으로 9레벨',
     )
     await expect(detail.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('[data-testid=cat-slot][data-code=sky]')).toBeVisible()

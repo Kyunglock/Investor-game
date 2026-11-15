@@ -1,5 +1,7 @@
 /** 중간 매도벽과 중간 보스를 넘긴 뒤 한 번만 거래를 잠깐 멈추고 숨을 고른다. */
 export const CIRCUIT_BREAKER = {
+  /** 꺼 두었다: 스테이지 돌파전에서 발동하지 않는다. 방치형은 서버(IdleEngine.CIRCUIT_ENABLED)를 따른다. */
+  enabled: false,
   afterWalls: [5] as readonly number[],
   seconds: 4,
   healRatio: 0.2,
