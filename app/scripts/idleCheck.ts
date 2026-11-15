@@ -522,6 +522,7 @@ try {
                 upcoming: {
                   wall: number
                   hp: number
+                  label: string
                   crack: string
                   top: number
                   bottom: number
@@ -542,6 +543,20 @@ try {
     await expect.poll(async () => (await queuedWalls())[0].hp).toBeLessThanOrEqual(30)
     assert((await queuedWalls())[0].hp >= 1)
     assert.notEqual((await queuedWalls())[0].crack, intact)
+    // The walls behind show their remaining shares only (decisions.md 542): 30 of 264 health is
+    // at most 4,500 of 39,600 shares, and the untouched one further back still reads more.
+    const labels = (await queuedWalls()).map((wall) => wall.label)
+    assert(
+      labels.every((label) => /^[\d,]+주$/.test(label)),
+      `rear wall labels: ${labels}`,
+    )
+    const sharesOn = (label: string) => Number(label.replace(/[^\d]/g, ''))
+    assert(sharesOn(labels[0]) >= 100 && sharesOn(labels[0]) <= 4500, labels[0])
+    assert(sharesOn(labels[1]) > sharesOn(labels[0]), labels.join(' / '))
+    await page.screenshot({
+      path: `/tmp/idle-rear-${width}.png`,
+      clip: { x: 0, y: 40, width, height: 260 },
+    })
     const cash = await page.locator('.idle-cash').first().boundingBox()
     const number = await page.getByTestId('idle-wall-number').boundingBox()
     assert(cash && number && cash.x + cash.width <= number.x)

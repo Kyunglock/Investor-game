@@ -1,5 +1,6 @@
 import type Phaser from 'phaser'
-import { CELL_CRACKS, cellKey } from './art'
+import { CELL_CRACKS, cellKey, WALL_LABEL_STYLE } from './art'
+import { cellShares } from './assault'
 import { IDLE_PIERCE_FLOOR } from './idlePierce'
 
 export const IDLE_WALL_GAP = 6
@@ -28,8 +29,14 @@ export function idleWallLayout(laneWidth: number, viewportHeight: number) {
   return { bottom, height, spacing: height + IDLE_WALL_GAP }
 }
 
+/** 뒤 벽에 적는 남은 물량: 맨 앞 벽의 칸과 같은 환산(100주 단위)으로 "7,200주"만 적는다 (542번). */
+export function queuedWallLabel(maxHp: number, hp: number) {
+  return `${cellShares(maxHp, hp).toLocaleString()}주`
+}
+
 /**
- * Server-owned health for the two walls behind the current target. They carry no text (decisions.md 507).
+ * Server-owned health for the two walls behind the current target. Each carries its remaining
+ * shares and nothing else (decisions.md 542; 507 had removed every text).
  * Only pierced bullets reach them, and they keep their last point of health until they come to the front (520).
  */
 export class IdleWallQueueFx {
@@ -38,6 +45,7 @@ export class IdleWallQueueFx {
     hp: number
     maxHp: number
     body: Phaser.GameObjects.Image
+    label: Phaser.GameObjects.Text
   }[]
 
   constructor(scene: Phaser.Scene) {
@@ -46,6 +54,18 @@ export class IdleWallQueueFx {
       hp: 0,
       maxHp: 0,
       body: scene.add.image(0, 0, cellKey(0)).setOrigin(0.5, 1).setDepth(2.2).setVisible(false),
+      // 피해 숫자(깊이 8)가 벽 위로 떠오르며 지나가도 읽히게 그 위에, 짙은 바탕의 딱지로 적는다.
+      label: scene.add
+        .text(0, 0, '', {
+          ...WALL_LABEL_STYLE,
+          fontSize: '14px',
+          strokeThickness: 0,
+          backgroundColor: 'rgba(20, 44, 84, 0.78)',
+          padding: { x: 7, y: 2 },
+        })
+        .setOrigin(0.5)
+        .setDepth(8.5)
+        .setVisible(false),
     }))
   }
 
@@ -75,7 +95,14 @@ export class IdleWallQueueFx {
         .setDisplaySize(width - 3, height - 3)
         .setAlpha(0.9 - i * 0.13)
         .setVisible(true)
+      // 낮은 화면에서 벽이 얇아지면 글자도 줄인다.
+      layer.label
+        .setPosition(left + width / 2, y - (height - 3) / 2)
+        .setScale(Math.min(1, (height - 3) / 26))
+        .setAlpha(0.95 - i * 0.13)
+        .setVisible(true)
       if (!changed) continue
+      layer.label.setText(queuedWallLabel(maxHp, hp))
       layer.wall = wall
       layer.hp = hp
       layer.maxHp = maxHp
@@ -103,10 +130,11 @@ export class IdleWallQueueFx {
   }
 
   inspect() {
-    return this.layers.map(({ wall, body, hp, maxHp }) => ({
+    return this.layers.map(({ wall, body, label, hp, maxHp }) => ({
       wall,
       hp,
       maxHp,
+      label: label.visible ? label.text : '',
       crack: body.texture.key,
       top: body.y - body.displayHeight,
       bottom: body.y,
