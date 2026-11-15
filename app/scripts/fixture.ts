@@ -180,6 +180,19 @@ export const company = {
   },
   // 종목회의의 기회 (#803): 한 시간에 하나씩, 세 개까지.
   meetings: { chances: 2, max: 3, nextSeconds: 1500 },
+  // 출석 보상 (528번): 오늘 것은 이미 받은 채로 둔다. 출석판이 스스로 떠서 다른 화면 검사를 가리지 않게.
+  attendance: {
+    today: 3,
+    claimable: false,
+    board: [50, 0, 100, 0, 100, 100, 300].map((diamonds, i) => ({
+      day: i + 1,
+      diamonds,
+      incomeMinutes: diamonds === 0 ? 30 : 0,
+      money: diamonds === 0 ? 87_300_000 : null,
+      claimed: i < 3,
+    })),
+    lastReward: { day: 3, diamonds: 100, money: 0 },
+  },
   gacha: {
     roster: 7,
     // 데리고 있을 수 있는 수는 자리 수와 같다 (#801).

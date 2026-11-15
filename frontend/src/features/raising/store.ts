@@ -75,6 +75,13 @@ interface RaisingState {
   grantSandboxCats: (level: number) => Promise<void>
   /** 테스트판: 그 등급의 무기를 받아 사장냥이 든다. */
   grantSandboxWeapon: (grade: WeaponGrade) => Promise<void>
+  /** 테스트판: 하루가 지난 셈 친다. 출석 보상을 다시 받을 수 있다 (528번). */
+  skipSandboxDay: () => Promise<void>
+  /**
+   * 오늘의 출석 보상을 받는다 (decisions.md 528번). 받은 것은 company.attendance.lastReward. 받은 회사(오늘 이미 받았거나 끊겼으면 null)를
+   * 돌려준다. 전투를 멈추지 않게 busy를 켜지 않는다.
+   */
+  claimAttendance: () => Promise<Company | null>
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   fieldCat: (code: CatCode, fielded: boolean) => Promise<void>
   /** 고양이에게 가진 무기 하나를 들린다. weapon이 null이면 뺀다 (488번). */
@@ -226,6 +233,12 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     setSandboxWallet: (infinite) => change(api.POST('/api/sandbox/wallet', { body: { infinite } })),
     grantSandboxCats: (level) => change(api.POST('/api/sandbox/cats', { body: { level } })),
     grantSandboxWeapon: (grade) => change(api.POST('/api/sandbox/weapon', { body: { grade } })),
+    skipSandboxDay: () => change(api.POST('/api/sandbox/next-day')),
+    claimAttendance: async () => {
+      const res = await safely(api.POST('/api/company/attendance'))
+      set({ company: res?.data ?? get().company, error: reason(res?.error) })
+      return res?.data ?? null
+    },
     useActive: async (code) => {
       const res = await safely(api.POST('/api/company/idle/active', { body: { code } }))
       if (!res?.data) return false

@@ -215,6 +215,23 @@ export function IdleSandbox({ company }: { company: Company }) {
                 </button>
               ))}
             </div>
+            <span className="idle-sandbox-label">출석 보상</span>
+            <div className="idle-sandbox-chips is-one">
+              <button
+                type="button"
+                disabled={busy}
+                data-testid="idle-sandbox-next-day"
+                onClick={() =>
+                  // 날이 바뀌면 출석판이 스스로 뜨므로 도구 창은 닫는다.
+                  void run(async () => {
+                    await store().skipSandboxDay()
+                    closePanel()
+                  })
+                }
+              >
+                다음 날로
+              </button>
+            </div>
             <label className="idle-sandbox-check">
               <input
                 type="checkbox"

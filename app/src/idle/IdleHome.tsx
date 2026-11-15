@@ -3,7 +3,7 @@ import { money } from '@web/features/game/labels'
 import { diamondText } from '@web/features/raising/gachaRules'
 import { useRaisingStore } from '@web/features/raising/store'
 import { type ReactNode, useEffect, useState } from 'react'
-import { rate } from '../app/income'
+import { rate, readOfflineSeen, shouldShowOffline } from '../app/income'
 import { meetingReady } from '../app/meeting'
 import { Sheet } from '../app/Sheet'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
@@ -16,6 +16,7 @@ import { sharesOf } from '../mental/shares'
 import { WeaponInventory, weaponBadge } from '../mental/WeaponInventory'
 import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../mental/weaponEffects'
 import { IdleActives } from './IdleActives'
+import { IdleAttendance } from './IdleAttendance'
 import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
@@ -106,6 +107,10 @@ export function IdleHome({
   const capital = useCountUp(company.capital)
   // 종목회의를 열거나 이어 갈 수 있으면 회사 메뉴에 점을 단다 (#803).
   const meeting = meetingReady(company)
+  // 자리를 비운 동안의 수입 알림이 떠 있거나 전투·종목회의 창이 열려 있으면 출석판은 그 뒤에 뜬다 (528번).
+  const [offlineSeen, setOfflineSeen] = useState(readOfflineSeen)
+  const offlineShowing = shouldShowOffline(idle?.offline, offlineSeen)
+  const elsewhere = useAppUi((s) => s.battle != null || s.investOpen)
   useEffect(() => {
     if (menu === 'battle' || menu === 'company') return
     const previous = useAppUi.getState().modalBack
@@ -238,6 +243,10 @@ export function IdleHome({
             </button>
           </header>
           <IdleOptions />
+          {/* 설정 옆의 빠른 단추 (528번): 출석판을 다시 연다. */}
+          <div className="idle-quick">
+            <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
+          </div>
           <IdleSandbox company={company} />
           <IdleActives company={company} connected={connected} />
           {blocked && (
@@ -251,7 +260,7 @@ export function IdleHome({
         </>
       )}
       {nav}
-      <OfflineIncome company={company} />
+      <OfflineIncome company={company} seen={offlineSeen} onSeen={setOfflineSeen} />
       {menu !== 'battle' && menu !== 'company' && (
         <Sheet
           title={menus.find((m) => m.key === menu)?.label}
