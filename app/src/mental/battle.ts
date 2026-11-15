@@ -1799,7 +1799,7 @@ class BattleScene extends Phaser.Scene {
   /** 큰손을 잡았다: 남은 대량 매도벽 칸이 한꺼번에 금이 간다("큰손이 손을 뗐다"). 벽까지 다 부수면 깬다. */
   private whaleDown() {
     haptic.heavy()
-    this.hitstop(140)
+    // 멈칫은 두지 않는다 (536번).
     const mid = this.bossMid
     this.bossMid = false
     // 방치형의 큰손은 별도 적이다. 처치 보너스를 벽 명중으로 보고하면
@@ -4022,7 +4022,6 @@ class BattleScene extends Phaser.Scene {
     this.dustFx.explode(this.fx([8, 12, 18][tier - 1]), x, y)
     this.chips?.explode(this.fx(4 + tier * 3), x, y - 4)
     this.thump(x, y + 34, [48, 58, 70][tier - 1] * grow)
-    this.hitstop(tier === 3 ? 70 : 45)
     this.playSound('ram')
     haptic.medium()
     this.damageStats.rams++
