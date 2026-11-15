@@ -525,6 +525,24 @@
   font-size: 16px;
   color: #2f8fd8;
 }
+/* 좁은 화면(320px): 다이아 수가 네 자리여도 벽 번호가 잘리지 않게 틈과 글씨를 줄인다. */
+@media (max-width: 350px) {
+  .idle-hud {
+    gap: 5px;
+  }
+  .idle-wall-number {
+    padding: 6px 7px;
+  }
+  .idle-diamonds {
+    flex-shrink: 0;
+    gap: 3px;
+    padding: 0 6px;
+    font-size: 12px;
+  }
+  .idle-diamonds .idle-icon {
+    font-size: 13px;
+  }
+}
 .idle-tabs .idle-icon {
   font-size: 15px;
   margin-right: 4px;
