@@ -116,3 +116,37 @@ describe('출석 보상 (528번)', () => {
     expect(useRaisingStore.getState().company).toBe(after)
   })
 })
+
+describe('시즌패스 (529번)', () => {
+  const pass = (claimable: number, lastRewards: object[] = []) => ({ claimable, lastRewards })
+
+  it('단계를 주면 그 단계만, 없으면 모두 받는다', async () => {
+    const after = { ...before, pass: pass(0, [{ step: 2, diamonds: 0, money: 500 }]) }
+    post.mockResolvedValue({ data: after } as never)
+    const result = await useRaisingStore.getState().claimPass(2)
+    expect(post).toHaveBeenLastCalledWith('/api/company/pass/claim', { body: { step: 2 } })
+    expect(result?.pass.lastRewards).toHaveLength(1)
+    expect(useRaisingStore.getState().company).toBe(after)
+    expect(useRaisingStore.getState().busy).toBe(false)
+    await useRaisingStore.getState().claimPass()
+    expect(post).toHaveBeenLastCalledWith('/api/company/pass/claim', { body: {} })
+  })
+
+  it('받을 것이 없어 거절되거나 끊기면 null이고 회사는 그대로다', async () => {
+    post.mockResolvedValueOnce({ error: { message: '받을 보상이 없습니다.' } } as never)
+    expect(await useRaisingStore.getState().claimPass()).toBeNull()
+    expect(useRaisingStore.getState().error).toBe('받을 보상이 없습니다.')
+    expect(useRaisingStore.getState().company).toBe(before)
+    post.mockRejectedValueOnce(new Error('offline'))
+    expect(await useRaisingStore.getState().claimPass(1)).toBeNull()
+    expect(useRaisingStore.getState().company).toBe(before)
+  })
+
+  it('테스트판에서 경험치를 더하고 시즌을 넘긴다', async () => {
+    post.mockResolvedValue({ data: { ...before, pass: pass(5) } } as never)
+    await useRaisingStore.getState().addSandboxPassExp(500)
+    expect(post).toHaveBeenLastCalledWith('/api/sandbox/pass-exp', { body: { exp: 500 } })
+    await useRaisingStore.getState().skipSandboxSeason()
+    expect(post).toHaveBeenLastCalledWith('/api/sandbox/next-season')
+  })
+})

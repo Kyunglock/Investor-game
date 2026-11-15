@@ -20,6 +20,7 @@ import { IdleAttendance } from './IdleAttendance'
 import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
+import { IdlePass } from './IdlePass'
 import { IdleSandbox } from './IdleSandbox'
 import { IdleIcon, type IdleIconName } from './icons'
 import { OfflineIncome } from './OfflineIncome'
@@ -253,8 +254,9 @@ export function IdleHome({
             </button>
           </header>
           <IdleOptions />
-          {/* 설정 옆의 빠른 단추 (528번): 출석판을 다시 연다. */}
+          {/* 설정 옆의 빠른 단추 (528·529번): 시즌패스를 열고, 출석판을 다시 연다. */}
           <div className="idle-quick">
+            <IdlePass company={company} />
             <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
           </div>
           <IdleSandbox company={company} />

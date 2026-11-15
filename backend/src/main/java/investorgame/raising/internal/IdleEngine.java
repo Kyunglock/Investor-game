@@ -320,7 +320,16 @@ class IdleEngine {
 
   /** Today in Korea (yyyy-MM-dd): daily things reset at Korean midnight (523). */
   String today() {
-    return java.time.LocalDate.ofInstant(clock.instant(), SEOUL).toString();
+    return todayDate().toString();
+  }
+
+  java.time.LocalDate todayDate() {
+    return java.time.LocalDate.ofInstant(clock.instant(), SEOUL);
+  }
+
+  /** The instant (ms) a Korean calendar day starts. */
+  static long startOf(java.time.LocalDate day) {
+    return day.atStartOfDay(SEOUL).toInstant().toEpochMilli();
   }
 
   static double maxHp(long wall) {
@@ -537,6 +546,8 @@ class IdleEngine {
     // Pay only for contacted walls in order. No leftover DPS rolls into an untouched new wall.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
       earned += Math.floor(maxHp(s.wall) * REWARD_PER_HEALTH * CompanyEngine.inflation(c));
+      // 시즌패스 경험치 (529번): 벽 하나에 exp.wall.
+      engine.pass.gain(c, engine.pass.rule().exp().wall(), todayDate());
       s.wall++;
       s.damage = s.nextDamage;
       s.nextDamage = s.afterNextDamage;
@@ -565,19 +576,30 @@ class IdleEngine {
     CompanyEngine.spend(c, engine.diamonds().cost(count));
     List<CompanyState.Pulled> drawn = new ArrayList<>();
     for (int i = 0; i < engine.diamonds().items(count); i++) {
-      s.catDraws++;
-      int roll =
-          random.forKey("cat-draw", s.catDraws).nextInt(java.util.Arrays.stream(CAT_WEIGHTS).sum());
-      int cat = 0;
-      while (roll >= CAT_WEIGHTS[cat]) roll -= CAT_WEIGHTS[cat++];
-      String code = CATS.get(cat);
-      int level = s.cats.merge(code, 1, Integer::sum);
-      if (level == 1 && s.fielded.size() < FIELD_SLOTS) {
-        s.fielded.add(code);
-      }
-      drawn.add(new CompanyState.Pulled(code, null, level, level == 1));
+      drawn.add(grantCat(c, random));
     }
     s.lastDraws = drawn;
+  }
+
+  /** One random cat at no cost: the gacha (526) and the season pass's last step (529) share it. */
+  CompanyState.Pulled grantCat(CompanyState c, SeededRandom random) {
+    CompanyState.Idle s = state(c);
+    s.catDraws++;
+    int roll =
+        random.forKey("cat-draw", s.catDraws).nextInt(java.util.Arrays.stream(CAT_WEIGHTS).sum());
+    int cat = 0;
+    while (roll >= CAT_WEIGHTS[cat]) roll -= CAT_WEIGHTS[cat++];
+    String code = CATS.get(cat);
+    int level = s.cats.merge(code, 1, Integer::sum);
+    if (level == 1 && s.fielded.size() < FIELD_SLOTS) {
+      s.fielded.add(code);
+    }
+    return new CompanyState.Pulled(code, null, level, level == 1);
+  }
+
+  String catName(String code) {
+    int at = CATS.indexOf(code);
+    return at < 0 ? code : CAT_NAMES[at];
   }
 
   /** 테스트판 (decisions.md 499번): 고른 벽 앞에 바로 선다. 그 벽은 새 벽이고 거래 정지와 쌓인 피해는 지운다. */

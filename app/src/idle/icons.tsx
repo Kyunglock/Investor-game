@@ -127,6 +127,20 @@ const SHAPES = {
       <path d="M4 10h16M8 3v4.5M16 3v4.5m-7.3 8 2.3 2.3 4.3-4.4" />
     </>
   ),
+  // 시즌패스 (529번): 별이 찍힌 표.
+  pass: (
+    <>
+      <path
+        d="M3 6.5h18v4a1.5 1.5 0 0 0 0 3v4H3v-4a1.5 1.5 0 0 0 0-3Z"
+        fill="currentColor"
+        fillOpacity=".28"
+      />
+      <path
+        d="m12 8.8 1 2.1 2.2.3-1.6 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.6-1.6 2.2-.3Z"
+        strokeWidth="1.3"
+      />
+    </>
+  ),
 } satisfies Record<string, ReactNode>
 
 export type IdleIconName = keyof typeof SHAPES

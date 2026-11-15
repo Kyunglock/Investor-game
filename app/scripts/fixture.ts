@@ -196,6 +196,33 @@ export const company = {
     })),
     lastReward: { day: 3, diamonds: 100, money: 0 },
   },
+  // 시즌패스 (529번): 3단계까지 올라 모두 받은 채다. 다이아 50과 돈이 번갈아, 5의 배수는 큰 보상.
+  pass: {
+    season: 1,
+    name: '시즌 1',
+    endsAt: 1_795_000_000_000,
+    secondsLeft: 12 * 86_400 + 5 * 3600,
+    endingSoon: false,
+    exp: 340,
+    expPerStep: 100,
+    step: 3,
+    claimable: 0,
+    steps: Array.from({ length: 30 }, (_, i) => {
+      const step = i + 1
+      const diamonds =
+        step === 30 ? 500 : step % 10 === 0 ? 300 : step % 5 === 0 ? 200 : step % 2 === 1 ? 50 : 0
+      return {
+        step,
+        diamonds,
+        money: diamonds === 0 ? 87_300_000 : null,
+        weapon: step === 10 || step === 20,
+        cat: step === 30,
+        reached: step <= 3,
+        claimed: step <= 3,
+      }
+    }),
+    lastRewards: [],
+  },
   gacha: {
     roster: 7,
     // 데리고 있을 수 있는 수는 자리 수와 같다 (#801).

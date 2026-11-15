@@ -1,12 +1,16 @@
 package investorgame.raising.internal;
 
 import investorgame.common.error.InvalidRequestException;
+import investorgame.common.random.SeededRandom;
 import investorgame.raising.CompanyView;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
-/** 날마다 받는 보상 (decisions.md 528번): 출석. 하루의 경계는 한국 시간 자정이고 서버 시각으로 판정한다(화면의 시계는 믿지 않는다). */
+/**
+ * 날마다·시즌마다 받는 보상: 출석(decisions.md 528번)과 시즌패스(529번). 하루의 경계는 한국 시간 자정이고 서버 시각으로 판정한다(화면의 시계는 믿지
+ * 않는다).
+ */
 @Component
 class RewardsEngine {
   private final IdleEngine idle;
@@ -51,6 +55,8 @@ class RewardsEngine {
     c.attendCount++;
     c.attendDay = idle.today();
     c.lastAttend = reward;
+    // 출석하면 시즌패스 경험치 (529번).
+    engine.pass.gain(c, rule().passExp(), idle.todayDate());
   }
 
   /** 테스트판: 하루가 지난 셈 친다. 오늘 받은 출석을 다시 받을 수 있다. */
@@ -88,5 +94,133 @@ class RewardsEngine {
         r == null
             ? null
             : new CompanyView.AttendanceReward(r.day, r.diamonds, CompanyView.money(r.money)));
+  }
+
+  /** 멘탈 보호 스테이지를 깼다: 패스 경험치 (529번). */
+  void stageCleared(CompanyState c) {
+    engine.pass.stageCleared(c, idle.todayDate());
+  }
+
+  /** EX 디펜스를 했다: 패스 경험치 (529번). */
+  void exDone(CompanyState c) {
+    engine.pass.gain(c, engine.pass.rule().exp().ex(), idle.todayDate());
+  }
+
+  /**
+   * 시즌패스의 단계 보상을 받는다 (529번). step이 null이면 받을 수 있는 것을 모두 받는다. 도달하지 않았거나 이미 받은 단계면 400. 모두 받기에 받을 것이
+   * 없어도 400.
+   */
+  void claimPass(CompanyState c, Integer step, SeededRandom random) {
+    engine.pass.roll(c, idle.todayDate());
+    int reached = engine.pass.reached(c);
+    List<Integer> steps = new ArrayList<>();
+    if (step == null) {
+      for (int i = 1; i <= reached; i++) {
+        if (!c.passClaimed.contains(i)) steps.add(i);
+      }
+      if (steps.isEmpty()) {
+        throw new InvalidRequestException("받을 수 있는 시즌패스 보상이 없어요");
+      }
+    } else {
+      if (step < 1 || step > engine.pass.rule().steps()) {
+        throw new InvalidRequestException("없는 단계예요: " + step);
+      }
+      if (step > reached) {
+        throw new InvalidRequestException("아직 도달하지 않은 단계예요: " + step);
+      }
+      if (c.passClaimed.contains(step)) {
+        throw new InvalidRequestException("이미 받은 단계예요: " + step);
+      }
+      steps.add(step);
+    }
+    List<CompanyState.PassReward> got = new ArrayList<>();
+    for (int at : steps) {
+      PassRules.Reward reward = engine.pass.reward(at);
+      CompanyState.PassReward r = new CompanyState.PassReward();
+      r.step = at;
+      r.diamonds = reward.diamonds();
+      c.diamonds += r.diamonds;
+      if (reward.money()) {
+        r.money = money(c, engine.pass.rule().moneyMinutes());
+        c.capital += r.money;
+      }
+      if (reward.weapon()) {
+        engine.mental.initWeapons(c);
+        CompanyState.Pulled weapon = engine.mental.drawOne(c, random);
+        r.weaponKind = weapon.kind;
+        r.weaponGrade = weapon.grade;
+      }
+      if (reward.cat()) {
+        r.cat = idle.grantCat(c, random).kind;
+      }
+      c.passClaimed.add(at);
+      got.add(r);
+    }
+    c.lastPass = got;
+  }
+
+  /** 테스트판: 패스 경험치를 더한다. */
+  void addPassExp(CompanyState c, long exp) {
+    engine.pass.gain(c, exp, idle.todayDate());
+  }
+
+  /** 테스트판: 다음 시즌으로 넘긴다. 진행도가 비고 받지 않은 보상은 사라진다. */
+  void nextSeason(CompanyState c) {
+    c.passSeasonOffset++;
+    engine.pass.roll(c, idle.todayDate());
+  }
+
+  private static final long DAY_SECONDS = 86_400;
+
+  /** 시즌패스의 화면 값 (529번). */
+  CompanyView.Pass passView(CompanyState c) {
+    java.time.LocalDate today = idle.todayDate();
+    engine.pass.roll(c, today);
+    CompanyProperties.Pass rule = engine.pass.rule();
+    int reached = engine.pass.reached(c);
+    long endsAt = IdleEngine.startOf(engine.pass.ends(c, today));
+    long left = Math.max(0, (endsAt - idle.now() + 999) / 1000);
+    List<CompanyView.PassStep> steps = new ArrayList<>();
+    int claimable = 0;
+    for (int at = 1; at <= rule.steps(); at++) {
+      PassRules.Reward reward = engine.pass.reward(at);
+      boolean claimed = c.passClaimed.contains(at);
+      if (at <= reached && !claimed) claimable++;
+      steps.add(
+          new CompanyView.PassStep(
+              at,
+              reward.diamonds(),
+              reward.money() ? CompanyView.money(money(c, rule.moneyMinutes())) : null,
+              reward.weapon(),
+              reward.cat(),
+              at <= reached,
+              claimed));
+    }
+    List<CompanyView.PassReward> last =
+        (c.lastPass == null ? List.<CompanyState.PassReward>of() : c.lastPass)
+            .stream()
+                .map(
+                    r ->
+                        new CompanyView.PassReward(
+                            r.step,
+                            r.diamonds,
+                            CompanyView.money(r.money),
+                            r.weaponKind,
+                            r.weaponGrade,
+                            r.cat,
+                            r.cat == null ? null : idle.catName(r.cat)))
+                .toList();
+    return new CompanyView.Pass(
+        c.passSeason,
+        "시즌 " + c.passSeason,
+        endsAt,
+        left,
+        left <= DAY_SECONDS,
+        c.passExp,
+        rule.expPerStep(),
+        reached,
+        claimable,
+        steps,
+        last);
   }
 }

@@ -63,7 +63,40 @@ public record CompanyProperties(
     Income income,
     Meetings meetings,
     Diamonds diamonds,
-    Attendance attendance) {
+    Attendance attendance,
+    Pass pass) {
+
+  /**
+   * 시즌패스 (decisions.md 529번): 무료 줄 하나. 시즌은 epoch(한국 시간 자정)부터 days일마다 이어진다.
+   *
+   * @param epoch 첫 시즌이 시작하는 날(yyyy-MM-dd, 한국 시간)
+   * @param days 한 시즌의 길이(일)
+   * @param steps 단계 수
+   * @param expPerStep 한 단계에 드는 패스 경험치
+   * @param moneyMinutes 돈 보상 = 받을 때 회사의 초당 수입 × 이만큼(분)
+   */
+  public record Pass(
+      String epoch,
+      int days,
+      int steps,
+      int expPerStep,
+      int moneyMinutes,
+      PassRewards rewards,
+      PassExp exp) {}
+
+  /** 단계의 다이아: 보통 단계(돈과 번갈아)·5의 배수·10의 배수(무기 하나 더)·마지막 단계(고양이 한 마리 더). */
+  public record PassRewards(
+      long normalDiamonds, long fiveDiamonds, long tenDiamonds, long lastDiamonds) {}
+
+  /**
+   * 패스 경험치를 얻는 곳.
+   *
+   * @param wall 매도벽 하나를 돌파할 때
+   * @param stage 멘탈 보호 스테이지를 깰 때(별과 상관없이)
+   * @param stageDailyMax 스테이지로 하루에 얻는 상한
+   * @param ex EX 디펜스
+   */
+  public record PassExp(int wall, int stage, int stageDailyMax, int ex) {}
 
   /**
    * 출석 보상 (decisions.md 528번): 출석판의 칸을 차례로 받고 끝 칸 다음은 다시 첫 칸이다.

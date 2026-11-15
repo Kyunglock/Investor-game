@@ -280,6 +280,30 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/pass/claim:
+    post:
+      operationId: claimPass
+      summary: 시즌패스의 단계 보상을 받는다 (decisions.md 529번)
+      description: |
+        step을 실으면 그 단계 하나를, 본문이 없거나 step이 없으면 받을 수 있는 것을 모두 받는다. 받은 것은 pass.lastRewards에 담긴다.
+        서버가 도달 여부와 중복 수령을 검증한다: 도달하지 않았거나 이미 받은 단계, 없는 단계, 받을 것이 없는 모두 받기는 400.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                step: { type: integer, minimum: 1, description: 받을 단계. 없으면 받을 수 있는 것을 모두 받는다 }
+      responses:
+        '200':
+          description: 보상을 받은 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/attendance:
     post:
       operationId: claimAttendance
@@ -597,6 +621,41 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/sandbox/pass-exp:
+    post:
+      operationId: addSandboxPassExp
+      summary: 테스트판에서 시즌패스 경험치를 더한다 (decisions.md 529번)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [exp]
+              properties:
+                exp: { type: integer, format: int64, minimum: 1, maximum: 100000 }
+      responses:
+        '200':
+          description: 바뀐 뒤의 테스트판 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/sandbox/next-season:
+    post:
+      operationId: skipSandboxSeason
+      summary: 테스트판에서 다음 시즌으로 넘긴다 (decisions.md 529번). 진행도가 비고 받지 않은 보상은 사라진다
+      responses:
+        '200':
+          description: 바뀐 뒤의 테스트판 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/sandbox/next-day:
     post:
       operationId: skipSandboxDay
@@ -674,7 +733,7 @@ components:
     Company:
       type: object
       description: 회사 화면의 값. 직원 능력치는 등급만. 분기·결산·파산·엔딩은 없다 (decisions.md 523번). 회사는 끝나지 않고 시간이 흐르는 대로 돈을 번다
-      required: [companyId, number, era, capital, diamonds, grade, seats, employees, desks, gacha, history, meetings, attendance]
+      required: [companyId, number, era, capital, diamonds, grade, seats, employees, desks, gacha, history, meetings, attendance, pass]
       properties:
         companyId: { type: string, format: uuid }
         number: { type: integer, description: 사장이 차린 몇 번째 회사인가 }
@@ -772,6 +831,48 @@ components:
               description: 인사팀에 사람이 있으면 지원자 등급의 중심이 오를 수 있는 곳(인사 직원보다 두 단계 아래). 없으면 null (6.3절)
               oneOf: [{ $ref: '#/components/schemas/Grade' }, { type: 'null' }]
             hot: { type: [string, 'null'], description: 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) }
+        pass:
+          type: object
+          description: 시즌패스 (decisions.md 529번). 4주짜리 시즌 동안 플레이로 패스 경험치를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이다. 시즌이 끝나면 받지 않은 보상은 사라진다
+          required: [season, name, endsAt, secondsLeft, endingSoon, exp, expPerStep, step, claimable, steps, lastRewards]
+          properties:
+            season: { type: integer, description: 시즌 번호 }
+            name: { type: string }
+            endsAt: { type: integer, format: int64, description: 시즌이 끝나는 때(서버 시각, ms) }
+            secondsLeft: { type: integer, format: int64, description: 끝날 때까지 남은 시간(초) }
+            endingSoon: { type: boolean, description: 끝나기까지 하루가 안 남았다. 받지 않은 보상이 있으면 알려 준다 }
+            exp: { type: integer, format: int64, description: 이번 시즌에 모은 패스 경험치 }
+            expPerStep: { type: integer, description: 한 단계에 드는 경험치 }
+            step: { type: integer, description: 지금 도달한 단계(0부터) }
+            claimable: { type: integer, description: 받을 수 있는 보상의 수 }
+            steps:
+              type: array
+              description: 단계마다의 보상, 1단계부터
+              items:
+                type: object
+                required: [step, diamonds, weapon, cat, reached, claimed]
+                properties:
+                  step: { type: integer }
+                  diamonds: { type: integer, format: int64, description: 받는 다이아. 돈 단계면 0 }
+                  money: { type: [number, 'null'], description: 돈 단계면 지금 받으면 들어올 돈(회사의 초당 수입 30분어치). 아니면 null }
+                  weapon: { type: boolean, description: 무기 하나를 더 받는다. 등급은 뽑기처럼 정해진다 }
+                  cat: { type: boolean, description: 고양이 한 마리를 더 받는다 }
+                  reached: { type: boolean, description: 경험치가 이 단계에 닿았다 }
+                  claimed: { type: boolean, description: 이미 받았다 }
+            lastRewards:
+              type: array
+              description: 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다
+              items:
+                type: object
+                required: [step, diamonds, money]
+                properties:
+                  step: { type: integer }
+                  diamonds: { type: integer, format: int64 }
+                  money: { type: number }
+                  weaponKind: { type: [string, 'null'] }
+                  weaponGrade: { type: [string, 'null'] }
+                  cat: { type: [string, 'null'], description: 받은 고양이의 코드 }
+                  catName: { type: [string, 'null'] }
         attendance:
           type: object
           description: 출석 보상 (decisions.md 528번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다

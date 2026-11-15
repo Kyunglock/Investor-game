@@ -209,6 +209,37 @@ class CompanyState {
   /** 다이아 (decisions.md 526번): 직원·고양이·무기 뽑기에 쓴다. 뽑기권(tickets·weaponTickets)을 대신한다. */
   long diamonds;
 
+  /** 시즌패스 (529번): 지금 진행 중인 시즌 번호. 시즌이 바뀌면 진행도를 비운다. 없던 저장은 0이라 처음 볼 때 지금 시즌으로 맞춘다. */
+  int passSeason;
+
+  /** 이번 시즌에 모은 패스 경험치. */
+  long passExp;
+
+  /** 이번 시즌에 보상을 받은 단계. */
+  List<Integer> passClaimed = new ArrayList<>();
+
+  /** 멘탈 보호 스테이지로 패스 경험치를 얻은 날(한국 시간)과 그날 얻은 양: 하루 상한을 센다. */
+  String passStageDay;
+
+  int passStageExp;
+
+  /** 테스트판에서 넘긴 시즌 수. */
+  int passSeasonOffset;
+
+  /** 마지막으로 받은 시즌패스 보상들. 화면이 획득 연출에 쓴다. */
+  List<PassReward> lastPass = new ArrayList<>();
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class PassReward {
+    int step;
+    long diamonds;
+    double money;
+    String weaponKind;
+    String weaponGrade;
+    String cat;
+  }
+
   /** 마지막으로 출석 보상을 받은 날(한국 시간, yyyy-MM-dd). 받은 적이 없으면 null (528번). */
   String attendDay;
 

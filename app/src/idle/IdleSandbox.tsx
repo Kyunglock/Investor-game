@@ -232,6 +232,25 @@ export function IdleSandbox({ company }: { company: Company }) {
                 다음 날로
               </button>
             </div>
+            <span className="idle-sandbox-label">시즌패스</span>
+            <div className="idle-sandbox-chips is-two">
+              <button
+                type="button"
+                disabled={busy}
+                data-testid="idle-sandbox-pass-exp"
+                onClick={() => void run(() => store().addSandboxPassExp(500))}
+              >
+                패스 경험치 +500
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                data-testid="idle-sandbox-next-season"
+                onClick={() => void run(() => store().skipSandboxSeason())}
+              >
+                다음 시즌으로
+              </button>
+            </div>
             <label className="idle-sandbox-check">
               <input
                 type="checkbox"

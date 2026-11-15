@@ -385,6 +385,7 @@ class DefaultCompanyService implements CompanyService {
         new CompanyView.Meetings(
             c.meetingChances, engine.meetingMax(), engine.meetingWaitSeconds(c, now)),
         rewards.view(c),
+        rewards.passView(c),
         lockedDesks,
         engine.mental.weaponViews(c),
         engine.mental.armoryView(c),
@@ -411,6 +412,9 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView reportStage(UUID sessionId, int stage, boolean cleared, int stars) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.reportStage(row.state(), stage, cleared, stars);
+    if (cleared) {
+      rewards.stageCleared(row.state());
+    }
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -444,6 +448,33 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView claimPass(UUID sessionId, Integer step) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    rewards.claimPass(row.state(), step, new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxPassExp(UUID sessionId, long exp) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    rewards.addPassExp(row.state(), exp);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxNextSeason(UUID sessionId) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    rewards.nextSeason(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView sandboxNextDay(UUID sessionId) {
     CompanyRepository.Row row = lockSandbox(sessionId);
     rewards.nextDay(row.state());
@@ -455,7 +486,11 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView reportEx(UUID sessionId, int kills) {
     CompanyRepository.Row row = lockActive(sessionId);
+    boolean first = !idle.today().equals(row.state().exDay);
     engine.mental.reportEx(row.state(), kills, idle.today());
+    if (first) {
+      rewards.exDone(row.state());
+    }
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
