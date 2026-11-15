@@ -303,7 +303,11 @@ class CompanyApiTest {
     List<Number> incomes = hired.read("$.employees[*].incomePerSecond");
     assertThat(incomes).hasSize(2).allMatch(income -> income.doubleValue() > 0);
     double staff = hired.read("$.idle.income.staffPerSecond", Double.class);
-    assertThat(staff).isEqualTo(incomes.stream().mapToDouble(Number::doubleValue).sum());
+    // 화면 값은 소수를 버린 수라 직원마다 버린 몫만큼(직원 수 미만) 어긋날 수 있다.
+    assertThat(staff)
+        .isCloseTo(
+            incomes.stream().mapToDouble(Number::doubleValue).sum(),
+            org.assertj.core.data.Offset.offset(2.0));
     assertThat(hired.read("$.idle.income.perSecond", Double.class)).isGreaterThan(staff);
 
     // 접속 신호: 시작하고 한 번 보내면 그 사이의 수입이 자본에 들어온다(줄지 않는다).
