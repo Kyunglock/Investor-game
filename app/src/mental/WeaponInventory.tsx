@@ -1,5 +1,7 @@
 import type { Company } from '@web/api/client'
 import { GUN_GRADES } from '@web/features/game/cat/draw'
+import { DiamondIcon, DiamondPrice } from '@web/features/raising/DiamondIcon'
+import { diamondText } from '@web/features/raising/gachaRules'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useEffect, useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
@@ -7,7 +9,7 @@ import { sfx } from '../fx/sound'
 import { CatPortrait } from '../idle/CatPortrait'
 import { GunSprite } from './GunSprite'
 import { DEFAULT_WEAPON, type Weapon } from './hero'
-import { type TenCard, TenReveal } from './TenReveal'
+import { TenBonus, type TenCard, TenReveal } from './TenReveal'
 import { type DrawResult, WeaponReveal } from './WeaponReveal'
 import { FIRE_STYLE_NAMES, SHOT_WEIGHT, WEAPON_EFFECTS } from './weaponEffects'
 import { weaponRevealPlan } from './weaponRevealPlan'
@@ -15,7 +17,7 @@ import './weapons.css'
 
 type Armory = NonNullable<Company['armory']>
 
-/** 10연속 뽑기 (517번): 뽑기권 열 장으로 열 개. */
+/** 10연차 (517·526번): 서버에 보내는 수. 값은 diamonds.tenDraw이고 diamonds.tenCount개가 나온다. */
 export const TEN = 10
 
 /** 합칠 수 있는 등급: 가장 높은 등급(LR)은 못 합친다 (366번). */
@@ -40,10 +42,12 @@ export const GRADE_BADGE: Record<Weapon['grade'], string> = {
 /** 인벤토리 한 쪽의 칸 수: 6칸 × 6줄 (509번). */
 const SLOTS = 36
 
-/** 인벤토리 메뉴의 배지: 쓸 수 있는 무기 뽑기권 수. */
+/** 인벤토리 메뉴의 배지: 가진 다이아로 뽑을 수 있는 횟수 (526번). 한 번도 못 뽑으면 달지 않는다. */
 export function weaponBadge(company: Company): string | null {
-  const tickets = company.armory?.tickets ?? 0
-  return tickets > 0 ? String(tickets) : null
+  const d = company.diamonds
+  if (!company.armory || d.draw <= 0) return null
+  const draws = Math.floor(d.amount / d.draw)
+  return draws > 0 ? (draws > 99 ? '99+' : String(draws)) : null
 }
 
 /**
@@ -69,7 +73,7 @@ export function WeaponInventory({ company }: { company: Company }) {
     }
   }, [])
   const draw = async () => {
-    if (drawing.current || useRaisingStore.getState().busy || !armory || armory.tickets <= 0) return
+    if (drawing.current || useRaisingStore.getState().busy || !canOne) return
     drawing.current = true
     const id = Date.now()
     setReveal({ id, result: null })
@@ -89,10 +93,9 @@ export function WeaponInventory({ company }: { company: Company }) {
       drawing.current = false
     }
   }
-  // 10연속 (517번): 열 장을 한 번에 쓰고, 상자가 열리면 열 개가 차례로 나온다.
+  // 10연차 (517·526번): 한 번에 tenCount개를 뽑고, 상자가 열리면 차례로 나온다.
   const drawTen = async () => {
-    if (drawing.current || useRaisingStore.getState().busy || !armory || armory.tickets < TEN)
-      return
+    if (drawing.current || useRaisingStore.getState().busy || !canTen) return
     drawing.current = true
     const id = Date.now()
     setReveal(null)
@@ -104,7 +107,7 @@ export function WeaponInventory({ company }: { company: Company }) {
       const draws = state.company?.armory?.lastDraws ?? []
       if (!mounted.current) return
       setTen(
-        !state.error && draws.length === TEN
+        !state.error && draws.length > 0
           ? {
               id,
               cards: draws.map((d, i) => {
@@ -131,6 +134,10 @@ export function WeaponInventory({ company }: { company: Company }) {
     }
   }
   const armory: Armory | null = company.armory ?? null
+  // 뽑기 값은 서버가 준다 (526번): 한 번은 draw, 10연차는 tenDraw에 tenCount개.
+  const diamonds = company.diamonds
+  const canOne = Boolean(armory) && diamonds.amount >= diamonds.draw
+  const canTen = Boolean(armory) && diamonds.amount >= diamonds.tenDraw
   const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
   const equipped = weapons.find((w) => w.equipped) ?? weapons[0]
   const sorted = [...weapons].sort(
@@ -272,26 +279,40 @@ export function WeaponInventory({ company }: { company: Company }) {
       </section>
       <div className="weapon-draw-row">
         <p className="font-game text-[15px]">
-          뽑기권 <b data-testid="weapon-tickets">{armory?.tickets ?? 0}</b>장
+          <DiamondIcon /> <span className="sr-only">다이아 </span>
+          <b data-testid="weapon-diamonds">
+            {company.sandboxInfinite ? '∞' : diamondText(diamonds.amount)}
+          </b>
+          {!canOne && (
+            <span className="weapon-draw-short" data-testid="weapon-diamonds-short">
+              다이아가 모자라요
+            </span>
+          )}
         </p>
         <button
           type="button"
           className="weapon-draw"
           data-testid="weapon-draw"
-          disabled={busy || Boolean(reveal || ten) || !armory || armory.tickets <= 0}
+          disabled={busy || Boolean(reveal || ten) || !canOne}
           onClick={() => void draw()}
         >
           무기 뽑기
+          <small>
+            <DiamondPrice amount={diamonds.draw} />
+          </small>
         </button>
         <button
           type="button"
           className="weapon-draw weapon-draw-ten"
           data-testid="weapon-draw-ten"
-          disabled={busy || Boolean(reveal || ten) || !armory || armory.tickets < TEN}
+          disabled={busy || Boolean(reveal || ten) || !canTen}
           onClick={() => void drawTen()}
         >
-          10연속
-          <small>뽑기권 {TEN}장</small>
+          10연차
+          <TenBonus count={diamonds.tenCount} />
+          <small>
+            <DiamondPrice amount={diamonds.tenDraw} />
+          </small>
         </button>
       </div>
       <p className="mt-2 text-[11px] text-muted">뽑기 F~A · S 이상은 합성으로 획득 · 최고 LR</p>
@@ -299,7 +320,8 @@ export function WeaponInventory({ company }: { company: Company }) {
         <WeaponReveal
           key={reveal.id}
           result={reveal.result}
-          tickets={armory?.tickets ?? 0}
+          price={diamonds.draw}
+          canAgain={canOne}
           onClose={() => setReveal(null)}
           onAgain={() => void draw()}
         />
@@ -307,13 +329,13 @@ export function WeaponInventory({ company }: { company: Company }) {
       {ten && (
         <TenReveal
           key={ten.id}
-          label="무기 10연속 뽑기"
+          label="무기 10연차"
           testId="weapon-ten"
           icon="★"
-          loading="무기 열 개를 가져오는 중…"
+          loading={`무기 ${diamonds.tenCount}개를 가져오는 중…`}
           cards={ten.cards}
-          canAgain={(armory?.tickets ?? 0) >= TEN}
-          againNote={`뽑기권 ${armory?.tickets ?? 0}장`}
+          canAgain={canTen}
+          againNote={<DiamondPrice amount={diamonds.tenDraw} />}
           onClose={() => setTen(null)}
           onAgain={() => void drawTen()}
         />

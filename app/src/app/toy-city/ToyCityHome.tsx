@@ -1,6 +1,7 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
-import { drawable } from '@web/features/raising/gachaRules'
+import { DiamondIcon } from '@web/features/raising/DiamondIcon'
+import { diamondText, drawable } from '@web/features/raising/gachaRules'
 import { nextStep, officeName } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
@@ -90,16 +91,16 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
     sfx.tap()
     useAppUi.getState().setTab(tab)
   }
-  // 채용은 메뉴를 거치지 않고 가진 채용권만큼 바로 뽑는다 (490번). 결과 카드는 Windows가 띄운다. 도감과 확률은 다른 장면 아래의 도감 탭에 있다.
+  // 채용은 메뉴를 거치지 않고 가진 다이아가 닿는 만큼 바로 뽑는다 (490·526번). 결과 카드는 Windows가 띄운다. 도감과 확률은 다른 장면 아래의 도감 탭에 있다.
   const [hireNote, setHireNote] = useState<string | null>(null)
   const hire = () => {
     const count = drawable(company)
     if (count < 1) {
       sfx.tap()
       setHireNote(
-        company.gacha.tickets < 1
-          ? '채용권이 없어요 · 건물을 올리면 받아요'
-          : '자리가 꽉 찼어요 · 회사를 넓히면 더 뽑을 수 있어요',
+        company.employees.length >= company.seats
+          ? '자리가 꽉 찼어요 · 회사를 넓히면 더 뽑을 수 있어요'
+          : '다이아가 모자라요 · 멘탈 보호 스테이지의 별로 얻어요',
       )
       return
     }
@@ -157,6 +158,19 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
         <div className="toy-wallet">
           <i aria-hidden="true">₩</i>
           <strong data-testid="company-capital">{money(capital)}</strong>
+        </div>
+        {/* 다이아 (526번): 직원·고양이·무기 뽑기에 쓴다. */}
+        <div
+          className="toy-wallet toy-wallet-diamond"
+          role="img"
+          aria-label={`다이아 ${company.diamonds.amount.toLocaleString()}개`}
+        >
+          <i aria-hidden="true">
+            <DiamondIcon />
+          </i>
+          <strong data-testid="company-diamonds">
+            {company.sandboxInfinite ? '∞' : diamondText(company.diamonds.amount)}
+          </strong>
         </div>
       </div>
       {/* 첫 종목회의를 정하기 전까지는 첫 판의 흐름이 이끈다 (#803): 그 뒤에 남은 걸음만 한 줄로 보인다. */}
@@ -347,7 +361,7 @@ function SideGames({ company, onMental }: { company: Company; onMental: () => vo
 
 /**
  * 매도벽 돌파 스테이지 선택 (#698): 주 게임. 1-1부터 차례로 열리고 챕터 끝은 보스다. 스테이지 번호가 매도벽의 세기라 뒤로 갈수록 세진다. 처음 깨면
- * 자본과 무기 뽑기권, 별을 더 얻으면 뽑기권을 받는다.
+ * 자본을 받는다. 다이아는 주지 않는다 (526번).
  */
 function AssaultSelect({ company }: { company: Company }) {
   const assaults = company.assaults
@@ -397,7 +411,7 @@ function AssaultSelect({ company }: { company: Company }) {
       <p className="text-sm text-muted" data-testid="assault-lead">
         {chapter > openChapter
           ? `챕터 ${chapter - 1} 보스를 깨면 열린다`
-          : '매도벽을 부수고 올라가요. 처음 깨면 자본과 무기 뽑기권을 받아요.'}
+          : '매도벽을 부수고 올라가요. 처음 깨면 자본을 받아요.'}
       </p>
       <ol className="toy-stage-grid" data-testid="assault-grid">
         {numbers.map((n) => {
@@ -522,7 +536,7 @@ function StageSelect({ company }: { company: Company }) {
         disabled={!stages.exAvailable}
         onClick={() => start({ kind: 'ex' })}
       >
-        {stages.exAvailable ? 'EX 디펜스 · 하루에 한 번 · 무기 뽑기권' : 'EX 디펜스는 내일 다시'}
+        {stages.exAvailable ? 'EX 디펜스 · 하루 한 번 · 다이아 보상' : 'EX 디펜스는 내일 다시'}
       </button>
     </>
   )
