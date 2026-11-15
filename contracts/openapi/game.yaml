@@ -429,7 +429,7 @@ paths:
       operationId: drawCat
       summary: '다이아로 고양이를 뽑는다. 한 번 100, 10연차는 1,000에 열한 마리 (decisions.md 488·493·517·526번)'
       description: |
-        무기 뽑기와 같은 값이다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
+        무기 뽑기와 같은 값이다. 동료 고양이는 39종(사장냥 포함 총 40종)이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
         이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 나온 고양이는 idle.lastDraws에 차례대로 담긴다.
         다이아가 모자라면 하나도 뽑지 않고 400.
       requestBody:
@@ -462,7 +462,7 @@ paths:
               type: object
               required: [code, fielded]
               properties:
-                code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
+                code: { type: string, enum: [sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat] }
                 fielded: { type: boolean }
       responses:
         '200':
@@ -488,7 +488,7 @@ paths:
               type: object
               required: [code]
               properties:
-                code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
+                code: { type: string, enum: [sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat] }
                 kind: { type: string, enum: [pistol, revolver, smg, shotgun, rifle] }
                 grade: { type: string, enum: [F, E, D, C, B, A, S, SS, SSS, SR, UR, LR] }
       responses:
@@ -604,7 +604,7 @@ paths:
   /api/sandbox/cats:
     post:
       operationId: grantSandboxCats
-      summary: 테스트판에서 고양이 여섯을 모두 그 레벨로 받고 빈 출전 칸을 채운다 (decisions.md 499번)
+      summary: 테스트판에서 동료 고양이 39종을 모두 그 레벨로 받고 빈 출전 칸을 채운다 (decisions.md 499번)
       requestBody:
         required: true
         content:
@@ -1274,7 +1274,7 @@ components:
                 type: object
                 required: [code, level, isNew]
                 properties:
-                  code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
+                  code: { type: string, enum: [sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat] }
                   level: { type: integer, description: 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다 }
                   isNew: { type: boolean, description: 처음 얻은 고양이 }
             actives:
@@ -1309,7 +1309,7 @@ components:
                 type: object
                 required: [code, name, level, damagePercent, firePercent, criticalPercent, fielded, weapon, skill, skillName, skillLevel, skillNextLevel]
                 properties:
-                  code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
+                  code: { type: string, enum: [sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat] }
                   name: { type: string }
                   level: { type: integer, description: 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다 }
                   damagePercent: { type: integer, description: 이 고양이 총의 공격력(%). 든 무기 공격력의 이만큼으로 쏜다. 레벨과 특성이 들어 있다 (492번) }

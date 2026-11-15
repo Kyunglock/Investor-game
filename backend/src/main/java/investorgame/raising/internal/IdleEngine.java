@@ -99,15 +99,73 @@ class IdleEngine {
   private static final String[] NAMES = {"물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬"};
   // Cats (decisions.md 488, 492, 493): each has a trait for its own gun. Drawn with a ticket.
   private static final List<String> CATS =
-      List.of("sky", "mint", "lilac", "sunset", "night", "snow");
-  private static final String[] CAT_NAMES = {"하늘냥", "민트냥", "라일락냥", "노을냥", "밤냥", "눈꽃냥"};
-  private static final int[] CAT_WEIGHTS = {25, 25, 10, 15, 15, 10};
-  private static final double[] CAT_FIRE = {1.25, 1, 1, 1.1, 1, 1.4};
-  private static final double[] CAT_DAMAGE = {1, 1.25, 1, 1.1, 1.1, 1};
-  private static final double[] CAT_CRITICAL = {1, 1, 1.5, 1, 1.25, 1};
+      List.of(
+          "sky",
+          "mint",
+          "lilac",
+          "sunset",
+          "night",
+          "snow",
+          "caramel",
+          "mocha",
+          "peach",
+          "silver",
+          "panda",
+          "biscuit",
+          "ocean",
+          "lemon",
+          "cocoa",
+          "rose",
+          "tiger",
+          "cloud",
+          "star",
+          "siam",
+          "tilt",
+          "russet",
+          "sage",
+          "apricot",
+          "plum",
+          "patch",
+          "drowsy",
+          "coral",
+          "truffle",
+          "frost",
+          "butter",
+          "terra",
+          "wisteria",
+          "odd",
+          "pistachio",
+          "sand",
+          "blush",
+          "petrol",
+          "oat");
+  private static final String[] CAT_NAMES = {
+    "하늘냥", "민트냥", "라일락냥", "노을냥", "밤냥", "눈꽃냥", "카라멜냥", "모카냥", "복숭아냥", "은빛냥", "판다냥", "비스킷냥", "바다냥",
+    "레몬냥", "코코아냥", "로즈냥", "호랑냥", "구름냥", "별빛냥", "샴냥", "짝귀냥", "단풍냥", "세이지냥", "살구냥", "자두냥", "조각냥",
+    "졸린냥", "산호냥", "트러플냥", "서리냥", "버터냥", "테라냥", "등꽃냥", "오드냥", "피스타냥", "모래냥", "볼터치냥", "청록냥", "오트냥"
+  };
+  private static final int[] CAT_WEIGHTS = {
+    25, 25, 10, 15, 15, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10
+  };
+  private static final double[] CAT_FIRE = {
+    1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1,
+    1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1
+  };
+  private static final double[] CAT_DAMAGE = {
+    1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.1, 1.1,
+    1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1
+  };
+  private static final double[] CAT_CRITICAL = {
+    1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1,
+    1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5
+  };
   // Each cat's own skill, as an index into CODES (501): sky meteor, mint water, lilac bolt,
   // sunset ram, night meteor, snow water. Matches the app's idle/loadout.ts CAT_SKILLS.
-  private static final int[] CAT_SKILL = {1, 0, 2, 3, 1, 0};
+  private static final int[] CAT_SKILL = {
+    1, 0, 2, 3, 1, 0, 1, 0, 2, 3, 1, 0, 1, 0, 2, 3, 1, 0, 1, 0, 2, 3, 1, 0, 1, 0, 2, 3, 1, 0, 1, 0,
+    2, 3, 1, 0, 1, 0, 2
+  };
   private static final long[] OLD_UNLOCKS = {5, 15, 30, 50};
   private static final String[] OLD_SKILL_CATS = {"mint", "sky", "lilac", "sunset"};
   // Cats used to join at these walls. Saves from then keep them.
@@ -656,7 +714,7 @@ class IdleEngine {
 
   static final long MAX_JUMP_WALL = 100_000;
 
-  /** 테스트판 (499번): 고양이 여섯을 모두 그 레벨로 주고, 빈 출전 칸을 차례대로 채운다. */
+  /** 테스트판 (499번): 동료 고양이 39종을 모두 그 레벨로 주고, 빈 출전 칸을 차례대로 채운다. */
   void grantCats(CompanyState c, int level) {
     CompanyState.Idle s = state(c);
     for (String code : CATS) {

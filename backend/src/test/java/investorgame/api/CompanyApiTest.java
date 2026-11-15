@@ -172,7 +172,7 @@ class CompanyApiTest {
     mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
     DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
     List<Integer> levels = opened.read("$.idle.cats[*].level");
-    assertThat(levels).as("고양이는 벽을 돌파해도 저절로 오지 않는다 (488번)").containsOnly(0).hasSize(6);
+    assertThat(levels).as("고양이는 벽을 돌파해도 저절로 오지 않는다 (488번)").containsOnly(0).hasSize(39);
     long diamonds = opened.read("$.diamonds.amount", Long.class);
     long capital = opened.read("$.capital", Long.class);
     postJson("/api/company/cat/field", "{\"code\":\"sky\",\"fielded\":true}")

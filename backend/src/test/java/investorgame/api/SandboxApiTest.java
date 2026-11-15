@@ -10,6 +10,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import investorgame.TestcontainersConfiguration;
 import jakarta.servlet.http.Cookie;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -151,11 +152,12 @@ class SandboxApiTest {
     assertThat(fresh.read("$.idle.wall", Long.class)).isEqualTo(1);
     assertThat(fresh.read("$.battleUpgrades[?(@.kind=='damage')].level").toString())
         .isEqualTo("[0]");
-    // 고양이 여섯을 그 레벨로 받고 넷이 출전한다. 무기를 받으면 사장냥이 든다.
+    // 동료 고양이 39종을 그 레벨로 받고 넷이 출전한다. 무기를 받으면 사장냥이 든다.
     DocumentContext cats =
         json(
             mvc.perform(tool("cats", "{\"level\":10}", in)).andExpect(status().isOk()).andReturn());
-    assertThat(cats.read("$.idle.cats[*].level").toString()).isEqualTo("[10,10,10,10,10,10]");
+    List<Integer> catLevels = cats.read("$.idle.cats[*].level");
+    assertThat(catLevels).hasSize(39).containsOnly(10);
     assertThat(cats.read("$.idle.cats[?(@.fielded == true)].code").toString())
         .isEqualTo("[\"sky\",\"mint\",\"lilac\",\"sunset\"]");
     DocumentContext armed =

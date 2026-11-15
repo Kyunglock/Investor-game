@@ -85,7 +85,12 @@ export const HERO_KEYS = ['hero-idle', 'hero-fire', 'hero-hurt'] as const
 function drawRigBody(scene: Phaser.Scene, c: CanvasRenderingContext2D, index = 4, look?: number) {
   const asset = look === undefined ? 'heroPoses' : MATE_LOOKS[look].poses
   const source = scene.textures.get(`art-${asset}`).getSourceImage() as HTMLImageElement
-  drawCatPose(c, source, index)
+  drawCatPose(
+    c,
+    source,
+    index,
+    look !== undefined && 'slot' in MATE_LOOKS[look] ? MATE_LOOKS[look] : undefined,
+  )
 }
 
 function shadow(c: CanvasRenderingContext2D) {

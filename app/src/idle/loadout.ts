@@ -1,9 +1,19 @@
 import type { Company } from '@web/api/client'
+import type { CatCode } from '@web/features/raising/store'
 import { loadoutOf } from '../mental/cards'
+import { NEW_CATS } from '../mental/catRoster'
 import { DEFAULT_WEAPON, heroOf } from '../mental/hero'
 
 /** 고양이마다 전투 그림이 정해져 있다 (mates.ts MATE_LOOKS의 차례, 492번). */
-export const CAT_LOOKS = { sky: 0, mint: 1, lilac: 2, sunset: 3, night: 4, snow: 5 } as const
+export const CAT_LOOKS = {
+  sky: 0,
+  mint: 1,
+  lilac: 2,
+  sunset: 3,
+  night: 4,
+  snow: 5,
+  ...Object.fromEntries(NEW_CATS.map((cat, i) => [cat.code, i + 6])),
+} as Record<CatCode, number>
 
 /** 서버의 스킬 코드 → 전투의 마법. */
 const SKILL_MAGIC = { water: 'water', meteor: 'meteor', bolt: 'lightning', ram: 'earth' } as const
