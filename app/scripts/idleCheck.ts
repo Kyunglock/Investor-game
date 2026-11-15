@@ -132,7 +132,6 @@ try {
     const loadingErrors: string[] = []
     const actions: string[] = []
     const reportedHits: { wall: number; kind: string; count: number; damage: number }[] = []
-    let circuitJustStarted = false
     let catDraws = 0
     const hires: number[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -152,11 +151,6 @@ try {
         // screen forgets those hits) and credits none of them, so the screen never gets further
         // ahead than one heartbeat's hits, and those are far too few to break a wall this size.
         company.idle.sequence = body.sequence
-        if (body.action === 'tick' && circuitJustStarted) {
-          circuitJustStarted = false
-        } else if (body.action === 'tick' && company.idle.circuitSeconds > 0) {
-          company.idle.circuitSeconds = Math.max(0, company.idle.circuitSeconds - 2)
-        }
       }
       // Cat gacha, fielding and equipment (decisions.md 488): the mock keeps the server's shape.
       const path = new URL(route.request().url()).pathname
@@ -483,39 +477,26 @@ try {
               physicsPaused: boolean
               running: boolean
               catTextures: string[]
-              circuits: number
-              circuit: null | { elapsed: number; queuedSell: number; queuedBuy: number }
             }
           }
         ).__mentalMarket(),
       )
     assert.equal((await market()).simSpeed, 1) // Existing 2x speed uses simScale(2) = 1.
-    company.idle.circuitSeconds = 4
-    circuitJustStarted = true
-    await expect.poll(async () => (await market()).circuit !== null).toBe(true)
-    await expect(page.getByText('거래 정지', { exact: true })).toBeVisible()
-    await expect.poll(async () => (await market()).circuit?.queuedSell ?? 0).toBeGreaterThan(0)
-    assert.equal((await market()).physicsPaused, true)
-    await expect.poll(async () => (await market()).circuit?.queuedBuy ?? 0).toBeGreaterThan(0)
+    // 서킷브레이커는 꺼 두었다(IdleEngine.CIRCUIT_ENABLED): 여기서는 켜서 보지 않는다.
+    // 앱이 뒤로 가면 서버에 멈춤을 알리고 전투 시계가 선다. 돌아오면 다시 흐른다.
     await page.evaluate(() =>
       window.dispatchEvent(new CustomEvent('idle-app-active', { detail: false })),
     )
     await expect.poll(() => actions.at(-1)).toBe('stop')
-    const circuitClock = (await market()).battleSeconds
-    const pausedCircuit = (await market()).circuit?.elapsed
-    assert.notEqual(pausedCircuit, undefined)
-    await page.screenshot({ path: `/tmp/idle-circuit-${width}.png`, fullPage: true })
-    const frozenRemaining = company.idle.circuitSeconds
+    await expect.poll(async () => (await market()).physicsPaused).toBe(true)
+    const stoppedClock = (await market()).battleSeconds
     await page.waitForTimeout(800)
-    assert.equal((await market()).circuit?.elapsed, pausedCircuit)
-    assert.equal(company.idle.circuitSeconds, frozenRemaining)
-    assert.equal((await market()).battleSeconds, circuitClock)
+    assert.equal((await market()).battleSeconds, stoppedClock)
     await page.evaluate(() =>
       window.dispatchEvent(new CustomEvent('idle-app-active', { detail: true })),
     )
-    await expect.poll(async () => (await market()).circuit, { timeout: 10000 }).toBe(null)
     await expect.poll(async () => (await market()).physicsPaused).toBe(false)
-    await expect.poll(async () => (await market()).battleSeconds).toBeGreaterThan(circuitClock)
+    await expect.poll(async () => (await market()).battleSeconds).toBeGreaterThan(stoppedClock)
     // Cats stand still while they shoot a wall; they walk only after breaking it (decisions.md 493).
     // 방향별 달리기는 프레임마다 새 키 대신 고양이별 캔버스 하나를 갱신한다.
     const running = async () =>
@@ -636,19 +617,6 @@ try {
           { timeout: 10000 },
         )
         .toBe(1)
-    }
-    if (width === 390) {
-      company.idle.wall = 16
-      company.idle.circuitSeconds = 4
-      circuitJustStarted = true
-      await expect.poll(async () => (await market()).circuits).toBe(2)
-      // A fast server can reach another halt before the previous client animation finishes.
-      company.idle.wall = 26
-      company.idle.circuitSeconds = 4
-      circuitJustStarted = true
-      await expect.poll(async () => (await market()).circuits).toBe(3)
-      await expect.poll(async () => (await market()).circuit?.queuedSell ?? 0).toBeGreaterThan(0)
-      await expect.poll(async () => (await market()).circuit, { timeout: 10000 }).toBe(null)
     }
     await expect
       .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
