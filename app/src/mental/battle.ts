@@ -207,20 +207,20 @@ export interface Outcome {
   priceEnd: number
 }
 
+/** 자동 전투가 그리는 벽: 서버의 값에 서버가 아직 처리하지 않은 명중을 얹은 것이다 (532번, idlePredict.ts). */
 export interface IdleSnapshot {
   circuitSeconds?: number
   upcoming?: { wall: number; hp: number; maxHp: number }[]
   wall: number
   hp: number
   maxHp: number
-  /** 서버가 마지막으로 처리한 접속 신호의 순번: 이 순번까지 보낸 명중은 hp에 들어 있다 (496번). */
-  sequence?: number
 }
 
 export interface BattleOptions {
-  /** Foreground idle mode: wall health and progression are server-authoritative. */
+  /** Foreground idle mode: the wall and its health come from this snapshot, never from the renderer's own count. */
   idle?: () => IdleSnapshot
-  onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number) => void
+  /** depth: 총알이 이미 뚫고 온 벽의 수 (520·532번). 0은 지금 치는 벽을 바로 맞힌 것이다. */
+  onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number, depth: number) => void
   /** 자동 전투의 몬스터 습격 알림 (500번). */
   onIdleRaid?: (text: string, color: string) => void
 
@@ -254,10 +254,6 @@ export interface BattleHandle {
   setPaused: (paused: boolean) => void
   /** 전투 배속(gameSpeed.ts): 1배가 예전 빠르기의 절반. */
   setSpeed: (speed: GameSpeed) => void
-  /** 자동 전투: 지금까지 맞힌 것이 이 순번의 접속 신호에 실려 나갔다 (496번). */
-  idleHitsSent: (sequence: number) => void
-  /** 자동 전투: 보내려던 명중을 버렸다(멈춤·끊김). 먼저 빼 둔 피해도 잊는다. */
-  clearIdleHits: () => void
   /** 테스트판: 그 종류의 몬스터 습격을 바로 부른다. */
   callIdleRaid: (kind: IdleRaidKind) => void
   /** 자동 전투: 액티브 스킬의 연출과 효과를 낸다 (503번). */
@@ -267,11 +263,6 @@ export interface BattleHandle {
 
 const INK = '#2b2340'
 const BULLET_LIFE = 900
-/**
- * 자동 전투에서 먼저 빼 둔 피해를 서버 답 없이 들고 있는 상한(실제 ms). 평소에는 서버가 처리한 순번으로 잊고(496번), 답이 영영 오지 않을 때만
- * 이 시간으로 잊는다. 서버가 늦은 접속 신호를 받아 주는 10초(497번)보다 길다.
- */
-const IDLE_HIT_MS = 12000
 /** 총과 앞발에만 적용하는 반동의 초당 감쇠. 몸통·발·충돌 위치는 변형하지 않는다. */
 const RECOIL = { decay: 22 }
 const recoilDecay = (kick: number, dt: number) =>
@@ -540,7 +531,6 @@ class BattleScene extends Phaser.Scene {
   private idleWall = 0
   /** 지금 벽에 방금 맞힌 피해(실제 ms와 양). 서버 값이 따라올 때까지 화면의 벽 체력에서 먼저 뺀다 (493번). */
   /** 먼저 빼 둔 명중. sequence는 실려 나간 접속 신호의 순번이고, 아직 안 나갔으면 없다 (496번). */
-  private idleHits: { at: number; amount: number; sequence?: number }[] = []
   private idleTransition = false
   private runRush = 0
   private wallsBroken = 0
@@ -748,14 +738,6 @@ class BattleScene extends Phaser.Scene {
   /** 자동 전투의 매수벽은 물량과 같은 배율로 두꺼워진다 (498번): 매수 대 매도의 균형은 그대로이고, 물량을 지우는 데 드는 화력만 는다. */
   private buyWallMental() {
     return this.loadout.maxMental * (this.opts.idle ? this.hpScale : 1)
-  }
-
-  idleHitsSent(sequence: number) {
-    for (const hit of this.idleHits) hit.sequence ??= sequence
-  }
-
-  clearIdleHits() {
-    this.idleHits = []
   }
 
   applyLoadout(loadout: Loadout) {
@@ -1906,25 +1888,17 @@ class BattleScene extends Phaser.Scene {
     const wall = this.walls.find((w) => !w.broken)
     if (!wall) return
     if (snapshot.wall !== this.idleWall) {
-      this.idleHits = []
       if (this.circuit) this.endCircuit()
       if (this.bossEnemy?.active) this.kill(this.bossEnemy, false)
       for (const cell of [...wall.cells]) if (cell.active && !cell.dying) this.kill(cell, false)
       return
     }
-    // 서버는 1초마다 답한다: 그사이 맞힌 피해를 먼저 빼서 맞는 즉시 줄어 보이게 한다. 뺀 것은 그 명중을 실은 접속 신호를 서버가 처리했을 때
-    // (snapshot.sequence) 잊는다: 시간으로 잊으면 서버 값에 이미 든 피해를 또 빼거나 아직 안 든 피해를 돌려놓아 체력이 오르내렸다 (496번).
-    // 벽이 깨지는 판정은 서버 것이라 여기서는 0까지 내리지 않는다.
-    const since = performance.now() - IDLE_HIT_MS
-    const handled = snapshot.sequence ?? -1
-    this.idleHits = this.idleHits.filter(
-      (hit) => hit.at >= since && (hit.sequence === undefined || hit.sequence > handled),
-    )
-    const pending = this.idleHits.reduce((sum, hit) => sum + hit.amount, 0)
+    // 스냅샷은 이미 맞힌 피해까지 든 값이다 (532번): 벽이 바닥나면 스냅샷의 벽 번호가 넘어가 위에서 곧바로 부서진다.
+    // 칸의 체력이 0이 되지 않게만 막는다(서킷브레이커 앞에서 넘친 피해가 기다리는 벽).
     const cells = this.wallLayers(wall)
     for (const cell of cells) {
       cell.maxHp = snapshot.maxHp / Math.max(1, cells.length)
-      const hp = Math.max(0.01, (snapshot.hp - pending) / Math.max(1, cells.length))
+      const hp = Math.max(1e-6, snapshot.hp / Math.max(1, cells.length))
       if (cell.hp !== hp) {
         cell.hp = hp
         this.crackCell(cell)
@@ -2910,10 +2884,8 @@ class BattleScene extends Phaser.Scene {
       return
     }
     if (this.opts.idle && e.cell) {
-      if (!this.idleTransition) {
-        this.reportIdleHit(this.idleWall, kind, dmg)
-        this.idleHits.push({ at: performance.now(), amount: dmg })
-      }
+      // 벽의 체력은 여기서 깎지 않는다: 알린 명중이 예측(idlePredict.ts)에 얹혀 다음 프레임의 스냅샷으로 돌아온다 (532번).
+      if (!this.idleTransition) this.reportIdleHit(this.idleWall, kind, dmg, 0)
     } else e.hp -= dmg
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
     if (e.cell) e.clearTint()
@@ -4286,7 +4258,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 범위 피해 (decisions.md 362번): 맞은 적을 뺀, 터진 자리 반지름 안의 적이 함께 맞는다. 바깥으로 밀어내는 각도로 맞는다. */
-  private reportIdleHit(wall: number, kind: DamageKind, damage: number) {
+  private reportIdleHit(wall: number, kind: DamageKind, damage: number, depth: number) {
     if (!Number.isFinite(damage) || damage <= 0) return
     const code: IdleAttackKind =
       this.reportAs ??
@@ -4297,7 +4269,7 @@ class BattleScene extends Phaser.Scene {
           : kind === 'earth' || kind === 'siege'
             ? 'ram'
             : 'bullet')
-    this.opts.onIdleHit?.(wall, code, damage)
+    this.opts.onIdleHit?.(wall, code, damage, depth)
   }
 
   /**
@@ -4321,7 +4293,7 @@ class BattleScene extends Phaser.Scene {
     const layers = this.idleQueue.behind(x, slope, y)
     const hits = idlePierceHits(this.idleWall, damage, layers)
     if (!layers.length) return
-    for (const hit of hits) this.reportIdleHit(hit.wall, 'bullet', hit.damage)
+    for (const hit of hits) this.reportIdleHit(hit.wall, 'bullet', hit.damage, hit.behind)
     // 총알이 마지막 벽까지 이어 날아간다. 벽을 지날 때마다 불꽃과 줄어든 피해 숫자.
     const last = layers[layers.length - 1]
     const shot = this.pierceShots[this.pierceIndex++ % this.pierceShots.length]
@@ -4903,8 +4875,6 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     applyLoadout: (loadout) => scene.applyLoadout(loadout),
     setPaused: (paused) => scene.setPaused(paused),
     setSpeed: (speed) => scene.setGameSpeed(speed),
-    idleHitsSent: (sequence) => scene.idleHitsSent(sequence),
-    clearIdleHits: () => scene.clearIdleHits(),
     callIdleRaid: (kind) => scene.callIdleRaid(kind),
     castActive: (code) => scene.castActive(code),
     stop: () => {

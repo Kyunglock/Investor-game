@@ -1,4 +1,5 @@
 import type { Company } from '@web/api/client'
+import { shownIdle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import type { ActiveCode } from '../mental/actives'
 import { idleAssaultSpec } from '../mental/assault'
@@ -32,11 +33,6 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       nativeActive = (event as CustomEvent<boolean>).detail
       pause()
     }
-    // The heartbeat loop says which beat carried the hits so far, and when it dropped them
-    // (decisions.md 496): the renderer keeps its early damage until the server has handled that beat.
-    const sent = (event: Event) =>
-      battle.current?.idleHitsSent((event as CustomEvent<number>).detail)
-    const dropped = () => battle.current?.clearIdleHits()
     // 테스트판의 도구 창이 몬스터 습격을 바로 부른다 (decisions.md 499번).
     const raidCalled = (event: Event) =>
       battle.current?.callIdleRaid((event as CustomEvent<IdleRaidKind>).detail)
@@ -45,8 +41,6 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       battle.current?.castActive((event as CustomEvent<ActiveCode>).detail)
     document.addEventListener('visibilitychange', visibility)
     window.addEventListener('idle-app-active', native)
-    window.addEventListener('idle-hits-sent', sent)
-    window.addEventListener('idle-hits-clear', dropped)
     window.addEventListener('idle-test-raid', raidCalled)
     window.addEventListener('idle-active', activeUsed)
     setError(null)
@@ -54,7 +48,10 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       .then(({ startBattle }) => {
         if (disposed || !host.current) return
         const c = latest.current.company
-        const spec = idleAssaultSpec(c.idle?.wall ?? 1, c.idle?.maxHp)
+        // The wall on screen is the predicted one (decisions.md 532): the server's state plus the
+        // hits it has not handled yet, so a wall breaks at the hit and not at the next heartbeat.
+        const first = shownIdle(c.idle)
+        const spec = idleAssaultSpec(first.wall, first.maxHp)
         battle.current = startBattle(host.current, {
           mode: 'assault',
           speed: 2,
@@ -62,11 +59,11 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
           genre: 'DEFENSE',
           hero: heroOf(c),
           loadout: idleLoadout(c),
-          idle: () => latest.current.company.idle ?? { wall: 1, hp: 120, maxHp: 120 },
-          onIdleHit: (wall, kind, damage) => {
+          idle: () => shownIdle(latest.current.company.idle),
+          onIdleHit: (wall, kind, damage, depth) => {
             if (!disposed && foreground && nativeActive && latest.current.connected) {
               window.dispatchEvent(
-                new CustomEvent('idle-wall-hit', { detail: { wall, kind, damage } }),
+                new CustomEvent('idle-wall-hit', { detail: { wall, kind, depth, damage } }),
               )
             }
           },
@@ -88,11 +85,8 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       })
     return () => {
       disposed = true
-      window.dispatchEvent(new Event('idle-hits-clear'))
       document.removeEventListener('visibilitychange', visibility)
       window.removeEventListener('idle-app-active', native)
-      window.removeEventListener('idle-hits-sent', sent)
-      window.removeEventListener('idle-hits-clear', dropped)
       window.removeEventListener('idle-test-raid', raidCalled)
       window.removeEventListener('idle-active', activeUsed)
       battle.current?.stop()

@@ -2,6 +2,7 @@ import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { diamondText } from '@web/features/raising/gachaRules'
 import { useRaisingStore } from '@web/features/raising/store'
+import { useShownIdle } from '@web/features/raising/useIdleBattle'
 import { type ReactNode, useEffect, useState } from 'react'
 import { rate, readOfflineSeen, shouldShowOffline } from '../app/income'
 import { meetingReady } from '../app/meeting'
@@ -87,6 +88,9 @@ export function IdleHome({
     setMenu(next)
   }
   const idle = company.idle
+  // 벽 번호와 거래 정지는 화면이 먼저 부순 벽을 따른다 (532번). 돈은 서버가 확정한 값만 쓴다.
+  const shown = useShownIdle(idle)
+  const halted = shown.circuitSeconds > 0
   // 자본은 1초마다 서버에서 새로 온다 (#803): 숫자가 그 사이를 굴러가며 계속 불어난다.
   const capital = useCountUp(company.capital)
   // 종목회의를 열거나 이어 갈 수 있으면 회사 메뉴에 점을 단다 (#803).
@@ -183,12 +187,12 @@ export function IdleHome({
             <strong
               className="idle-wall-number"
               data-testid="idle-wall-number"
-              data-state={connected ? ((idle?.circuitSeconds ?? 0) > 0 ? 'halt' : 'auto') : 'wait'}
+              data-state={connected ? (halted ? 'halt' : 'auto') : 'wait'}
             >
               {connected
-                ? (idle?.circuitSeconds ?? 0) > 0
+                ? halted
                   ? '거래 정지'
-                  : `매도벽 ${(idle?.wall ?? 1).toLocaleString()}`
+                  : `매도벽 ${shown.wall.toLocaleString()}`
                 : '연결 대기'}
             </strong>
             {/* 다이아 (526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. */}
@@ -242,7 +246,7 @@ export function IdleHome({
           {menu === 'cats' && <IdleCats company={company} gearAsked={weaponsAsked} />}
           <p className="idle-sheet-note">
             {connected
-              ? (idle?.circuitSeconds ?? 0) > 0
+              ? halted
                 ? '서킷브레이커 · 거래 재개 대기'
                 : '● 메뉴를 보는 동안에도 자동 전투 중'
               : '연결을 기다리는 동안 전투가 멈춰 있어요'}

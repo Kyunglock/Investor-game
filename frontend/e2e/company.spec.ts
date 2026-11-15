@@ -81,6 +81,50 @@ test('회사를 차려 뽑으면 바로 앉아 1초마다 벌고, 기회를 써�
   )
   expect(company.capital).toBeGreaterThan(started.capital)
 
+  // 화면이 먼저 벽을 부순다 (532번): 직접 명중(depth 0)은 맨 앞 벽부터 깎는 한 줄기 피해이고, 벽을 깨고 남은 피해는 다음 벽으로 넘어간다.
+  // 총알 한 발씩만 보낸다: 횟수 예산(권총은 박자마다 여러 발)에 걸리지 않아, 인정되는 피해가 한 발의 상한으로만 정해진다.
+  const wallOf = (c: Company) => {
+    if (!c.idle) throw new Error('자동 전투 상태가 없다')
+    return c.idle
+  }
+  const shoot = async (damage: number) => {
+    await page.waitForTimeout(700)
+    return companyOf(
+      await api.post('/api/company/idle', {
+        data: {
+          runId,
+          sequence: ++sequence,
+          action: 'tick',
+          hits: [{ wall: 1, kind: 'bullet', depth: 0, count: 1, damage }],
+        },
+      }),
+    )
+  }
+  expect(wallOf(company).wall).toBe(1)
+  // 터무니없이 큰 한 발도 가장 센 총알 한 발만큼만 인정된다. 새 회사의 한 발로는 첫 벽이 깨지지 않는다.
+  const full = wallOf(company).hp
+  company = await shoot(1e9)
+  const shot = full - wallOf(company).hp
+  expect(wallOf(company).wall).toBe(1)
+  expect(shot).toBeGreaterThan(0)
+  // 상한 아래의 한 발은 보낸 그대로 인정된다: 반 발 남짓 남을 때까지 깎는다.
+  for (let i = 0; wallOf(company).hp > 0.6 * shot; i++) {
+    expect(i).toBeLessThan(60)
+    const before = wallOf(company).hp
+    const damage = Math.min(0.9 * shot, before - 0.5 * shot)
+    company = await shoot(damage)
+    expect(wallOf(company).wall).toBe(1)
+    expect(wallOf(company).hp).toBeCloseTo(before - damage, 6)
+  }
+  // 남은 체력보다 0.3발 큰 한 발: 벽이 깨지고, 넘친 0.3발이 다음 벽에 들어가 있다.
+  const next = wallOf(company).upcoming?.[0]
+  if (!next) throw new Error('다음 벽이 없다')
+  const left = 0.3 * shot
+  company = await shoot(wallOf(company).hp + left)
+  expect(wallOf(company).wall).toBe(2)
+  expect(wallOf(company).maxHp).toBe(next.maxHp)
+  expect(wallOf(company).hp).toBeCloseTo(next.hp - left, 6)
+
   // 종목회의: 기회 하나를 써서 열고(직원이 종목을 물어 온다) 산다.
   const chances = company.meetings.chances
   expect(chances).toBeGreaterThanOrEqual(1)
