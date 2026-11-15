@@ -76,7 +76,7 @@ class IdleEngine {
   // hit as a multiple of the boss cat's gun, and hits on the wall per cast (meteors per cast; a
   // bolt and one chain per lightning stroke). The level follows the cat's level.
   private static final int SKILL_MAX_LEVEL = 5;
-  private static final int SKILL_CAT_LEVELS = 2;
+  private static final int SKILL_CAT_LEVELS = 10;
   private static final double[][] COOLDOWNS = {
     {2.4, 2.1, 1.8, 1.6, 1.4},
     {3.6, 3.3, 3, 2.8, 2.6},
@@ -377,15 +377,15 @@ class IdleEngine {
     return SPEED * total;
   }
 
-  /** A cat's skill level (515): one more for every two cat levels, up to five. */
+  /** A cat's skill level (515, 534): one more at cat level 10, 20, 30 and 40, up to five. */
   static int skillLevel(int catLevel) {
-    return Math.min(SKILL_MAX_LEVEL, 1 + Math.max(0, catLevel - 1) / SKILL_CAT_LEVELS);
+    return Math.min(SKILL_MAX_LEVEL, 1 + Math.max(0, catLevel) / SKILL_CAT_LEVELS);
   }
 
   /** The cat level at which the skill next levels up, or 0 at the top level. */
   private static int nextSkillAt(int catLevel) {
     int level = skillLevel(catLevel);
-    return level >= SKILL_MAX_LEVEL ? 0 : 1 + level * SKILL_CAT_LEVELS;
+    return level >= SKILL_MAX_LEVEL ? 0 : level * SKILL_CAT_LEVELS;
   }
 
   /**

@@ -1355,7 +1355,7 @@ export interface components {
                      */
                     skill: "water" | "meteor" | "bolt" | "ram";
                     skillName: string;
-                    /** @description 고유 스킬의 레벨 1~5 (515번). 고양이 레벨이 둘 오를 때마다 하나 오른다 */
+                    /** @description 고유 스킬의 레벨 1~5 (515번). 고양이 Lv.10·20·30·40에 하나씩 오른다 (534번) */
                     skillLevel: number;
                     /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
                     skillNextLevel: number;

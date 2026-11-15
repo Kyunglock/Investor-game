@@ -794,9 +794,12 @@ class IdleEngineTest {
   @Test
   void aSkillLevelsUpWithItsCat() {
     assertThat(IdleEngine.skillLevel(1)).isEqualTo(1);
-    assertThat(IdleEngine.skillLevel(2)).isEqualTo(1);
-    assertThat(IdleEngine.skillLevel(3)).isEqualTo(2);
-    assertThat(IdleEngine.skillLevel(9)).isEqualTo(5);
+    assertThat(IdleEngine.skillLevel(9)).isEqualTo(1);
+    assertThat(IdleEngine.skillLevel(10)).isEqualTo(2);
+    assertThat(IdleEngine.skillLevel(19)).isEqualTo(2);
+    assertThat(IdleEngine.skillLevel(20)).isEqualTo(3);
+    assertThat(IdleEngine.skillLevel(39)).isEqualTo(4);
+    assertThat(IdleEngine.skillLevel(40)).isEqualTo(5);
     assertThat(IdleEngine.skillLevel(1000)).isEqualTo(5);
     start(1);
     state.idle.wall = 100;
@@ -804,27 +807,27 @@ class IdleEngineTest {
     state.idle.fielded.add("mint");
     var cat = engine.view(state).cats().stream().filter(c -> "mint".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(1);
-    assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(3);
+    assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(10);
     // Level 1 water: 1.5 times the gun, once per 2.4 s. 1.2 s at double speed is one cooldown.
     tick(1200, new IdleHit(100, "water", 3, 3 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(1.5, offset(1e-9));
-    // Cat level 5 is skill level 3: 2.6 times the gun, once per 1.8 s.
-    state.idle.cats.put("mint", 5);
+    // Cat level 20 is skill level 3: 2.6 times the gun, once per 1.8 s.
+    state.idle.cats.put("mint", 20);
     state.idle.damage = 0;
     state.idle.hitCredits = new double[7];
     tick(900, new IdleHit(100, "water", 3, 3 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2.6, offset(1e-9));
     cat = engine.view(state).cats().stream().filter(c -> "mint".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(3);
-    assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(7);
+    assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(30);
     assertThat(engine.view(state).skills().getFirst().level()).isEqualTo(3);
     // The top level has no next level.
-    state.idle.cats.put("mint", 9);
+    state.idle.cats.put("mint", 40);
     cat = engine.view(state).cats().stream().filter(c -> "mint".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(5);
     assertThat(cat.orElseThrow().skillNextLevel()).isZero();
     // A level 3 meteor shower drops three rocks per cast: three hits per 3 s.
-    state.idle.cats.put("sky", 5);
+    state.idle.cats.put("sky", 20);
     state.idle.fielded.add("sky");
     state.idle.damage = 0;
     state.idle.hitCredits = new double[7];
