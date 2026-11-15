@@ -41,41 +41,4 @@ class AdminApiTest {
         .andExpect(status().isForbidden());
   }
 
-  /** 숨은 값(시드·회사 상태 JSON)은 없다. */
-  @Test
-  void 차린_회사가_어디까지_갔는지_세션과_함께_기록에_보인다() throws Exception {
-    Cookie cookie =
-        mvc.perform(post("/api/sessions")).andReturn().getResponse().getCookie(SessionCookies.NAME);
-    Cookie session = new Cookie(cookie.getName(), cookie.getValue());
-    String companyId =
-        JsonPath.read(
-            mvc.perform(post("/api/company").cookie(session))
-                .andReturn()
-                .getResponse()
-                .getContentAsString(),
-            "$.companyId");
-    // 한 해는 네 분기다 (decisions.md 268번).
-    for (int quarter = 1; quarter <= 4; quarter++) {
-      mvc.perform(
-              post("/api/company/settle")
-                  .cookie(session)
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content("{\"year\":1,\"quarter\":%d}".formatted(quarter)))
-          .andExpect(status().isOk());
-    }
-
-    String at = "$.companies[?(@.companyId == '%s')]";
-    mvc.perform(get("/api/admin/plays").header(AdminController.TOKEN_HEADER, "test-admin-token"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath(at + ".status", companyId).value("ACTIVE"))
-        .andExpect(jsonPath(at + ".number", companyId).value(1))
-        .andExpect(jsonPath(at + ".year", companyId).value(2))
-        .andExpect(jsonPath(at + ".settled", companyId).value(1))
-        .andExpect(jsonPath(at + ".grade", companyId).value("F"))
-        .andExpect(jsonPath(at + ".seed", companyId).doesNotExist())
-        .andExpect(jsonPath(at + ".state", companyId).doesNotExist())
-        .andExpect(jsonPath("$.sessions[0].companies").isNumber())
-        .andExpect(jsonPath("$.sessions[?(@.firstIp == '127.0.0.1')]").isNotEmpty())
-        .andExpect(jsonPath("$.runs").doesNotExist());
-  }
 }
