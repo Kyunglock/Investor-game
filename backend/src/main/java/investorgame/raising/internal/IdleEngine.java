@@ -174,8 +174,11 @@ class IdleEngine {
   // A cat's gun hits for this share of the weapon's damage; each level above 1 adds the bonus.
   private static final double CAT_POWER = 0.5;
   private static final double CAT_LEVEL_BONUS = 0.2;
-  // Capital per point of wall health on a clear, and per active second at wall 1 (492).
-  private static final double REWARD_PER_HEALTH = 60_000;
+  // A cleared wall pays this many game seconds of its own time income, a boss wall BOSS_REWARD
+  // times that (537). It used to pay per point of wall health, which outgrew the time income.
+  static final double REWARD_SECONDS = 30;
+  private static final double BOSS_REWARD = 3;
+  // Capital per active game second at wall 1 (492).
   private static final double INCOME = 20_000;
   private static final double INCOME_GROWTH = 0.05;
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
@@ -352,6 +355,19 @@ class IdleEngine {
       s.offlineEarned = earned;
       s.offlineCapped = gone > cap;
     }
+  }
+
+  /**
+   * What clearing the front wall pays (537): REWARD_SECONDS of the wall's own time income at its
+   * price level, three times that on a boss wall. Employees and the stage bonus are not in it.
+   */
+  private static double reward(CompanyState c) {
+    CompanyState.Idle s = c.idle;
+    return Math.floor(
+        wallIncome(s)
+            * REWARD_SECONDS
+            * (s.wall % 10 == 0 ? BOSS_REWARD : 1)
+            * CompanyEngine.inflation(c));
   }
 
   /** The wall's own time income per game second, before the price level (492). */
@@ -639,7 +655,7 @@ class IdleEngine {
     // Walls break in order, and what is left of the breaking damage goes on to the next wall
     // (532): the screen broke it at that hit and kept shooting.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
-      earned += Math.floor(maxHp(s.wall) * REWARD_PER_HEALTH * CompanyEngine.inflation(c));
+      earned += reward(c);
       // 시즌패스 경험치 (529번): 벽 하나에 exp.wall.
       engine.pass.gain(c, engine.pass.rule().exp().wall(), todayDate());
       double left = Math.max(0, s.damage - maxHp(s.wall));
