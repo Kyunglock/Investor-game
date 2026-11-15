@@ -1,17 +1,25 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
-import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { awayText, readOfflineSeen, saveOfflineSeen, shouldShowOffline } from '../app/income'
+import { awayText, saveOfflineSeen, shouldShowOffline } from '../app/income'
 import { useAppUi } from '../app/ui'
 import { sfx } from '../fx/sound'
 
 /**
  * 자리를 비운 동안 번 돈 알림 (#803). 서버는 마지막으로 준 것을 응답마다 그대로 실어 보내므로, 이 기기가 확인한 at과 다를 때만 한 번 띄운다. 확인을
- * 누르면 그 at을 기기에 남긴다. 메인 화면(매도벽 돌파) 위에 뜨고, body에 바로 그린다(아래 화면은 그동안 누를 수 없다).
+ * 누르면 그 at을 기기에 남긴다. 메인 화면(매도벽 돌파) 위에 뜨고, body에 바로 그린다(아래 화면은 그동안 누를 수 없다). 확인한 at(seen)은
+ * 돌파 화면이 들고 있다: 이 알림이 떠 있는 동안 출석판이 기다리게 하려는 것이다 (528번).
  */
-export function OfflineIncome({ company }: { company: Company }) {
-  const [seen, setSeen] = useState(readOfflineSeen)
+export function OfflineIncome({
+  company,
+  seen,
+  onSeen,
+}: {
+  company: Company
+  seen: number | null
+  onSeen: (at: number) => void
+}) {
   const offline = company.idle?.offline
   if (!offline || !shouldShowOffline(offline, seen)) return null
   return (
@@ -20,7 +28,7 @@ export function OfflineIncome({ company }: { company: Company }) {
       offline={offline}
       onConfirm={() => {
         saveOfflineSeen(offline.at)
-        setSeen(offline.at)
+        onSeen(offline.at)
       }}
     />
   )

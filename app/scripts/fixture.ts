@@ -149,6 +149,9 @@ const employee = (
   ...extra,
 })
 
+/** 깬 스테이지의 별: 다 받은 칸·덜 받은 칸·보스(1-10)가 한 챕터에 섞여 보이게. */
+const STAGE_STARS = [3, 3, 3, 3, 2, 3, 3, 1, 3, 2, 3, 2]
+
 export const company = {
   companyId: '00000000-0000-0000-0000-000000000001',
   number: 1,
@@ -180,6 +183,46 @@ export const company = {
   },
   // 종목회의의 기회 (#803): 한 시간에 하나씩, 세 개까지.
   meetings: { chances: 2, max: 3, nextSeconds: 1500 },
+  // 출석 보상 (528번): 오늘 것은 이미 받은 채로 둔다. 출석판이 스스로 떠서 다른 화면 검사를 가리지 않게.
+  attendance: {
+    today: 3,
+    claimable: false,
+    board: [50, 0, 100, 0, 100, 100, 300].map((diamonds, i) => ({
+      day: i + 1,
+      diamonds,
+      incomeMinutes: diamonds === 0 ? 30 : 0,
+      money: diamonds === 0 ? 87_300_000 : null,
+      claimed: i < 3,
+    })),
+    lastReward: { day: 3, diamonds: 100, money: 0 },
+  },
+  // 시즌패스 (529번): 3단계까지 올라 모두 받은 채다. 다이아 50과 돈이 번갈아, 5의 배수는 큰 보상.
+  pass: {
+    season: 1,
+    name: '시즌 1',
+    endsAt: 1_795_000_000_000,
+    secondsLeft: 12 * 86_400 + 5 * 3600,
+    endingSoon: false,
+    exp: 340,
+    expPerStep: 100,
+    step: 3,
+    claimable: 0,
+    steps: Array.from({ length: 30 }, (_, i) => {
+      const step = i + 1
+      const diamonds =
+        step === 30 ? 500 : step % 10 === 0 ? 300 : step % 5 === 0 ? 200 : step % 2 === 1 ? 50 : 0
+      return {
+        step,
+        diamonds,
+        money: diamonds === 0 ? 87_300_000 : null,
+        weapon: step === 10 || step === 20,
+        cat: step === 30,
+        reached: step <= 3,
+        claimed: step <= 3,
+      }
+    }),
+    lastRewards: [],
+  },
   gacha: {
     roster: 7,
     // 데리고 있을 수 있는 수는 자리 수와 같다 (#801).
@@ -293,4 +336,19 @@ export const company = {
     ],
   },
   invest: null,
+  // 멘탈 보호 스테이지 (527번): 별 30·30·40, 10의 배수는 두 배. 아직 얻지 않은 별의 몫이 남은 다이아다.
+  stages: {
+    best: STAGE_STARS.length,
+    last: 50,
+    perChapter: 10,
+    stars: STAGE_STARS,
+    bonusPercent: 30,
+    exAvailable: true,
+    diamondsLeft: Array.from({ length: 50 }, (_, i) => {
+      const left = [100, 70, 40, 0][STAGE_STARS[i] ?? 0]
+      return (i + 1) % 10 === 0 ? left * 2 : left
+    }),
+    exDiamonds: 300,
+    lastResult: null,
+  },
 } satisfies Company
