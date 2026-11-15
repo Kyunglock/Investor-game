@@ -15,7 +15,7 @@ export type DrawResult = {
   weapon: Weapon
 }
 
-/** 최상위 모달이 인벤토리 시트의 포커스·터치를 가린다. 결과는 이번 서버 응답의 스냅샷이다. */
+/** 최상위 모달이 아래 메뉴 시트의 포커스·터치를 가린다. 결과는 이번 서버 응답의 스냅샷이다. */
 export function WeaponReveal({
   result,
   price,
@@ -90,7 +90,7 @@ export function WeaponReveal({
         if (result) onClose()
       }}
       onKeyDown={(e) => {
-        // 아래 인벤토리 Sheet의 document Escape 처리까지 전달하지 않는다.
+        // 아래 메뉴 Sheet의 document Escape 처리까지 전달하지 않는다.
         if (e.key === 'Escape') {
           e.preventDefault()
           e.stopPropagation()

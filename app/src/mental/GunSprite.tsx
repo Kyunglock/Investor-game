@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 import { STAGE_ASSETS } from './assets'
 import { drawInventoryGun } from './weaponArt'
 
-/** 인벤토리는 무기만 중앙에 배치한다. 전투의 손·자세와 분리된 그림 영역. */
+/** 장비 목록은 무기만 중앙에 배치한다. 전투의 손·자세와 분리된 그림 영역. */
 const BOX_W = 96
 const BOX_H = 72
 

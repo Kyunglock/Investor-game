@@ -31,16 +31,6 @@ const SHAPES = {
       <path d="M1.8 12.6h1.9m-1.6 3 1.9-.5m18.2-2.5h-1.9m1.6 3-1.9-.5" strokeWidth="1.3" />
     </>
   ),
-  stats: <path d="M4 20V11m5.3 9V5m5.4 15v-7M20 20V8" />,
-  bag: (
-    <>
-      <path d="M5 9h14l1 11H4Z" fill="currentColor" fillOpacity=".28" />
-      <path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2M9 13.5h6" />
-    </>
-  ),
-  spark: (
-    <path d="m12 3 2 6.2 6 1.8-6 2-2 6-2-6-6-2 6-1.8Z" fill="currentColor" fillOpacity=".28" />
-  ),
   // 공격력: 비스듬히 세운 칼.
   damage: (
     <>

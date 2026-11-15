@@ -24,7 +24,7 @@ export function Windows({ company }: { company: Company }) {
   // 멘탈 전투는 스테이지를 골라 들어간다 (decisions.md 369번): 저절로 뜨지 않는다.
   const battle = useAppUi((s) => s.battle)
   const sheet = useAppUi((s) => s.sheet)
-  // 회의 뒤 전투에서 무기를 바꾸러 갔으면, 인벤토리를 닫을 때 회의 창으로 돌아온다. 회의 창이 인벤토리를 덮지 않게 그동안은 닫아 둔다.
+  // 회의 뒤 전투에서 무기를 바꾸러 갔으면, 장비 화면을 닫을 때 회의 창으로 돌아온다. 회의 창이 장비 화면을 덮지 않게 그동안은 닫아 둔다.
   const [investAfterWeapons, setInvestAfterWeapons] = useState(false)
   useEffect(() => {
     if (investAfterWeapons && sheet?.kind !== 'weapons') {
@@ -87,7 +87,7 @@ export function Windows({ company }: { company: Company }) {
             }
           }}
           onChangeWeapon={() => {
-            // 무기 인벤토리는 사무실 탭(자동 전투 화면)의 성장 메뉴에 있어서, 다른 탭에서 왔어도 거기로 가서 연다.
+            // 무기 장비는 사무실 탭(자동 전투 화면)의 고양이 메뉴에 있어서(530번), 다른 탭에서 왔어도 거기로 가서 사장냥 장비를 연다.
             const back = battle.kind === 'invest'
             const ui = useAppUi.getState()
             ui.endBattle()

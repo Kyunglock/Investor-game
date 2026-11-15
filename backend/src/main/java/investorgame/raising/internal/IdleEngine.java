@@ -639,23 +639,54 @@ class IdleEngine {
   }
 
   /**
-   * A cat takes one copy of an owned weapon; null kind and grade take it off. The boss cat keeps
-   * the copy it holds, so the last copy can only be taken from another cat.
+   * A cat takes one free copy of an owned weapon; null kind and grade take it off. A copy in the
+   * boss cat's or another cat's paws cannot be taken (decisions.md 530).
    */
   void equipCat(CompanyState c, String code, String kind, String grade) {
     CompanyState.Idle s = state(c);
     if (!s.cats.containsKey(code)) throw new InvalidRequestException("가지지 않은 고양이다: " + code);
-    s.catWeapons.remove(code);
-    if (kind == null && grade == null) return;
-    CompanyState.Weapon owned =
-        c.weapons == null
-            ? null
-            : c.weapons.stream().filter(w -> w.same(kind, grade)).findFirst().orElse(null);
-    if (owned == null) throw new InvalidRequestException("가지지 않은 무기다: " + kind + " " + grade);
-    int free = owned.count - (c.weapon != null && c.weapon.same(kind, grade) ? 1 : 0);
-    if (free < 1) throw new InvalidRequestException("사장냥이 들고 있는 무기다. 같은 무기가 하나 더 있어야 한다");
+    if (kind == null && grade == null) {
+      s.catWeapons.remove(code);
+      return;
+    }
+    if (free(c, kind, grade, code) < 1) {
+      throw new InvalidRequestException("장착 중인 무기다. 같은 무기가 하나 더 있어야 한다");
+    }
     s.catWeapons.put(code, new CompanyState.Weapon(kind, grade));
-    releaseWeapons(c);
+  }
+
+  /** The boss cat may only pick up a copy no cat is holding (decisions.md 530). */
+  void requireFreeForBoss(CompanyState c, String kind, String grade) {
+    if (c.weapon != null && c.weapon.same(kind, grade)) return;
+    if (owned(c, kind, grade) > 0 && free(c, kind, grade, null) < 1) {
+      throw new InvalidRequestException("장착 중인 무기다. 같은 무기가 하나 더 있어야 한다");
+    }
+  }
+
+  /** Merging only spends copies nobody holds (decisions.md 530). */
+  void requireFreeForMerge(CompanyState c, String kind, String grade, int need) {
+    int owned = owned(c, kind, grade);
+    if (owned >= need && free(c, kind, grade, null) < need) {
+      throw new InvalidRequestException("장착 중인 무기는 합칠 수 없다. 장착하지 않은 무기가 " + need + "개 있어야 한다");
+    }
+  }
+
+  private static int owned(CompanyState c, String kind, String grade) {
+    if (c.weapons == null) return 0;
+    return c.weapons.stream().filter(w -> w.same(kind, grade)).mapToInt(w -> w.count).sum();
+  }
+
+  /** Copies of a weapon nobody holds; the cat `except` does not count as a holder. */
+  private int free(CompanyState c, String kind, String grade, String except) {
+    int owned = owned(c, kind, grade);
+    if (owned == 0) throw new InvalidRequestException("가지지 않은 무기다: " + kind + " " + grade);
+    CompanyState.Idle s = state(c);
+    long held =
+        s.catWeapons.entrySet().stream()
+            .filter(e -> !e.getKey().equals(except) && e.getValue().same(kind, grade))
+            .count();
+    if (c.weapon != null && c.weapon.same(kind, grade)) held++;
+    return owned - (int) held;
   }
 
   /**

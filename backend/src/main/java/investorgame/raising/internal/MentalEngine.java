@@ -147,6 +147,10 @@ class MentalEngine {
    * 무기 합성 (decisions.md 366번): 같은 무기(종류+등급) mergeCount개를 합쳐 한 등급 위의 등급에 해당하는 종류 하나로. 가장 높은 등급이거나
    * 모자라면 400. 들고 있던 무기를 다 썼으면 합쳐 만든 무기를 든다.
    */
+  int mergeCount() {
+    return properties.mental().weaponGacha().mergeCount();
+  }
+
   void mergeWeapon(CompanyState c, String kind, String grade) {
     initWeapons(c);
     int at = WEAPON_GRADES.indexOf(grade);

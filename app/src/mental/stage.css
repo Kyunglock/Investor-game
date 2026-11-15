@@ -101,7 +101,7 @@
   font-size: 11px;
   color: #8b6847;
 }
-/* 출전 화면의 든 무기 (#564): 고르기·뽑기·합성은 무기 인벤토리(weapons.css)로 옮겼다. */
+/* 출전 화면의 든 무기 (#564): 고르기·뽑기·합치기는 고양이 탭(idle-home.css, 530번)에서 한다. */
 .stage-equipped {
   width: 100%;
   max-width: 440px;

@@ -25,8 +25,8 @@ export type BattleEntry =
   | { kind: 'ex' }
   | { kind: 'invest'; mode: 'DEFENSE' | 'ASSAULT'; level: number }
 /**
- * 시트: employee는 채용 화면의 우리 직원 목록에서 여는 직원 상세다 (#801). weapons는 전투에서 무기를 바꾸러 올 때 여는 성장 › 인벤토리다
- * (489번).
+ * 시트: employee는 채용 화면의 우리 직원 목록에서 여는 직원 상세다 (#801). weapons는 전투에서 무기를 바꾸러 올 때 여는 고양이 탭의 사장냥
+ * 장비다 (489·530번).
  */
 export type Sheet =
   | { kind: 'employee'; id: number }

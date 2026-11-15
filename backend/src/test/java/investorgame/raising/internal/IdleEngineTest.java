@@ -668,20 +668,26 @@ class IdleEngineTest {
     assertThat(engine.view(state).dps()).isGreaterThan(before);
     assertThat(weaponOf("sky"))
         .isEqualTo(new investorgame.raising.CompanyView.CatWeapon("rifle", "S"));
-    // One copy: the cat that equips last takes it from the other cat.
-    engine.equipCat(state, "mint", "rifle", "S");
-    assertThat(weaponOf("sky")).isNull();
-    assertThat(weaponOf("mint")).isNotNull();
-    // The boss cat takes the last copy back.
-    company.mental.equip(state, "rifle", "S");
-    engine.releaseWeapons(state);
+    // One copy: a weapon in another cat's paws cannot be taken (decisions.md 530).
+    assertThatThrownBy(() -> engine.equipCat(state, "mint", "rifle", "S"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    assertThat(weaponOf("sky")).isNotNull();
     assertThat(weaponOf("mint")).isNull();
-    // A second copy can be shared.
-    state.weapons.getLast().count = 2;
+    // Nor by the boss cat, and held copies are not merged away.
+    assertThatThrownBy(() -> engine.requireFreeForBoss(state, "rifle", "S"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    state.weapons.getLast().count = 3;
+    assertThatThrownBy(() -> engine.requireFreeForMerge(state, "rifle", "S", 3))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    // Equipping the same weapon again keeps it, and spare copies can be shared.
+    engine.equipCat(state, "sky", "rifle", "S");
     engine.equipCat(state, "mint", "rifle", "S");
+    engine.requireFreeForBoss(state, "rifle", "S");
     assertThat(weaponOf("mint")).isNotNull();
     engine.equipCat(state, "mint", null, null);
     assertThat(weaponOf("mint")).isNull();
+    state.weapons.getLast().count = 4;
+    engine.requireFreeForMerge(state, "rifle", "S", 3);
   }
 
   @Test

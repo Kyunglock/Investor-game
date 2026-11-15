@@ -17,6 +17,7 @@ import {
   stageLabel,
   stageSpec,
 } from './advance'
+import { GRADE_BADGE } from './armory'
 import { type AssaultSpec, assaultSpec } from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
@@ -36,7 +37,6 @@ import { GunSprite } from './GunSprite'
 import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './gameSpeed'
 import { BATTLE_SECONDS, type Genre } from './genres'
 import { StagePortrait } from './StagePortrait'
-import { GRADE_BADGE } from './WeaponInventory'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './stage.css'
 import { type Hero, heroOf, type Weapon } from './hero'
@@ -57,7 +57,7 @@ export function MentalWindow({
   entry: BattleEntry
   company: Company
   onDone: () => void
-  /** 출전 화면의 "무기 바꾸기": 전투 창을 닫고 메인의 무기 인벤토리를 연다(Windows가 맡는다). */
+  /** 출전 화면의 "무기 바꾸기": 전투 창을 닫고 메인 고양이 탭의 사장냥 장비를 연다(Windows가 맡는다, 530번). */
   onChangeWeapon: () => void
 }) {
   // 싸우는 사람과 든 무기는 출전을 누르는 순간 굳힌다: 회사가 다시 그려져도 한 판이 다시 시작되지 않게.
@@ -590,8 +590,8 @@ function AssaultResult({
 }
 
 /**
- * 출전 화면의 든 무기 (#564): 무기 고르기·뽑기·합성은 메인의 무기 인벤토리(WeaponInventory.tsx)로 옮겼다. 여기서는 든 무기만 작게 보이고, 바꾸려면
- * 출전 화면을 닫고 인벤토리를 연다.
+ * 출전 화면의 든 무기 (#564): 무기 고르기·뽑기·합치기는 메인의 고양이 탭(CatGear·IdleGacha, 530번)에서 한다. 여기서는 든 무기만 작게
+ * 보이고, 바꾸려면 출전 화면을 닫고 고양이 탭의 사장냥 장비를 연다.
  */
 function EquippedWeapon({ weapon, onChange }: { weapon: Weapon; onChange: () => void }) {
   return (

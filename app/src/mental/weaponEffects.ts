@@ -24,7 +24,7 @@ export const WEAPON_EFFECTS: Record<WeaponKind, WeaponEffect> = {
  * 서버(`mental.weapons`)가, 사거리·재장전·밀어내기 같은 한 판 안의 규칙은 앱이 가진다(376번처럼).
  */
 export interface WeaponTraits {
-  /** 강점·약점 한 줄: 인벤토리·출전 화면에 보인다. */
+  /** 강점·약점 한 줄: 출전 화면에 보인다. */
   strength: string
   weakness: string
   /** 탄이 날아가는 거리(화면 높이의 비율). null이면 끝없이(화면 밖까지). */
@@ -199,7 +199,7 @@ export function aimWithJitter(kind: WeaponKind, base: number, roll: number): num
   return j ? base + (roll * 2 - 1) * j : base
 }
 
-/** 무기마다 쏘는 방식의 짧은 이름 (#563): 인벤토리·출전 화면에 보인다. */
+/** 무기마다 쏘는 방식의 짧은 이름 (#563): 장비·출전 화면에 보인다. */
 export const FIRE_STYLE_NAMES: Record<WeaponKind, string> = {
   pistol: '고른 한 발',
   revolver: '묵직한 한 발',

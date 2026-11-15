@@ -222,15 +222,9 @@ try {
     await expect(stat('crit')).toContainText('치명타 피해')
     await expect(stat('crit')).toContainText('+0% → +20%')
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
-    await page.getByRole('tab', { name: '스킬', exact: true }).click()
-    // A skill is a cat's own ability, cast while that cat is fielded (decisions.md 501).
-    await expect(page.getByText('메테오 스킬')).toBeVisible()
-    await expect(
-      page.getByText('하늘냥·밤냥의 고유 스킬 · 출전하면 발동', { exact: true }),
-    ).toBeVisible()
-    await expect(
-      page.getByText('노을냥의 고유 스킬 · 출전하면 발동', { exact: true }),
-    ).toBeVisible()
+    // Growth holds the stats only (decisions.md 530): no tab row, no inventory, no skill list.
+    await expect(page.getByRole('tab')).toHaveCount(0)
+    await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     // Cats are drawn with diamonds (decisions.md 526), fielded in four slots, and kept in a 6 x 3 grid (488, 493, 495).
     await page.getByRole('button', { name: '고양이' }).click()
@@ -261,8 +255,11 @@ try {
     const detail = page.getByTestId('cat-detail')
     await expect(detail).toHaveAttribute('data-code', 'sky')
     // The cat's own skill starts at level 1 and says when it levels up (decisions.md 515).
-    await expect(detail.getByTestId('cat-skill')).toContainText(
-      '고유 스킬 메테오 스킬 Lv.1 · 고양이 Lv.3에 스킬 Lv.2',
+    // Picking a cat explains its skill (decisions.md 530): what it does, how it grows, the next level.
+    await expect(detail.getByTestId('cat-skill')).toContainText('고유 스킬 메테오 스킬 Lv.1')
+    await expect(detail.getByTestId('cat-skill')).toContainText('운석 → 대운석 → 유성우')
+    await expect(detail.getByTestId('cat-skill-next')).toHaveText(
+      '고양이 Lv.3에 스킬 Lv.2 · 앞으로 2레벨',
     )
     await expect(detail.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('[data-testid=cat-slot][data-code=sky]')).toBeVisible()
@@ -429,7 +426,6 @@ try {
     assert(queue[1].bottom < queue[0].top)
     await page.screenshot({ path: `/tmp/idle-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: '성장' }).click()
-    await page.getByRole('tab', { name: '능력치', exact: true }).click()
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     if (width === 390) {
@@ -503,7 +499,7 @@ try {
     await expect(page.getByTestId('assault-open')).toHaveCount(0)
     await expect(page.getByTestId('side-open')).toHaveCount(0)
     await expect(page.getByTestId('battle-upgrade-open')).toHaveCount(0)
-    // The office no longer has its own inventory; weapons live in Growth (decisions.md 489).
+    // The office has no inventory of its own; weapons live in the Cats menu (decisions.md 489, 530).
     await expect(page.getByTestId('open-weapons')).toHaveCount(0)
     // Hiring draws at once with as many as the diamonds allow instead of opening a menu (decisions.md 490).
     await page.getByTestId('tab-market').click()
