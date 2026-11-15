@@ -966,6 +966,9 @@ button.idle-cat-gun {
 .idle-sandbox-chips.is-four {
   grid-template-columns: repeat(4, 1fr);
 }
+.idle-sandbox-chips.is-one {
+  grid-template-columns: 1fr;
+}
 .idle-sandbox-check {
   display: flex;
   align-items: center;
@@ -1102,4 +1105,159 @@ button.idle-cat-gun {
 }
 .idle-buy-ten {
   background: linear-gradient(#ffc98a, #ff9f43);
+}
+
+/* 설정 왼쪽의 빠른 단추 줄 (528번): 출석. 설정 창이 아래로 열려도 가리지 않게 옆으로 늘어놓는다. */
+.idle-quick {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 46px);
+  right: 56px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+  color: #765127;
+}
+.idle-quick-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid #c69b59;
+  border-radius: 11px;
+  background: #fff8e3e8;
+  color: inherit;
+  font-size: 21px;
+}
+/* 누르는 자리는 44px로 넓힌다. */
+.idle-quick-button::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+}
+.idle-quick-button .idle-dot {
+  top: -4px;
+  right: -4px;
+  width: 11px;
+  height: 11px;
+  border-width: 1.5px;
+}
+/* 출석판 (528번): 수입 알림과 같은 종이 카드에 일곱 칸. 넷씩 두 줄이고 마지막 7일 차는 두 칸을 차지한다. */
+.idle-attendance {
+  position: relative;
+  width: min(100%, 320px);
+}
+.idle-attendance h2 {
+  font-size: 19px;
+  color: #744322;
+}
+.idle-offline .idle-attendance-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  min-height: 44px;
+  margin: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #957854;
+  font-size: 15px;
+}
+.idle-attendance-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+.idle-attendance-board li {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  align-content: center;
+  min-height: 62px;
+  padding: 6px 2px;
+  border: 1.5px solid #d9bb86;
+  border-radius: 11px;
+  background: #fffaf0;
+}
+.idle-attendance-day {
+  font-size: 11px;
+  color: #957854;
+}
+.idle-attendance-reward {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  font-size: 15px;
+}
+.idle-attendance-reward .idle-coin {
+  width: 17px;
+  height: 17px;
+  font-size: 10px;
+}
+.idle-attendance-board .is-last {
+  grid-column: span 2;
+  border-color: #c48637;
+  background: linear-gradient(#fff1c4, #ffe09a);
+}
+.is-last > .idle-attendance-reward {
+  font-size: 19px;
+}
+.idle-attendance-board .is-today {
+  border: 2px solid #e0703a;
+  background: #fff;
+  box-shadow: 0 2px 0 #e0703a55;
+}
+.is-today > .idle-attendance-day {
+  color: #d05a25;
+}
+.is-done > .idle-attendance-day,
+.is-done > .idle-attendance-reward {
+  opacity: 0.35;
+}
+.idle-attendance-stamp {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.idle-attendance-stamp svg {
+  width: 34px;
+  height: 34px;
+  padding: 5px;
+  border: 2px solid #3d9a5b;
+  border-radius: 50%;
+  background: #ffffffb0;
+  fill: none;
+  stroke: #3d9a5b;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: rotate(-8deg);
+}
+.idle-attendance-result {
+  margin-top: 12px;
+  font-size: 15px;
+}
+.idle-attendance-result b {
+  color: #c0672a;
+}
+.idle-attendance-result.is-quiet {
+  font:
+    12px "Noto Sans KR",
+    sans-serif;
+  color: #937b53;
+}
+.idle-attendance-error {
+  margin-top: 8px;
+  font:
+    12px "Noto Sans KR",
+    sans-serif;
+  color: #c0392b;
+}
+.idle-offline button:disabled {
+  opacity: 0.5;
 }

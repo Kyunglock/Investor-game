@@ -200,3 +200,32 @@ test('무기 10연차는 다이아 1,000개에 열한 개를 주고, 다이아�
   const after = await companyOf(await api.get('/api/company'))
   expect(after.diamonds.amount).toBe(0)
 })
+
+test('출석 보상은 하루에 한 번 받는다 (#799)', async ({ page }) => {
+  const api = page.request
+  expect((await api.post('/api/sessions')).ok()).toBe(true)
+  const opened = await companyOf(await api.post('/api/company'))
+  // 새 회사는 1일 차를 받을 수 있다. 출석판은 일곱 칸이고 2·4일 차는 돈 칸이다.
+  expect(opened.attendance.claimable).toBe(true)
+  expect(opened.attendance.today).toBe(1)
+  expect(opened.attendance.board.map((cell) => cell.diamonds)).toEqual([
+    50, 0, 100, 0, 100, 100, 300,
+  ])
+  expect(opened.attendance.board.every((cell) => !cell.claimed)).toBe(true)
+
+  const claimed = await companyOf(await api.post('/api/company/attendance'))
+  expect(claimed.diamonds.amount).toBe(opened.diamonds.amount + 50)
+  expect(claimed.attendance.claimable).toBe(false)
+  expect(claimed.attendance.today).toBe(1)
+  expect(claimed.attendance.board[0].claimed).toBe(true)
+  expect(claimed.attendance.lastReward).toMatchObject({ day: 1, diamonds: 50 })
+
+  // 같은 날 다시 받으면 400이고 다이아는 그대로다.
+  const again = await api.post('/api/company/attendance')
+  expect(again.status()).toBe(400)
+  // 본 게임에서는 날짜를 넘길 수 없다.
+  expect((await api.post('/api/sandbox/next-day')).status()).toBe(400)
+  const after = await companyOf(await api.get('/api/company'))
+  expect(after.diamonds.amount).toBe(claimed.diamonds.amount)
+  expect(after.attendance.claimable).toBe(false)
+})
