@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { FxLayer } from '../fx/FxLayer'
 import { armAudio } from '../fx/sound'
 import { useCompanyFx } from '../fx/useCompanyFx'
+import { CAT_FACES_URL } from '../idle/CatPortrait'
 import { STAGE_ASSETS } from '../mental/assets'
 import { LoadingScreen, preloadImages } from './LoadingScreen'
 import { Shell } from './Shell'
@@ -16,7 +17,8 @@ import { firstTab, useAppUi } from './ui'
  * 튜토리얼이 켜진 채 들어간다. 서버 상태는 웹과 같은 스토어가 들고 있다.
  */
 /** 접속 때 미리 받는 그림: 전투와 사무실 (517번). */
-const BOOT_IMAGES = [...Object.values(STAGE_ASSETS), officeAtlas]
+// 카드 초상화는 작아서 가장 먼저 받는다: 전투 그림이 늦어도 고양이 카드는 바로 보인다.
+const BOOT_IMAGES = [CAT_FACES_URL, ...Object.values(STAGE_ASSETS), officeAtlas]
 
 /** 로딩 화면을 적어도 이만큼은 보인다: 빠른 접속에서 번쩍하고 지나가지 않게 (517번). */
 const BOOT_MIN_MS = 1400

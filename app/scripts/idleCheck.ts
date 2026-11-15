@@ -9,6 +9,9 @@ const extraCats = JSON.parse(
     'utf8',
   ),
 ) as { code: string; name: string }[]
+const faceRects = JSON.parse(
+  readFileSync(new URL('../src/idle/assets/cat-face-rects.json', import.meta.url), 'utf8'),
+) as { faces: Record<string, { x: number; y: number; w: number; h: number }> }
 
 // The shop tab carries a dot ("무료 상품 있음") while a free item is left (decisions.md 541).
 const SHOP_MENU = /^상점( 무료 상품 있음)?$/
@@ -376,7 +379,12 @@ try {
     await expect(lastCat).toBeEnabled()
     await lastCat.click()
     await expect(detail).toHaveAttribute('data-code', 'oat')
-    await expect(detail.locator('.idle-cat-face image')).toHaveAttribute('href', /cats-38-40/)
+    await expect(detail.locator('.idle-cat-face image')).toHaveAttribute('href', /cat-faces/)
+    const oat = faceRects.faces.oat
+    await expect(detail.locator('.idle-cat-face')).toHaveAttribute(
+      'viewBox',
+      `${oat.x} ${oat.y} ${oat.w} ${oat.h}`,
+    )
     await detail.getByTestId('cat-field').click()
     await expect.poll(mates).toBe(4)
     await expect(page.locator('[data-testid=cat-slot][data-code=oat]')).toBeVisible()
