@@ -1,5 +1,6 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
+import { diamondText } from '@web/features/raising/gachaRules'
 import { useRaisingStore } from '@web/features/raising/store'
 import { type ReactNode, useEffect, useState } from 'react'
 import { rate } from '../app/income'
@@ -222,13 +223,15 @@ export function IdleHome({
                   : `매도벽 ${(idle?.wall ?? 1).toLocaleString()}`
                 : '연결 대기'}
             </strong>
+            {/* 다이아 (526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. */}
             <div
-              className="idle-cash"
+              className="idle-cash idle-diamonds"
               role="status"
-              aria-label={`무기 뽑기권 ${company.armory?.tickets ?? 0}장`}
+              aria-label={`다이아 ${company.diamonds.amount.toLocaleString()}개`}
+              data-testid="idle-diamonds"
             >
-              <IdleIcon name="ticket" />
-              {company.sandboxInfinite ? '∞' : (company.armory?.tickets ?? 0)}
+              <IdleIcon name="diamond" />
+              {company.sandboxInfinite ? '∞' : diamondText(company.diamonds.amount)}
             </div>
             <button type="button" aria-label="회사 메뉴" onClick={onManage}>
               ☰

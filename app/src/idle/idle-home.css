@@ -514,6 +514,17 @@
   font-size: 18px;
   color: #b0762f;
 }
+/* 다이아 칩 (526번): 보석만 푸르게, 수는 자본과 같은 글씨로. 수가 길어져도 한 줄에 둔다. */
+.idle-diamonds {
+  gap: 4px;
+  padding: 0 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.idle-diamonds .idle-icon {
+  font-size: 16px;
+  color: #2f8fd8;
+}
 .idle-tabs .idle-icon {
   font-size: 15px;
   margin-right: 4px;
@@ -1065,8 +1076,10 @@ button.idle-cat-gun {
   background: #2b234033;
   pointer-events: none;
 }
-/* 10연속 (517번): 한 번 뽑기 옆. */
+/* 10연차 (517번): 한 번 뽑기 옆. 덤 표시(+1)가 단추 위에 걸친다 (526번). */
 .idle-cat-gacha .idle-buy {
+  position: relative;
+  flex-shrink: 0;
   min-width: 70px;
 }
 .idle-buy-ten {

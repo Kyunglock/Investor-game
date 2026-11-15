@@ -1,4 +1,5 @@
 import type { Company } from '@web/api/client'
+import { DiamondPrice } from '@web/features/raising/DiamondIcon'
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
@@ -22,12 +23,16 @@ export function catRevealPlan(isNew: boolean) {
  */
 export function CatReveal({
   result,
-  tickets,
+  price,
+  canAgain,
   onClose,
   onAgain,
 }: {
   result: CatDraw | null
-  tickets: number
+  /** 한 번 더 뽑는 다이아 값 (526번) */
+  price: number
+  /** 다이아가 한 번 더 뽑을 만큼 남았다 */
+  canAgain: boolean
   onClose: () => void
   onAgain: () => void
 }) {
@@ -158,9 +163,12 @@ export function CatReveal({
                 <button type="button" onClick={onClose} data-testid="cat-reveal-close">
                   닫기
                 </button>
-                {tickets > 0 && (
+                {canAgain && (
                   <button type="button" onClick={onAgain} data-testid="cat-reveal-again">
-                    한 번 더 뽑기 <small>뽑기권 {tickets}장</small>
+                    한 번 더 뽑기{' '}
+                    <small>
+                      <DiamondPrice amount={price} />
+                    </small>
                   </button>
                 )}
               </div>

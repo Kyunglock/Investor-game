@@ -194,7 +194,7 @@ export function Shell({ company }: { company: Company }) {
   )
 }
 
-/** 머리띠: 건물 이름, 굴러가는 자본, 소리 끄기. */
+/** 머리띠: 건물 이름, 굴러가는 자본, 소리 끄기. 다이아는 320px에 함께 들어가지 않아 채용 장면이 크게 보인다 (526번). */
 function Hud({ company }: { company: Company }) {
   const capital = useCountUp(company.capital)
   const [muted, setMutedState] = useState(isMuted)
