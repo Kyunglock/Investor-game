@@ -127,7 +127,7 @@ function CrewPart({ company }: { company: Company }) {
               className="crew-row"
               data-testid="crew-row"
             >
-              <GradeBadge grade={e.overallGrade} size="sm" />
+              <GradeBadge grade={e.overallGrade} size="md" />
               <span className="crew-name">
                 <b>{e.name}</b>
                 <small>{deskName(e.desk) ?? titleOf(e.overallGrade)}</small>
