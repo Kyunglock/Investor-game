@@ -157,7 +157,7 @@ export class BuyWallFx {
         )
       }
       this.title
-        .setText(`매수벽 ${shareLabel(wall.hp)} / ${shareLabel(wall.maxHp)}`)
+        .setText(`매수벽 ${shareLabel(wall.hp)}`)
         .setPosition(left + width / 2, top + height * 0.58)
     } else {
       this.surface.setVisible(false)
