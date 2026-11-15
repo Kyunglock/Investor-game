@@ -47,11 +47,11 @@ paths:
   /api/company/draws:
     post:
       operationId: drawEmployees
-      summary: 채용권으로 count명을 뽑는다 (decisions.md 312번)
+      summary: 다이아로 직원 count명을 뽑는다 (decisions.md 312·526번)
       description: |
-        채용권 한 장에 한 명이 오고 서버가 바로 빈 자리에 앉힌다(524번, 사장이 배치하지 않는다). 자리(seats)가 꽉 차면 400: 회사를 넓혀야 더 뽑는다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
+        한 명에 다이아 diamonds.hire(100)이고, 온 직원은 서버가 바로 빈 자리에 앉힌다(524번, 사장이 배치하지 않는다). 자리(seats)가 꽉 차면 400: 회사를 넓혀야 더 뽑는다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
         요청에 지금까지 뽑은 횟수(draws)를 싣는다: 이미 한 뽑기면 아무것도 하지 않고 지금 회사를 돌려주고, 아직 오지 않은 것이면 400.
-        채용권이 모자라거나 한 번에 maxDraws를 넘으면 400.
+        다이아가 모자라거나 한 번에 maxDraws를 넘으면 400.
       requestBody:
         required: true
         content:
@@ -174,7 +174,7 @@ paths:
       operationId: reportStage
       summary: 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번)
       description: |
-        열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 깼으면 처음이면 자본(번호 × 1b)과 무기 뽑기권(보스면 3장), 별을 처음 얻을 때마다 뽑기권 한 장.
+        열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 깼으면 처음이면 자본(번호 × 1b), 별을 처음 얻을 때마다 다이아(1개째 30·2개째 30·3개째 40, 10의 배수 스테이지는 두 배, 526번). 이미 얻은 별은 다시 깨도 주지 않는다.
         못 깼으면 보상 없이 결과만 남는다. 결과는 stages.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
       requestBody:
         required: true
@@ -258,8 +258,8 @@ paths:
       operationId: reportAssault
       summary: 매도벽 돌파 스테이지 한 판의 결과를 보낸다 (#698)
       description: |
-        열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 보상은 멘탈 스테이지와 같다: 처음 깨면 자본(번호 × 1b)과 무기 뽑기권(챕터 끝이면 3장),
-        별을 처음 얻을 때마다 뽑기권 한 장. 못 깼으면 보상 없이 결과만 남는다. 결과는 assaults.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
+        열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 처음 깨면 자본(번호 × 1b)을 준다. 다이아는 주지 않는다(526번).
+        못 깼으면 보상 없이 결과만 남는다. 결과는 assaults.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
       requestBody:
         required: true
         content:
@@ -284,7 +284,7 @@ paths:
     post:
       operationId: reportEx
       summary: EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번)
-      description: 하루에 한 번(한국 시간 자정에 다시 열린다, 523번) 무기 뽑기권 1 + 물리친 적 40마다 한 장(최대 3장). 오늘 이미 했으면 그대로 둔다.
+      description: 하루에 한 번(한국 시간 자정에 다시 열린다, 523번) 다이아 300개(526번, 전에는 무기 뽑기권). 오늘 이미 했으면 그대로 둔다.
       requestBody:
         required: true
         content:
@@ -334,10 +334,10 @@ paths:
   /api/company/weapon/draw:
     post:
       operationId: drawWeapon
-      summary: 무기 뽑기권 한 장에 무기 하나, 10연속이면 열 개를 뽑는다 (decisions.md 366·517번)
+      summary: '다이아로 무기를 뽑는다. 한 번 100, 10연차는 1,000에 열한 개 (decisions.md 366·517·526번)'
       description: |
         등급은 F 450·E 260·D 150·C 80·B 40·A 17·S 3의 가중치로, 종류는 등급에 따라 정한다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
-        결과는 armory.lastDraw에, 한꺼번에 뽑은 것은 armory.lastDraws에 차례대로 담긴다. 뽑기권이 count장보다 적으면 하나도 뽑지 않고 400.
+        결과는 armory.lastDraw에, 한꺼번에 뽑은 것은 armory.lastDraws에 차례대로 담긴다. count가 10이면 10연차다(diamonds.tenDraw에 diamonds.tenCount개). 다이아가 모자라면 하나도 뽑지 않고 400.
       requestBody:
         required: false
         content:
@@ -384,11 +384,11 @@ paths:
   /api/company/cat/draw:
     post:
       operationId: drawCat
-      summary: 뽑기권 한 장에 고양이 한 마리, 10연속이면 열 마리를 뽑는다 (decisions.md 488·493·517번)
+      summary: '다이아로 고양이를 뽑는다. 한 번 100, 10연차는 1,000에 열한 마리 (decisions.md 488·493·517·526번)'
       description: |
-        무기 뽑기와 같은 뽑기권(armory.tickets)을 한 장 쓴다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
+        무기 뽑기와 같은 값이다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
         이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 나온 고양이는 idle.lastDraws에 차례대로 담긴다.
-        뽑기권이 count장보다 적으면 하나도 뽑지 않고 400.
+        다이아가 모자라면 하나도 뽑지 않고 400.
       requestBody:
         required: false
         content:
@@ -487,7 +487,7 @@ paths:
       summary: 코드를 넣고 테스트판에 들어간다 (decisions.md 499번)
       description: |
         코드가 맞으면 테스트판 쿠키(IG_SANDBOX)를 심고 이 플레이어의 테스트판 회사를 돌려준다. 쿠키가 있는 동안 /api/company 요청은 본 게임과 따로 둔
-        테스트판 회사로 간다. 테스트판 회사는 자본·채용권·뽑기권이 요청마다 다시 채워지고 업계 순위에 남지 않는다. 서버에 코드가 없으면(꺼짐) 404,
+        테스트판 회사로 간다. 테스트판 회사는 자본·다이아가 요청마다 다시 채워지고 업계 순위에 남지 않는다. 서버에 코드가 없으면(꺼짐) 404,
         코드가 틀리면 400.
       requestBody:
         required: true
@@ -539,7 +539,7 @@ paths:
   /api/sandbox/wallet:
     post:
       operationId: setSandboxWallet
-      summary: 테스트판의 무한 지갑을 켜고 끈다 (decisions.md 499번). 끄면 자본은 처음 돈, 채용권·뽑기권은 0에서 시작한다
+      summary: 테스트판의 무한 지갑을 켜고 끈다 (decisions.md 499번). 끄면 자본은 처음 돈, 다이아는 0에서 시작한다
       requestBody:
         required: true
         content:
@@ -644,7 +644,7 @@ components:
     Company:
       type: object
       description: 회사 화면의 값. 직원 능력치는 등급만. 분기·결산·파산·엔딩은 없다 (decisions.md 523번). 회사는 끝나지 않고 시간이 흐르는 대로 돈을 번다
-      required: [companyId, number, era, capital, grade, seats, employees, desks, gacha, history, meetings]
+      required: [companyId, number, era, capital, diamonds, grade, seats, employees, desks, gacha, history, meetings]
       properties:
         companyId: { type: string, format: uuid }
         number: { type: integer, description: 사장이 차린 몇 번째 회사인가 }
@@ -658,6 +658,16 @@ components:
             description: { type: string }
         opening: { type: [string, 'null'], description: 회사를 차릴 때의 한 줄 }
         capital: { type: number, description: 자본. 자동 전투의 물가(decisions.md 505번)로 int64를 넘게 커진다. 소수 없는 수다 }
+        diamonds:
+          type: object
+          description: 다이아 (decisions.md 526번). 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. 채용권과 뽑기권을 대신한다. 멘탈 보호 스테이지의 별과 EX 디펜스로 얻는다
+          required: [amount, draw, tenDraw, tenCount, hire]
+          properties:
+            amount: { type: integer, format: int64, description: 가진 다이아 }
+            draw: { type: integer, format: int64, description: 고양이·무기 한 번 뽑는 값(100) }
+            tenDraw: { type: integer, format: int64, description: '고양이·무기 10연차의 값(1,000)' }
+            tenCount: { type: integer, description: 10연차에 나오는 수(11) }
+            hire: { type: integer, format: int64, description: 직원 한 명을 뽑는 값(100) }
         grade: { $ref: '#/components/schemas/Grade' }
         nextGradeCapital: { type: [integer, 'null'], format: int64, description: 다음 띠의 자본. 끝 등급이면 null }
         upgrade:
@@ -743,9 +753,8 @@ components:
         gacha:
           type: object
           description: 채용 뽑기 (decisions.md 312번). 공채 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다
-          required: [tickets, roster, rosterMax, draws, maxDraws, rates, drawn, collection]
+          required: [roster, rosterMax, draws, maxDraws, rates, drawn, collection]
           properties:
-            tickets: { type: integer, description: 가진 채용권. 한 장에 한 명. 회사를 차릴 때와 이사할 때 받는다 }
             roster: { type: integer, description: 데리고 있는 사람 수 }
             rosterMax: { type: integer, description: '데리고 있을 수 있는 사람 수 = 회사의 자리 수 (524번). roster가 여기에 닿으면 더 뽑을 수 없고, 회사를 넓히면 는다' }
             draws: { type: integer, description: 지금까지 뽑은 횟수. 뽑기 요청에 싣는다 }
@@ -1042,17 +1051,17 @@ components:
               description: 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null
               oneOf:
                 - type: object
-                  required: [stage, cleared, stars, firstClear, capital, tickets]
+                  required: [stage, cleared, stars, firstClear, capital, diamonds]
                   properties:
                     stage: { type: integer, description: 스테이지 번호. EX 디펜스면 0 }
                     cleared: { type: boolean }
                     stars: { type: integer }
                     firstClear: { type: boolean, description: 이 판에 처음 깼다 }
                     capital: { type: integer, format: int64, description: 받은 자본 }
-                    tickets: { type: integer, description: 받은 무기 뽑기권 }
+                    diamonds: { type: integer, format: int64, description: 받은 다이아 (526번) }
                 - type: 'null'
         sandbox: { type: boolean, description: 테스트판의 회사다 (decisions.md 499번) }
-        sandboxInfinite: { type: boolean, description: 테스트판의 무한 지갑이 켜져 있다. 자본과 뽑기권이 떨어지지 않는다 }
+        sandboxInfinite: { type: boolean, description: 테스트판의 무한 지갑이 켜져 있다. 자본과 다이아가 떨어지지 않는다 }
         idle:
           type: object
           required: [wall, hp, maxHp, dps, earned, boss, skills, cats, fieldSlots, wallDps, income]
@@ -1169,14 +1178,14 @@ components:
               description: 마지막으로 보낸 결과와 받은 보상. 없으면 null
               oneOf:
                 - type: object
-                  required: [stage, cleared, stars, firstClear, capital, tickets]
+                  required: [stage, cleared, stars, firstClear, capital, diamonds]
                   properties:
                     stage: { type: integer, description: 스테이지 번호 }
                     cleared: { type: boolean }
                     stars: { type: integer }
                     firstClear: { type: boolean, description: 이 판에 처음 깼다 }
                     capital: { type: integer, format: int64, description: 받은 자본 }
-                    tickets: { type: integer, description: 받은 무기 뽑기권 }
+                    diamonds: { type: integer, format: int64, description: 받은 다이아. 매도벽 돌파 스테이지는 주지 않아 늘 0이다 (526번) }
                 - type: 'null'
         battleUpgrades:
           description: 자본으로 사는 전투 강화 (decisions.md 367·394번). 공격력·연사, 최대 단계 없이 멘탈 전투의 바탕 수치에 영구로 붙는다
@@ -1193,11 +1202,10 @@ components:
               nextBonusPercent: { type: integer, description: 다음 단계의 효과(%) }
               maxLevel: { type: integer, description: 살 수 있는 마지막 단계 (487번). 0이면 끝없이 산다 }
         armory:
-          description: 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 무기 뽑기권으로 뽑는다
+          description: 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 다이아로 뽑는다(526번)
           type: object
-          required: [tickets, mergeCount, lastDraw, lastDraws]
+          required: [mergeCount, lastDraw, lastDraws]
           properties:
-            tickets: { type: integer, description: 가진 무기 뽑기권 }
             mergeCount: { type: integer, description: 합쳐 한 등급 올리는 데 드는 같은 무기 수 }
             lastDraw:
               description: 마지막으로 뽑은 무기. 뽑은 적이 없으면 null

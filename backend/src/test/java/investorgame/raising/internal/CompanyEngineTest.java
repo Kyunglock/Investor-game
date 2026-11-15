@@ -140,7 +140,7 @@ class CompanyEngineTest {
 
   /** 뽑기 하나. 채용권이 없으면 한 장 쥐여 준다. */
   private static CompanyState.Employee drawOne(CompanyState company) {
-    company.tickets = Math.max(company.tickets, 1);
+    company.diamonds = Math.max(company.diamonds, 100);
     int id = ENGINE.draw(company, 1, new HashSeededRandom(77)).getFirst().employeeId;
     return company.employees.stream().filter(e -> e.id == id).findFirst().orElseThrow();
   }
@@ -164,7 +164,7 @@ class CompanyEngineTest {
     // 반지하는 자리가 넷이라(524번) 한 번에 넷씩 뽑고 비운다.
     for (int round = 0; round < 600; round++) {
       company.employees.clear();
-      company.tickets = 4;
+      company.diamonds = (4) * 100L;
       for (CompanyState.Drawn d : ENGINE.draw(company, 4, new HashSeededRandom(round))) {
         counts[CompanyEngine.LADDER.indexOf(d.grade)]++;
         stars += d.star ? 1 : 0;
@@ -264,7 +264,7 @@ class CompanyEngineTest {
     CompanyState company = ENGINE.open(new HashSeededRandom(3), 1_200_000_000_000L);
     assertThat(ENGINE.grade(company)).isEqualTo("SSS");
     assertThat(ENGINE.rateGrade(company, ENGINE.rates().get(2))).isEqualTo("X");
-    company.tickets = 60;
+    company.diamonds = (60) * 100L;
     List<CompanyState.Drawn> drawn = new java.util.ArrayList<>();
     List<CompanyState.Employee> hired = new java.util.ArrayList<>();
     for (int i = 0; i < 6; i++) {
@@ -285,16 +285,14 @@ class CompanyEngineTest {
 
   /** 채용 뽑기 전에 차린 회사 (decisions.md 312번): 처음 불러올 때 채용권을 받고 지금 직원이 도감에 오른다. 한 번만. */
   @Test
-  void 뽑기_전에_차린_회사는_채용권을_받고_직원이_도감에_오른다() {
+  void 뽑기_전에_차린_회사는_직원이_도감에_오른다() {
     CompanyState old = open(1, stats(50, 50, 50, 50), 100_000_000);
     old.gachaReady = false;
-    old.tickets = 0;
+    old.diamonds = (0) * 100L;
     old.collection.clear();
     assertThat(ENGINE.adoptGacha(old)).isTrue();
-    assertThat(old.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
     assertThat(old.collection).containsEntry("B", 1);
     assertThat(ENGINE.adoptGacha(old)).as("한 번만").isFalse();
-    assertThat(old.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
     assertThat(ENGINE.open(new HashSeededRandom(1), 100_000_000).gachaReady).isTrue();
   }
 
@@ -333,12 +331,13 @@ class CompanyEngineTest {
   }
 
   @Test
-  void 사장의_사재로_직원_없이_F등급_자리_네_개로_열리고_채용권을_받는다() {
+  void 사장의_사재로_직원_없이_F등급_자리_네_개로_열리고_다이아를_받는다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
     assertThat(company.capital).isEqualTo(100_000_000);
     assertThat(company.employees).isEmpty();
     assertThat(company.opening).contains("100b로");
-    assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
+    assertThat(company.diamonds).as("시작 다이아 (526번)").isEqualTo(1000);
+    assertThat(company.diamondsReady).isTrue();
     assertThat(ENGINE.draw(company, 1, new HashSeededRandom(1)).getFirst().name).isEqualTo("박한결");
     assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
     assertThat(ENGINE.seats(company.capital)).isEqualTo(4);
@@ -360,7 +359,7 @@ class CompanyEngineTest {
     int sum = 0;
     int count = 0;
     for (int round = 0; round < 100; round++) {
-      company.tickets = 3;
+      company.diamonds = (3) * 100L;
       for (CompanyState.Drawn d : ENGINE.draw(company, 3, new HashSeededRandom(round))) {
         sum += CompanyEngine.LADDER.indexOf(d.grade);
         count++;
@@ -426,7 +425,7 @@ class CompanyEngineTest {
     assertThat(drawn)
         .extracting(d -> d.name)
         .containsExactlyElementsOf(company.employees.stream().map(e -> e.name).toList());
-    assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets() - 2);
+    assertThat(company.diamonds).as("한 명에 다이아 100 (526번)").isEqualTo(1000 - 200);
     assertThat(company.capital).as("뽑기는 돈이 들지 않는다").isEqualTo(capital);
     assertThat(company.draws).isEqualTo(2);
     assertThat(company.collection.values().stream().mapToInt(Integer::intValue).sum()).isEqualTo(2);
@@ -436,12 +435,12 @@ class CompanyEngineTest {
 
     // 반지하(F)는 자리가 넷이다: 둘 더 뽑으면 꽉 차고, 그 뒤로는 채용권이 있어도 못 뽑는다.
     assertThat(ENGINE.seats(company)).isEqualTo(4);
-    company.tickets = 10;
+    company.diamonds = (10) * 100L;
     assertThatThrownBy(() -> ENGINE.draw(company, 3, new HashSeededRandom(5)))
         .as("자리를 넘겨 뽑을 수 없다")
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("회사를 넓히면");
-    assertThat(company.tickets).as("거절되면 채용권을 쓰지 않는다").isEqualTo(10);
+    assertThat(company.diamonds).as("거절되면 다이아를 쓰지 않는다").isEqualTo(1000);
     ENGINE.draw(company, 2, new HashSeededRandom(5));
     assertThat(company.employees).hasSize(4).allSatisfy(e -> assertThat(e.desk).isNotNull());
     assertThatThrownBy(() -> ENGINE.draw(company, 1, new HashSeededRandom(5)))
@@ -487,7 +486,7 @@ class CompanyEngineTest {
     java.util.Set<String> names = new java.util.HashSet<>();
     String previous = null;
     while (names.size() < total) {
-      company.tickets = PROPERTIES.gacha().maxDraws();
+      company.diamonds = (PROPERTIES.gacha().maxDraws()) * 100L;
       company.employees.clear();
       for (CompanyState.Drawn d :
           ENGINE.draw(

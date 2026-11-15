@@ -122,11 +122,6 @@ class CompanyEngine {
                 .thenComparingInt(e -> -e.id));
   }
 
-  /** 인사팀이 있으면 연말에 더 받는 채용권 (6.3절, decisions.md 312번). */
-  int hrExtraTickets() {
-    return properties.hr().extraTickets();
-  }
-
   /** 인사 직원이 끌어올리는 뽑기의 중심 등급: 인사 직원보다 두 단계 아래, 바닥 F (6.3절). */
   String hrCap(Employee hr) {
     return LADDER.get(Math.max(0, LADDER.indexOf(employeeGrade(hr)) - properties.hr().capSteps()));
@@ -149,7 +144,8 @@ class CompanyEngine {
   CompanyState open(SeededRandom random, long capital) {
     CompanyState company = new CompanyState();
     company.capital = Math.max(0, capital);
-    company.tickets = properties.gacha().startTickets();
+    company.diamonds = properties.diamonds().start();
+    company.diamondsReady = true;
     company.gachaReady = true;
     company.building = grade((long) company.capital);
     company.era = eras().getFirst().code();
@@ -470,8 +466,9 @@ class CompanyEngine {
     if (count < 1 || count > gacha.maxDraws()) {
       throw new InvalidRequestException("한 번에 1~" + gacha.maxDraws() + "명까지 뽑는다");
     }
-    if (company.tickets < count) {
-      throw new InvalidRequestException("채용권이 모자란다");
+    long cost = properties.diamonds().hire() * count;
+    if (company.diamonds < cost) {
+      throw new InvalidRequestException("다이아가 모자라요");
     }
     // 뽑은 직원은 바로 자리에 앉는다 (524번): 자리가 꽉 차면 더 뽑을 수 없고, 회사를 넓히면 자리가 는다.
     if (company.employees.size() + count > seats(company)) {
@@ -481,7 +478,7 @@ class CompanyEngine {
     int sssAt = LADDER.indexOf(StatGrade.SSS.name());
     java.util.Optional<Employee> mentor = bestRanked(company, RANK_MENTOR);
     List<String> sectors = content.sectors().stream().map(s -> s.code()).toList();
-    company.tickets -= count;
+    company.diamonds -= cost;
     company.lastDraw.clear();
     for (int i = 0; i < count; i++) {
       RandomGenerator rng = random.forKey("draw", company.draws++);
@@ -551,7 +548,6 @@ class CompanyEngine {
       return false;
     }
     company.gachaReady = true;
-    company.tickets += properties.gacha().startTickets();
     for (Employee e : company.employees) {
       collect(company, employeeGrade(e));
     }
@@ -570,25 +566,6 @@ class CompanyEngine {
         .filter(e -> e.id == id)
         .findFirst()
         .orElseThrow(() -> new InvalidRequestException("없는 직원"));
-  }
-
-  /** 채용권을 받는다. 받은 까닭을 lines(분기 실적·결산 소식)에 한 줄 남긴다. */
-  void giveTickets(CompanyState company, int count, String reason, List<String> lines) {
-    if (count <= 0) {
-      return;
-    }
-    company.tickets += count;
-    RaisingContent.Market texts = content.raising().company().market();
-    if (lines != null) {
-      lines.add(
-          Korean.fill(
-              texts.tickets(),
-              Map.of(
-                  "count",
-                  String.valueOf(count),
-                  "reason",
-                  texts.ticketReasons().getOrDefault(reason, ""))));
-    }
   }
 
   private void requireOpen(CompanyState company) {
@@ -776,7 +753,6 @@ class CompanyEngine {
     // 공사 기간 없이 바로 옮긴다 (405번): 322번(#347)의 몇 해에 걸친 공사를 뺐다.
     company.building = next;
     history.add(company, company.year, "grow", null, next);
-    giveTickets(company, properties.gacha().moveTickets(), "move", new ArrayList<>());
     landmark(company, next, new ArrayList<>());
   }
 
@@ -867,6 +843,31 @@ class CompanyEngine {
     company.sold = false;
     company.finished = false;
     adoptRealtime(company);
+  }
+
+  /** 뽑기권이 있던 때의 저장을 옮긴다 (526번): 남은 채용권과 무기·고양이 뽑기권을 한 장에 per-ticket 다이아로 바꾼다. 한 번만. 바꿨으면 true. */
+  boolean adoptDiamonds(CompanyState company) {
+    if (company.diamondsReady) {
+      return false;
+    }
+    long tickets = Math.max(0, (long) company.tickets) + Math.max(0, (long) company.weaponTickets);
+    company.diamonds += tickets * properties.diamonds().perTicket();
+    company.tickets = 0;
+    company.weaponTickets = 0;
+    company.diamondsReady = true;
+    return true;
+  }
+
+  CompanyProperties.Diamonds diamonds() {
+    return properties.diamonds();
+  }
+
+  /** 다이아를 쓴다 (526번). 모자라면 아무것도 쓰지 않고 400. */
+  static void spend(CompanyState company, long cost) {
+    if (company.diamonds < cost) {
+      throw new InvalidRequestException("다이아가 모자라요");
+    }
+    company.diamonds -= cost;
   }
 
   /**

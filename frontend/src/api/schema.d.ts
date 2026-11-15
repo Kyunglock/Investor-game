@@ -56,10 +56,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 채용권으로 count명을 뽑는다 (decisions.md 312번)
-         * @description 채용권 한 장에 한 명이 오고 서버가 바로 빈 자리에 앉힌다(524번, 사장이 배치하지 않는다). 자리(seats)가 꽉 차면 400: 회사를 넓혀야 더 뽑는다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
+         * 다이아로 직원 count명을 뽑는다 (decisions.md 312·526번)
+         * @description 한 명에 다이아 diamonds.hire(100)이고, 온 직원은 서버가 바로 빈 자리에 앉힌다(524번, 사장이 배치하지 않는다). 자리(seats)가 꽉 차면 400: 회사를 넓혀야 더 뽑는다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
          *     요청에 지금까지 뽑은 횟수(draws)를 싣는다: 이미 한 뽑기면 아무것도 하지 않고 지금 회사를 돌려주고, 아직 오지 않은 것이면 400.
-         *     채용권이 모자라거나 한 번에 maxDraws를 넘으면 400.
+         *     다이아가 모자라거나 한 번에 maxDraws를 넘으면 400.
          */
         post: operations["drawEmployees"];
         delete?: never;
@@ -167,7 +167,7 @@ export interface paths {
         put?: never;
         /**
          * 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번)
-         * @description 열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 깼으면 처음이면 자본(번호 × 1b)과 무기 뽑기권(보스면 3장), 별을 처음 얻을 때마다 뽑기권 한 장.
+         * @description 열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 깼으면 처음이면 자본(번호 × 1b), 별을 처음 얻을 때마다 다이아(1개째 30·2개째 30·3개째 40, 10의 배수 스테이지는 두 배, 526번). 이미 얻은 별은 다시 깨도 주지 않는다.
          *     못 깼으면 보상 없이 결과만 남는다. 결과는 stages.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
          */
         post: operations["reportStage"];
@@ -269,8 +269,8 @@ export interface paths {
         put?: never;
         /**
          * 매도벽 돌파 스테이지 한 판의 결과를 보낸다 (#698)
-         * @description 열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 보상은 멘탈 스테이지와 같다: 처음 깨면 자본(번호 × 1b)과 무기 뽑기권(챕터 끝이면 3장),
-         *     별을 처음 얻을 때마다 뽑기권 한 장. 못 깼으면 보상 없이 결과만 남는다. 결과는 assaults.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
+         * @description 열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 처음 깨면 자본(번호 × 1b)을 준다. 다이아는 주지 않는다(526번).
+         *     못 깼으면 보상 없이 결과만 남는다. 결과는 assaults.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
          */
         post: operations["reportAssault"];
         delete?: never;
@@ -290,7 +290,7 @@ export interface paths {
         put?: never;
         /**
          * EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번)
-         * @description 하루에 한 번(한국 시간 자정에 다시 열린다, 523번) 무기 뽑기권 1 + 물리친 적 40마다 한 장(최대 3장). 오늘 이미 했으면 그대로 둔다.
+         * @description 하루에 한 번(한국 시간 자정에 다시 열린다, 523번) 다이아 300개(526번, 전에는 무기 뽑기권). 오늘 이미 했으면 그대로 둔다.
          */
         post: operations["reportEx"];
         delete?: never;
@@ -332,9 +332,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 무기 뽑기권 한 장에 무기 하나, 10연속이면 열 개를 뽑는다 (decisions.md 366·517번)
+         * 다이아로 무기를 뽑는다. 한 번 100, 10연차는 1,000에 열한 개 (decisions.md 366·517·526번)
          * @description 등급은 F 450·E 260·D 150·C 80·B 40·A 17·S 3의 가중치로, 종류는 등급에 따라 정한다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
-         *     결과는 armory.lastDraw에, 한꺼번에 뽑은 것은 armory.lastDraws에 차례대로 담긴다. 뽑기권이 count장보다 적으면 하나도 뽑지 않고 400.
+         *     결과는 armory.lastDraw에, 한꺼번에 뽑은 것은 armory.lastDraws에 차례대로 담긴다. count가 10이면 10연차다(diamonds.tenDraw에 diamonds.tenCount개). 다이아가 모자라면 하나도 뽑지 않고 400.
          */
         post: operations["drawWeapon"];
         delete?: never;
@@ -374,10 +374,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 뽑기권 한 장에 고양이 한 마리, 10연속이면 열 마리를 뽑는다 (decisions.md 488·493·517번)
-         * @description 무기 뽑기와 같은 뽑기권(armory.tickets)을 한 장 쓴다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
+         * 다이아로 고양이를 뽑는다. 한 번 100, 10연차는 1,000에 열한 마리 (decisions.md 488·493·517·526번)
+         * @description 무기 뽑기와 같은 값이다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
          *     이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 나온 고양이는 idle.lastDraws에 차례대로 담긴다.
-         *     뽑기권이 count장보다 적으면 하나도 뽑지 않고 400.
+         *     다이아가 모자라면 하나도 뽑지 않고 400.
          */
         post: operations["drawCat"];
         delete?: never;
@@ -460,7 +460,7 @@ export interface paths {
         /**
          * 코드를 넣고 테스트판에 들어간다 (decisions.md 499번)
          * @description 코드가 맞으면 테스트판 쿠키(IG_SANDBOX)를 심고 이 플레이어의 테스트판 회사를 돌려준다. 쿠키가 있는 동안 /api/company 요청은 본 게임과 따로 둔
-         *     테스트판 회사로 간다. 테스트판 회사는 자본·채용권·뽑기권이 요청마다 다시 채워지고 업계 순위에 남지 않는다. 서버에 코드가 없으면(꺼짐) 404,
+         *     테스트판 회사로 간다. 테스트판 회사는 자본·다이아가 요청마다 다시 채워지고 업계 순위에 남지 않는다. 서버에 코드가 없으면(꺼짐) 404,
          *     코드가 틀리면 400.
          */
         post: operations["enterSandbox"];
@@ -503,7 +503,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 테스트판의 무한 지갑을 켜고 끈다 (decisions.md 499번). 끄면 자본은 처음 돈, 채용권·뽑기권은 0에서 시작한다 */
+        /** 테스트판의 무한 지갑을 켜고 끈다 (decisions.md 499번). 끄면 자본은 처음 돈, 다이아는 0에서 시작한다 */
         post: operations["setSandboxWallet"];
         delete?: never;
         options?: never;
@@ -606,6 +606,31 @@ export interface components {
             opening?: string | null;
             /** @description 자본. 자동 전투의 물가(decisions.md 505번)로 int64를 넘게 커진다. 소수 없는 수다 */
             capital: number;
+            /** @description 다이아 (decisions.md 526번). 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. 채용권과 뽑기권을 대신한다. 멘탈 보호 스테이지의 별과 EX 디펜스로 얻는다 */
+            diamonds: {
+                /**
+                 * Format: int64
+                 * @description 가진 다이아
+                 */
+                amount: number;
+                /**
+                 * Format: int64
+                 * @description 고양이·무기 한 번 뽑는 값(100)
+                 */
+                draw: number;
+                /**
+                 * Format: int64
+                 * @description 고양이·무기 10연차의 값(1,000)
+                 */
+                tenDraw: number;
+                /** @description 10연차에 나오는 수(11) */
+                tenCount: number;
+                /**
+                 * Format: int64
+                 * @description 직원 한 명을 뽑는 값(100)
+                 */
+                hire: number;
+            };
             grade: components["schemas"]["Grade"];
             /**
              * Format: int64
@@ -705,8 +730,6 @@ export interface components {
             };
             /** @description 채용 뽑기 (decisions.md 312번). 공채 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다 */
             gacha: {
-                /** @description 가진 채용권. 한 장에 한 명. 회사를 차릴 때와 이사할 때 받는다 */
-                tickets: number;
                 /** @description 데리고 있는 사람 수 */
                 roster: number;
                 /** @description 데리고 있을 수 있는 사람 수 = 회사의 자리 수 (524번). roster가 여기에 닿으면 더 뽑을 수 없고, 회사를 넓히면 는다 */
@@ -1026,13 +1049,16 @@ export interface components {
                      * @description 받은 자본
                      */
                     capital: number;
-                    /** @description 받은 무기 뽑기권 */
-                    tickets: number;
+                    /**
+                     * Format: int64
+                     * @description 받은 다이아 (526번)
+                     */
+                    diamonds: number;
                 } | null;
             };
             /** @description 테스트판의 회사다 (decisions.md 499번) */
             sandbox?: boolean;
-            /** @description 테스트판의 무한 지갑이 켜져 있다. 자본과 뽑기권이 떨어지지 않는다 */
+            /** @description 테스트판의 무한 지갑이 켜져 있다. 자본과 다이아가 떨어지지 않는다 */
             sandboxInfinite?: boolean;
             idle?: {
                 /** @description 회사의 수입 (523번). 화면에서 흐르는 실제 1초에 버는 돈이고, 접속해 있는 동안과 자리를 비운 동안이 같다 */
@@ -1172,8 +1198,11 @@ export interface components {
                      * @description 받은 자본
                      */
                     capital: number;
-                    /** @description 받은 무기 뽑기권 */
-                    tickets: number;
+                    /**
+                     * Format: int64
+                     * @description 받은 다이아. 매도벽 돌파 스테이지는 주지 않아 늘 0이다 (526번)
+                     */
+                    diamonds: number;
                 } | null;
             };
             /** @description 자본으로 사는 전투 강화 (decisions.md 367·394번). 공격력·연사, 최대 단계 없이 멘탈 전투의 바탕 수치에 영구로 붙는다 */
@@ -1196,10 +1225,8 @@ export interface components {
                 /** @description 살 수 있는 마지막 단계 (487번). 0이면 끝없이 산다 */
                 maxLevel: number;
             }[];
-            /** @description 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 무기 뽑기권으로 뽑는다 */
+            /** @description 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 다이아로 뽑는다(526번) */
             armory?: {
-                /** @description 가진 무기 뽑기권 */
-                tickets: number;
                 /** @description 합쳐 한 등급 올리는 데 드는 같은 무기 수 */
                 mergeCount: number;
                 /** @description 마지막으로 뽑은 무기. 뽑은 적이 없으면 null */

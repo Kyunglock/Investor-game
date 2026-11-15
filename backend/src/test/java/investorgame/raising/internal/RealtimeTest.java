@@ -258,7 +258,7 @@ class RealtimeTest {
     assertThat(c.employees.getFirst().desk).isEqualTo("day");
     assertThat(c.idle.wall).isEqualTo(42);
     assertThat(c.stageStars).containsExactly(3, 2);
-    assertThat(c.tickets).isEqualTo(3);
+    assertThat(c.tickets).as("뽑기권은 다이아로 따로 옮긴다").isEqualTo(3);
     assertThat(c.building).as("짓던 건물은 바로 다 짓는다").isEqualTo("B");
     assertThat(c.buildingTo).isNull();
     assertThat(c.phase).as("폭락장은 없다").isEqualTo("normal");
@@ -302,18 +302,17 @@ class RealtimeTest {
     clock.now = java.time.Instant.parse("2026-11-14T14:30:00Z").toEpochMilli();
     assertThat(idle.today()).isEqualTo("2026-11-14");
     assertThat(company.mental.stagesView(c, idle.today()).exAvailable()).isTrue();
-    int tickets = c.weaponTickets;
+    long diamonds = c.diamonds;
     company.mental.reportEx(c, 80, idle.today());
-    assertThat(c.weaponTickets).isGreaterThan(tickets);
+    assertThat(c.diamonds).isEqualTo(diamonds + 300);
     assertThat(company.mental.stagesView(c, idle.today()).exAvailable()).isFalse();
-    tickets = c.weaponTickets;
     company.mental.reportEx(c, 80, idle.today());
-    assertThat(c.weaponTickets).as("같은 날 또 해도 보상은 없다").isEqualTo(tickets);
+    assertThat(c.diamonds).as("같은 날 또 해도 보상은 없다").isEqualTo(diamonds + 300);
     // 31분 뒤는 한국 시간으로 다음 날이다.
     clock.now += 31 * 60_000L;
     assertThat(idle.today()).isEqualTo("2026-11-15");
     assertThat(company.mental.stagesView(c, idle.today()).exAvailable()).isTrue();
     company.mental.reportEx(c, 80, idle.today());
-    assertThat(c.weaponTickets).isGreaterThan(tickets);
+    assertThat(c.diamonds).isEqualTo(diamonds + 600);
   }
 }
