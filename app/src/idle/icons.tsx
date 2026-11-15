@@ -113,14 +113,11 @@ const SHAPES = {
       <path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3m-3.5 4v2" />
     </>
   ),
-  ticket: (
+  // 다이아 (526번): 위가 깎인 보석.
+  diamond: (
     <>
-      <path
-        d="M3 7h18v3.5a1.8 1.8 0 0 0 0 3.5V17H3v-3a1.8 1.8 0 0 0 0-3.5Z"
-        fill="currentColor"
-        fillOpacity=".28"
-      />
-      <path d="M14.5 7v2m0 2.5v1.5m0 2.5V17" strokeWidth="1.3" />
+      <path d="M7 4h10l4.5 5.5L12 21 2.5 9.5Z" fill="currentColor" fillOpacity=".28" />
+      <path d="M2.5 9.5h19M9.5 4 8 9.5 12 21l4-11.5L14.5 4" strokeWidth="1.3" />
     </>
   ),
 } satisfies Record<string, ReactNode>

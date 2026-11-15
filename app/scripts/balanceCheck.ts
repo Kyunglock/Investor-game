@@ -37,7 +37,7 @@ try {
           exAvailable: false,
           lastResult: null,
         },
-        armory: { tickets: 0, mergeCount: 2, lastDraw: null },
+        armory: { mergeCount: 2, lastDraw: null, lastDraws: [] },
         weapons: [
           {
             kind,

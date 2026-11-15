@@ -536,6 +536,11 @@
   color: white;
   flex-shrink: 0;
 }
+/* 다이아 지갑 (526번): 동그라미만 푸르게. */
+.toy-wallet-diamond i {
+  background: #dff3ff;
+  font-size: 15px;
+}
 .toy-rival-goal {
   position: relative;
   pointer-events: auto;
