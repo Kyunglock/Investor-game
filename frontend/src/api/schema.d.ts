@@ -279,6 +279,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/pass/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 시즌패스의 단계 보상을 받는다 (decisions.md 529번)
+         * @description step을 실으면 그 단계 하나를, 본문이 없거나 step이 없으면 받을 수 있는 것을 모두 받는다. 받은 것은 pass.lastRewards에 담긴다.
+         *     서버가 도달 여부와 중복 수령을 검증한다: 도달하지 않았거나 이미 받은 단계, 없는 단계, 받을 것이 없는 모두 받기는 400.
+         */
+        post: operations["claimPass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 오늘의 출석 보상을 받는다 (decisions.md 528번)
+         * @description 하루에 한 번, 한국 시간 자정 기준이고 서버 시각으로 판정한다. 출석판(attendance.board)의 다음 칸을 받고 한 칸 나아간다.
+         *     누적 출석이라 빠진 날이 있어도 처음으로 돌아가지 않고, 7일 차 다음은 다시 1일 차다. 받은 보상은 attendance.lastReward에 담긴다.
+         *     오늘 이미 받았으면 400.
+         */
+        post: operations["claimAttendance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/ex": {
         parameters: {
             query?: never;
@@ -528,6 +571,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sandbox/pass-exp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 테스트판에서 시즌패스 경험치를 더한다 (decisions.md 529번) */
+        post: operations["addSandboxPassExp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sandbox/next-season": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 테스트판에서 다음 시즌으로 넘긴다 (decisions.md 529번). 진행도가 비고 받지 않은 보상은 사라진다 */
+        post: operations["skipSandboxSeason"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sandbox/next-day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 테스트판에서 하루가 지난 셈 친다 (decisions.md 528번). 출석 보상을 다시 받을 수 있다 */
+        post: operations["skipSandboxDay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sandbox/weapon": {
         parameters: {
             query?: never;
@@ -715,6 +809,95 @@ export interface components {
                 hrCap?: components["schemas"]["Grade"] | null;
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
+            };
+            /** @description 시즌패스 (decisions.md 529번). 4주짜리 시즌 동안 플레이로 패스 경험치를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이다. 시즌이 끝나면 받지 않은 보상은 사라진다 */
+            pass: {
+                /** @description 시즌 번호 */
+                season: number;
+                name: string;
+                /**
+                 * Format: int64
+                 * @description 시즌이 끝나는 때(서버 시각
+                 */
+                endsAt: number;
+                /**
+                 * Format: int64
+                 * @description 끝날 때까지 남은 시간(초)
+                 */
+                secondsLeft: number;
+                /** @description 끝나기까지 하루가 안 남았다. 받지 않은 보상이 있으면 알려 준다 */
+                endingSoon: boolean;
+                /**
+                 * Format: int64
+                 * @description 이번 시즌에 모은 패스 경험치
+                 */
+                exp: number;
+                /** @description 한 단계에 드는 경험치 */
+                expPerStep: number;
+                /** @description 지금 도달한 단계(0부터) */
+                step: number;
+                /** @description 받을 수 있는 보상의 수 */
+                claimable: number;
+                /** @description 단계마다의 보상, 1단계부터 */
+                steps: {
+                    step: number;
+                    /**
+                     * Format: int64
+                     * @description 받는 다이아. 돈 단계면 0
+                     */
+                    diamonds: number;
+                    /** @description 돈 단계면 지금 받으면 들어올 돈(회사의 초당 수입 30분어치). 아니면 null */
+                    money?: number | null;
+                    /** @description 무기 하나를 더 받는다. 등급은 뽑기처럼 정해진다 */
+                    weapon: boolean;
+                    /** @description 고양이 한 마리를 더 받는다 */
+                    cat: boolean;
+                    /** @description 경험치가 이 단계에 닿았다 */
+                    reached: boolean;
+                    /** @description 이미 받았다 */
+                    claimed: boolean;
+                }[];
+                /** @description 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다 */
+                lastRewards: {
+                    step: number;
+                    /** Format: int64 */
+                    diamonds: number;
+                    money: number;
+                    weaponKind?: string | null;
+                    weaponGrade?: string | null;
+                    /** @description 받은 고양이의 코드 */
+                    cat?: string | null;
+                    catName?: string | null;
+                }[];
+            };
+            /** @description 출석 보상 (decisions.md 528번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다 */
+            attendance: {
+                /** @description 오늘 받을 칸(1부터). 오늘 이미 받았으면 오늘 받은 칸 */
+                today: number;
+                /** @description 오늘 보상을 아직 안 받았다 */
+                claimable: boolean;
+                /** @description 출석판, 1일 차부터 */
+                board: {
+                    day: number;
+                    /**
+                     * Format: int64
+                     * @description 받는 다이아. 돈 칸이면 0
+                     */
+                    diamonds: number;
+                    /** @description 돈 칸이면 회사의 초당 수입 몇 분어치인가. 다이아 칸이면 0 */
+                    incomeMinutes: number;
+                    /** @description 돈 칸이면 지금 받으면 들어올 돈(지금의 초당 수입 기준). 다이아 칸이면 null */
+                    money?: number | null;
+                    /** @description 이번 주기에서 이미 받은 칸 */
+                    claimed: boolean;
+                }[];
+                /** @description 마지막으로 받은 보상. 받은 적이 없으면 null */
+                lastReward?: {
+                    day: number;
+                    /** Format: int64 */
+                    diamonds: number;
+                    money: number;
+                } | null;
             };
             /** @description 종목회의의 기회 (decisions.md 523번). 1시간마다 하나씩 생기고 max까지 쌓인다. 자리를 비운 동안에도 쌓인다 */
             meetings: {
@@ -1036,6 +1219,13 @@ export interface components {
                 bonusPercent: number;
                 /** @description 오늘 EX 디펜스를 아직 안 했다. 하루에 한 번이고 한국 시간 자정에 다시 열린다 (523번) */
                 exAvailable: boolean;
+                /** @description 스테이지마다 아직 받을 수 있는 다이아, 1번부터 마지막 스테이지까지 (527번). 별을 처음 얻을 때마다 받으므로 얻지 않은 별의 몫이다. 별 셋을 다 얻었으면 0 */
+                diamondsLeft: number[];
+                /**
+                 * Format: int64
+                 * @description EX 디펜스 한 번의 다이아 (527번)
+                 */
+                exDiamonds: number;
                 /** @description 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null */
                 lastResult: {
                     /** @description 스테이지 번호. EX 디펜스면 0 */
@@ -1665,6 +1855,59 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    claimPass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description 받을 단계. 없으면 받을 수 있는 것을 모두 받는다 */
+                    step?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 보상을 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    claimAttendance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 보상을 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     reportEx: {
         parameters: {
             query?: never;
@@ -2041,6 +2284,82 @@ export interface operations {
                 };
             };
         };
+        responses: {
+            /** @description 바뀐 뒤의 테스트판 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addSandboxPassExp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: int64 */
+                    exp: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 바뀐 뒤의 테스트판 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    skipSandboxSeason: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 바뀐 뒤의 테스트판 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    skipSandboxDay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description 바뀐 뒤의 테스트판 회사 */
             200: {
