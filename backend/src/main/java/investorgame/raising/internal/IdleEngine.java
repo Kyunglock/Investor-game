@@ -462,6 +462,15 @@ class IdleEngine {
     return plainHp(wall) * (wall % 10 == 0 ? BOSS_HP : 1);
   }
 
+  /**
+   * Whether a bullet that hit the wall {@code depth} walls in front of {@code wall} is stopped by a
+   * 대량 매도벽 on the way: that front wall, a wall between, or the target itself.
+   */
+  static boolean pierceBlocked(long wall, int depth) {
+    for (long at = wall - depth; at <= wall; at++) if (at % 10 == 0) return true;
+    return false;
+  }
+
   /** A wall's health before the every-tenth-wall multiplier. */
   private static double plainHp(long wall) {
     long depth = wall - 1;
@@ -670,6 +679,9 @@ class IdleEngine {
         // Only a bullet's pierce reaches the queued walls (520): explosions and skills stop at the
         // front wall.
         if (depth > 0 && kind != 0) continue;
+        // A 대량 매도벽 (every tenth wall) cannot be pierced: not when it is the screen's front wall,
+        // and a pierced bullet neither hits it nor goes past it. Matches the app's idlePierceReach.
+        if (depth > 0 && pierceBlocked(hit.wall(), depth)) continue;
         double reported =
             hit.damage() == null ? damage * PIERCE[depth] * hit.count() : hit.damage();
         if (!Double.isFinite(reported) || reported <= 0) continue;

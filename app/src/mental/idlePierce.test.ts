@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { IDLE_PIERCE, IDLE_PIERCE_FLOOR, idlePierceHits } from './idlePierce'
+import {
+  IDLE_PIERCE,
+  IDLE_PIERCE_FLOOR,
+  idleBossWall,
+  idlePierceHits,
+  idlePierceReach,
+} from './idlePierce'
 
 describe('매도벽 돌파의 총알 관통 (520번)', () => {
   const walls = [
@@ -36,5 +42,21 @@ describe('매도벽 돌파의 총알 관통 (520번)', () => {
   it('피해가 없으면 뚫지 않는다', () => {
     expect(idlePierceHits(7, 0, walls)).toEqual([])
     expect(idlePierceHits(7, Number.NaN, walls)).toEqual([])
+  })
+
+  it('대량 매도벽(열 번째 벽마다)은 뚫리지 않는다: 맨 앞이면 멈추고, 뒤에 있으면 그 앞까지만 간다', () => {
+    expect(idleBossWall(10)).toBe(true)
+    expect(idleBossWall(11)).toBe(false)
+    expect(idlePierceReach(7)).toBe(2)
+    expect(idlePierceReach(8)).toBe(1)
+    expect(idlePierceReach(9)).toBe(0)
+    expect(idlePierceReach(10)).toBe(0)
+    const near = [
+      { wall: 9, hp: 100 },
+      { wall: 10, hp: 100 },
+    ]
+    expect(idlePierceHits(8, 40, near)).toEqual([{ wall: 9, behind: 1, damage: 20 }])
+    expect(idlePierceHits(9, 40, [{ wall: 10, hp: 100 }])).toEqual([])
+    expect(idlePierceHits(10, 40, [{ wall: 11, hp: 100 }])).toEqual([])
   })
 })

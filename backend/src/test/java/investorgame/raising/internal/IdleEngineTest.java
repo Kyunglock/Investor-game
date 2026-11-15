@@ -211,6 +211,17 @@ class IdleEngineTest {
   }
 
   @Test
+  void aBossWallCannotBePierced() {
+    // 대량 매도벽(열 번째 벽마다)은 뚫리지 않는다: 맞지도 않고 그 뒤로 가지도 않는다.
+    assertThat(IdleEngine.pierceBlocked(10, 1)).isTrue();
+    assertThat(IdleEngine.pierceBlocked(11, 1)).isTrue();
+    assertThat(IdleEngine.pierceBlocked(11, 2)).isTrue();
+    assertThat(IdleEngine.pierceBlocked(12, 2)).isTrue();
+    assertThat(IdleEngine.pierceBlocked(9, 1)).isFalse();
+    assertThat(IdleEngine.pierceBlocked(13, 2)).isFalse();
+  }
+
+  @Test
   void piercedDamageIsCappedAtTheWallsShareOfOneBullet() {
     start(1);
     // A forged pierce report as strong as a full bullet: only 50% and 25% of the best bullet count.

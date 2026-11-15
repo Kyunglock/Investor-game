@@ -1,7 +1,7 @@
 import type Phaser from 'phaser'
 import { CELL_CRACKS, cellKey, WALL_LABEL_STYLE } from './art'
 import { cellShares } from './assault'
-import { IDLE_PIERCE_FLOOR } from './idlePierce'
+import { IDLE_PIERCE_FLOOR, idleBossWall } from './idlePierce'
 
 export const IDLE_WALL_GAP = 6
 const UPCOMING_WALLS = 2
@@ -84,7 +84,7 @@ export class IdleWallQueueFx {
       )
       const changed = layer.wall !== wall || layer.hp !== hp || layer.maxHp !== maxHp
       layer.body
-        .setTexture(cellKey(Math.max(0, crack)))
+        .setTexture(cellKey(Math.max(0, crack), idleBossWall(wall)))
         .setPosition(left + width / 2, y)
         .setDisplaySize(width - 3, height - 3)
         .setAlpha(0.9 - i * 0.13)
@@ -132,7 +132,7 @@ export class IdleWallQueueFx {
       top: body.y - body.displayHeight,
       bottom: body.y,
       visible: body.visible,
-      boss: wall % 10 === 0,
+      boss: idleBossWall(wall),
     }))
   }
 }

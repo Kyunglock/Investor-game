@@ -443,7 +443,11 @@ export const RAM_ART = 2.5
 /** 매도벽 칸 텍스처의 크기(px). 화면에서는 칸 크기로 늘여 놓는다. 금 간 정도 0~3. */
 export const CELL_TEX = { w: 360, h: 60 }
 export const CELL_CRACKS = 4
-export const cellKey = (crack: number) => `cell-${crack}`
+/** boss면 대량 매도벽(열 번째 벽마다의 큰손 벽): 같은 블록을 보라로 물들인 그림이다(빨강은 매수벽 색이라 피한다). */
+export const cellKey = (crack: number, boss = false) =>
+  boss ? `cell-boss-${crack}` : `cell-${crack}`
+/** 대량 매도벽 블록의 색상(hue): 명암과 채도는 보통 블록 그대로 두고 색만 바꾼다. */
+const BOSS_WALL_HUE = '#a020f0'
 
 const ORDER_FONT = '"Jua", "Gowun Dodum", sans-serif'
 
@@ -717,6 +721,24 @@ export function bakeOrders(scene: Phaser.Scene, hpScale = 1, redraw = false) {
   const blocks = scene.textures.get('art-wallBlocks').getSourceImage() as HTMLImageElement
   for (let crack = 0; crack < CELL_CRACKS; crack++) {
     bake(scene, cellKey(crack), CELL_TEX.w, CELL_TEX.h, (c) => drawToySellWall(c, blocks, crack))
+    // 대량 매도벽: 같은 블록의 색상만 보라로 바꾸고, 빈 자리는 블록 모양대로 다시 비운다.
+    bake(scene, cellKey(crack, true), CELL_TEX.w, CELL_TEX.h, (c) => {
+      const plain = document.createElement('canvas')
+      plain.width = CELL_TEX.w
+      plain.height = CELL_TEX.h
+      const p = plain.getContext('2d')
+      if (!p) return
+      drawToySellWall(p, blocks, crack)
+      c.save()
+      c.drawImage(plain, 0, 0)
+      c.globalCompositeOperation = 'hue'
+      c.fillStyle = BOSS_WALL_HUE
+      c.fillRect(0, 0, CELL_TEX.w, CELL_TEX.h)
+      // 한 번에 덮어야 한다: destination-in은 그리는 모양 밖을 모두 지운다.
+      c.globalCompositeOperation = 'destination-in'
+      c.drawImage(plain, 0, 0)
+      c.restore()
+    })
   }
   // 벽 뒤 판: 블록 사이를 잇는 옅은 접지 그림자.
   bake(scene, 'wall-band', 64, 32, (c) => {
