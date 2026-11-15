@@ -279,6 +279,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 오늘의 출석 보상을 받는다 (decisions.md 528번)
+         * @description 하루에 한 번, 한국 시간 자정 기준이고 서버 시각으로 판정한다. 출석판(attendance.board)의 다음 칸을 받고 한 칸 나아간다.
+         *     누적 출석이라 빠진 날이 있어도 처음으로 돌아가지 않고, 7일 차 다음은 다시 1일 차다. 받은 보상은 attendance.lastReward에 담긴다.
+         *     오늘 이미 받았으면 400.
+         */
+        post: operations["claimAttendance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/ex": {
         parameters: {
             query?: never;
@@ -528,6 +550,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sandbox/next-day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 테스트판에서 하루가 지난 셈 친다 (decisions.md 528번). 출석 보상을 다시 받을 수 있다 */
+        post: operations["skipSandboxDay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sandbox/weapon": {
         parameters: {
             query?: never;
@@ -715,6 +754,35 @@ export interface components {
                 hrCap?: components["schemas"]["Grade"] | null;
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
+            };
+            /** @description 출석 보상 (decisions.md 528번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다 */
+            attendance: {
+                /** @description 오늘 받을 칸(1부터). 오늘 이미 받았으면 오늘 받은 칸 */
+                today: number;
+                /** @description 오늘 보상을 아직 안 받았다 */
+                claimable: boolean;
+                /** @description 출석판, 1일 차부터 */
+                board: {
+                    day: number;
+                    /**
+                     * Format: int64
+                     * @description 받는 다이아. 돈 칸이면 0
+                     */
+                    diamonds: number;
+                    /** @description 돈 칸이면 회사의 초당 수입 몇 분어치인가. 다이아 칸이면 0 */
+                    incomeMinutes: number;
+                    /** @description 돈 칸이면 지금 받으면 들어올 돈(지금의 초당 수입 기준). 다이아 칸이면 null */
+                    money?: number | null;
+                    /** @description 이번 주기에서 이미 받은 칸 */
+                    claimed: boolean;
+                }[];
+                /** @description 마지막으로 받은 보상. 받은 적이 없으면 null */
+                lastReward?: {
+                    day: number;
+                    /** Format: int64 */
+                    diamonds: number;
+                    money: number;
+                } | null;
             };
             /** @description 종목회의의 기회 (decisions.md 523번). 1시간마다 하나씩 생기고 max까지 쌓인다. 자리를 비운 동안에도 쌓인다 */
             meetings: {
@@ -1036,6 +1104,13 @@ export interface components {
                 bonusPercent: number;
                 /** @description 오늘 EX 디펜스를 아직 안 했다. 하루에 한 번이고 한국 시간 자정에 다시 열린다 (523번) */
                 exAvailable: boolean;
+                /** @description 스테이지마다 아직 받을 수 있는 다이아, 1번부터 마지막 스테이지까지 (527번). 별을 처음 얻을 때마다 받으므로 얻지 않은 별의 몫이다. 별 셋을 다 얻었으면 0 */
+                diamondsLeft: number[];
+                /**
+                 * Format: int64
+                 * @description EX 디펜스 한 번의 다이아 (527번)
+                 */
+                exDiamonds: number;
                 /** @description 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null */
                 lastResult: {
                     /** @description 스테이지 번호. EX 디펜스면 0 */
@@ -1665,6 +1740,29 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    claimAttendance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 보상을 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     reportEx: {
         parameters: {
             query?: never;
@@ -2041,6 +2139,29 @@ export interface operations {
                 };
             };
         };
+        responses: {
+            /** @description 바뀐 뒤의 테스트판 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    skipSandboxDay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description 바뀐 뒤의 테스트판 회사 */
             200: {
