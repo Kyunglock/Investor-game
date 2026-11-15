@@ -65,19 +65,20 @@ class CompanyState {
 
     /** 최근 벽이 실제로 받은 피해(게임 초당, 492번). 화면의 실제 화력 표시에만 쓴다. */
     double wallDps;
+
+    /** 마지막으로 접속 신호를 받은 때(서버 시각, ms). 자리를 비운 동안의 수입을 여기서부터 센다 (523번). 없던 저장은 0. */
+    long lastSeen;
+
+    /** 마지막으로 받은 자리 비운 동안의 수입 (523번): 받은 때·비운 시간(초, 상한까지)·번 돈·상한에 걸렸는가. 화면이 한 번 알려 준다. */
+    long offlineAt;
+
+    double offlineSeconds;
+    double offlineEarned;
+    boolean offlineCapped;
   }
 
   /** 사장이 차린 몇 번째 회사인가(1부터). */
   int number = 1;
-
-  /** 지금 분기(1~4). 턴 하나가 한 분기이고 4분기를 넘기면 연말 결산이다 (decisions.md 268번). 이 칸이 없던 회사는 1분기. */
-  int quarter = 1;
-
-  /** 폭락장인 해에 폭락이 터지는 분기(2~4). 숨은 값. 폭락장이 아니거나 이 칸이 없던 해면 null(옛 해는 네 분기에 고르게 빠진다). */
-  Integer crashQuarter;
-
-  /** 폭락 조짐(헛조짐 포함)을 거시경제 기사에 싣는 분기: 폭락이 터지기 바로 앞 분기. 조짐이 없으면 null. */
-  Integer omenQuarter;
 
   /**
    * 올해 회사 등급과 자리 수를 정한 자본(연초 자본). 분기마다 자본이 바뀌어도 등급·건물·자리 수는 연말에만 바뀐다 (268번). 이 칸이 없던 회사면 null(지금
@@ -102,42 +103,31 @@ class CompanyState {
 
   int buildLeft;
 
-  /** 올해 낸 이사 비용 (296번). */
-  long yearMoving;
-
-  /** 올해 전투 강화에 쓴 돈 (367번). */
-  long yearUpgrades;
-
-  /** 올해 스테이지 보상으로 받은 자본 (369번). */
-  long yearRewards;
-
-  /**
-   * 올해 판돈과 수수료를 정하는 자본: 1분기를 넘길 때의 자본 (268번). 분기마다 자본을 다시 걸면 이긴 분기가 겹겹이 불어나 한 해 합계가 예전 규칙과 달라진다.
-   * 자본이 그 아래로 줄면 지금 자본만큼만 건다. 아직 1분기를 안 넘겼으면 null.
-   */
-  Long yearStake;
-
-  /** 이번 분기를 시작할 때의 자본. 분기 실적의 앞 숫자다. */
-  Long quarterStartCapital;
-
   /**
    * 자리마다 사장이 정한 팀장: 자리 코드 → 직원 번호 (decisions.md 269번). 정하지 않았거나 그 사람이 자리를 떠났으면 그 자리에서 종합 등급이 가장 높은
    * 사람이 팀장이다.
    */
   Map<String, Integer> leaders = new LinkedHashMap<>();
 
-  /** 올해 넘긴 분기의 실적. 연말 결산에 모여 들어가고 해가 바뀌면 비운다 (268번). */
-  List<Quarter> quarters = new ArrayList<>();
-
-  /** 1년 차 1분기를 1로 센 분기 번호. 해를 건너도 이어진다(특급 인재가 떠나는 때, 290번). */
-  int quarterIndex() {
-    return (year - 1) * 4 + quarter;
-  }
-
-  /** 분기마다 다른 난수 열쇠: 같은 해의 분기끼리 기사·한마디·판정이 겹치지 않게. */
+  /** 종목회의마다 다른 난수 열쇠 (523번): 회의끼리 기사·한마디·판정이 겹치지 않게. 분기가 있던 때의 열쇠(해 × 10 + 분기)와 겹치지 않는 자리에서 센다. */
   int turn() {
-    return year * 10 + quarter;
+    return 1000 + meetings;
   }
+
+  /** 지금까지 연 종목회의 수 (523번). */
+  int meetings;
+
+  /** 쌓인 종목회의 기회 (523번): 시간마다 하나씩, 상한까지. */
+  int meetingChances;
+
+  /** 기회를 마지막으로 센 때(서버 시각, ms). 0이면 아직 세지 않았다(새 회사·옛 저장): 처음 셀 때 시작 기회를 준다. */
+  long meetingAt;
+
+  /** EX 디펜스를 마지막으로 한 날(한국 시간, yyyy-MM-dd). 하루에 한 번이다 (523번, 전에는 분기에 한 번). */
+  String exDay;
+
+  /** 분기·결산을 없앤 뒤의 저장인가 (523번). 아니면 불러올 때 한 번 옮긴다. */
+  boolean realtime;
 
   /** 이 회사의 시대 코드 (9.4절). */
   String era;
@@ -156,17 +146,6 @@ class CompanyState {
 
   /** 최근에 쓴 문구 틀 (#392): 회의 한마디·팀장 보고가 같은 줄로 이어 나오지 않게 고를 때 건너뛴다. 오래된 것부터 빠진다. */
   List<String> recentLines = new ArrayList<>();
-
-  /** 투자 회의를 연달아 번 해 수 (263번). */
-  int meetingStreak;
-
-  /** 지금까지 한 해 자본 배수의 최고·최저(만분율). 연표의 "가장 크게 번 해"·"가장 아팠던 해"를 가린다 (263번). */
-  int bestYearBp;
-
-  int worstYearBp;
-
-  /** 올해 결산 전에 일어난 일(이사·채용권·랜드마크 같은). 결산 소식 줄에 붙고 해가 바뀌면 비운다 (262번). */
-  List<String> yearLines = new ArrayList<>();
 
   /** 망해서 문을 닫았는가 (decisions.md 247번). 닫은 회사는 끝난 채로 남고 사장이 다음 회사를 차린다. */
   boolean closed;
@@ -198,14 +177,6 @@ class CompanyState {
   /** 올해 시장: boom·normal·crash. 결산 전에는 화면에 나가지 않는다. */
   String phase;
 
-  String omen;
-  String wantedDesk;
-
-  /** 다음 해 시장 갈래와 조짐(숨은 값). XX 경보·ZZZ 선견 직원이 있을 때만 화면에 나간다 (2.4절). */
-  String nextPhase;
-
-  String nextOmen;
-
   /**
    * 채용권 (decisions.md 312번). 채용 뽑기 한 번에 한 장. 회사를 차릴 때·분기를 넘길 때·연말 결산·업적·이사로 받는다. 다음 회사로 이어진다. 공채
    * 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다.
@@ -226,20 +197,11 @@ class CompanyState {
   /** 마지막 뽑기의 결과. 화면이 카드를 뒤집어 보인다. 분기를 넘기면 비운다. */
   List<Drawn> lastDraw = new ArrayList<>();
 
-  /** 올해 연초 회의 때의 자본. 연말 결산서의 연초 자본이다 (decisions.md 251번). 이 칸을 더하기 전의 해면 null. */
-  Long yearStartCapital;
-
-  /** 올해 인사에 쓴 돈(251번). 계약금은 채용 뽑기로 바뀌며(312번), 이적료는 이직 제안과 함께(385번) 없어졌다. */
-  long yearHiring;
-
   /** 지금까지 만난 사람 수. 뽑은 사람의 이름을 이것으로 붙인다. 다음 회사로 이어진다. */
   int met;
 
   /** 올해 종목 회의 (decisions.md 229번). 연초에 준비해 두지만 직원이 종목을 물어 와야(found) 열린다 (267번). 옛 회사면 null이다. */
   Invest invest;
-
-  /** 이번 분기의 멘탈 전투 (decisions.md 328번). 분기를 열 때 새로 만든다. 이 칸을 더하기 전의 분기면 null이다. */
-  Mental mental;
 
   /** 가진 무기 (decisions.md 346번). 종류+등급으로 하나씩. 처음엔 일반 권총 하나. 이 칸을 더하기 전의 회사면 null이다. */
   List<Weapon> weapons;
@@ -284,8 +246,6 @@ class CompanyState {
 
   /** 이 회사에서 이미 나온 뉴스. 투자 회의에 같은 뉴스가 다시 나오지 않는다(다 쓰면 비운다). */
   List<String> usedNews = new ArrayList<>();
-
-  List<Settlement> settlements = new ArrayList<>();
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -499,86 +459,6 @@ class CompanyState {
     String grade;
   }
 
-  /** 분기 하나의 실적 (decisions.md 268번). 분기 실적 창과 연말 결산서의 분기별 막대가 쓴다. */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Quarter {
-    int year;
-    int quarter;
-    long capitalBefore;
-    long capitalAfter;
-    long fee;
-
-    /** 직원들이 이 분기에 굴린 몫. */
-    long staff;
-
-    /** 이 분기에 낸 인사 비용(계약금·새로 받기 값). 이적료는 이직 제안과 함께 뺐다(385번). */
-    long hiring;
-
-    /** 이 분기에 낸 이사 비용 (296번). */
-    long moving;
-
-    /** 이 분기에 전투 강화에 쓴 돈 (367번). */
-    long upgrades;
-
-    /** 이 분기에 스테이지 보상으로 받은 자본 (369번). */
-    long rewards;
-
-    /** 이 분기 종목 회의의 기사 제목과 손익. 안 열렸으면 null. */
-    String investTitle;
-
-    Long investTotal;
-
-    /** 이 분기에 폭락이 터졌다. */
-    boolean crash;
-
-    /** 이 분기 멘탈 전투 (328번): 고른 카드와 강화율. 치르지 않았으면 null. */
-    String mentalCard;
-
-    Integer mentalBonusPercent;
-
-    /** 리서치 팀 보고 (decisions.md 278번): 형광펜을 그을 회의 수, 그은 수, 결정적 문장을 짚은 수. */
-    int highlightChances;
-
-    int highlights;
-    int highlightHits;
-
-    /** 종목 발굴팀이 가져와 회의한 종목(278번). 없으면 null. */
-    String scoutStock;
-
-    Boolean scoutUp;
-    Integer scoutPercent;
-
-    List<Result> results = new ArrayList<>();
-    List<String> lines = new ArrayList<>();
-
-    /** 팀장 보고: 사람이 앉은 자리마다 한 줄 (269번). */
-    List<Report> reports = new ArrayList<>();
-  }
-
-  /**
-   * 이번 분기의 멘탈 전투 (decisions.md 328번). 서버가 장르와 머리글을 정하고, 치른 결과(카드·물리친 적·남은 멘탈)는 한 번만 받아 강화율을 매긴다.
-   * 치르기 전에는 cards가 null.
-   */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Mental {
-    /** ASSAULT(공격)·DEFENSE(디펜스). 생존형은 329번에서 뺐다. */
-    String genre;
-
-    String headline;
-
-    /** 고른 카드 코드, 고른 순서대로(처음 한 장 + 레벨이 오를 때마다 한 장, 330번). */
-    List<String> cards;
-
-    int kills;
-    int mentalLeft;
-    int bonusPercent;
-
-    /** 이번 분기 EX 디펜스를 치렀다 (369번): 분기에 한 번. */
-    boolean exDone;
-  }
-
   /** 스테이지·EX 한 판의 결과와 보상 (decisions.md 369번). EX면 stage가 0. */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -632,17 +512,6 @@ class CompanyState {
     }
   }
 
-  /** 팀장 보고 한 줄 (decisions.md 269번). pnl은 돈을 굴리는 자리의 팀 손익, 돕는 자리면 null. */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Report {
-    String desk;
-    int leaderId;
-    String leader;
-    Long pnl;
-    String text;
-  }
-
   /** 회사를 떠난 직원 (263번). */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -670,68 +539,5 @@ class CompanyState {
 
     /** 첫인사 (349번): 버릇대로 한마디. 이 칸을 더하기 전의 뽑기면 null. */
     String hello;
-  }
-
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Settlement {
-    int year;
-    String phase;
-    String omen;
-    long capitalBefore;
-    long capitalAfter;
-    long fee;
-
-    /** 그해 채용에 쓴 돈(계약금·새로 받기 값, 251번). 이 칸을 더하기 전의 결산이면 0. */
-    long hiring;
-
-    /** 그해 낸 이사 비용 (296번). */
-    long moving;
-
-    /** 그해 전투 강화에 쓴 돈 (367번). */
-    long upgrades;
-
-    /** 그해 스테이지 보상으로 받은 자본 (369번). */
-    long rewards;
-
-    /** 그해 투자 회의의 기사 제목과 손익. 회의를 안 했거나 이 칸을 더하기 전(240번)의 결산이면 null. */
-    String investTitle;
-
-    Long investTotal;
-
-    /** 그해 네 분기의 실적 (268번). 분기 결산이 생기기 전의 결산이면 비어 있다. */
-    List<Quarter> quarters = new ArrayList<>();
-
-    /** 팀장들의 한 해 보고 (269번). */
-    List<Report> reports = new ArrayList<>();
-
-    String gradeBefore;
-    String gradeAfter;
-
-    /**
-     * 올해 조짐을 사장이 어떻게 읽었나 (#394): falseKept(헛조짐에 안 속음)·falseDefended(헛조짐에 방어)·trueDefended(진짜 조짐에
-     * 방어)·trueIgnored(진짜 조짐을 보고도 버팀). 방어는 돈을 굴리는 사람을 모두 식품·금융 데스크로 옮겨 둔 분기다(386번). 조짐이 없었으면 null.
-     */
-    String omenCall;
-
-    /** 옛 엔딩 표시 (276번). 쓰지 않는다 (374번). 옛 저장본을 읽으려고만 남긴다. */
-    boolean finished;
-
-    /** 그해 연 업적 이름 (263번). */
-    List<String> achieved = new ArrayList<>();
-
-    List<Result> results = new ArrayList<>();
-    List<String> lines = new ArrayList<>();
-  }
-
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Result {
-    int employeeId;
-    String name;
-    String desk;
-    long stake;
-    long pnl;
-    Map<String, Integer> flips = new LinkedHashMap<>();
   }
 }

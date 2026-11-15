@@ -22,18 +22,8 @@ function score(e: Employee, stat: string): number {
  * 돈을 굴리는 자리에 맞는 정도: 자리가 원하는 능력치의 등급에, 이 시대에 뜨는 자리면 한 칸, 직원의 관심 섹터와 같은 섹터 데스크면 반 칸을 더한다
  * (decisions.md 233번). 시대 보너스(+4%p)가 관심 섹터 보너스(+2%p)보다 커서 그만큼 더 쳐준다.
  */
-function tradeScore(e: Employee, d: Desk, omen = false): number {
-  return (
-    score(e, d.statCode) +
-    (d.hot ? 1 : 0) +
-    (e.sector && d.sector === e.sector ? 0.5 : 0) +
-    (omen && crashSafe(d) ? 1 : 0)
-  )
-}
-
-/** 폭락장에 덜 빠지는 자리(식품·금융, 폭락장 손익 절반 이하). */
-export function crashSafe(d: Desk): boolean {
-  return d.trades && d.crashPercent != null && d.crashPercent <= 50
+function tradeScore(e: Employee, d: Desk): number {
+  return score(e, d.statCode) + (d.hot ? 1 : 0) + (e.sector && d.sector === e.sector ? 0.5 : 0)
 }
 
 /**
@@ -41,9 +31,8 @@ export function crashSafe(d: Desk): boolean {
  * 먼저 보이는 데 쓴다. 같으면 자리 순서대로.
  */
 export function rankDesks(company: Company, e: Employee): Desk[] {
-  const omen = Boolean(company.meeting?.omen)
   return company.desks
-    .map((d, i) => ({ d, i, s: d.trades ? tradeScore(e, d, omen) : score(e, d.statCode) }))
+    .map((d, i) => ({ d, i, s: d.trades ? tradeScore(e, d) : score(e, d.statCode) }))
     .sort((a, b) => b.s - a.s || a.i - b.i)
     .map((x) => x.d)
 }
@@ -52,27 +41,24 @@ export function rankDesks(company: Company, e: Employee): Desk[] {
 function bestTrading(
   e: Employee,
   trading: Desk[],
-  omen = false,
   count?: Map<string, number>,
 ): { desk: Desk; score: number } | null {
   const open = trading.filter((d) => (count?.get(d.code) ?? 0) < DESK_CAP)
   if (open.length === 0) return null
   return open
-    .map((desk) => ({ desk, score: tradeScore(e, desk, omen) }))
+    .map((desk) => ({ desk, score: tradeScore(e, desk) }))
     .reduce((a, b) => (b.score > a.score ? b : a))
 }
 
 /**
  * 자동 배치 (decisions.md 232·233번). 돈을 굴리는 자리부터 채운다: 가장 맞는 돈 굴리는 자리가 가장 잘 맞는 두 사람을 그 자리에 앉힌다(섹터 데스크 여섯과
  * 단타 데스크 가운데, 같은 자리에 둘이 앉아도 된다). 판돈은 돈을 굴리는 사람끼리 나누므로 셋째부터는 돕는 자리가 낫다: 종목 발굴팀(안목, 종목 회의를 연다,
- * 267번), 폭락 조짐이 있으면 리스크 관리 팀(줏대)을 리서치 팀(안목)보다 먼저, 그다음 인사팀(안목). 그래도 사람과 자리가 남으면 돈을 굴리는 자리에 더 앉힌다.
+ * 267번), 리서치 팀(안목), 리스크 관리 팀(줏대), 인사팀(안목). 그래도 사람과 자리가 남으면 돈을 굴리는 자리에 더 앉힌다.
  * 자리가 모자라면 남은 사람은 쉰다. 한 자리에는 DESK_CAP명까지만 앉힌다(440번).
  */
 export function autoPlace(company: Company): Seat[] {
   const desks = new Map(company.desks.map((d) => [d.code, d]))
   const trading = company.desks.filter((d) => d.trades)
-  // 폭락 조짐이 있으면 폭락장에 덜 빠지는 자리를 한 칸 더 쳐준다: 자리가 둘뿐이면 리스크 관리 팀에 사람을 뺄 여유가 없다 (259번).
-  const omen = Boolean(company.meeting?.omen)
   const left = [...company.employees]
   const placed = new Map<number, string>()
   const count = new Map<string, number>()
@@ -87,10 +73,10 @@ export function autoPlace(company: Company): Seat[] {
   const best = (stat: string) =>
     left.reduce<Employee | null>((a, e) => (!a || score(e, stat) > score(a, stat) ? e : a), null)
   const trade = (n: number) => {
-    const scoreOf = (e: Employee) => bestTrading(e, trading, omen)?.score ?? -1
+    const scoreOf = (e: Employee) => bestTrading(e, trading)?.score ?? -1
     const ranked = [...left].sort((a, b) => scoreOf(b) - scoreOf(a))
     for (const e of ranked.slice(0, Math.min(n, seats))) {
-      const best = bestTrading(e, trading, omen, count)
+      const best = bestTrading(e, trading, count)
       if (best) take(e, best.desk.code)
     }
   }
@@ -98,10 +84,7 @@ export function autoPlace(company: Company): Seat[] {
   if (trading.length > 0) {
     trade(2)
   }
-  const support = company.meeting?.omen
-    ? ['scout', 'risk', 'research', 'hr']
-    : ['scout', 'research', 'risk', 'hr']
-  for (const code of support) {
+  for (const code of ['scout', 'research', 'risk', 'hr']) {
     const desk = desks.get(code)
     const e = desk && best(desk.statCode)
     if (seats > 0 && desk && e) {
@@ -122,17 +105,11 @@ export function seatOne(company: Company, employeeId: number, desk: string | nul
   }))
 }
 
-/** 자리의 예상 효과 한 줄 (decisions.md 259번): 맞히면 몇 %, 틀리면 몇 %, 폭락장에 덜 빠지는가. 돕는 자리면 설명. */
+/** 자리의 예상 효과 한 줄 (decisions.md 259번): 맞히면 몇 %, 틀리면 몇 %. 돕는 자리면 설명. */
 export function deskEffect(d: Desk): string {
   if (!d.trades || d.gainBp == null || d.missBp == null) {
     return d.description
   }
   const pct = (bp: number) => `${Math.round(bp / 100)}%`
-  const crash =
-    d.crashPercent != null && d.crashPercent < 100
-      ? ' · 폭락장에 덜 빠짐'
-      : d.crashPercent != null && d.crashPercent > 100
-        ? ' · 폭락장에 더 빠짐'
-        : ''
-  return `맞히면 +${pct(d.gainBp)} · 틀리면 −${pct(d.missBp)}${crash}`
+  return `맞히면 +${pct(d.gainBp)} · 틀리면 −${pct(d.missBp)}`
 }

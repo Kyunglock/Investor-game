@@ -4,11 +4,12 @@ import { firstTab, tabBadge, tabFromWeb, useAppUi } from './ui'
 
 function company(over: Partial<Company> = {}): Company {
   return {
-    status: 'ACTIVE',
     seats: 4,
     employees: [],
+    desks: [{ code: 'bio', trades: true }],
     gacha: { tickets: 0 },
-    meeting: { wanted: '' },
+    meetings: { chances: 0, max: 3, nextSeconds: 60 },
+    invest: null,
     ...over,
   } as unknown as Company
 }
@@ -54,7 +55,7 @@ describe('앱 탭 (decisions.md 309번)', () => {
 
   it('웹의 탭 이름을 앱 탭으로 옮긴다', () => {
     expect(tabFromWeb('meeting')).toBe('issue')
-    expect(tabFromWeb('settlement')).toBe('record')
+    expect(tabFromWeb('settlement')).toBeNull()
     expect(tabFromWeb('market')).toBe('market')
     expect(tabFromWeb(null)).toBeNull()
   })
@@ -66,7 +67,7 @@ describe('앱 탭 (decisions.md 309번)', () => {
         { id: 1, desk: 'bio' },
         { id: 2, desk: null },
       ] as never,
-      meeting: { wanted: '', omen: '조짐' } as never,
+      meetings: { chances: 1, max: 3, nextSeconds: 60 },
     })
     expect(tabBadge(c, 'issue')).toBe('!')
     expect(tabBadge(c, 'market')).toBe('2')
@@ -78,6 +79,5 @@ describe('앱 탭 (decisions.md 309번)', () => {
   it('처음 들어오면 직원 유무와 관계없이 사무실부터', () => {
     expect(firstTab(company())).toBe('office')
     expect(firstTab(company({ employees: [{ id: 1 }] as never }))).toBe('office')
-    expect(firstTab(company({ status: 'ENDED' }))).toBe('office')
   })
 })

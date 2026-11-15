@@ -25,18 +25,14 @@ try {
     grade: 'F',
     seats: 4,
     capital: 10_000_000_000,
-    lastSettlement: null,
-    mental: null,
     upgrade: {
       to: 'E',
       cost: 100_000_000,
       needed: 200_000_000,
       affordable: true,
-      years: 0,
-      left: null as number | null,
     },
   }
-  let mode: 'reject' | 'construction' | 'grow' = 'reject'
+  let mode: 'reject' | 'grow' = 'reject'
   let step = 0
   const grades = ['E', 'D', 'C', 'B', 'A']
   const capacities = [6, 10, 14, 18, 22]
@@ -44,17 +40,13 @@ try {
     if (route.request().url().endsWith('/upgrade')) {
       if (mode === 'reject')
         return route.fulfill({ status: 400, json: { message: '확장 조건을 다시 확인해주세요.' } })
-      if (mode === 'construction')
-        company = { ...company, upgrade: { ...company.upgrade, years: 2, left: 2 } }
-      else {
-        company = {
-          ...company,
-          grade: grades[step],
-          seats: capacities[step],
-          upgrade: { ...company.upgrade, to: grades[step + 1] ?? 'S', years: 0, left: null },
-        }
-        step++
+      company = {
+        ...company,
+        grade: grades[step],
+        seats: capacities[step],
+        upgrade: { ...company.upgrade, to: grades[step + 1] ?? 'S' },
       }
+      step++
     }
     return route.fulfill({ json: company })
   })
@@ -95,11 +87,7 @@ try {
     '확장 조건을 다시 확인해주세요.',
   )
   await expect(page.getByTestId('move-scene')).toHaveCount(0)
-  mode = 'construction'
-  await page.getByTestId('upgrade').click()
-  await expect(page.getByTestId('construction')).toContainText('2년')
-  await expect(page.getByTestId('move-scene')).toHaveCount(0)
-  company.upgrade = { ...company.upgrade, years: 0, left: null }
+  // 공사 기간은 없어졌다 (#803): 확장은 사는 즉시 끝난다.
   await page.reload()
   mode = 'grow'
   for (let i = 0; i < 5; i++) {
@@ -175,7 +163,9 @@ try {
     await page.setViewportSize({ width, height })
     await page.screenshot({ path: resolve(out, `home-${width}x${height}.png`) })
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
-    await expect(page.getByTestId('settle')).toBeEnabled()
+    // 분기 넘기기 버튼은 없어졌다 (#803): 아래에는 돌파 지원 현황만 남는다.
+    await expect(page.getByTestId('settle')).toHaveCount(0)
+    await expect(page.getByTestId('office-support')).toBeVisible()
   }
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.reload()
@@ -193,7 +183,7 @@ try {
   await expect(still.getByTestId('move-banner')).toHaveCount(0)
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: navigation, no desks, dialog focus, API rejection, construction, five alternating expansions with impact/evict/celebrate frames, empty lot and rival rising once, tap-to-skip, real employee count, responsive viewports, reduced motion',
+    'PASS: navigation, no desks, dialog focus, API rejection, five alternating expansions with impact/evict/celebrate frames, empty lot and rival rising once, tap-to-skip, real employee count, responsive viewports, reduced motion',
   )
 } finally {
   await browser.close()

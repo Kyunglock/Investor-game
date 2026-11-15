@@ -56,7 +56,7 @@ export function useIdleBattle(companyId?: string) {
     const tick = async () => {
       if (disposed || blocked || pending || !visible() || useRaisingStore.getState().busy) return
       const before = useRaisingStore.getState().company
-      if (before?.companyId !== companyId || before.status !== 'ACTIVE') return
+      if (before?.companyId !== companyId) return
       pending = true
       const version = generation
       try {

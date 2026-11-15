@@ -53,17 +53,19 @@ describe('토이시티의 실제 회사 상태 표시', () => {
     }
   })
 
-  it('확장 기준과 공사 진행률은 서버의 비용·기간을 따른다', () => {
+  it('확장 진행률은 서버가 준 필요 자본을 따르고, 끝 등급이면 꽉 찬다', () => {
     const company = {
       capital: 80,
-      upgrade: { needed: 100, affordable: false, years: 4, left: null },
+      upgrade: { needed: 100, affordable: false },
     } as Company
-    expect(growthProgress(company).percent).toBe(80)
-    if (!company.upgrade) throw new Error('테스트 회사의 확장 계획 누락')
-    company.upgrade = { ...company.upgrade, left: 2 }
-    expect(growthProgress(company)).toEqual({ percent: 50, label: '공사 중 · 완공까지 2년' })
-    company.upgrade.left = 0
-    expect(growthProgress(company)).toEqual({ percent: 100, label: '공사 중 · 완공까지 0년' })
+    expect(growthProgress(company)).toEqual({ percent: 80, label: '다음 확장까지 80%' })
+    expect(
+      growthProgress({ capital: 120, upgrade: { needed: 100, affordable: true } } as Company),
+    ).toEqual({ percent: 100, label: '준비 완료 · 건물을 키울 수 있어요' })
+    expect(growthProgress({ capital: 80, upgrade: null } as Company)).toEqual({
+      percent: 100,
+      label: '최고 단계에 도착했어요',
+    })
   })
 
   it('확장 연출은 힘 모으기·부딪힘·커지기·축하를 2~2.5초에 차례로 지나고, 내려갈 때는 축하가 없다', () => {

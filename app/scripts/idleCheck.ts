@@ -2,6 +2,9 @@ import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
 
+// The company menu carries a dot ("종목회의 가능") while a stock meeting can be opened (#803).
+const COMPANY_MENU = /^회사( 종목회의 가능)?$/
+
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
   args: ['--no-sandbox'],
@@ -75,6 +78,9 @@ try {
         ],
         fieldSlots: 4,
         wallDps: 0,
+        // Real-time income (#803): the HUD shows it under the capital. No offline payout yet.
+        income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },
+        offline: null as { at: number; seconds: number; earned: number; capped: boolean } | null,
         cats: [
           // Each cat has a skill of its own (decisions.md 501).
           ['sky', '하늘냥', 125, 100, 'meteor', '메테오 스킬'],
@@ -405,6 +411,14 @@ try {
     const cash = await page.locator('.idle-cash').first().boundingBox()
     const number = await page.getByTestId('idle-wall-number').boundingBox()
     assert(cash && number && cash.x + cash.width <= number.x)
+    // Income per second sits under the capital, inside the chip (#803).
+    await expect(page.getByTestId('idle-income')).toHaveText('+48.5a/초')
+    const income = await page.getByTestId('idle-income').boundingBox()
+    assert(income && income.y >= cash.y && income.y + income.height <= cash.y + cash.height + 0.5)
+    assert(income.x + income.width <= cash.x + cash.width + 0.5, 'income fits the capital chip')
+    // A meeting can be opened (chances left, someone on a trading desk): the company menu has a dot.
+    await expect(page.getByTestId('meeting-dot')).toBeVisible()
+    await expect(page.getByTestId('offline-income')).toHaveCount(0)
     const queue = await queuedWalls()
     assert(queue.every((wall) => wall.visible && wall.top >= 55))
     assert(queue[1].bottom < queue[0].top)
@@ -477,7 +491,7 @@ try {
     await expect
       .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
       .toEqual([company.idle.wall + 1, company.idle.wall + 2])
-    await page.getByRole('button', { name: '회사', exact: true }).click()
+    await page.getByRole('button', { name: COMPANY_MENU }).click()
     await expect(page.getByTestId('office-scene')).toBeVisible()
     await expect(page.getByTestId('office-support')).toContainText('자동 전투 중')
     await expect(page.getByTestId('office-support')).toContainText(`${company.idle.wall}벽`)
@@ -505,7 +519,7 @@ try {
       .toBeGreaterThan(officeTicks)
     const nav = page.getByRole('navigation', { name: '게임 메뉴' }).last()
     await expect(nav.getByRole('button')).toHaveCount(4)
-    await expect(nav.getByRole('button', { name: '회사', exact: true })).toHaveAttribute(
+    await expect(nav.getByRole('button', { name: COMPANY_MENU })).toHaveAttribute(
       'aria-current',
       'page',
     )
@@ -515,7 +529,7 @@ try {
       await expect(nav.getByRole('button', { name })).toHaveAttribute('aria-current', 'page')
       await page.getByRole('button', { name: '닫기 ✕' }).click()
       await expect(page.getByTestId('office-scene')).toBeVisible()
-      await expect(nav.getByRole('button', { name: '회사', exact: true })).toHaveAttribute(
+      await expect(nav.getByRole('button', { name: COMPANY_MENU })).toHaveAttribute(
         'aria-current',
         'page',
       )

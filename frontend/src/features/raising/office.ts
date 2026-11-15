@@ -1,4 +1,4 @@
-import type { Company, Grade } from '../../api/client'
+import type { Grade } from '../../api/client'
 import { EMPLOYEE_LADDER, LADDER } from './grades'
 
 /**
@@ -165,51 +165,6 @@ export const FLOORS: Record<Tier, [string, string]> = {
   whole: ['#dcc9ab', '#d1bb98'],
   hq: ['#e8e4dc', '#dcd6cb'],
   landmark: ['#ece4cf', '#e2d5b4'],
-}
-
-type Employee = Company['employees'][number]
-
-export interface SeatTile {
-  /** 자리 번호(0부터). 빈 자리를 고를 때 쓴다 */
-  index: number
-  employee: Employee | null
-  /** 앉은 자리 이름 */
-  desk: string | null
-  /** 돈을 굴리는 자리면 참 */
-  trades: boolean
-  /** 지난 결산 손익. 판돈이 없었으면 null */
-  pnl: number | null
-  /** 정면 얼굴 표정: 벌었으면 웃고, 잃었으면 처진다 */
-  mood: 'joy' | 'despair' | null
-}
-
-/**
- * 사무실 미니맵의 칸 (decisions.md 237번). 자리 수만큼 칸이 있고, 앉은 사람이 앞에서부터 채우고 남은 칸은 빈 자리다. 쉬는 사람은 칸 밖(휴게실)에 따로
- * 선다.
- */
-export function seatTiles(company: Company): { tiles: SeatTile[]; resting: Employee[] } {
-  const seated = company.employees.filter((e) => e.desk)
-  const results = new Map((company.lastSettlement?.results ?? []).map((r) => [r.employeeId, r]))
-  const desks = new Map(company.desks.map((d) => [d.code, d]))
-  const tiles = Array.from({ length: company.seats }, (_, index): SeatTile => {
-    const employee = seated[index] ?? null
-    if (!employee) {
-      return { index, employee, desk: null, trades: false, pnl: null, mood: null }
-    }
-    const desk = desks.get(employee.desk ?? '')
-    const r = results.get(employee.id)
-    // 돈을 굴리는 자리에만 운용 손익 배지를 단다 (#346): 해 가운데 발굴팀으로 옮긴 사람에게 지난 운용 손익이 붙었다.
-    const pnl = r && r.stake > 0 && desk?.trades ? r.pnl : null
-    return {
-      index,
-      employee,
-      desk: desk?.name ?? null,
-      trades: desk?.trades ?? false,
-      pnl,
-      mood: pnl === null || pnl === 0 ? null : pnl > 0 ? 'joy' : 'despair',
-    }
-  })
-  return { tiles, resting: company.employees.filter((e) => !e.desk) }
 }
 
 /**

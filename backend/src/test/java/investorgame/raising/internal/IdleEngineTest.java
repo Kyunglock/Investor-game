@@ -136,11 +136,15 @@ class IdleEngineTest {
     tick(1000);
     tick(86400000, new IdleHit(1, "bullet", 1000));
     assertThat(state.idle.damage).isZero();
-    assertThat(state.capital).isEqualTo(40000);
+    // The day away pays time income up to eight hours (decisions.md 523), never damage.
+    double away = 8 * 3600 * 40000.0;
+    assertThat(state.capital).isEqualTo(40000 + away);
     engine.beat(state, "one", ++sequence, "stop");
     tick(1000, new IdleHit(1, "bullet", 1000));
     assertThat(state.idle.damage).isZero();
-    assertThat(state.capital).isEqualTo(40000);
+    assertThat(state.capital)
+        .as("the second after the stop is paid as time away")
+        .isEqualTo(80000 + away);
   }
 
   @Test
@@ -153,7 +157,8 @@ class IdleEngineTest {
     assertThat(state.capital).isEqualTo(5 * 40000);
     tick(10001, new IdleHit(1, "bullet", 3, 3.0));
     assertThat(state.idle.damage).isEqualTo(14);
-    assertThat(state.capital).isEqualTo(5 * 40000);
+    // The silence keeps no hits, but its time income is still paid (523).
+    assertThat(state.capital).isEqualTo(5 * 40000 + Math.floor(10.001 * 40000));
   }
 
   @Test

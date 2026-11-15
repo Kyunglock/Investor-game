@@ -6,15 +6,9 @@ function company(over: Partial<Company> = {}): Company {
   return {
     companyId: 'c1',
     number: 1,
-    year: 1,
-    quarter: 1,
     capital: 100,
     grade: 'F',
     employees: [],
-    lastQuarter: null,
-    lastSettlement: null,
-    ending: null,
-    broke: null,
     ...over,
   } as unknown as Company
 }
@@ -38,42 +32,20 @@ describe('회사 변화의 효과 (decisions.md 310번)', () => {
     ])
   })
 
-  it('분기를 넘기면 분기 실적(폭락 여부), 해가 바뀌면 연말 결산과 업적', () => {
-    const q = companyEvents(
-      company(),
-      company({
-        quarter: 2,
-        capital: 80,
-        lastQuarter: { crash: true, capitalBefore: 100, capitalAfter: 80 },
-      } as never),
-    )
-    expect(q[0]).toEqual({ kind: 'quarter', crash: true, delta: -20 })
-    const y = companyEvents(
-      company({ quarter: 4 }),
-      company({
-        year: 2,
-        capital: 300,
-        grade: 'E',
-        lastSettlement: { capitalBefore: 100, capitalAfter: 300, achieved: ['첫 이사'] },
-      } as never),
-    )
-    expect(y).toEqual([
-      { kind: 'year-end', delta: 200, achieved: ['첫 이사'] },
-      { kind: 'capital', delta: 200 },
-      { kind: 'grade-up', to: 'E', scene: false },
+  it('확장을 사서 건물이 오르면 자본 변화와 함께 알린다', () => {
+    expect(companyEvents(company(), company({ capital: 70, grade: 'E' }))).toEqual([
+      { kind: 'capital', delta: -30 },
+      { kind: 'grade-up', to: 'E' },
     ])
   })
 
-  it('건물이 줄거나, 랜드마크 타워에 오르거나, 파산이 새로 생기면 알린다', () => {
+  it('건물이 줄거나 랜드마크 타워에 오르면 알린다', () => {
     expect(companyEvents(company({ grade: 'E' }), company({ grade: 'F' }))).toEqual([
       { kind: 'grade-down', to: 'F' },
     ])
     expect(companyEvents(company({ grade: 'XXX' }), company({ grade: 'Z' }))).toEqual([
-      { kind: 'grade-up', to: 'Z', scene: true },
+      { kind: 'grade-up', to: 'Z' },
       { kind: 'landmark' },
-    ])
-    expect(companyEvents(company(), company({ broke: '금고가 비었다' }))).toEqual([
-      { kind: 'broke' },
     ])
   })
 })

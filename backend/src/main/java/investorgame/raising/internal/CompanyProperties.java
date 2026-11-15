@@ -61,7 +61,24 @@ public record CompanyProperties(
     Scout scout,
     Sale sale,
     String endingGrade,
-    Mental mental) {
+    Mental mental,
+    Income income,
+    Meetings meetings) {
+
+  /**
+   * 실시간 수입 (decisions.md 523번): 직원 한 명의 초당 수입 = 등급별 기본값 × (1 + 능력치 합 ÷ 100).
+   *
+   * @param gradePerSecond 직원 종합 등급별 기본값(게임 1초에 버는 원, 첫 벽의 물가 기준)
+   * @param offlineHours 자리를 비운 동안 쌓이는 수입의 상한(시간)
+   */
+  public record Income(Map<String, Long> gradePerSecond, int offlineHours) {}
+
+  /**
+   * 종목회의의 기회 (523번): intervalMinutes마다 한 번 생기고 max번까지 쌓인다.
+   *
+   * @param startChances 새 회사가 처음 가진 기회
+   */
+  public record Meetings(int intervalMinutes, int max, int startChances) {}
 
   /**
    * 멘탈 전투 (decisions.md 328번). 강화율(%) = min(maxPercent, 물리친 적 ÷ killsPerPercent + 남은 멘탈 ÷

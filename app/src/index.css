@@ -255,7 +255,7 @@ body {
   animation: pulse-soft 1.6s ease-in-out infinite;
 }
 
-/* 분기 넘기기 버튼이 숨 쉰다 */
+/* 큰 버튼이 숨 쉰다 */
 @keyframes breathe {
   0%,
   100% {

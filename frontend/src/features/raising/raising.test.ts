@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { fitOf } from './CompanyScreen'
 import { EMPLOYEE_LADDER, LADDER } from './grades'
 
 describe('등급 사다리', () => {
@@ -11,26 +10,5 @@ describe('등급 사다리', () => {
   it('직원 등급은 ZZZ 위로 XS·XSS·GOD까지 18단계다 (289번)', () => {
     expect(EMPLOYEE_LADDER).toHaveLength(18)
     expect(EMPLOYEE_LADDER.slice(-4)).toEqual(['ZZZ', 'XS', 'XSS', 'GOD'])
-  })
-})
-
-describe('자리에 맞는 정도 (증권사 육성 설계 4.2절)', () => {
-  const desk = {
-    code: 'bio',
-    name: '바이오 데스크',
-    statCode: 'patience',
-    trades: true,
-    sector: 'bio',
-    hot: false,
-    description: '',
-  }
-  const employee = (patience: string) => ({ grades: { patience } }) as never
-
-  it('자리가 원하는 능력치가 A 이상이면 잘 맞고, C·B는 보통, 그 아래는 안 맞는다', () => {
-    expect(fitOf(employee('SSS'), desk)).toBe('good')
-    expect(fitOf(employee('A'), desk)).toBe('good')
-    expect(fitOf(employee('B'), desk)).toBe('fair')
-    expect(fitOf(employee('C'), desk)).toBe('fair')
-    expect(fitOf(employee('D'), desk)).toBe('poor')
   })
 })

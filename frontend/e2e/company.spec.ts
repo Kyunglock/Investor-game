@@ -1,616 +1,96 @@
-import { expect, type Page, test } from '@playwright/test'
+import { type APIResponse, expect, test } from '@playwright/test'
+import type { components } from '../src/api/schema.d.ts'
 
-// 실제 브라우저·서버·DB로 회사 한 바퀴를 확인한다 (증권사 육성 설계 4·6·9절, decisions.md 228번).
-// 새 브라우저 문맥은 새 세션이라 회사가 없다: 사장의 사재로 차리고, 채용권으로 뽑아 앉히고, 해마다 결산한다. 회사는 끝나지 않는다(236번).
+// 실제 서버·DB로 실시간 수입과 종목회의를 확인한다 (#803, decisions.md 523번). 게임 화면은 앱(/app/)에 있어, 여기서는 첫 화면만 보고 나머지는
+// Vite 프록시(/api)를 거쳐 API를 직접 부른다. 새 브라우저 문맥은 새 세션이라 회사가 없고, 같은 문맥의 요청은 세션 쿠키를 함께 쓴다.
 
-test.setTimeout(90_000)
+type Company = components['schemas']['Company']
 
-async function openCompany(page: Page) {
-  await page.goto('/')
-  await page.getByRole('button', { name: '바로 시작' }).click()
-  await expect(page.getByTestId('company')).toBeVisible()
-}
+test.setTimeout(60_000)
 
-/** 회사 화면의 탭을 연다 (231번). */
-async function tab(page: Page, name: RegExp) {
-  await page.getByRole('tab', { name }).click()
-}
-
-/** 채용권으로 한 명씩 n명을 뽑는다 (decisions.md 312번). 채용 탭에 있어야 한다. 카드가 뒤집히는 창을 모두 열고 닫는다. */
-async function drawPeople(page: Page, n: number) {
-  for (let i = 0; i < n; i++) {
-    await page.getByTestId('draw-one').click()
-    await closeReveal(page)
-  }
-}
-
-/**
- * 뽑기 결과 창: 모두 열고 확인. 카드는 저절로도 열려서 "모두 열기"가 누르는 사이에 사라질 수 있다. 그러면 기다리지 않고 확인 버튼이 나왔는지 다시 본다.
- */
-async function closeReveal(page: Page) {
-  const reveal = page.getByTestId('gacha-reveal')
-  await expect(reveal).toBeVisible()
-  const all = reveal.getByTestId('gacha-open-all')
-  const close = reveal.getByTestId('gacha-close')
-  await expect(async () => {
-    if (!(await close.isVisible())) {
-      await all.click({ timeout: 1_000 })
-    }
-    await expect(close).toBeVisible({ timeout: 1_000 })
-  }).toPass({ timeout: 30_000 })
-  await close.click()
-  await expect(reveal).toHaveCount(0)
-}
-
-/**
- * 분기 넘기기를 누르면 직원이 종목을 물어 올 수 있다 (267·382번). 물어 왔으면 종목 회의 창이 바로 뜨고, 고르고, 직원마다 맞대결 막대가 돌고(235번) 끝나면
- * 창에서 그대로 분기를 넘긴다 (231번). 아무도 안 왔으면 바로 넘긴다. watch면 연출을 끝까지 보고, 아니면 차트 밑의 빨리 보기(395번)로 넘긴다. 1~3분기면 분기 실적이,
- * 4분기면 연말 결산서가 뜨고 닫는다. 종목 회의를 했으면 true.
- */
-async function passQuarter(
-  page: Page,
-  year: number,
-  quarter: number,
-  choice: string,
-  watch = false,
-): Promise<boolean> {
-  const label = `${year}년 차 ${quarter}분기 넘기기`
-  await page.getByRole('button', { name: label, exact: true }).click()
-  const meeting = page.getByRole('dialog', { name: '종목 회의' })
-  // 거시경제 회의는 뺐다 (382번).
-  await expect(page.getByRole('dialog', { name: '거시경제 회의' })).toHaveCount(0)
-  const sheet = page.getByRole('dialog', { name: quarter < 4 ? '분기 실적' : '연말 결산서' })
-  await expect(meeting.or(sheet)).toBeVisible()
-  const held = await meeting.isVisible()
-  if (held) {
-    await expect(meeting).toBeVisible()
-    // 누가 가져왔는지·팀 합산 칩은 보이지 않는다 (422번).
-    await expect(meeting.getByTestId('invest-finder')).toHaveCount(0)
-    // 종목 분석 → 투자 결정은 한 화면씩 (368번): 분석을 보고 결정하러 간다.
-    await meeting.getByTestId('invest-to-decide').click()
-    const pick = quarter === 1 ? choice : '산다'
-    // 버튼 이름을 그대로 맞춘다.
-    await meeting.getByRole('button', { name: pick, exact: true }).click()
-    await expect(meeting.getByTestId('invest-outcome')).toBeVisible()
-    await expect(meeting.getByTestId('invest-choice')).toHaveText(pick)
-    const settle = meeting.getByRole('button', { name: label })
-    if (watch && quarter === 1) {
-      // 결정 장면은 종목 차트가 그려지며 오르거나 빠지는 것이다 (283번).
-      await expect(meeting.getByTestId('invest-chart')).toBeVisible()
-      await expect(meeting.getByTestId('chart-change')).toHaveText(/[▲▼] [+−]\d+%/)
-      await expect(settle).toHaveCount(0)
-      await expect(settle).toBeVisible({ timeout: 15_000 })
-      // 가져온 직원을 칭찬하거나 탓하는 한 줄이 붙는다.
-      await expect(meeting.getByTestId('invest-credit')).toBeVisible()
-    } else {
-      // 빨리 보기는 종목 차트 바로 밑의 큰 버튼이다 (395번): 창 머리줄에는 없다.
-      const skip = meeting.getByTestId('invest-skip')
-      await expect(
-        meeting.locator('header').getByRole('button', { name: '빨리 보기' }),
-      ).toHaveCount(0)
-      await skip.click()
-      await expect(skip).toHaveCount(0)
-    }
-    await settle.click()
-    await expect(meeting).toBeHidden()
-  }
-  if (quarter < 4) {
-    await closeQuarter(page, year, quarter)
-  } else {
-    await closeYearEnd(page, year)
-    await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
-  }
-  return held
-}
-
-/** 한 해를 네 분기 넘긴다. 1분기는 고른 결정으로, 나머지는 산다(지켜본다는 423번에서 뺐다). 1분기에 종목 회의를 했으면 true. */
-async function passYear(page: Page, year: number, choice: string, watch = false): Promise<boolean> {
-  const held = await passQuarter(page, year, 1, choice, watch)
-  for (let quarter = 2; quarter <= 4; quarter++) {
-    await passQuarter(page, year, quarter, '산다')
-  }
-  return held
-}
-
-/**
- * 1~3분기를 넘기면 분기 실적이 뜬다 (268번): 자본이 얼마에서 얼마가 됐는지. 결산서 같은 종이에 표지의 네 칸 중 지금 분기가 표시되고, 폭락 분기면 표지가
- * 바뀐다 (396번). 확인하면 닫힌다.
- */
-async function closeQuarter(page: Page, year: number, quarter: number) {
-  const sheet = page.getByRole('dialog', { name: '분기 실적' })
-  await expect(sheet).toContainText(`${year}년 차 ${quarter}분기 실적`)
-  await expect(sheet.getByTestId('quarter-change')).toBeVisible()
-  await expect(sheet.getByRole('list', { name: `네 분기 중 ${quarter}번째` })).toBeVisible()
-  if ((await sheet.getByTestId('quarter-crash').count()) > 0) {
-    await expect(sheet).toHaveAttribute('data-crash', 'true')
-  }
-  // 자리마다 팀장이 보고한다 (269번). 돈을 굴리는 사람이 없으면 보고도 없다.
-  const reports = await sheet.getByTestId('team-report').count()
-  const staffed = await page.getByTestId('office-seat').count()
-  expect(reports > 0).toBe(staffed > 0)
-  // 팀마다 팀장 등급이 눈에 띄는 방패로 붙는다 (397번).
-  const bars = sheet.getByTestId('team-bar')
-  for (let i = 0; i < (await bars.count()); i++) {
-    await expect(bars.nth(i).locator('[data-testid="grade-badge"][data-size="md"]')).toHaveCount(1)
-  }
-  await sheet.getByRole('button', { name: '확인' }).click()
-  await expect(sheet).toBeHidden()
-}
-
-/**
- * 결산하면 연말 결산서가 따로 뜬다 (240번): 종목 회의 한 건과 직원들이 1년 동안 굴린 몫이 나뉘어 있고, 팀장 등급과 등급이 오른 직원이 보인다 (397번).
- * 확인하면 닫힌다.
- */
-async function closeYearEnd(page: Page, year: number) {
-  const sheet = page.getByRole('dialog', { name: '연말 결산서' })
-  await expect(sheet.getByRole('heading', { name: '연말 결산서', exact: true })).toBeVisible()
-  await expect(
-    sheet.getByText(`${String(year).padStart(2, '0')}년 차 · 우리 회사의 기록`, { exact: true }),
-  ).toBeVisible()
-  await expect(sheet.getByTestId('ledger-staff')).toContainText('직원들의 1년 운용')
-  await expect(sheet.getByTestId('ledger-after')).toBeVisible()
-  // 결산 전광판에 팀장 등급 방패가 붙는다 (397번). 직원 등급은 바뀌지 않아 등급 상승 칸은 없다(421번).
-  if ((await sheet.getByTestId('board-team').count()) > 0) {
-    await expect(
-      sheet
-        .locator('[data-testid="board-team"] [data-testid="grade-badge"][data-size="md"]')
-        .first(),
-    ).toBeVisible()
-  }
-  await expect(sheet.getByTestId('promotions')).toHaveCount(0)
-  await sheet.getByRole('button', { name: '확인' }).click()
-  await expect(sheet).toBeHidden()
-  // 건물이 바뀌었으면 건물 알림이 뜬다 (281번).
-  const move = page.getByTestId('move-scene')
-  if (await move.isVisible()) {
-    await move.getByRole('button', { name: /짐 정리 끝/ }).click()
-  }
-}
-
-test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 네 개와 채용권 열 장이 있다', async ({
-  page,
-}) => {
-  await openCompany(page)
-  // 회사 등급 글자 대신 건물로 보인다 (238번): 반지하 원룸에서 시작하고 건물 사다리는 일곱 칸이다.
-  await expect(page.getByTestId('company-building')).toHaveText('반지하 원룸')
-  // 직원이 없으면 채용 탭이 먼저 열린다 (312번).
-  await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByTestId('tickets')).toHaveText('10')
-  await expect(page.getByTestId('roster')).toContainText('0명')
-  await expect(page.getByTestId('collection-entry')).toHaveCount(18)
-  await page.getByText('확률표').click()
-  await expect(page.getByTestId('gacha-rates').getByRole('listitem')).toHaveCount(5)
-  await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
-  await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
-  // 건물은 저절로 오르지 않는다 (296번): 이사 비용과 필요한 자본이 보이고, 자본이 모자라면 버튼이 잠긴다.
-  await expect(page.getByTestId('next-step')).toContainText('이사 비용 18b')
-  await expect(page.getByTestId('upgrade')).toBeDisabled()
-  // 라이벌 회사를 걷어냈다 (288번): 업계 순위가 없다.
-  await expect(page.getByTestId('industry')).toHaveCount(0)
-  await tab(page, /배치/)
-  await expect(page.getByTestId('employee')).toHaveCount(0)
-  await expect(page.getByTestId('desk-board')).toHaveCount(0)
-  await tab(page, /이슈/)
-  await expect(page.getByTestId('meeting')).toBeVisible()
-
-  // 회사 건물 단면: 책상은 자리 수, 아직 아무도 없다 (8.1·8.4절).
-  await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '0')
-  // 사무실 미니맵 (237번): 자리마다 칸이 있고 아직 다 빈 자리다. 누르면 쉬는 사람이 없으니 채용으로 데려간다.
-  await expect(page.getByTestId('office-empty')).toHaveCount(4)
-  await page.getByRole('button', { name: '빈 자리 1에 앉힐 사람 고르기' }).click()
-  await expect(page.getByTestId('seat-picker')).toContainText('쉬는 직원이 없습니다')
-  await page.getByTestId('seat-picker').getByRole('button', { name: '채용에서 뽑기' }).click()
-  await expect(page.getByTestId('seat-picker')).toHaveCount(0)
-  await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
-  // 그림 끄기는 없다(343번): 설명글은 그림 아래에 늘 있다.
-  await expect(page.getByTestId('office-art')).toContainText(
-    '사무실: 반지하 원룸, 책상 4개 · 객장: 손님 없음, 길고양이 한 마리',
+/** 성공한 응답의 회사. 실패면 서버가 말한 이유를 함께 보인다. */
+async function companyOf(response: APIResponse): Promise<Company> {
+  expect(response.ok(), `${response.url()} → ${response.status()} ${await response.text()}`).toBe(
+    true,
   )
-})
+  return (await response.json()) as Company
+}
 
-test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, 회의와 결산을 하면 세 해가 지나도 이어진다', async ({
-  page,
-}) => {
-  test.setTimeout(240_000)
-  await openCompany(page)
-
-  // 뽑으면 카드가 뒤집히며 등급이 드러나고, 도감에 오른다 (312번).
-  await page.getByTestId('draw-one').click()
-  const reveal = page.getByTestId('gacha-reveal')
-  await expect(reveal.getByTestId('gacha-card')).toHaveCount(1)
-  await expect(reveal.getByTestId('gacha-card')).toHaveAttribute('data-open', 'true')
-  await expect(reveal).toContainText('NEW')
-  await reveal.getByTestId('gacha-close').click()
-  await drawPeople(page, 3)
-  await expect(page.getByTestId('tickets')).toHaveText('6')
-  await expect(page.getByTestId('roster')).toContainText('4명')
-  // 직원이 바뀌어 화면을 새로 그려도 채용 탭에 그대로 있다.
-  await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
-  // 내보내기는 없다 (338번).
-  await expect(page.getByTestId('release')).toHaveCount(0)
-
-  // 배치 (269번): 직무 자리를 먼저 누르고 그 자리에 앉힐 직원을 고른다. 후보에는 그 자리가 원하는 능력치의 등급이 보인다.
-  await tab(page, /배치/)
-  await page.getByText('직원 상세 능력치').click()
-  await expect(page.getByTestId('attire').first()).toContainText(/후드티|셔츠|정장/)
-  const board = page.getByTestId('desk-board')
-  // 섹터 데스크 (233번): 종목 섹터마다 돈을 굴리는 자리가 있다.
-  await expect(board.locator('[data-desk="semiconductor"]')).toContainText('반도체 데스크')
-  await expect(board.locator('[data-desk="food"]')).toContainText('식품 데스크')
-  const bio = board.locator('[data-desk="bio"]')
-  await expect(bio.getByTestId('desk-members')).toHaveText('비어 있음')
-  await bio.getByRole('button', { name: /사람 고르기/ }).click()
-  await expect(bio.getByTestId('desk-candidate')).toHaveCount(4)
-  await expect(bio.getByTestId('desk-candidate').first()).toContainText('인내심')
-  await bio.getByTestId('desk-candidate').first().click()
-  // 앉으면 그 사람이 팀장이다.
-  await expect(bio.getByTestId('leader-badge')).toHaveCount(1)
-  await expect(bio.getByTestId('desk-members')).toContainText(/(팀장 [A-Z]+)/)
-  const day = board.locator('[data-desk="day"]')
-  await day.getByRole('button', { name: /사람 고르기/ }).click()
-  await day.getByTestId('desk-candidate').filter({ hasText: '쉬는 중' }).first().click()
-  await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '2')
-  await expect(page.getByTestId('office-tag')).toHaveCount(2)
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/4')
-  // 같은 자리에 둘이면 팀장을 바꿀 수 있다: 단타 데스크 사람을 바이오로 옮겨 팀장으로 정한다.
-  await bio.getByRole('button', { name: /사람 고르기/ }).click()
-  await bio.getByTestId('desk-candidate').filter({ hasText: '단타 데스크에서 옮김' }).click()
-  await expect(bio.getByTestId('leader-badge')).toHaveCount(1)
-  await bio.getByRole('button', { name: '팀장으로' }).click()
-  await expect(bio.getByRole('button', { name: '팀장으로' })).toHaveCount(1)
-  await expect(bio.getByTestId('leader-badge')).toHaveCount(1)
-  // 빼면 쉰다. 자동 배치 (232·233번): 버튼 하나로 두 사람이 다시 돈을 굴리는 자리에 앉는다.
-  await bio.getByRole('button', { name: '빼기' }).first().click()
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('1/4')
-  await page.getByRole('button', { name: '자동 배치' }).click()
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('4/4')
-  // 반지하(F)에는 돕는 자리가 아직 닫혀 있어(#393) 넷 다 돈을 굴리는 자리에 앉는다.
-  await expect(page.getByTestId('office-tag')).toHaveCount(4)
-  await expect(
-    page
-      .getByTestId('office-tag')
-      .filter({ hasText: /데스크/ })
-      .first(),
-  ).toBeVisible()
-  // 자리 카드에는 예상 효과가 보인다 (259번).
-  await expect(bio).toContainText('맞히면 +')
-
-  // 미니맵에서 바로 배치 (237번): 앉은 사람을 눌러 쉬게 하면 휴게실로 가고, 빈 자리를 눌러 그 사람을 골라 다시 앉힌다.
-  const seats = page.getByTestId('office-seat')
-  await expect(seats).toHaveCount(4)
-  await seats.nth(1).click()
-  const picker = page.getByTestId('seat-picker')
-  await expect(picker).toContainText('어디에 앉힐까요?')
-  // 누른 사람의 상세 능력치가 함께 보인다: 종합 등급과 능력치 다섯.
-  await expect(picker.getByTestId('employee-detail')).toContainText('종합')
-  await expect(picker.getByTestId('employee-detail').getByRole('listitem')).toHaveCount(5)
-  await picker.getByRole('button', { name: '쉰다' }).click()
-  await expect(picker).toHaveCount(0)
-  await expect(page.getByTestId('office-empty')).toHaveCount(1)
-  await expect(page.getByTestId('office-resting')).toBeVisible()
-  await page.getByTestId('office-empty').click()
-  await expect(picker).toContainText('빈 자리에 누구를 앉힐까요?')
-  await picker.getByRole('button', { name: /종합/ }).click()
-  await picker.getByRole('button', { name: /단타 데스크 용기/ }).click()
-  await expect(picker).toHaveCount(0)
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('4/4')
-  await expect(page.getByTestId('office-empty')).toHaveCount(0)
-  await expect(page.getByTestId('office-resting')).toHaveCount(0)
-
-  for (let year = 1; year <= 3; year++) {
-    const held = await passYear(page, year, '산다', year === 1)
-    // 첫 회사의 첫 분기에는 돈을 굴리는 직원이 꼭 종목을 물어 온다 (267번): 종목 회의를 배운다.
-    if (year === 1) {
-      expect(held).toBe(true)
-      // 결산하면 지난 결산 탭이 열리고, 결과가 그림 속 직원 머리 위에도 뜬다.
-      await expect(page.getByRole('tab', { name: /지난 결산/ })).toHaveAttribute(
-        'aria-selected',
-        'true',
-      )
-      // 장부에 종목 회의 한 건이 직원들의 1년 운용과 따로 있다 (240번).
-      await expect(page.getByTestId('ledger-invest')).toContainText('종목 회의')
-      // 연말 결산서에 분기별 막대가 있다 (268번). 태도는 거시경제 회의와 함께 뺐다 (382번).
-      await expect(page.getByTestId('quarter-bars').getByRole('listitem')).toHaveCount(4)
-      await expect(page.getByTestId('ledger-staff')).toBeVisible()
-      // 채용 뽑기는 돈이 들지 않아 첫 해에는 인사 비용 줄이 없다 (251·312번).
-      await expect(page.getByTestId('ledger-hiring')).toHaveCount(0)
-      // 채용권을 받은 까닭이 결산 소식에 남는다 (312번).
-      await expect(page.getByTestId('settlement')).toContainText('채용권')
-      // 손익은 돈을 굴리는 자리(데스크)에 앉은 사람 머리 위에만 뜬다.
-      const traders = await page
-        .getByTestId('office-tag')
-        .filter({ hasText: /데스크/ })
-        .count()
-      await expect(page.getByTestId('office-pnl')).toHaveCount(traders)
-    }
-  }
-  // 연표 탭 (263번): 차린 해부터 큰 일이 쌓이고 업적과 명예의 전당이 보인다.
-  await tab(page, /연표/)
-  await expect(page.getByTestId('timeline')).toContainText('1호 회사를 차렸다')
-  // 업적 열하나 (351번에서 열다섯, 381번에서 상벌로만 열리던 넷을 뺐다).
-  await expect(page.getByTestId('achievement')).toHaveCount(11)
-  await expect(page.getByTestId('hall').getByRole('listitem')).toHaveCount(4)
-  // 매각을 뺐다(236번): 세 해가 지나도 회사는 이어지고 4년 차 이슈가 온다. 팔 곳은 없다.
-  await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
-  await expect(page.getByTestId('sale')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /회사 팔기/ })).toHaveCount(0)
-  await page.reload()
-  await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
-  await tab(page, /채용/)
-  // 분기·연말마다 채용권이 쌓였다 (312번).
-  await expect(page.getByTestId('tickets')).not.toHaveText('0')
-  await passYear(page, 4, '판다')
-  await expect(page.getByText(/1호 회사 · 5년 차 1분기/)).toBeVisible()
-})
-
-test('뽑기에서 특급이 나오면 카드가 금빛으로 떨다가 늦게 열린다 (290·312번)', async ({ page }) => {
-  // 2%를 기다리기 어렵다: 뽑기 응답의 첫 카드를 특급으로 바꿔 본다.
-  await page.route('**/api/company/draws', async (route) => {
-    const response = await route.fetch()
-    const company = await response.json()
-    company.gacha.drawn[0] = { ...company.gacha.drawn[0], grade: 'B', star: true, fresh: true }
-    await route.fulfill({ response, json: company })
-  })
-  await openCompany(page)
-  await page.getByTestId('draw-one').click()
-  const card = page.getByTestId('gacha-reveal').getByTestId('gacha-card').first()
-  await expect(card).toHaveAttribute('data-star', 'true')
-  await expect(card).toHaveAttribute('data-open', 'true', { timeout: 5_000 })
-  await expect(card).toContainText('특급')
-  await expect(card).toContainText('NEW')
-  await page.getByTestId('gacha-close').click()
-})
-
-test('뽑기 요청이 끊겨도 버튼이 잠기지 않고 다시 뽑을 수 있다', async ({ page }) => {
-  await openCompany(page)
-  let dropped = false
-  await page.route('**/api/company/draws', async (route) => {
-    if (!dropped) {
-      dropped = true
-      await route.abort('connectionreset')
-      return
-    }
-    await route.continue()
-  })
-  const draw = page.getByTestId('draw-one')
-  await draw.click()
-  await expect(draw).toBeEnabled()
-  await draw.click()
-  await closeReveal(page)
-  await expect(page.getByTestId('roster')).toContainText('1명')
-})
-
-test('분기 넘기기 버튼을 빠르게 두 번 눌러도 한 분기만 넘어간다 (#305)', async ({ page }) => {
-  // 돈을 굴리는 직원이 없으면 회의 없이 바로 넘긴다. 예전에는 두 번째 요청이 다음 해를 결산했다.
-  await openCompany(page)
-  let settles = 0
-  page.on('request', (r) => {
-    if (r.url().endsWith('/api/company/settle')) {
-      settles++
-    }
-  })
-  await page.getByRole('button', { name: '1년 차 1분기 넘기기' }).dblclick()
-  await closeQuarter(page, 1, 1)
-  await expect(page.getByText(/1호 회사 · 1년 차 2분기/)).toBeVisible()
-  // 서버에도 같은 분기를 두 번 보내 본다: 한 분기만 넘어간다.
-  const again = await page.request.post('/api/company/settle', { data: { year: 1, quarter: 1 } })
-  expect(again.ok()).toBe(true)
-  expect((await again.json()).quarter).toBe(2)
-  await page.reload()
-  await expect(page.getByText(/1호 회사 · 1년 차 2분기/)).toBeVisible()
-  // 네 분기를 넘기면 연말 결산서가 뜬다. 회의를 안 했으니 결산서에 회의 줄이 없다.
-  for (let quarter = 2; quarter <= 4; quarter++) {
-    await page.getByRole('button', { name: `1년 차 ${quarter}분기 넘기기` }).click()
-    if (quarter < 4) {
-      await closeQuarter(page, 1, quarter)
-    }
-  }
-  await expect(page.getByTestId('year-end').getByTestId('ledger-invest')).toHaveCount(0)
-  await closeYearEnd(page, 1)
-  await expect(page.getByText(/1호 회사 · 2년 차 1분기/)).toBeVisible()
-  expect(settles).toBeGreaterThanOrEqual(1)
-})
-
-test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞붙고, 끝나면 사장이 고른다 (279·285·352번)', async ({
-  page,
-}) => {
-  await openCompany(page)
-  await drawPeople(page, 2)
-  await tab(page, /배치/)
-  await page.getByRole('button', { name: '자동 배치' }).click()
-  // 첫 회사의 첫 분기에는 꼭 누가 종목을 물어 온다 (267번): 분기 넘기기를 누르면 종목 회의가 바로 뜬다 (382번).
-  await page.getByRole('button', { name: '1년 차 1분기 넘기기', exact: true }).click()
-  const meeting = page.getByRole('dialog', { name: '종목 회의' })
-  await expect(meeting).toBeVisible()
-  // 첫 화면은 종목 분석이다 (368번): 기사만 보이고, 직원 의견(378번)·토론·결정 버튼은 결정 화면에 있다.
-  await expect(meeting.getByTestId('invest-article')).toBeVisible()
-  await expect(meeting.getByTestId('team-clash')).toHaveCount(0)
-  await expect(meeting.getByTestId('remarks')).toHaveCount(0)
-  await expect(meeting.getByRole('button', { name: '산다', exact: true })).toHaveCount(0)
-  await meeting.getByTestId('invest-to-decide').click()
-  await expect(meeting.getByTestId('invest-article')).toHaveCount(0)
-  // 직원 의견은 결정 화면에 있다 (378번): 투자하자·매도하자, 명수는 없다.
-  await expect(meeting.getByTestId('remarks')).toBeVisible()
-  await expect(meeting.getByTestId('opinion').first().getByRole('heading')).toHaveText(
-    /^(투자하자|매도하자|모르겠다)$/,
-  )
-  // 고집 표시와 크게 산다·판다는 뺐다.
-  await expect(meeting.getByTestId('stubborn')).toHaveCount(0)
-  await expect(meeting.getByRole('button', { name: /크게/ })).toHaveCount(0)
-  // "너희가 알아서 해"는 없다 (352번).
-  await expect(meeting.getByTestId('invest-team')).toHaveCount(0)
-  // 토론은 접혀 있다 (370번, #498): 결과 한 줄만 보이고, 기다리지 않고 바로 고를 수 있다.
-  await expect(meeting.getByTestId('debate-summary')).toContainText(/매수 \d+ : 매도 \d+/)
-  await expect(meeting.getByTestId('team-clash')).toHaveCount(0)
-  await expect(meeting.getByRole('button', { name: '산다', exact: true })).toBeEnabled()
-  // 펼치면 지금처럼 토론이 나오고, 끝날 때까지 결정 버튼은 잠긴다.
-  await meeting.getByTestId('debate-toggle').click()
-  await expect(meeting.getByRole('button', { name: '산다', exact: true })).toBeDisabled()
-  // 차트가 아직 없는 토론 중에는 토론 장면 바로 밑에 빨리 보기가 있다 (395번).
-  await expect(
-    meeting.getByTestId('debate-fold').locator('xpath=following-sibling::*[1]'),
-  ).toHaveAttribute('data-testid', 'invest-skip')
-  const clash = meeting.getByTestId('team-clash').first()
-  await expect(clash).toBeVisible()
-  await expect(clash).toHaveAttribute('data-phase', 'clash')
-  // 밀어내기 막대 (304번): 매수파는 왼쪽, 매도파는 오른쪽에 선다. 양쪽 다 누군가 선다. 경계에서 번개가 튄다.
-  await expect(clash.getByTestId('clash-gauge')).toBeVisible()
-  await expect(clash.getByTestId('side-buy').getByTestId('speaker').first()).toBeVisible()
-  await expect(clash.getByTestId('side-sell').getByTestId('speaker').first()).toBeVisible()
-  await expect(clash.getByTestId('clash-bolt')).toBeVisible()
-  // 맞붙는 동안 매수파·매도파의 말이 한 줄씩 쭉쭉 올라온다 (285번).
-  const lines = clash.getByTestId('debate-line')
-  await expect(lines.first()).toHaveAttribute('data-side', 'BUY')
-  await expect(lines.nth(1)).toHaveAttribute('data-side', 'SELL')
-  await expect(clash).toHaveAttribute('data-phase', 'clash')
-  // 말 한 줄이 글자 수만큼 머문다 (303번): 일곱 줄이면 30초 안팎.
-  await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 45_000 })
-  await expect(clash.getByTestId('clash-result')).toHaveText(/팀 의견: (매수|매도)!/)
-  // 두 바퀴 뒤 결판 세 박자 (295·304번): 사회가 표결을 부르고, 이긴 쪽이 선언하고, 진 쪽이 물러난다.
-  await expect(lines).toHaveCount(7)
-  const result = await clash.getByTestId('clash-result').innerText()
-  await expect(lines.nth(4)).toHaveAttribute('data-kind', 'TALLY')
-  await expect(lines.nth(5)).toHaveAttribute('data-kind', 'WIN')
-  await expect(lines.nth(5)).toHaveAttribute('data-side', result.includes('매수') ? 'BUY' : 'SELL')
-  await expect(lines.nth(6)).toHaveAttribute('data-kind', 'LOSE')
-  // 토론이 끝나면 사장 차례: 직원들이 기운 쪽이 한 줄로 보이고, 사장이 고른다.
-  await expect(meeting.getByTestId('invest-your-turn')).toContainText('사장님 차례')
-  await expect(meeting.getByTestId('invest-skip')).toHaveCount(0)
-  await meeting
-    .getByRole('button', { name: result.includes('매수') ? '산다' : '판다', exact: true })
-    .click()
-  await expect(meeting.getByTestId('invest-choice')).toHaveText(
-    result.includes('매수') ? '산다' : '판다',
-  )
-  await expect(meeting.getByTestId('invest-outcome')).toContainText('사장 결정')
-  // 빨리 보기는 차트 바로 밑에 있다 (395번). 차트가 다 그려졌으면 이미 사라졌다.
-  const fast = meeting.getByTestId('invest-skip')
-  if (await fast.isVisible()) {
-    await fast.click()
-  }
-  await meeting.getByRole('button', { name: '1년 차 1분기 넘기기' }).click()
-  await closeQuarter(page, 1, 1)
-})
-
-test('건물이 커지면 연말 결산서 뒤 알림 창에서 옆 건물을 들이받아 무너뜨린다 (243·281·288번)', async ({
-  page,
-}) => {
-  await openCompany(page)
-  // 사재 100b로 첫해에 건물을 키우기는 어렵다: 연말 결산 응답의 등급을 올려 본다.
-  await page.route('**/api/company/settle', async (route) => {
-    const response = await route.fetch()
-    const company = await response.json()
-    if (company.quarter === 1 && company.lastSettlement) {
-      company.lastSettlement.gradeBefore = 'F'
-      company.lastSettlement.gradeAfter = 'E'
-    }
-    await route.fulfill({ response, json: company })
-  })
-  for (let quarter = 1; quarter <= 4; quarter++) {
-    await page.getByRole('button', { name: `1년 차 ${quarter}분기 넘기기` }).click()
-    if (quarter < 4) {
-      await closeQuarter(page, 1, quarter)
-    }
-  }
-  await page
-    .getByRole('dialog', { name: '연말 결산서' })
-    .getByRole('button', { name: '확인' })
-    .click()
-  const move = page.getByTestId('move-scene')
-  await expect(move).toHaveAttribute('data-move', 'up')
-  await expect(move.getByTestId('rival-smash')).toBeVisible()
-  await expect(move).toContainText('옆 건물을 들이받아 무너뜨리고')
-  // 라이벌 회사 이름은 나오지 않는다.
-  await expect(move).not.toContainText('라이벌')
-  await expect(page.getByRole('alertdialog', { name: '라이벌 결과' })).toHaveCount(0)
-})
-
-test('새 건물 공사가 끝나면 가림막이 걷히며 새 건물이 솟아오른다 (#347)', async ({ page }) => {
-  await openCompany(page)
-  // 새 건물(상가)은 한 해 걸려 짓는다: 연말 결산 응답을 완공(E → D)으로 바꿔 본다.
-  await page.route('**/api/company/settle', async (route) => {
-    const response = await route.fetch()
-    const company = await response.json()
-    if (company.quarter === 1 && company.lastSettlement) {
-      company.lastSettlement.gradeBefore = 'E'
-      company.lastSettlement.gradeAfter = 'D'
-    }
-    await route.fulfill({ response, json: company })
-  })
-  for (let quarter = 1; quarter <= 4; quarter++) {
-    await page.getByRole('button', { name: `1년 차 ${quarter}분기 넘기기` }).click()
-    if (quarter < 4) {
-      await closeQuarter(page, 1, quarter)
-    }
-  }
-  await page
-    .getByRole('dialog', { name: '연말 결산서' })
-    .getByRole('button', { name: '확인' })
-    .click()
-  const move = page.getByTestId('move-scene')
-  await expect(move.getByTestId('build-complete')).toBeVisible()
-  await expect(move.getByTestId('rival-smash')).toHaveCount(0)
-  await expect(move).toContainText('공사가 끝났다!')
-  await expect(move).toContainText('반지하 원룸 → 상가 2층')
-})
-
-test('분기는 직접 넘기고 실적 창은 확인을 누를 때까지 남는다', async ({ page }) => {
-  await page.clock.install()
-  await openCompany(page)
-  await expect(page.getByRole('button', { name: /자동 진행|자동 멈춤/ })).toHaveCount(0)
-  await page.getByRole('button', { name: '1년 차 1분기 넘기기', exact: true }).click()
-  const sheet = page.getByRole('dialog', { name: '분기 실적' })
-  await expect(sheet).toBeVisible()
-  await expect(page.getByTestId('auto-countdown')).toHaveCount(0)
-  const mutations: string[] = []
-  page.on('request', (request) => {
-    if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/api/company')) {
-      mutations.push(request.url())
-    }
-  })
-  await page.clock.fastForward(60_000)
-  await expect(sheet).toBeVisible()
-  await sheet.getByRole('button', { name: '확인', exact: true }).click()
-  await expect(sheet).toHaveCount(0)
-  await page.clock.fastForward(60_000)
-  await expect(page.getByRole('button', { name: '1년 차 2분기 넘기기', exact: true })).toBeEnabled()
-  expect(mutations).toEqual([])
-})
-
-test('개인정보처리방침이 있고, 게시자 ID가 없으면 광고 자리를 그리지 않는다 (271번)', async ({
-  page,
-}) => {
+test('첫 화면은 게임 이름과 앱 화면으로 가는 게임 시작을 보인다', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('button', { name: '바로 시작' })).toBeVisible()
-  await expect(page.getByTestId('ad-slot')).toHaveCount(0)
-  await page.getByRole('link', { name: '개인정보처리방침' }).click()
-  await expect(page.getByTestId('privacy')).toContainText('광고와 쿠키')
-  await expect(page.getByTestId('privacy')).toContainText('익명 세션 쿠키')
-  await page.getByRole('link', { name: /게임으로 돌아가기/ }).click()
-  await expect(page.getByRole('button', { name: '바로 시작' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '흔들리지 않는 고양이' })).toBeVisible()
+  const start = page.getByRole('link', { name: '게임 시작' })
+  await expect(start).toBeVisible()
+  await expect(start).toHaveAttribute('href', '/app/')
 })
 
-test('튜토리얼과 함께 시작하면 걸음이 회사 상태를 따라가고, 건너뛰면 다시 보이지 않는다 (302번)', async ({
-  page,
-}) => {
-  await page.goto('/')
-  // 처음 온 사람에게는 튜토리얼 쪽이 먼저다.
-  await expect(page.getByRole('button', { name: '튜토리얼과 함께 시작' })).toBeVisible()
-  await page.getByRole('button', { name: '튜토리얼과 함께 시작' }).click()
-  await expect(page.getByTestId('company')).toBeVisible()
-  const tutorial = page.getByTestId('tutorial')
-  await expect(tutorial).toContainText('튜토리얼 1/5 · 직원 뽑기')
-  await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
-  // 뽑으면 걸음이 넘어가며 배치 탭으로 옮겨 간다.
-  await page.getByTestId('draw-one').click()
-  await closeReveal(page)
-  await expect(tutorial).toContainText('2/5 · 자리에 앉히기')
-  await expect(page.getByRole('tab', { name: /배치/ })).toHaveAttribute('aria-selected', 'true')
-  await page.getByRole('button', { name: '자동 배치' }).click()
-  await expect(tutorial).toContainText('3/5 · 분기 넘기기')
-  await tutorial.getByRole('button', { name: '건너뛰기' }).click()
-  await expect(tutorial).toHaveCount(0)
-  await page.reload()
-  await expect(page.getByTestId('company')).toBeVisible()
-  await expect(tutorial).toHaveCount(0)
+test('회사를 차려 뽑고 앉히면 1초마다 벌고, 기회를 써서 종목회의를 한다', async ({ page }) => {
+  const api = page.request
+  // 스토어의 open과 같은 순서: 세션을 만들고 회사를 차린다.
+  expect((await api.post('/api/sessions')).ok()).toBe(true)
+  let company = await companyOf(await api.post('/api/company'))
+  expect(company.employees).toHaveLength(0)
+  expect(company.meetings.chances).toBe(1)
+
+  // 채용권으로 뽑는다 (store.draw: 지금까지 뽑은 횟수를 함께 보낸다).
+  const count = Math.min(company.gacha.tickets, company.gacha.maxDraws, company.seats)
+  expect(count).toBeGreaterThanOrEqual(1)
+  company = await companyOf(
+    await api.post('/api/company/draws', { data: { count, draws: company.gacha.draws } }),
+  )
+  expect(company.employees).toHaveLength(count)
+
+  // 뽑은 사람을 돈을 굴리는 자리에 앉힌다 (store.place).
+  const trading = company.desks.filter((d) => d.trades)
+  expect(trading.length).toBeGreaterThan(0)
+  const seats = company.employees.map((e, i) => ({
+    employeeId: e.id,
+    desk: trading[i % trading.length].code,
+  }))
+  company = await companyOf(await api.post('/api/company/placement', { data: { seats } }))
+  for (const e of company.employees) {
+    expect(e.desk).not.toBeNull()
+    expect(e.incomePerSecond).toBeGreaterThan(0)
+  }
+  expect(company.idle?.income.perSecond).toBeGreaterThan(0)
+
+  // 화면을 보는 동안의 박자 (useIdleBattle: runId·sequence·action·hits). 시작하고 1초 남짓 뒤의 박자에 수입이 자본에 들어온다.
+  const runId = crypto.randomUUID()
+  let sequence = company.idle?.sequence ?? 0
+  const started = await companyOf(
+    await api.post('/api/company/idle', {
+      data: { runId, sequence: ++sequence, action: 'start', hits: [] },
+    }),
+  )
+  await page.waitForTimeout(1_200)
+  company = await companyOf(
+    await api.post('/api/company/idle', {
+      data: { runId, sequence: ++sequence, action: 'tick', hits: [] },
+    }),
+  )
+  expect(company.capital).toBeGreaterThan(started.capital)
+
+  // 종목회의: 기회 하나를 써서 열고(직원이 종목을 물어 온다) 산다.
+  const chances = company.meetings.chances
+  expect(chances).toBeGreaterThanOrEqual(1)
+  company = await companyOf(await api.post('/api/company/invest/open'))
+  expect(company.invest?.convened).toBe(true)
+  expect(company.invest?.outcome ?? null).toBeNull()
+  expect(company.meetings.chances).toBe(chances - 1)
+  company = await companyOf(await api.post('/api/company/invest', { data: { choice: 'BUY' } }))
+  expect(company.invest?.outcome).toBeTruthy()
+  expect(company.capital).toBeGreaterThanOrEqual(0)
+  expect(company.meetings.chances).toBe(chances - 1)
+
+  // 새 회사는 기회가 하나뿐이라 다음 회의는 열리지 않는다.
+  expect(company.meetings.chances).toBe(0)
+  expect((await api.post('/api/company/invest/open')).status()).toBe(400)
+})
+
+test('분기 넘기기는 없어졌다', async ({ page }) => {
+  const api = page.request
+  expect((await api.post('/api/sessions')).ok()).toBe(true)
+  await companyOf(await api.post('/api/company'))
+  const settle = await api.post('/api/company/settle', { data: { year: 1, quarter: 1 } })
+  expect(settle.status()).toBe(404)
 })

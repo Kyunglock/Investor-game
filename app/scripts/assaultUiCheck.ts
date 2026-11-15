@@ -101,7 +101,6 @@ try {
             convened: true,
             outcome: null,
           },
-          lastSettlement: null,
           weapons: [
             {
               kind: 'pistol',
@@ -124,7 +123,8 @@ try {
       }),
     )
     await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
-    await page.getByTestId('settle').waitFor()
+    // 분기 넘기기 버튼은 없어졌다 (#803): 메인 화면이 뜨기를 기다린다.
+    await page.getByTestId('idle-battle').waitFor()
     await page.evaluate(async () => {
       const path = '/app/src/app/ui.ts'
       const { useAppUi } = await import(/* @vite-ignore */ path)

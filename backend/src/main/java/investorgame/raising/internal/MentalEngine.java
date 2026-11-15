@@ -1,6 +1,5 @@
 package investorgame.raising.internal;
 
-import investorgame.common.Korean;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
@@ -50,43 +49,9 @@ class MentalEngine {
     return content.raising().company().mental();
   }
 
-  /**
-   * 분기를 열 때: 장르를 시장 갈래의 가중치로만 섞어 뽑는다. 폭락이 터지는 분기면 디펜스가 자주 나오지만 꼭 나오지는 않아 숨은 값이 새지 않는다. 머리글은 장르의 것
-   * 가운데 하나.
-   */
-  CompanyState.Mental create(CompanyState c, SeededRandom random) {
-    RandomGenerator rng = random.forKey("mental", c.year, c.quarter);
-    boolean burst =
-        CompanyEngine.CRASH.equals(c.phase)
-            && c.crashQuarter != null
-            && c.crashQuarter == c.quarter;
-    Map<String, Integer> weights = properties.mental().genreWeights().get(burst ? BURST : c.phase);
-    int total = GENRES.stream().mapToInt(g -> weights.getOrDefault(g, 0)).sum();
-    int roll = rng.nextInt(total);
-    CompanyState.Mental mental = new CompanyState.Mental();
-    for (String genre : GENRES) {
-      roll -= weights.getOrDefault(genre, 0);
-      if (roll < 0) {
-        mental.genre = genre;
-        break;
-      }
-    }
-    List<String> headlines = text().headlines().get(mental.genre);
-    mental.headline = headlines.get(rng.nextInt(headlines.size()));
-    return mental;
-  }
-
-  /**
-   * 멘탈 전투 전에 연 분기(이 칸이 없다)면 이번 분기의 전투를 만들고, 무기 전에 차린 회사면 일반 권총을, 무기 뽑기 전에 차린 회사면 처음 뽑기권을 준다. 바꿨으면
-   * true.
-   */
-  boolean adopt(CompanyState c, SeededRandom random) {
-    boolean changed = initWeapons(c) | initWeaponGacha(c);
-    if (c.mental != null) {
-      return changed;
-    }
-    c.mental = create(c, random);
-    return true;
+  /** 무기 전에 차린 회사면 일반 권총을, 무기 뽑기 전에 차린 회사면 처음 뽑기권을 준다. 바꿨으면 true. 분기마다 만들던 멘탈 전투는 없앴다 (523번). */
+  boolean adopt(CompanyState c) {
+    return initWeapons(c) | initWeaponGacha(c);
   }
 
   /** 무기가 없는 회사에 일반 권총 하나를 주고 들게 한다 (346번). 줬으면 true. */
@@ -269,7 +234,6 @@ class MentalEngine {
         break;
       }
       c.capital -= price;
-      c.yearUpgrades = CompanyEngine.plus(c.yearUpgrades, (long) price);
       bought++;
     }
     if (bought == 0) {
@@ -407,48 +371,6 @@ class MentalEngine {
         base.bulletSpeed());
   }
 
-  /**
-   * 한 판 결과를 받는다: 레벨이 오를 때마다 고른 카드(처음 한 장 포함, 330번)와 물리친 적·남은 멘탈. 이번 분기가 아니거나 없는 카드면 400, 이미 받았으면
-   * 그대로 둔다(같은 요청 두 번). 보고 값은 상한으로 자르고 강화율 = min(최대, 적 ÷ a + 멘탈 ÷ b). 무기는 떨어지지 않고, 무기 뽑기권을 받는다
-   * (366번).
-   */
-  void report(
-      CompanyState c,
-      SeededRandom random,
-      int year,
-      int quarter,
-      List<String> cards,
-      int kills,
-      int mentalLeft) {
-    if (c.year != year || c.quarter != quarter) {
-      throw new InvalidRequestException("이번 분기가 아니다: " + year + "년 " + quarter + "분기");
-    }
-    if (c.mental == null) {
-      throw new InvalidRequestException("이번 분기에는 멘탈 전투가 없다");
-    }
-    for (String card : cards) {
-      if (!text().cards().containsKey(card)) {
-        throw new InvalidRequestException("없는 카드다: " + card);
-      }
-    }
-    if (cards.isEmpty()) {
-      throw new InvalidRequestException("카드를 한 장은 골라야 한다");
-    }
-    if (c.mental.cards != null) {
-      return;
-    }
-    CompanyProperties.Mental rule = properties.mental();
-    c.mental.cards = List.copyOf(cards);
-    c.mental.kills = Math.clamp(kills, 0, rule.maxKills());
-    c.mental.mentalLeft = Math.clamp(mentalLeft, 0, rule.maxMental());
-    c.mental.bonusPercent =
-        Math.min(
-            rule.maxPercent(),
-            c.mental.kills / rule.killsPerPercent()
-                + c.mental.mentalLeft / rule.mentalPerPercent());
-    c.weaponTickets += rule.weaponGacha().battleTickets();
-  }
-
   /** 깬 최고 스테이지 (369번). 0이면 아직 없다. */
   int bestStage(CompanyState c) {
     return c.stageStars == null ? 0 : c.stageStars.size();
@@ -467,24 +389,12 @@ class MentalEngine {
   }
 
   /**
-   * 이번 분기 강화율(%) (369번): 깬 최고 스테이지 × bonusPerStage, 상한 maxBonus. 그 분기에 싸우지 않아도 매 분기 저절로 붙는다. 한 판
-   * 결과로 매기던 것(328번)은 쓰지 않는다.
+   * 멘탈 보호 보너스(%) (369번): 깬 최고 스테이지 × bonusPerStage, 상한 maxBonus. 회사의 초당 수입에 곱한다 (523번, 전에는 분기 실적에
+   * 붙었다).
    */
   int bonusPercent(CompanyState c) {
     CompanyProperties.Stages rule = properties.mental().stages();
     return Math.min(rule.maxBonus(), bestStage(c) * rule.bonusPerStage());
-  }
-
-  /** 분기 실적 소식 줄. 깬 스테이지가 없으면 null. */
-  String line(CompanyState c) {
-    if (bonusPercent(c) == 0) {
-      return null;
-    }
-    return Korean.fill(
-        text().line(),
-        Map.of(
-            "stage", stageLabel(bestStage(c)),
-            "percent", String.valueOf(bonusPercent(c))));
   }
 
   /**
@@ -518,25 +428,21 @@ class MentalEngine {
         c.stageStars.set(stage - 1, r.stars);
       }
       c.capital += r.capital;
-      c.yearRewards += r.capital;
       c.weaponTickets += r.tickets;
     }
     c.lastStage = r;
   }
 
   /**
-   * EX 디펜스 (369번): 분기에 한 번, 뽑기권 1 + 적 ÷ exKillsPerTicket장(상한 exMaxTickets). 이번 분기에 이미 했으면 보상 없이 그대로
-   * 둔다.
+   * EX 디펜스 (369번): 하루에 한 번(한국 시간 자정에 다시 열린다, 523번. 전에는 분기에 한 번), 뽑기권 1 + 적 ÷ exKillsPerTicket장(상한
+   * exMaxTickets). 오늘 이미 했으면 보상 없이 그대로 둔다.
    */
-  void reportEx(CompanyState c, int kills) {
-    if (c.mental == null) {
-      throw new InvalidRequestException("이번 분기에는 멘탈 전투가 없다");
-    }
-    if (c.mental.exDone) {
+  void reportEx(CompanyState c, int kills, String today) {
+    if (today.equals(c.exDay)) {
       return;
     }
     CompanyProperties.Stages rule = properties.mental().stages();
-    c.mental.exDone = true;
+    c.exDay = today;
     CompanyState.StageResult r = new CompanyState.StageResult();
     r.cleared = true;
     r.tickets = Math.min(rule.exMaxTickets(), 1 + Math.max(0, kills) / rule.exKillsPerTicket());
@@ -583,7 +489,6 @@ class MentalEngine {
         c.assaultStars.set(stage - 1, r.stars);
       }
       c.capital += r.capital;
-      c.yearRewards += r.capital;
       c.weaponTickets += r.tickets;
     }
     c.lastAssault = r;
@@ -605,7 +510,7 @@ class MentalEngine {
   }
 
   /** 스테이지 화면 값 (369번). */
-  CompanyView.Stages stagesView(CompanyState c) {
+  CompanyView.Stages stagesView(CompanyState c, String today) {
     CompanyProperties.Stages rule = properties.mental().stages();
     CompanyState.StageResult r = c.lastStage;
     return new CompanyView.Stages(
@@ -614,7 +519,7 @@ class MentalEngine {
         rule.perChapter(),
         c.stageStars == null ? List.of() : List.copyOf(c.stageStars),
         bonusPercent(c),
-        c.mental != null && !c.mental.exDone,
+        !today.equals(c.exDay),
         r == null
             ? null
             : new CompanyView.StageResult(

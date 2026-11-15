@@ -8,26 +8,12 @@ type PlayLog = components['schemas']['PlayLog']
 type CompanyPlay = PlayLog['companies'][number]
 
 /**
- * 첫 회사가 어느 해에서 멈췄는지 (decisions.md 228·264번). 해 순. 돌고 있는 회사는 지금 해에, 망해서 닫은 회사(247번)는 닫은 해에 멈춘 것으로
- * 센다. 매각을 빼기 전에 팔린 회사는 한 바퀴를 다 돈 것이라 세지 않는다. 아무도 뽑지 않은 회사는 따로 센다: 처음 온 사람이 공채에서 막혔는지가 가장
- * 궁금하다. 첫 회사만 센다(다음 회사는 이미 한 바퀴를 돈 사람이다).
+ * 첫 회사 가운데 아무도 뽑지 않은 회사가 얼마나 되는지 (decisions.md 228·264번). 처음 온 사람이 채용에서 막혔는지가 가장 궁금하다. 팔린 회사는 한
+ * 바퀴를 다 돈 것이라 세지 않고, 첫 회사만 센다. 해와 결산이 없어져(#803) 해별로 가르지 않는다.
  */
-export function dropOff(
-  companies: CompanyPlay[],
-): { year: number; all: number; noStaff: number }[] {
-  const rows = new Map<number, { year: number; all: number; noStaff: number }>()
-  for (const c of companies) {
-    if (c.sold || c.number !== 1) {
-      continue
-    }
-    const row = rows.get(c.year) ?? { year: c.year, all: 0, noStaff: 0 }
-    row.all++
-    if (c.employees === 0) {
-      row.noStaff++
-    }
-    rows.set(c.year, row)
-  }
-  return [...rows.values()].sort((a, b) => a.year - b.year)
+export function dropOff(companies: CompanyPlay[]): { all: number; noStaff: number } {
+  const first = companies.filter((c) => !c.sold && c.number === 1)
+  return { all: first.length, noStaff: first.filter((c) => c.employees === 0).length }
 }
 
 const TOKEN_KEY = 'ig-admin-token'
@@ -90,6 +76,7 @@ export function AdminPage() {
   }
 
   const sold = log?.companies.filter((c) => c.sold).length ?? 0
+  const first = dropOff(log?.companies ?? [])
   const ipOf = new Map(log?.sessions.map((s) => [s.sessionId, s.lastIp ?? '—']) ?? [])
 
   return (
@@ -125,26 +112,9 @@ export function AdminPage() {
             <b>{sold}</b>
           </p>
 
-          <Card title="첫 회사가 멈춘 해" aside="도는 중이거나 망해서 닫은 첫 회사, 해 순">
-            <table className="w-full text-left text-[13px]" data-testid="admin-dropoff">
-              <thead className="text-[11px] text-faint">
-                <tr>
-                  <th className="py-1 font-normal">해</th>
-                  <th className="font-normal">멈춘 회사</th>
-                  <th className="font-normal">그중 직원 없음</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dropOff(log.companies).map((row) => (
-                  <tr key={row.year} className="border-t border-line-soft">
-                    <td className="py-1.5 font-mono-num">{row.year}년 차</td>
-                    <td className="font-mono-num">{row.all}</td>
-                    <td className="font-mono-num">{row.noStaff}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+          <p className="text-sm" data-testid="admin-dropoff">
+            첫 회사 <b>{first.all}</b> · 그중 직원 없음 <b>{first.noStaff}</b>
+          </p>
 
           <Card title="회사" aside="최근에 차린 순">
             <div className="overflow-x-auto">
@@ -155,7 +125,6 @@ export function AdminPage() {
                     <th className="font-normal">세션</th>
                     <th className="font-normal">IP</th>
                     <th className="font-normal">상태</th>
-                    <th className="font-normal">해</th>
                     <th className="font-normal">마지막</th>
                     <th className="font-normal">자본</th>
                     <th className="font-normal">등급</th>
@@ -176,7 +145,6 @@ export function AdminPage() {
                         {c.number}호 · {STATUS_LABEL[c.status]}
                         {c.sold && ' · 팔림'}
                       </td>
-                      <td className="font-mono-num">결산 {c.settled}번</td>
                       <td className="font-mono-num">{time(c.updatedAt)}</td>
                       <td className="font-mono-num">{money(c.capital)}</td>
                       <td className="font-mono-num">{c.grade}</td>

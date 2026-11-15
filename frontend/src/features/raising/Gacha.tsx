@@ -239,7 +239,7 @@ export function GachaPanel({ company }: { company: Company }) {
         </p>
       </div>
       <p className="mt-1 text-[12px] text-muted">
-        채용권 한 장에 한 명이 옵니다. 분기를 넘길 때마다, 연말·업적·이사 때 채용권을 받습니다.
+        채용권 한 장에 한 명이 옵니다. 회사를 차릴 때와 이사할 때 채용권을 받습니다.
         {company.meeting?.hrCap && ` 인사팀 덕에 ${company.meeting.hrCap} 언저리까지 나옵니다.`}
       </p>
       <div className="mt-2 grid grid-cols-2 gap-2">

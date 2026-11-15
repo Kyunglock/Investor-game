@@ -6,14 +6,11 @@ export type FxEvent =
   | { kind: 'capital'; delta: number }
   | { kind: 'hired'; name: string }
   | { kind: 'left'; name: string }
-  | { kind: 'quarter'; crash: boolean; delta: number }
-  | { kind: 'year-end'; delta: number; achieved: string[] }
-  /** scene: 연말 결산이 아닌 확장(구매)이라 건물 확장 연출이 곧바로 축하를 맡는다 (399번). */
-  | { kind: 'grade-up'; to: Company['grade']; scene: boolean }
+  /** 건물은 확장을 사서만 오른다 (#803): 건물 확장 연출이 곧바로 축하를 맡는다 (399번). */
+  | { kind: 'grade-up'; to: Company['grade'] }
   | { kind: 'grade-down'; to: Company['grade'] }
   | { kind: 'opened'; number: number }
   | { kind: 'landmark' }
-  | { kind: 'broke' }
 
 export function companyEvents(before: Company | null, after: Company | null): FxEvent[] {
   if (!after) {
@@ -23,15 +20,6 @@ export function companyEvents(before: Company | null, after: Company | null): Fx
     return [{ kind: 'opened', number: after.number }]
   }
   const out: FxEvent[] = []
-  const yearEnd = after.year > before.year
-  const quarter = !yearEnd && after.quarter > before.quarter
-  if (yearEnd && after.lastSettlement) {
-    const s = after.lastSettlement
-    out.push({ kind: 'year-end', delta: s.capitalAfter - s.capitalBefore, achieved: s.achieved })
-  } else if (quarter && after.lastQuarter) {
-    const q = after.lastQuarter
-    out.push({ kind: 'quarter', crash: q.crash, delta: q.capitalAfter - q.capitalBefore })
-  }
   const delta = after.capital - before.capital
   if (delta !== 0) {
     out.push({ kind: 'capital', delta })
@@ -50,16 +38,13 @@ export function companyEvents(before: Company | null, after: Company | null): Fx
   }
   const step = LADDER.indexOf(after.grade) - LADDER.indexOf(before.grade)
   if (step > 0) {
-    out.push({ kind: 'grade-up', to: after.grade, scene: !yearEnd })
+    out.push({ kind: 'grade-up', to: after.grade })
   } else if (step < 0) {
     out.push({ kind: 'grade-down', to: after.grade })
   }
   // 랜드마크 타워에 올랐다 (374번): 엔딩은 없지만 크게 축하한다.
   if (after.grade === 'Z' && before.grade !== 'Z') {
     out.push({ kind: 'landmark' })
-  }
-  if (after.broke && !before.broke) {
-    out.push({ kind: 'broke' })
   }
   return out
 }

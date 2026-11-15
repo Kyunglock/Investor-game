@@ -80,7 +80,8 @@
 }
 .scene-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   background: #fffdf8;
   border: 1px solid #c5cdec;
   border-radius: 16px;
@@ -142,111 +143,6 @@
   color: #fffdf6;
   border-color: #a8bde3;
   box-shadow: 0 3px 0 #7895c5;
-}
-.record-balance {
-  padding: 20px;
-  text-align: center;
-  background: #fffaf0;
-  border: 1px solid #e2d4b7;
-  border-radius: 16px;
-  margin-bottom: 16px;
-}
-.record-balance span,
-.record-balance small {
-  display: block;
-  font-size: 11px;
-  color: #7a7890;
-}
-.record-balance strong {
-  display: block;
-  font-family: var(--font-game);
-  font-size: 35px;
-  padding: 4px 0;
-}
-.record-settlement > h3 {
-  font-family: var(--font-game);
-  color: #646586;
-  font-size: 20px;
-}
-.record-news-title {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin: 18px 0 8px;
-  font-family: var(--font-game);
-  font-size: 18px;
-  color: #646586;
-}
-.record-news-title small {
-  font-family: inherit;
-  font-size: 12px;
-  color: #8d94b8;
-}
-.record-news {
-  display: grid;
-  gap: 7px;
-}
-.record-news > li {
-  --tone: #8d94b8;
-  --tint: #eef0f7;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px 10px 10px;
-  border-radius: 14px;
-  border-left: 4px solid var(--tone);
-  background: #fffdf8;
-  box-shadow: 0 2px 0 #8297b733;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #343b65;
-}
-.record-news > li[data-tone="up"] {
-  --tone: #c0392b;
-  --tint: #fbe6e2;
-}
-.record-news > li[data-tone="down"] {
-  --tone: #2d5fa6;
-  --tint: #e2ebf7;
-}
-.record-news > li[data-tone="gold"] {
-  --tone: #d39a1e;
-  --tint: #fbf0d3;
-}
-.record-news > li[data-tone="teal"] {
-  --tone: #3f8f8a;
-  --tint: #dff1ee;
-}
-.record-news > li[data-tone="warn"] {
-  --tone: #d9772b;
-  --tint: #fbe9d9;
-}
-.record-news > li:first-child {
-  padding: 13px 12px 13px 10px;
-  background: linear-gradient(120deg, var(--tint), #fffdf8 70%);
-  font-family: var(--font-game);
-  font-size: 15px;
-}
-.record-news-icon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--tint);
-  font-size: 17px;
-  line-height: 1;
-}
-.record-news-tag {
-  display: block;
-  width: fit-content;
-  margin-bottom: 1px;
-  font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--tone);
 }
 .record-achievements > li {
   padding: 16px 12px;

@@ -1,22 +1,17 @@
 import './company-scenes.css'
 import type { Company } from '@web/api/client'
-import { money } from '@web/features/game/labels'
 import { pnlLabel } from '@web/features/raising/board'
 import { officeName, titleOf } from '@web/features/raising/office'
-import { Ledger, PHASES } from '@web/features/raising/YearEnd'
 import { useState } from 'react'
 import { sfx } from '../../fx/sound'
-import { newsKind } from './news'
 
-type Part = 'settlement' | 'achievements' | 'hall' | 'timeline'
+type Part = 'achievements' | 'hall' | 'timeline'
 
-/** 기록 장면 (decisions.md 263·309번): 지난 결산 · 업적 · 명예의 전당 · 연표를 칸으로 나눠 본다. */
+/** 기록 장면 (decisions.md 263·309번): 업적 · 명예의 전당 · 연표를 칸으로 나눠 본다. 지난 결산은 결산과 함께 없어졌다 (#803). */
 export function RecordScene({ company }: { company: Company }) {
-  const [part, setPart] = useState<Part>(company.lastSettlement ? 'settlement' : 'achievements')
+  const [part, setPart] = useState<Part>('achievements')
   const h = company.history
-  const news = company.lastSettlement?.lines.filter((line) => newsKind(line).tag !== '성장') ?? []
   const parts: { id: Part; label: string }[] = [
-    { id: 'settlement', label: '지난 결산' },
     { id: 'achievements', label: '업적' },
     { id: 'hall', label: '명예의 전당' },
     { id: 'timeline', label: '연표' },
@@ -32,13 +27,6 @@ export function RecordScene({ company }: { company: Company }) {
         </span>
       </header>
       <div className="scene-stats">
-        <div>
-          <span>걸어온 시간</span>
-          <strong>
-            {company.year}
-            <small>년 차</small>
-          </strong>
-        </div>
         <div>
           <span>달성 업적</span>
           <strong>
@@ -76,53 +64,6 @@ export function RecordScene({ company }: { company: Company }) {
         ))}
       </div>
       <div className="mt-3">
-        {part === 'settlement' &&
-          (company.lastSettlement ? (
-            <section className="record-settlement" data-testid="settlement">
-              <div className="record-balance">
-                <span>지난해 연말 자본</span>
-                <strong>{money(company.lastSettlement.capitalAfter)}</strong>
-                <small>
-                  연간 증감{' '}
-                  {pnlLabel(
-                    company.lastSettlement.capitalAfter - company.lastSettlement.capitalBefore,
-                  )}
-                </small>
-              </div>
-              <h3 className="font-pen text-[22px] text-[#e08a00]">
-                {company.lastSettlement.year}년 차 결산 · {PHASES[company.lastSettlement.phase]}
-              </h3>
-              <div className="panel mt-1 p-3">
-                <Ledger company={company} settlement={company.lastSettlement} />
-              </div>
-              {news.length > 0 && (
-                <>
-                  <h4 className="record-news-title">
-                    그해의 소식 <small>{news.length}건</small>
-                  </h4>
-                  <ul className="record-news" data-testid="settlement-news">
-                    {news.map((line, i) => {
-                      const kind = newsKind(line)
-                      return (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: 같은 소식이 두 번 올 수 있고 목록은 한 번 그리면 그대로다 (#338)
-                        <li key={`${i}-${line}`} data-tone={kind.tone}>
-                          <span className="record-news-icon" aria-hidden="true">
-                            {kind.icon}
-                          </span>
-                          <span>
-                            <small className="record-news-tag">{kind.tag}</small>
-                            {line}
-                          </span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </>
-              )}
-            </section>
-          ) : (
-            <p className="text-[13px] text-ink/60">아직 결산한 해가 없습니다.</p>
-          ))}
         {part === 'achievements' && (
           <ul className="record-achievements grid grid-cols-2 gap-2">
             {h.achievements.map((a) => (

@@ -84,7 +84,6 @@ try {
         json: {
           ...company,
           invest: null,
-          lastSettlement: null,
           weapons: owned,
           armory: { tickets: 3, mergeCount: 2, lastDraw: null },
         },

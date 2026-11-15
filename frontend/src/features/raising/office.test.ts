@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import type { Company } from '../../api/client'
 import {
   attireOf,
   customersOf,
@@ -8,7 +7,6 @@ import {
   nextStep,
   officeCaption,
   officeName,
-  seatTiles,
   tierOf,
   titleOf,
 } from './office'
@@ -46,40 +44,6 @@ describe('회사 건물과 객장 (증권사 육성 설계 8.1절)', () => {
     expect(officeCaption('S', 8)).toBe(
       '사무실: 여의도 빌딩 몇 층, 책상 8개 · 객장: 대기 의자가 꽉 참',
     )
-  })
-
-  it('미니맵 칸은 자리 수만큼이고 앉은 사람이 앞에서 채우며, 표정은 지난 결산 손익을 따른다 (237번)', () => {
-    const company = {
-      seats: 3,
-      desks: [
-        { code: 'bio', name: '바이오 데스크', trades: true },
-        { code: 'research', name: '리서치 팀', trades: false },
-      ],
-      employees: [
-        { id: 1, name: '가', desk: 'bio' },
-        { id: 2, name: '나', desk: null },
-        { id: 3, name: '다', desk: 'research' },
-        { id: 4, name: '라', desk: 'bio' },
-      ],
-      lastSettlement: {
-        results: [
-          { employeeId: 1, stake: 100, pnl: -5 },
-          { employeeId: 4, stake: 100, pnl: 7 },
-        ],
-      },
-    } as unknown as Company
-    const { tiles, resting } = seatTiles(company)
-    expect(tiles.map((t) => t.employee?.name ?? null)).toEqual(['가', '다', '라'])
-    expect(tiles.map((t) => t.desk)).toEqual(['바이오 데스크', '리서치 팀', '바이오 데스크'])
-    expect(tiles.map((t) => t.trades)).toEqual([true, false, true])
-    expect(tiles.map((t) => t.mood)).toEqual(['despair', null, 'joy'])
-    expect(tiles.map((t) => t.pnl)).toEqual([-5, null, 7])
-    expect(resting.map((e) => e.name)).toEqual(['나'])
-    const empty = seatTiles({ ...company, seats: 5 }).tiles
-    expect(empty.slice(3).map((t) => [t.index, t.employee])).toEqual([
-      [3, null],
-      [4, null],
-    ])
   })
 })
 

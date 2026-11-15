@@ -35,7 +35,7 @@ function result(over: Partial<Result>): Result {
 }
 
 describe('investTimeline', () => {
-  it('막대 → 종목 공개 → 손익 → 회의 손익 → 결산 버튼 순서다', () => {
+  it('막대 → 종목 공개 → 손익 → 회의 손익 → 확인 버튼 순서다', () => {
     const t = investTimeline(2, 2000, false)
     expect(t.tugAt(1)).toBeGreaterThan(t.tugAt(0) + 2000)
     expect(t.reveal).toBeGreaterThan(t.tugAt(1) + 2000)

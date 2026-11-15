@@ -785,7 +785,7 @@ class BattleScene extends Phaser.Scene {
           ? '매도벽을 부수고 다음 벽으로!'
           : this.mode === 'advance'
             ? '전진! 길을 막는 불안을 치워라'
-            : '분기 시작! 멘탈 꽉 잡아',
+            : '시작! 멘탈 꽉 잡아',
         this.mode === 'assault' ? '#e8434f' : '#3a86ff',
       )
       // 공격 판은 첫 카드를 고르면 한 번 쭉 치고 오르며 시작한다.

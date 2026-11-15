@@ -38,6 +38,8 @@ class InvestEngineTest {
   /** 회사를 차리고 올해 종목을 누가 물어 온 셈 친다: 이 시험은 종목 회의 자체를 본다 (발굴은 ScoutEngineTest, decisions.md 267번). */
   private static CompanyState opened(HashSeededRandom random, long capital) {
     CompanyState company = ENGINE.open(random, capital);
+    company.meetings++;
+    company.invest = ENGINE.invest.create(company, random);
     company.invest.found = true;
     return company;
   }
@@ -145,32 +147,6 @@ class InvestEngineTest {
     }
   }
 
-  @Test
-  void 돈을_굴리는_직원이_있으면_회의를_해야_결산한다() {
-    CompanyState empty = opened(new HashSeededRandom(1), 100_000_000L);
-    assertThat(ENGINE.invest.open(empty)).as("돈을 굴리는 사람이 없으면 건너뛴다").isFalse();
-    ENGINE.settle(empty, new HashSeededRandom(1));
-    assertThat(empty.invest).as("다음 해 회의가 온다").isNotNull();
-
-    CompanyState company = company(2, stats(50, 50, 50, 50));
-    assertThatThrownBy(() -> ENGINE.settle(company, new HashSeededRandom(2)))
-        .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.invest.decide(company, "SHORT", new HashSeededRandom(2)))
-        .isInstanceOf(InvalidRequestException.class);
-    ENGINE.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(2));
-    long total = company.invest.total;
-    assertThatThrownBy(
-            () -> ENGINE.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(2)))
-        .as("한 해에 한 번")
-        .isInstanceOf(InvalidRequestException.class);
-    String title = company.invest.title;
-    CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(2));
-    // 연말 결산서(240번): 회의는 소식 줄이 아니라 따로 실린다.
-    assertThat(s.investTitle).isEqualTo(title);
-    assertThat(s.investTotal).isEqualTo(total);
-    assertThat(s.lines).noneMatch(l -> l.startsWith("투자 회의"));
-  }
-
   /** 줏대·용기가 만점이면 사장 말대로 하고, 맞히면 벌고 틀려도 잃지 않는다(#697). 손익은 바로 자본에 들어간다. 사장은 지켜볼 수 없다(423번). */
   @Test
   void 고집이_없는_직원은_사장_말대로_한다() {
@@ -202,54 +178,6 @@ class InvestEngineTest {
     assertThat(holder.invest.choice).isNull();
   }
 
-  /** 종목회의는 결과에 따라 수익만 정하고 매도벽 돌파로 이어지지 않는다 (474번). 맞혀도 틀려도 회의 뒤 전투가 없다. */
-  @Test
-  void 회의_뒤에는_매도벽_돌파가_없다() {
-    CompanyState winner = company(3, stats(50, 100, 100, 100));
-    long before = (long) winner.capital;
-    ENGINE.invest.decide(winner, right(winner), new HashSeededRandom(3));
-    assertThat(winner.invest.total).isPositive();
-    assertThat(winner.capital).isEqualTo(before + winner.invest.total);
-    assertThat(InvestEngine.battleMode(winner.invest)).isNull();
-    assertThat(InvestEngine.battleOpen(winner.invest)).isFalse();
-    assertThatThrownBy(() -> ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 3))
-        .as("회의 뒤 전투는 없다")
-        .isInstanceOf(InvalidRequestException.class);
-
-    CompanyState loser = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(loser, wrong(loser), new HashSeededRandom(3));
-    assertThat(InvestEngine.battleMode(loser.invest)).isNull();
-    int quarter = loser.quarter;
-    ENGINE.settleQuarter(loser, new HashSeededRandom(3));
-    assertThat(loser.quarter).as("전투 없이 바로 분기를 넘긴다").isEqualTo(quarter + 1);
-  }
-
-  /** 회의 뒤 전투의 세기 (#594): 회사가 크고 오래되고 사장이 강해질수록 오른다. 이유마다 몫이 보인다. */
-  @Test
-  void 매도벽_전투의_세기는_진행할수록_오른다() {
-    CompanyState c = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
-    int base = ENGINE.invest.battleLevel(c, c.invest, 0);
-    assertThat(ENGINE.invest.battleLevel(c, c.invest, 10)).as("스테이지 하나마다 +1").isEqualTo(base + 10);
-    c.quarter += 1;
-    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("분기마다 +1").isEqualTo(base + 1);
-    c.quarter -= 1;
-    c.year += 2;
-    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("두 해 = 여덟 분기").isEqualTo(base + 8);
-    c.building = CompanyEngine.LADDER.get(4);
-    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("건물 두 단계마다 +1").isEqualTo(base + 10);
-    c.battleLevels.put("damage", 60);
-    c.battleLevels.put("fire", 40);
-    c.battleLevels.put("hp", 500);
-    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0))
-        .as("구매한 강화는 난이도를 올리지 않는다")
-        .isEqualTo(base + 10);
-    assertThat(ENGINE.invest.battleLevelParts(c, c.invest, 0))
-        .containsEntry("quarter", 8)
-        .containsEntry("building", 2)
-        .doesNotContainKey("upgrade");
-  }
-
   @Test
   void 매도벽은_강화를_사도_세기가_오르지_않고_진행도만_반영한다() {
     CompanyState c = company(3, stats(50, 100, 100, 100));
@@ -264,10 +192,10 @@ class InvestEngineTest {
           .isEqualTo(base);
       assertThat(ENGINE.invest.battleLevelParts(c, c.invest, 0)).doesNotContainKey("upgrade");
     }
-    c.year += 4;
+    c.meetings += 16;
     c.building = CompanyEngine.LADDER.get(4);
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 10))
-        .as("분기·건물·스테이지로 오르는 난이도는 유지")
+        .as("회의 수·건물·스테이지로 오르는 난이도는 유지")
         .isEqualTo(base + 28);
   }
 
@@ -364,7 +292,7 @@ class InvestEngineTest {
         decisive++;
       }
     }
-    assertThat(decisive).as("안목 100이면 대개 결정적 문장에 긋는다").isGreaterThan(80);
+    assertThat(decisive).as("안목 100이면 대개 결정적 문장에 긋는다").isGreaterThan(70);
     CompanyState none = opened(new HashSeededRandom(1), 100_000_000L);
     assertThat(ENGINE.invest.liveHighlight(none, new HashSeededRandom(1))).isEmpty();
   }

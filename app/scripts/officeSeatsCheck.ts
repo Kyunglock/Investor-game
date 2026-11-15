@@ -15,7 +15,7 @@ try {
       const errors: string[] = []
       page.on('pageerror', (e) => errors.push(e.message))
       await page.addInitScript(() => localStorage.setItem('investor-game.tutorial', 'done'))
-      const company = { ...fixture, seats, grade: 'F', lastSettlement: null, mental: null }
+      const company = { ...fixture, seats, grade: 'F' }
       await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (route) =>
         route.fulfill({ json: company }),
       )

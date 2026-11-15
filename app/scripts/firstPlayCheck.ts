@@ -12,10 +12,9 @@ try {
   for (const width of [320, 390]) {
     const company = {
       ...structuredClone(fixture),
-      year: 1,
-      quarter: 1,
-      lastQuarter: null,
-      lastSettlement: null,
+      // 첫 판 (#803): 첫 회사에서 종목회의를 아직 정하지 않았다.
+      number: 1,
+      invest: null,
       assaults: { best: 0, last: 100, perChapter: 10, lastResult: null as object | null },
     }
     const page = await browser.newPage({

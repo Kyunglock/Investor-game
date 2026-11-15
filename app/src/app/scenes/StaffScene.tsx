@@ -1,7 +1,7 @@
 import './company-scenes.css'
 import './staff-office.css'
 import type { Company } from '@web/api/client'
-import { signedMoney, withParticle } from '@web/features/game/labels'
+import { withParticle } from '@web/features/game/labels'
 import { GradeBadge, GradeCard } from '@web/features/raising/GradeCard'
 import { LADDER, STAT_NAMES } from '@web/features/raising/grades'
 import { LockedDesks } from '@web/features/raising/LockedDesks'
@@ -16,6 +16,7 @@ import {
   EmployeeDetail,
   FIT_TONE,
   fitOf,
+  IncomeTag,
   NameTag,
 } from '../people'
 import { Sheet } from '../Sheet'
@@ -50,7 +51,6 @@ export function StaffScene({ company }: { company: Company }) {
   const { place } = useRaisingStore.getState()
   const sheet = useAppUi((s) => s.sheet)
   const { closeSheet } = useAppUi.getState()
-  const ended = company.status === 'ENDED'
   const working = company.employees.filter((e) => e.desk)
   const resting = company.employees.filter((e) => !e.desk).sort((a, b) => a.id - b.id)
   const openDesk =
@@ -63,7 +63,7 @@ export function StaffScene({ company }: { company: Company }) {
     <div className="company-scene staff-scene staff-office" data-testid="staff-scene">
       <header className="office-top">
         <h1>우리 사무실</h1>
-        {!ended && company.employees.length > 0 && (
+        {company.employees.length > 0 && (
           <button
             type="button"
             disabled={busy}
@@ -91,13 +91,13 @@ export function StaffScene({ company }: { company: Company }) {
         <>
           <ul className="office-rooms" data-testid="desk-board">
             {company.desks.map((d) => (
-              <TeamRoom key={d.code} company={company} desk={d} ended={ended} />
+              <TeamRoom key={d.code} company={company} desk={d} />
             ))}
           </ul>
-          <Lounge company={company} resting={resting} />
+          <Lounge resting={resting} />
         </>
       )}
-      {!ended && <LockedDesks company={company} className="text-ink/80" />}
+      <LockedDesks company={company} className="text-ink/80" />
       {openDesk && <DeskSheet company={company} desk={openDesk} onClose={closeSheet} />}
       {sheetEmployee && sheet?.kind === 'employee' && (
         <EmployeeSheet company={company} employee={sheetEmployee} onClose={closeSheet} />
@@ -140,19 +140,18 @@ function CatArt({ employee: e, eyes }: { employee: Employee; eyes: 'open' | 'hap
   )
 }
 
-/** 팀 방 하나: 이름·분위기 하트, 원하는 능력치·효과·지난 분기 손익, 책상에 앉은 고양이와 빈 자리, 팀장·인원과 "팀 보기". */
-function TeamRoom({ company, desk: d, ended }: { company: Company; desk: Desk; ended: boolean }) {
+/** 팀 방 하나: 이름·분위기 하트, 원하는 능력치·효과, 책상에 앉은 고양이와 빈 자리, 팀장·인원과 "팀 보기". */
+function TeamRoom({ company, desk: d }: { company: Company; desk: Desk }) {
   const { openSheet } = useAppUi.getState()
   const seated = seatedAt(company, d.code)
   const leader = seated.find((e) => e.leader)
-  const report = company.lastQuarter?.reports.find((r) => r.desk === d.code)
-  const pnl = report?.pnl
+
   const openDesk = () => {
     sfx.tap()
     openSheet({ kind: 'desk', desk: d.code })
   }
   // 빈 자리 "+"는 하나: 자리 수는 회사 전체(seats)라 팀마다 정해진 칸이 없다.
-  const slots: (Employee | null)[] = ended ? seated : [...seated, null]
+  const slots: (Employee | null)[] = [...seated, null]
   return (
     <li className="office-room panel" data-hot={d.hot} data-filled={seated.length > 0}>
       <div className="office-room-head">
@@ -164,12 +163,6 @@ function TeamRoom({ company, desk: d, ended }: { company: Company; desk: Desk; e
       </div>
       <p className="office-room-sub">
         원하는 능력치 <b>{STAT_NAMES[d.statCode]}</b> · {deskEffect(d)}
-        {pnl != null && (
-          <>
-            {' · 지난 분기 '}
-            <b className={pnl >= 0 ? 'office-up' : 'office-down'}>{signedMoney(pnl)}</b>
-          </>
-        )}
       </p>
       <div className="office-floor" data-testid="desk-members" data-empty={seated.length === 0}>
         {seated.length === 0 && <span className="sr-only">비어 있음</span>}
@@ -234,7 +227,6 @@ function TeamRoom({ company, desk: d, ended }: { company: Company; desk: Desk; e
       </div>
       <button
         type="button"
-        disabled={ended}
         onClick={openDesk}
         className="office-room-foot"
         data-testid="desk-row"
@@ -256,16 +248,15 @@ function TeamRoom({ company, desk: d, ended }: { company: Company; desk: Desk; e
             </>
           )}
         </span>
-        {!ended && <span className="office-more">팀 보기 ›</span>}
+        <span className="office-more">팀 보기 ›</span>
       </button>
     </li>
   )
 }
 
-/** 휴게실: 쉬는 동료가 소파에서 존다. 한 사람은 "저 일하고 싶어요…". 누르면 보낼 팀을 고른다(끝난 회사면 상세만). */
-function Lounge({ company, resting }: { company: Company; resting: Employee[] }) {
+/** 휴게실: 쉬는 동료가 소파에서 존다. 한 사람은 "저 일하고 싶어요…". 누르면 보낼 팀을 고른다. */
+function Lounge({ resting }: { resting: Employee[] }) {
   const { openSheet } = useAppUi.getState()
-  const ended = company.status === 'ENDED'
   const speaker = loungeSpeaker(resting)
   // 말하는 사람이 첫 소파 맨 앞에 앉아야 말풍선이 카드 밖으로 넘치지 않는다.
   const order = speaker ? [speaker, ...resting.filter((e) => e !== speaker)] : resting
@@ -275,7 +266,7 @@ function Lounge({ company, resting }: { company: Company; resting: Employee[] })
       <div className="office-room-head">
         <h2>☕ 휴게실</h2>
         <span className="office-hint">
-          {resting.length === 0 ? '모두 일하는 중' : ended ? '' : '눌러서 팀에 보내요'}
+          {resting.length === 0 ? '모두 일하는 중' : '눌러서 팀에 보내요'}
         </span>
       </div>
       <div className="office-lounge-floor">
@@ -296,7 +287,7 @@ function Lounge({ company, resting }: { company: Company; resting: Employee[] })
                 data-testid="lounge-cat"
                 onClick={() => {
                   sfx.tap()
-                  openSheet(ended ? { kind: 'employee', id: e.id } : { kind: 'lounge', id: e.id })
+                  openSheet({ kind: 'lounge', id: e.id })
                 }}
               >
                 {e === speaker && (
@@ -434,6 +425,7 @@ function DeskSheet({
               <span className="font-mono-num text-[12px]">
                 {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
               </span>
+              <IncomeTag employee={e} />
               {e.leader ? (
                 <span className="rounded bg-gold px-1.5 text-[11px] text-white">팀장</span>
               ) : (
@@ -494,7 +486,7 @@ function DeskSheet({
               <NameTag employee={e} />
               <span className="block font-mono-num text-[11px] opacity-80">
                 {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
-                {e.sector && d.sector === e.sector && ' · 관심'}
+                {e.sector && d.sector === e.sector && ' · 관심'} · <IncomeTag employee={e} />
               </span>
               <span className="block text-[11px] text-muted">
                 {e.desk ? `${deskName(e.desk)}에서 옮김` : '쉬는 중'}

@@ -13,14 +13,12 @@ export function ToyCityMove({
   before,
   after,
   beforeSeats,
-  year,
   onDone,
 }: {
   company: Company
   before: Grade
   after: Grade
   beforeSeats: number
-  year: number
   onDone: () => void
 }) {
   const [finished, setFinished] = useState(false)
@@ -91,10 +89,7 @@ export function ToyCityMove({
           </div>
         )}
         <div className="toy-move-heading">
-          <p>
-            {year}년 차 ·{' '}
-            {up ? `${direction === 'left' ? '왼쪽' : '오른쪽'}으로 확장` : '회사 규모 조정'}
-          </p>
+          <p>{up ? `${direction === 'left' ? '왼쪽' : '오른쪽'}으로 확장` : '회사 규모 조정'}</p>
           <h2 id="toy-move-title">
             {up
               ? finished

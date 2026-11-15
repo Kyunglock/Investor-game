@@ -4,7 +4,7 @@ import { useRaisingStore } from './store'
 
 vi.mock('../../api/client', () => ({ api: { POST: vi.fn() } }))
 
-const before = { grade: 'F', seats: 4, year: 2, quarter: 4, employees: [] } as unknown as Company
+const before = { grade: 'F', seats: 4, employees: [] } as unknown as Company
 const post = vi.mocked(api.POST)
 
 beforeEach(() => {
@@ -23,14 +23,13 @@ describe('서버에서 완료된 건물 확장 연출', () => {
     expect(useRaisingStore.getState().upgradeMove).toEqual({
       before: 'F',
       after: 'E',
-      year: 2,
       beforeSeats: 4,
     })
     expect(useRaisingStore.getState().company?.employees).toHaveLength(0)
   })
 
-  it('공사 시작 응답은 완료 연출을 재생하지 않는다', async () => {
-    post.mockResolvedValue({ data: { ...before, upgrade: { left: 2 } } } as never)
+  it('등급이 그대로인 응답은 완료 연출을 재생하지 않는다', async () => {
+    post.mockResolvedValue({ data: { ...before, capital: 10 } } as never)
     await useRaisingStore.getState().upgrade()
     expect(useRaisingStore.getState().upgradeMove).toBeNull()
   })
@@ -47,23 +46,36 @@ describe('서버에서 완료된 건물 확장 연출', () => {
     expect(useRaisingStore.getState().busy).toBe(false)
     expect(useRaisingStore.getState().error).toContain('서버에 연결하지 못했어요')
   })
+})
 
-  it('연말 완공은 결산서를 먼저 보여주고 기존 수용 인원을 보관한다', async () => {
-    post.mockResolvedValue({
-      data: {
-        ...before,
-        grade: 'E',
-        seats: 6,
-        year: 3,
-        quarter: 1,
-        lastSettlement: { gradeBefore: 'F', gradeAfter: 'E' },
-      },
-    } as never)
-    await useRaisingStore.getState().settle()
-    expect(useRaisingStore.getState()).toMatchObject({
-      justSettled: true,
-      moveAlert: true,
-      moveBeforeSeats: 4,
-    })
+describe('종목회의 열기 (#803)', () => {
+  const meeting = (over: object = {}) => ({ convened: true, outcome: null, ...over })
+
+  it('기회를 써서 새 회의가 열리면 true', async () => {
+    post.mockResolvedValue({ data: { ...before, invest: meeting() } } as never)
+    expect(await useRaisingStore.getState().convene()).toBe(true)
+    expect(post).toHaveBeenCalledWith('/api/company/invest/open')
+  })
+
+  it('정하지 않은 회의가 이미 열려 있으면 서버를 부르지 않는다', async () => {
+    useRaisingStore.setState({ company: { ...before, invest: meeting() } as never })
+    expect(await useRaisingStore.getState().convene()).toBe(true)
+    expect(post).not.toHaveBeenCalled()
+  })
+
+  it('이미 정한 회의만 남아 있으면 새 회의를 연다', async () => {
+    const decided = { ...before, invest: meeting({ outcome: { total: 5 } }) }
+    useRaisingStore.setState({ company: decided as never })
+    post.mockResolvedValue({ data: { ...before, invest: meeting() } } as never)
+    expect(await useRaisingStore.getState().convene()).toBe(true)
+    expect(post).toHaveBeenCalledTimes(1)
+  })
+
+  it('기회가 없어 거절되면 false이고 이유가 남는다', async () => {
+    const decided = { ...before, invest: meeting({ outcome: { total: 5 } }) }
+    useRaisingStore.setState({ company: decided as never })
+    post.mockResolvedValue({ error: { message: '종목회의 기회가 없습니다.' } } as never)
+    expect(await useRaisingStore.getState().convene()).toBe(false)
+    expect(useRaisingStore.getState().error).toBe('종목회의 기회가 없습니다.')
   })
 })

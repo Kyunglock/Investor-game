@@ -24,15 +24,11 @@ try {
     grade: 'F',
     seats: 4,
     capital: 10_000_000_000,
-    lastSettlement: null,
-    mental: null,
     upgrade: {
       to: 'E',
       cost: 100_000_000,
       needed: 200_000_000,
       affordable: true,
-      years: 0,
-      left: null as number | null,
     },
   }
   let step = 0
@@ -44,7 +40,7 @@ try {
         ...company,
         grade: grades[step],
         seats: capacities[step],
-        upgrade: { ...company.upgrade, to: grades[step + 1] ?? 'S', years: 0, left: null },
+        upgrade: { ...company.upgrade, to: grades[step + 1] ?? 'S' },
       }
       step++
     }

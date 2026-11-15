@@ -1,11 +1,8 @@
 package investorgame.raising.internal;
 
-import investorgame.common.Korean;
 import investorgame.content.ContentCatalog;
 import investorgame.content.RaisingContent;
 import investorgame.raising.internal.CompanyState.Employee;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 사기 (decisions.md 270번). 종목 회의에서 자기 말을 안 들어 줬는데 사장이 틀리면 서운하고, 들어 줬는데 맞으면 신이 난다. 한 해 내내 쉬면 기운을
@@ -66,23 +63,6 @@ class PayEngine {
       } else if (said.equals(invest.choice) && bossRight) {
         shift(e, 1);
       }
-    }
-  }
-
-  /** 분기를 넘길 때 자리에 앉아 있던 사람은 올해 쉰 것이 아니다. */
-  void markWorked(CompanyState c) {
-    c.employees.stream().filter(e -> e.desk != null).forEach(e -> e.restedAllYear = false);
-  }
-
-  /** 연말 (270번): 사기가 0 쪽으로 한 칸 돌아오고, 한 해 내내 쉰 사람은 기운을 되찾는다(+1). 소식 줄을 남긴다. */
-  void yearEnd(CompanyState c, List<String> lines) {
-    for (Employee e : c.employees) {
-      e.morale -= Integer.signum(e.morale);
-      if (e.restedAllYear && e.joinedYear < c.year) {
-        shift(e, 1);
-        lines.add(Korean.fill(texts().rested(), Map.of("name", e.name)));
-      }
-      e.restedAllYear = true;
     }
   }
 }

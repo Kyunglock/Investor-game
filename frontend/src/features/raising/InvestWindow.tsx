@@ -29,16 +29,14 @@ function signed(amount: number): string {
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
 /**
- * 종목 회의 (decisions.md 229·231·235·267번). 분기 넘기기를 눌러 직원이 종목을 물어 왔을 때만 열린다(382번): 창 머리에 누가 가져왔는지 보이고, 끝나면 그 사람을
- * 칭찬하거나 탓하는 한 줄이 붙는다. 한 해의 중대 결정이라 예전 매매 이벤트 창처럼 화면 가운데에 뜬다: 결산을 누르면 열리고, 고르면 결과를 보고 그대로
- * 그해 결산으로 넘어간다. 단서 기사를 놓고 직원들과 고민한다. 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고, 사장이 고른다(산다·판다, 지켜본다는 423번에서 뺐다,
+ * 종목회의 (decisions.md 229·231·235·267번, #803). 기회 하나를 써서 열면 직원이 종목을 물어 온다: 창 머리에 누가 가져왔는지 보이고, 끝나면 그 사람을
+ * 칭찬하거나 탓하는 한 줄이 붙는다. 중대 결정이라 화면 가운데에 뜬다: 고르면 결과를 보고 확인을 눌러 닫는다. 단서 기사를 놓고 직원들과 고민한다.
+ * 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고, 사장이 고른다(산다·판다, 지켜본다는 423번에서 뺐다,
  * 회의를 열면 먼저 매수파와 매도파가 불꽃을 튀기며 토론하고(352번), 그 뒤에 사장이 고른다. 전에는 "너희가 알아서 해" 하고 맡겨야 맞붙어 한쪽으로 정한다, 279번). 고르면 사장 결정에 도장이 찍히고, 돈을 굴리는 직원마다 **맞대결 막대**에서 사장 말과 꼬드김·제 판단이 엎치락뒤치락하다 이긴 쪽으로
  * 쭉 찬다(181번의 막대를 되살림). 다 끝나면 종목이 오르내린 것이 드러나고 직원마다 손익이 뜬다.
  */
 export function InvestWindow({
   invest,
-  year,
-  quarter,
   employees,
   onClose,
   onSettle,
@@ -46,10 +44,9 @@ export function InvestWindow({
   hold = false,
 }: {
   invest: Invest
-  year: number
-  quarter: number
   employees: Company['employees']
   onClose: () => void
+  /** 결과를 다 보고 확인을 눌렀다. 그 뒤에 무엇을 할지는 부른 쪽이 정한다. */
   onSettle: () => void
   /**
    * 종목 결정 후 결과 화면의 메인 버튼으로 매도벽 돌파에 진입한다. 주지 않으면(웹) 전투 없이 진행한다.
@@ -82,25 +79,28 @@ export function InvestWindow({
   const [debated, setDebated] = useState(skipped || !debateFirst)
   // 펼쳐 둔 토론이 끝나기를 기다리는 중: 이때만 고르기를 잠근다.
   const waiting = debateFirst && debateOpen && !debated
+  // 회사는 1초마다 새 객체로 온다(자동 전투의 박동): 타이머가 그때마다 다시 걸리지 않게 길이(숫자)와 정했는지(참·거짓)만 본다.
+  const debateMs = teamClashMs(debate)
   useEffect(() => {
     // 토론은 결정 화면에서 펼쳐야 시작한다: 분석을 읽는 동안 저절로 끝나 버리지 않게.
     if (!debateFirst || debated || !debateOpen || step !== 'decide') {
       return
     }
-    const id = setTimeout(() => setDebated(true), teamClashMs(debate))
+    const id = setTimeout(() => setDebated(true), debateMs)
     return () => clearTimeout(id)
-  }, [debateFirst, debated, debateOpen, debate, step])
+  }, [debateFirst, debated, debateOpen, debateMs, step])
   // 맡겼으면(279·285번) 매수파·매도파가 먼저 토론하며 맞붙고, 그 뒤에 차트가 그려진다.
   const lead = outcome?.delegated && debateOpen ? teamClashMs(outcome.debate) : 0
   const show = chartTimeline(1, CHART_MS, skipped, lead)
   const [finished, setFinished] = useState(skipped)
+  const decided = Boolean(outcome)
   useEffect(() => {
-    if (!outcome || finished || hold) {
+    if (!decided || finished || hold) {
       return
     }
     const id = setTimeout(() => setFinished(true), show.end)
     return () => clearTimeout(id)
-  }, [outcome, finished, show.end, hold])
+  }, [decided, finished, show.end, hold])
   // 빨리 보기 (395번): 결과면 차트를 다 그린 모습으로, 토론 중이면 다 오간 모습으로 넘긴다.
   const skip = () => {
     setSkipped(true)
@@ -109,7 +109,7 @@ export function InvestWindow({
   }
   const label = (code: string) => invest.options.find((o) => o.code === code)?.label ?? code
   const loss = Boolean(outcome && outcome.total < 0)
-  // 회의 뒤 전투를 마치고 돌아왔으면 (#591, decisions.md 428번) 회의 결과 전체 대신 전투 결과 한 장과 분기 넘기기만 보인다.
+  // 회의 뒤 전투를 마치고 돌아왔으면 (#591, decisions.md 428번) 회의 결과 전체 대신 전투 결과 한 장과 확인만 보인다.
   const battleDone = Boolean(
     hasBattle && outcome?.battle && outcome.battle.stars != null && outcome.battle.after != null,
   )
@@ -129,9 +129,7 @@ export function InvestWindow({
         {/* 머리줄은 내려도 위에 붙어 있다. 빨리 보기는 여기 두지 않고 차트(토론) 바로 밑에 둔다 (decisions.md 395번). */}
         <header className="meeting-header">
           <div>
-            <p className="meeting-eyebrow">
-              STOCK MEETING · {year}년 차 {quarter}분기
-            </p>
+            <p className="meeting-eyebrow">STOCK MEETING</p>
             <h3>종목 회의</h3>
             <p className="meeting-subtitle">단서를 살피고, 동료의 의견을 들어보세요.</p>
           </div>
@@ -356,7 +354,7 @@ export function InvestWindow({
                 className="animate-reveal min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
                 data-testid="invest-settle"
               >
-                {year}년 차 {quarter}분기 넘기기 →
+                확인
               </button>
             </div>
           )}
@@ -515,7 +513,7 @@ export function InvestWindow({
                         testId="invest-battle"
                       />
                     )}
-                    {/* 사무실로 나가 전투를 미룰 수 있지만, 전투를 건너뛰고 분기를 넘길 수는 없다. 전투를 마치면 open이 꺼져 넘기기가 나온다. */}
+                    {/* 사무실로 나가 전투를 미룰 수 있지만, 전투를 건너뛰고 끝낼 수는 없다. 전투를 마치면 open이 꺼져 확인이 나온다. */}
                     {!(hasBattle && outcome.battle?.open) && (
                       <button
                         type="button"
@@ -524,7 +522,7 @@ export function InvestWindow({
                         className="animate-reveal min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
                         data-testid="invest-settle"
                       >
-                        {year}년 차 {quarter}분기 넘기기 →
+                        확인
                       </button>
                     )}
                   </div>

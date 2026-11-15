@@ -1,16 +1,14 @@
 import type { Company } from '@web/api/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { needsFirstStage, readFirstPlay, saveFirstPlay } from './firstPlay'
+import { firstMeeting, needsFirstStage, readFirstPlay, saveFirstPlay } from './firstPlay'
 
 const company = {
   companyId: 'first',
-  status: 'ACTIVE',
   number: 1,
-  year: 1,
-  quarter: 1,
-  lastQuarter: null,
-  lastSettlement: null,
+  invest: null,
 } as Company
+const pending = { convened: true, outcome: null } as Company['invest']
+const decided = { convened: true, outcome: { total: 0 } } as Company['invest']
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -21,9 +19,20 @@ describe('첫 스테이지 진입', () => {
       false,
     )
   })
-  it('진행 중이거나 끝난 회사는 첫 전투로 끌어오지 않는다', () => {
-    expect(needsFirstStage({ ...company, quarter: 2 })).toBe(false)
-    expect(needsFirstStage({ ...company, status: 'ENDED' })).toBe(false)
+  it('첫 판은 첫 회사에서 첫 종목회의를 정하기 전까지다', () => {
+    expect(firstMeeting(company)).toBe(true)
+    expect(firstMeeting({ ...company, invest: pending })).toBe(true)
+    expect(firstMeeting({ ...company, invest: decided })).toBe(false)
+    expect(firstMeeting({ ...company, number: 2 })).toBe(false)
+  })
+  it('첫 회의를 이미 정했거나 다음 회사면 첫 전투로 끌어오지 않는다', () => {
+    expect(needsFirstStage({ ...company, invest: pending })).toBe(true)
+    expect(needsFirstStage({ ...company, invest: decided })).toBe(false)
+    expect(needsFirstStage({ ...company, number: 2 })).toBe(false)
+  })
+  it('저장한 걸음이 없으면 회의를 정했는지로 어디까지 왔는지 본다', () => {
+    expect(readFirstPlay(company)).toBe('welcome')
+    expect(readFirstPlay({ ...company, invest: decided })).toBe('play')
   })
   it('예전 설명 중간 저장과 중단한 전투는 첫 스테이지로 이어간다', () => {
     const getItem = vi.fn(() => 'welcome')

@@ -25,12 +25,12 @@ export interface InvestTimeline {
   reveal: number
   /** 회의 손익이 뜨는 때 */
   total: number
-  /** 연출이 끝나 결산 버튼이 나오는 때 */
+  /** 연출이 끝나 확인 버튼이 나오는 때 */
   end: number
 }
 
 /**
- * 투자 회의 결과의 순서 (decisions.md 235번): 사장 결정 도장 → 직원마다 맞대결 막대 → 종목 공개 → 직원마다 손익 → 회의 손익 → 결산 버튼. 빨리 보기면
+ * 투자 회의 결과의 순서 (decisions.md 235번): 사장 결정 도장 → 직원마다 맞대결 막대 → 종목 공개 → 직원마다 손익 → 회의 손익 → 확인 버튼. 빨리 보기면
  * 모두 0이다.
  */
 export function investTimeline(
@@ -55,7 +55,7 @@ export function investTimeline(
 
 /**
  * 차트로 보는 결정 장면의 순서 (decisions.md 283번): (맡겼으면 맞붙는 장면) → 결정 도장 → 차트가 그려진다 → 종목 공개 → 직원마다 손익 → 회의 손익 →
- * 결산 버튼. 빨리 보기면 모두 0이다.
+ * 확인 버튼. 빨리 보기면 모두 0이다.
  */
 export function chartTimeline(
   people: number,
