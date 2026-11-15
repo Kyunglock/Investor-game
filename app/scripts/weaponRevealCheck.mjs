@@ -46,6 +46,7 @@ try {
           cats: [],
           fieldSlots: 4,
           wallDps: 0,
+          power: 1038,
           income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },
         },
       }

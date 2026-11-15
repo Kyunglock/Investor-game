@@ -3,7 +3,7 @@ import { money } from '@web/features/game/labels'
 import { diamondText } from '@web/features/raising/gachaRules'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useShownIdle } from '@web/features/raising/useIdleBattle'
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { rate, readOfflineSeen, shouldShowOffline } from '../app/income'
 import { meetingReady } from '../app/meeting'
 import { Sheet } from '../app/Sheet'
@@ -257,26 +257,49 @@ export function IdleHome({
   )
 }
 
+/** 큰 전투력은 돈처럼 단위로 줄여 적는다. */
+const powerText = (power: number) =>
+  power < 1e12 ? Math.round(power).toLocaleString() : money(power)
+
+/**
+ * 전투력 (decisions.md 538번): 성장 탭의 숫자 하나. 서버가 강화·무기·고양이를 묶어 준다. 오르면 오른 만큼을 잠깐 옆에 띄운다.
+ */
+function IdlePower({ power }: { power: number }) {
+  const last = useRef(power)
+  const [gain, setGain] = useState(0)
+  useEffect(() => {
+    const diff = power - last.current
+    last.current = power
+    if (diff <= 0) return
+    setGain(diff)
+    const timer = window.setTimeout(() => setGain(0), 1600)
+    return () => window.clearTimeout(timer)
+  }, [power])
+  return (
+    <div className="idle-power" data-testid="idle-power">
+      <span>
+        전투력
+        <small>강화·무기·고양이를 모두 더한 힘</small>
+      </span>
+      <strong>
+        {gain > 0 && (
+          <i className="idle-power-gain" data-testid="idle-power-gain">
+            +{powerText(gain)}
+          </i>
+        )}
+        {powerText(power)}
+      </strong>
+    </div>
+  )
+}
+
 function IdleStats({ company }: { company: Company }) {
   const [count, setCount] = useState(1)
   const [buying, setBuying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   return (
     <>
-      <div className="idle-power">
-        <span>
-          화력
-          <small>모든 공격이 벽에 맞을 때</small>
-        </span>
-        <strong>{Math.round(company.idle?.dps ?? 0).toLocaleString()}</strong>
-      </div>
-      <div className="idle-power idle-power-real" data-testid="idle-wall-dps">
-        <span>
-          실제 벽 피해
-          <small>최근 초당 · 몬스터에 맞은 탄은 빼고</small>
-        </span>
-        <strong>{(company.idle?.wallDps ?? 0).toFixed(1)}</strong>
-      </div>
+      <IdlePower power={company.idle?.power ?? 0} />
       <div className="idle-buy-count">
         <span>강화 횟수</span>
         <div>

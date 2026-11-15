@@ -191,7 +191,8 @@ public record CompanyView(
       List<IdleActive> actives,
       List<CatDraw> lastDraws,
       Income income,
-      Offline offline) {}
+      Offline offline,
+      double power) {}
 
   /**
    * 고양이 뽑기에서 나온 한 마리 (517번).

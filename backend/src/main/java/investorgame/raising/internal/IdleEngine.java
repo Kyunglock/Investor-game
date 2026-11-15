@@ -184,6 +184,9 @@ class IdleEngine {
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
   private static final double REVOLVER_CRITICAL = 3;
   private static final double CRITICAL = 2;
+  // Matches weaponEffects.ts CRIT_CHANCE and BASE_CRIT_CHANCE.
+  private static final double REVOLVER_CHANCE = 0.4;
+  private static final double CRITICAL_CHANCE = 0.2;
   // Matches weaponEffects.ts SHOT_WEIGHT (decisions.md 495): every gun fires this many times
   // slower than its stats and each bullet hits that much harder. Damage per second is unchanged.
   private static final double BULLET_WEIGHT = 2;
@@ -449,6 +452,50 @@ class IdleEngine {
               / COOLDOWNS[skill][level];
     }
     return SPEED * total;
+  }
+
+  // 전투력 (538): the weights of the parts that are not bullet or skill damage.
+  private static final double POWER_SCALE = 100;
+  private static final double POWER_BUY_ORDERS = 2;
+  private static final double POWER_HP_WEIGHT = 0.25;
+
+  /**
+   * 전투력 (decisions.md 538번): 성장 탭이 보여 주는 숫자 하나. 모든 총과 스킬의 초당 피해(치명타 기대값 포함)에 매수 주문의 피해를 더하고, 매수벽 체력
+   * 강화의 4분의 1을 곱한다. 벽 번호는 보지 않으므로 강화·무기·고양이가 바뀔 때만 오른다.
+   */
+  private double power(CompanyState c) {
+    CompanyState.Idle s = state(c);
+    List<Shooter> shooters = shooters(c);
+    double total = 0;
+    for (int i = 0; i < shooters.size(); i++) {
+      Shooter shooter = shooters.get(i);
+      CompanyState.Weapon weapon = i == 0 ? c.weapon : s.catWeapons.get(s.fielded.get(i - 1));
+      double chance =
+          weapon != null && "revolver".equals(weapon.kind) ? REVOLVER_CHANCE : CRITICAL_CHANCE;
+      total +=
+          shooter.damage()
+              * shooter.perSecond()
+              * shooter.power()
+              / 1.25
+              * (1 + chance * (shooter.critical() - 1));
+    }
+    for (String code : s.fielded) {
+      int cat = CATS.indexOf(code);
+      if (cat < 0) continue;
+      int skill = CAT_SKILL[cat];
+      int level = skillLevel(s.cats.getOrDefault(code, 1)) - 1;
+      total +=
+          shooters.getFirst().damage()
+              * SKILL_DAMAGE[skill][level]
+              * SKILL_HITS[skill][level]
+              / COOLDOWNS[skill][level];
+    }
+    total += BUY_ORDER_DAMAGE * POWER_BUY_ORDERS * buyUp(c);
+    double hpUp = 0;
+    for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
+      if ("hp".equals(u.kind())) hpUp = u.bonusPercent() / 100.0;
+    }
+    return Math.floor(POWER_SCALE * SPEED * total * (1 + POWER_HP_WEIGHT * hpUp));
   }
 
   /** A cat's skill level (515, 534): one more at cat level 10, 20, 30 and 40, up to five. */
@@ -920,6 +967,7 @@ class IdleEngine {
                 s.offlineAt,
                 Math.round(s.offlineSeconds),
                 CompanyView.money(s.offlineEarned),
-                s.offlineCapped));
+                s.offlineCapped),
+        power(c));
   }
 }

@@ -76,6 +76,7 @@ function world() {
       })),
       fieldSlots: 4,
       wallDps: 0,
+      power: 1038,
       income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },
       offline: null,
       lastDraws: [],
@@ -199,7 +200,7 @@ try {
 
       // 성장 메뉴에는 능력치만 있다: 탭 줄이 없다.
       await page.getByRole('button', { name: '성장' }).click()
-      await expect(page.getByTestId('idle-wall-dps')).toBeVisible()
+      await expect(page.getByTestId('idle-power')).toBeVisible()
       await expect(page.getByRole('tab')).toHaveCount(0)
       await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
       await noOverflow(page)

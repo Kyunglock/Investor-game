@@ -349,10 +349,33 @@
     sans-serif;
   color: #9e8661;
 }
-.idle-power-real {
-  margin-top: 6px;
-  background: #eef3dc;
-  border-color: #c5d3a0;
+.idle-power-gain {
+  margin-right: 8px;
+  font-style: normal;
+  font-size: 13px;
+  color: #3f8f4c;
+  animation: idle-power-gain 1.6s ease-out both;
+}
+@keyframes idle-power-gain {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  20% {
+    opacity: 1;
+    transform: none;
+  }
+  80% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-power-gain {
+    animation: none;
+  }
 }
 .idle-power strong {
   font-size: 20px;

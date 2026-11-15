@@ -1335,6 +1335,8 @@ export interface components {
                 fieldSlots: number;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
+                /** @description 전투력 (538번). 성장 탭이 보여 주는 숫자 하나: 모든 총·스킬의 초당 피해(치명타 포함)와 매수 주문, 매수벽 체력 강화를 묶었다. 벽 번호는 보지 않는다 */
+                power: number;
                 /** @description 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다 */
                 cats: {
                     /** @enum {string} */

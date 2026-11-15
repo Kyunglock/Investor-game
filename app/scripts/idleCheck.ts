@@ -87,6 +87,7 @@ try {
         ],
         fieldSlots: 4,
         wallDps: 0,
+        power: 1038,
         // Real-time income (#803): the HUD shows it under the capital. No offline payout yet.
         income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },
         offline: null as { at: number; seconds: number; earned: number; capped: boolean } | null,
@@ -214,8 +215,10 @@ try {
     assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)
     await page.getByRole('button', { name: '성장' }).click()
     await expect(page.getByTestId('idle-menu')).toBeVisible()
-    await expect(page.getByText('모든 공격이 벽에 맞을 때')).toBeVisible()
-    await expect(page.getByTestId('idle-wall-dps')).toContainText('실제 벽 피해')
+    // 전투력 하나만 보인다 (538번): 화력과 실제 벽 피해는 뺐다.
+    await expect(page.getByTestId('idle-power')).toContainText('전투력')
+    await expect(page.getByTestId('idle-power')).toContainText('1,038')
+    await expect(page.getByText('실제 벽 피해')).toHaveCount(0)
     // Four stats (decisions.md 487): fire speed stops at its cap, the others can be bought.
     await expect(page.getByTestId('idle-stat')).toHaveCount(5)
     const stat = (kind: string) => page.locator(`[data-testid=idle-stat][data-kind=${kind}]`)

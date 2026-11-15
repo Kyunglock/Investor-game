@@ -372,6 +372,26 @@ class IdleEngineTest {
   }
 
   @Test
+  void powerIsOneNumberThatEveryUpgradeRaisesAndTheWallDoesNotChange() {
+    // 전투력 (538번): 권총·강화 없음이면 100 × 2배속 × (1 × 3.846 ÷ 1.25 × 1.2 + 매수 주문 1.5) = 1,038.
+    start(1);
+    double base = engine.view(state).power();
+    assertThat(base).isEqualTo(1038);
+    state.idle.wall = 500;
+    assertThat(engine.view(state).power()).as("the wall is not in it").isEqualTo(base);
+    double last = base;
+    for (String kind : List.of("damage", "fire", "hp", "buy", "crit")) {
+      state.battleLevels.put(kind, 10);
+      double now = engine.view(state).power();
+      assertThat(now).as(kind).isGreaterThan(last);
+      last = now;
+    }
+    state.idle.cats.put("mint", 1);
+    engine.fieldCat(state, "mint", true);
+    assertThat(engine.view(state).power()).as("a fielded cat").isGreaterThan(last);
+  }
+
+  @Test
   void aWallPaysThirtySecondsOfItsTimeIncomeAndABossWallThreeTimes() {
     // 537번: 벽 보상은 벽 체력이 아니라 그 벽의 시간 수입을 따른다. 첫 벽 0.6b, 10벽(큰손) 2.61b × 물가.
     start(1);
