@@ -6,7 +6,7 @@ import { meetingReady } from './meeting'
  * 아래 탭 (decisions.md 309·312번): 사무실 · 채용 · 이슈 · 기록. 웹의 탭을 폰 화면에 맞게 다시 나눴다. 뽑은 직원은 서버가 앉히므로 배치 탭은
  * 없다 (#801).
  */
-export type Tab = 'office' | 'market' | 'issue' | 'record'
+export type Tab = 'office' | 'market' | 'issue'
 
 /**
  * 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. assault는 주 게임 매도벽 돌파 스테이지 선택, side는 보조게임
@@ -96,7 +96,10 @@ export function tabFromWeb(tab: string | null): Tab | null {
   switch (tab) {
     case 'market':
       return 'market'
+    // 없앤 탭으로 오는 옛 링크는 사무실로 간다 (524·525번).
     case 'staff':
+    case 'record':
+    case 'history':
       return 'office'
     case 'meeting':
       return 'issue'

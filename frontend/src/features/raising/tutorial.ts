@@ -27,13 +27,12 @@ export const TUTORIAL_STEPS = 3
  * 튜토리얼이 잠갔다 여는 것들 (decisions.md 347번): 탭 셋, 종목회의, 건물 키우기. 'settle'은 분기 넘기기 때의 이름이 남은 것으로, 지금은 종목회의를
  * 가리킨다 (#803).
  */
-export type Feature = 'market' | 'settle' | 'issue' | 'record' | 'upgrade'
+export type Feature = 'market' | 'settle' | 'issue' | 'upgrade'
 
 export const FEATURE_NAMES: Record<Feature, string> = {
   market: '채용',
   settle: '종목회의',
   issue: '이슈',
-  record: '기록',
   upgrade: '건물 키우기',
 }
 
@@ -43,7 +42,7 @@ const STEP_ORDER: TutorialStep['id'][] = ['hire', 'meeting', 'grow']
 export const UNLOCKS: Record<TutorialStep['id'], Feature[]> = {
   hire: ['market'],
   meeting: ['settle', 'issue'],
-  grow: ['record', 'upgrade'],
+  grow: ['upgrade'],
 }
 
 export const ALL_FEATURES: Feature[] = STEP_ORDER.flatMap((id) => UNLOCKS[id])

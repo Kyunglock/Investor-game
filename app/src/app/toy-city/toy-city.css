@@ -536,43 +536,6 @@
   color: white;
   flex-shrink: 0;
 }
-.toy-mental-chip {
-  font-size: 10px;
-}
-.toy-mental-chip i {
-  background: #f4c1bc;
-  color: #b96468;
-}
-.toy-stage {
-  position: absolute;
-  top: max(130px, 17%);
-  left: 55px;
-  right: 55px;
-  text-align: center;
-  pointer-events: none;
-}
-.toy-stage > p {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.7px;
-  color: #7185a1;
-}
-.toy-stage h1 {
-  font-family: var(--font-game);
-  font-size: clamp(23px, 6.7vw, 31px);
-  line-height: 1.15;
-  margin: 7px 0 10px;
-  letter-spacing: -1px;
-}
-.toy-stage > span {
-  display: inline-block;
-  font-size: 10px;
-  background: #fffdf9;
-  border: 1px solid #c5cdec;
-  border-radius: 20px;
-  padding: 5px 10px;
-  box-shadow: 0 2px 0 #8d9ac422;
-}
 .toy-rival-goal {
   position: relative;
   pointer-events: auto;
@@ -911,9 +874,6 @@
     font-size: 9px;
     padding: 5px;
   }
-  .toy-stage h1 {
-    font-size: 23px;
-  }
   .toy-tutorial {
     top: max(210px, 28%);
     padding: 3px 8px;
@@ -1189,13 +1149,6 @@
 .toy-home .toy-growth i {
   background: linear-gradient(#c2e96a, #9bd13d);
 }
-.toy-home .toy-stage > p {
-  color: #aa7d48;
-}
-.toy-home .toy-stage > span {
-  background: #ffeabc;
-  border-color: #fff6d8;
-}
 .toy-home .toy-expand {
   background: #41aaad;
   color: #fff6dc;
@@ -1203,10 +1156,6 @@
 }
 .toy-home .toy-wallet i {
   background: #efb633;
-}
-.toy-home .toy-mental-chip i {
-  background: #f37c60;
-  color: #fff6dc;
 }
 /* 사무실은 같은 돌파 진행을 지원하는 관리 화면이다. */
 .toy-home .toy-support {

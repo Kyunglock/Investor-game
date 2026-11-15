@@ -66,7 +66,5 @@ if (process.env.EMPTY) {
   await page.getByRole('button', { name: '닫기 ✕' }).click()
   await page.getByTestId('tab-issue').click()
   await shot('issue')
-  await page.getByTestId('tab-record').click()
-  await shot('record')
 }
 await browser.close()

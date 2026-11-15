@@ -74,7 +74,7 @@ try {
 
   // 없어진 인력 관리 메뉴는 보이지 않는다 (#801).
   await expect(page.getByTestId('tab-staff')).toHaveCount(0)
-  for (const tab of ['market', 'issue', 'record']) {
+  for (const tab of ['market', 'issue']) {
     await page.getByTestId(`tab-${tab}`).click()
     await page.getByTestId('tab-office').click()
     await expect(home).toBeVisible()
