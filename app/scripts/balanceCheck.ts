@@ -35,6 +35,10 @@ try {
           stars: Array.from({ length: stage - 1 }, () => 3),
           bonusPercent: 0,
           exAvailable: false,
+          diamondsLeft: Array.from({ length: 10 }, (_, i) =>
+            i < stage - 1 ? 0 : i === 9 ? 200 : 100,
+          ),
+          exDiamonds: 300,
           lastResult: null,
         },
         armory: { mergeCount: 2, lastDraw: null, lastDraws: [] },
@@ -61,7 +65,7 @@ try {
         route.fulfill({ json: company }),
       )
       await page.goto(base)
-      await page.getByTestId('side-open').click()
+      await page.getByRole('button', { name: /^회사( 종목회의 가능| EX 디펜스 가능)?$/ }).click()
       await page.getByTestId('stage-open').click()
       await page.locator(`[data-testid=stage][data-stage="${stage}"]`).click()
       await page.getByTestId('mental-start').click()

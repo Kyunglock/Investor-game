@@ -3,7 +3,7 @@ import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
 
 // The company menu carries a dot ("종목회의 가능") while a stock meeting can be opened (#803).
-const COMPANY_MENU = /^회사( 종목회의 가능)?$/
+const COMPANY_MENU = /^회사( 종목회의 가능| EX 디펜스 가능)?$/
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,

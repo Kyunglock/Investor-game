@@ -126,6 +126,29 @@ class DiamondsTest {
   }
 
   @Test
+  void 스테이지마다_아직_받을_다이아가_보이고_별을_얻으면_줄어든다() {
+    // 527번(#797): 화면이 스테이지 목록에 남은 다이아를 보인다.
+    CompanyState c = engine.open(random, engine.openingCapital());
+    var before = engine.mental.stagesView(c, "2026-11-15");
+    assertThat(before.diamondsLeft()).hasSize(before.last());
+    assertThat(before.diamondsLeft().get(0)).isEqualTo(100);
+    assertThat(before.diamondsLeft().get(9)).as("10의 배수 스테이지는 두 배").isEqualTo(200);
+    assertThat(before.diamondsLeft().get(10)).isEqualTo(100);
+    assertThat(before.exDiamonds()).isEqualTo(300);
+    engine.mental.reportStage(c, 1, true, 2);
+    var after = engine.mental.stagesView(c, "2026-11-15");
+    assertThat(after.diamondsLeft().get(0)).as("3개째 별의 40이 남았다").isEqualTo(40);
+    assertThat(after.lastResult().diamonds()).isEqualTo(60);
+    engine.mental.reportStage(c, 1, true, 3);
+    assertThat(engine.mental.stagesView(c, "2026-11-15").diamondsLeft().get(0)).isZero();
+    // 서버가 판단한다: 못 깬 판은 별을 보내도 아무것도 주지 않는다.
+    long diamonds = c.diamonds;
+    engine.mental.reportStage(c, 2, false, 3);
+    assertThat(c.diamonds).isEqualTo(diamonds);
+    assertThat(engine.mental.stagesView(c, "2026-11-15").diamondsLeft().get(1)).isEqualTo(100);
+  }
+
+  @Test
   void 벽을_깨거나_이사해도_뽑기_재화는_나오지_않는다() {
     CompanyState c = engine.open(random, engine.openingCapital());
     c.capital = 10_000_000_000L;

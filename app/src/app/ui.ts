@@ -122,6 +122,19 @@ export function tabBadge(company: Company, tab: Tab): string | null {
   }
 }
 
+/**
+ * 멘탈 보호 스테이지 입구에 다는 표 (527번, #797): 지금 받을 다이아가 있을 때. 번호 스테이지의 다이아는 다 깰 때까지 늘 남아 있어 표가 꺼지지
+ * 않으므로, 오늘 EX 디펜스를 아직 안 했을 때만 단다.
+ */
+export function stageBadge(company: Company): string | null {
+  return company.stages?.exAvailable ? '!' : null
+}
+
+/** 그 스테이지에서 아직 받을 수 있는 다이아 (527번). 값이 없으면 0. */
+export function stageDiamonds(company: Company, stage: number): number {
+  return company.stages?.diamondsLeft?.[stage - 1] ?? 0
+}
+
 /** 회사를 처음 열 때는 준비된 사무실부터 보여 준다. */
 export function firstTab(_company: Company): Tab {
   return 'office'

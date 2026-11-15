@@ -952,6 +952,52 @@
   color: #c79a1a;
   white-space: nowrap;
 }
+/* 남은 다이아 (527번, #797): 칸 아래 한 줄. 10의 배수 스테이지는 오른쪽 위에 ×2. */
+.toy-stage-pick.has-diamonds {
+  position: relative;
+  min-height: 70px;
+  padding: 4px 0;
+}
+.toy-stage-diamonds {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1f6fb5;
+  white-space: nowrap;
+}
+.toy-stage-diamonds.is-done {
+  font-weight: 500;
+  font-size: 9px;
+  color: #2b2340;
+  opacity: 0.45;
+}
+.toy-stage-double {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  padding: 0 4px;
+  border: 1.5px solid #fffaf0;
+  border-radius: 8px;
+  background: #1f6fb5;
+  color: #fff;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 14px;
+}
+/* 좁은 화면(320px)에서 보스 칸의 "보스 ★★☆"가 칸을 넘지 않게. */
+@media (max-width: 359px) {
+  .toy-stage-grid {
+    gap: 6px;
+  }
+  .toy-stage-pick.is-boss small {
+    font-size: 9px;
+    letter-spacing: -0.4px;
+  }
+}
 .toy-stage-pick.is-cleared {
   background: #e7f8f1;
 }
