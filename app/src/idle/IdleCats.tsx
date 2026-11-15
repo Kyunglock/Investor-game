@@ -9,6 +9,7 @@ import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { magicTier } from '../mental/magic'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
+import { sortCats } from './catGrade'
 import { SkillBadge } from './SkillBadge'
 import { SKILLS } from './skills'
 
@@ -38,6 +39,8 @@ export function IdleCats({
   const hero = heroOf(company)
   const same = (w: Weapon, held: Cat['weapon']) => w.kind === held?.kind && w.grade === held.grade
   const fielded = idle.cats.filter((cat) => cat.fielded)
+  // 인벤토리: 가진 고양이를 등급순으로 먼저, 없는 고양이를 등급순으로 뒤에.
+  const sorted = sortCats(idle.cats)
   const cat = idle.cats.find((c) => c.code === picked && c.level > 0) ?? null
   const gun = cat
     ? (company.weapons?.find((w) => same(w, cat.weapon)) ?? DEFAULT_WEAPON)
@@ -200,7 +203,7 @@ export function IdleCats({
       <ul className="idle-cat-grid" aria-label={`고양이 인벤토리 · 동료 ${idle.cats.length}종`}>
         {Array.from(
           { length: Math.max(18, Math.ceil(idle.cats.length / COLUMNS) * COLUMNS) },
-          (_, i) => idle.cats[i] ?? null,
+          (_, i) => sorted[i] ?? null,
         ).map((c, i) =>
           c ? (
             <li key={c.code}>
