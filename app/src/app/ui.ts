@@ -1,4 +1,5 @@
 import type { Company } from '@web/api/client'
+import { hirable } from '@web/features/raising/gachaRules'
 import { create } from 'zustand'
 import { meetingReady } from './meeting'
 
@@ -109,13 +110,13 @@ export function tabFromWeb(tab: string | null): Tab | null {
   }
 }
 
-/** 탭에 다는 표: 이슈는 !(종목회의를 열거나 이어 갈 수 있다, #803), 채용은 채용권 수. */
+/** 탭에 다는 표: 이슈는 !(종목회의를 열거나 이어 갈 수 있다, #803), 채용은 지금 데려올 수 있는 직원 수(다이아와 남은 자리 가운데 작은 쪽, 526번). */
 export function tabBadge(company: Company, tab: Tab): string | null {
   switch (tab) {
     case 'issue':
       return meetingReady(company) ? '!' : null
     case 'market':
-      return company.gacha.tickets > 0 ? String(company.gacha.tickets) : null
+      return hirable(company) > 0 ? String(hirable(company)) : null
     default:
       return null
   }

@@ -28,7 +28,7 @@ interface RaisingState {
   load: () => Promise<void>
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). */
   open: () => Promise<void>
-  /** 채용권으로 count명을 뽑는다 (decisions.md 312번). 뽑힌 직원은 서버가 바로 자리에 앉힌다 (#801). */
+  /** 다이아로 count명을 뽑는다 (decisions.md 312·526번). 뽑힌 직원은 서버가 바로 자리에 앉힌다 (#801). */
   draw: (count: number) => Promise<void>
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
   upgrade: () => Promise<void>
@@ -50,12 +50,14 @@ interface RaisingState {
     kind: 'damage' | 'fire' | 'hp' | 'buy' | 'crit',
     levels?: number,
   ) => Promise<Company | null>
-  /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */
-  /** count개를 한꺼번에 (10연속, 517번). 없으면 하나. */
+  /**
+   * 다이아로 무기를 뽑는다 (decisions.md 366·526번). count가 없으면 하나(결과는 company.armory.lastDraw), 10이면 10연차로
+   * diamonds.tenCount개가 company.armory.lastDraws에 담긴다 (517번).
+   */
   drawWeapon: (count?: number) => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
-  /** 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번). 받은 회사(실패면 null)를 돌려준다. */
+  /** 다이아로 고양이를 뽑는다 (decisions.md 488·526번). count가 10이면 10연차다. 받은 회사(실패면 null)를 돌려준다. */
   drawCat: (count?: number) => Promise<Company | null>
   /** 액티브 스킬을 쓴다 (decisions.md 503번). 서버가 받아 줬으면 true. 전투를 멈추지 않게 busy를 켜지 않는다. */
   useActive: (code: ActiveCode) => Promise<boolean>

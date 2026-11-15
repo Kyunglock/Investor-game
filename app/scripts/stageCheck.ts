@@ -455,7 +455,7 @@ try {
       exAvailable: true,
       lastResult: null as null | Record<string, unknown>,
     },
-    armory: { tickets: 0, mergeCount: 2, lastDraw: null },
+    armory: { mergeCount: 2, lastDraw: null, lastDraws: [] },
     weapons: [
       {
         kind: 'pistol',
@@ -508,7 +508,7 @@ try {
         ...company,
         stages: {
           ...company.stages,
-          lastResult: { stage, cleared, stars, firstClear: false, capital: 0, tickets: 0 },
+          lastResult: { stage, cleared, stars, firstClear: false, capital: 0, diamonds: 0 },
         },
       }
     }
@@ -807,7 +807,9 @@ try {
   ).toContainText('연결을 확인')
   await page.screenshot({ path: resolve(out, 'result.png') })
   await page.getByTestId('mental-done').click()
-  await expect(page.getByTestId('mental-reward')).toHaveText('깨면 자본과 무기 뽑기권을 받는다.')
+  await expect(page.getByTestId('mental-reward')).toHaveText(
+    '깨면 자본을, 별을 처음 얻으면 다이아를 받는다.',
+  )
   assert.equal(reports, 2)
   await page.getByTestId('mental-done').click()
   await expect(page.getByTestId('mental-result')).toHaveCount(0)

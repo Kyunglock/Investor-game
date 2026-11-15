@@ -7,7 +7,8 @@ function company(over: Partial<Company> = {}): Company {
     seats: 4,
     employees: [],
     desks: [{ code: 'bio', trades: true }],
-    gacha: { tickets: 0 },
+    diamonds: { amount: 0, draw: 100, tenDraw: 1000, tenCount: 11, hire: 100 },
+    gacha: {},
     meetings: { chances: 0, max: 3, nextSeconds: 60 },
     invest: null,
     ...over,
@@ -62,9 +63,19 @@ describe('앱 탭 (decisions.md 309번)', () => {
     expect(tabFromWeb('staff')).toBe('office')
   })
 
-  it('탭의 표: 이슈 !, 채용권 수', () => {
+  it('탭의 표: 이슈 !, 채용은 다이아와 남은 자리로 데려올 수 있는 수', () => {
+    const diamonds = (amount: number) => ({ ...company().diamonds, amount })
+    // 다이아가 넉넉해도 남은 자리(4 − 2)까지만, 자리가 남아도 다이아가 닿는 데까지만 센다.
+    expect(tabBadge(company({ diamonds: diamonds(150) }), 'market')).toBe('1')
+    expect(tabBadge(company({ diamonds: diamonds(99) }), 'market')).toBeNull()
+    expect(
+      tabBadge(
+        company({ diamonds: diamonds(1000), employees: [{}, {}, {}, {}] as never }),
+        'market',
+      ),
+    ).toBeNull()
     const c = company({
-      gacha: { tickets: 2 } as never,
+      diamonds: diamonds(1000),
       employees: [
         { id: 1, desk: 'bio' },
         { id: 2, desk: 'bio' },
