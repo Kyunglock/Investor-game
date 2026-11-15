@@ -325,6 +325,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/shop/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 상점에서 상품 하나를 산다 (decisions.md 541번)
+         * @description 게임 재화로만 산다. 값은 다이아(priceDiamonds)나 돈(priceMoney: 지금 회사의 초당 수입 몇 분어치)이고, 주는 것도 다이아나 돈이다.
+         *     상품마다 하루에 살 수 있는 횟수가 있고 한국 시간 자정에 다시 찬다(서버 시각으로 판정한다). 산 것은 shop.lastReceipt에 담긴다.
+         *     없는 상품이거나 오늘 횟수를 다 썼거나 재화가 모자라면 400.
+         */
+        post: operations["buyShopItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/ex": {
         parameters: {
             query?: never;
@@ -872,6 +894,34 @@ export interface components {
                     cat?: string | null;
                     catName?: string | null;
                 }[];
+            };
+            /** @description 상점 (decisions.md 541번). 게임 재화로만 사는 날마다의 상품. 남은 횟수는 한국 시간 자정에 다시 찬다 */
+            shop: {
+                /** @description 진열 차례대로 */
+                items: {
+                    code: string;
+                    name: string;
+                    /** @description 다이아 값. 돈으로 사거나 무료면 0 */
+                    priceDiamonds: number;
+                    /** @description 돈 값(지금의 초당 수입 기준). 다이아로 사거나 무료면 null */
+                    priceMoney?: number | null;
+                    /** @description 주는 다이아. 돈을 주면 0 */
+                    giveDiamonds: number;
+                    /** @description 돈을 주면 회사의 초당 수입 몇 분어치인가. 다이아를 주면 0 */
+                    giveIncomeMinutes: number;
+                    /** @description 돈을 주면 지금 사면 들어올 돈. 다이아를 주면 null */
+                    giveMoney?: number | null;
+                    /** @description 하루에 살 수 있는 횟수 */
+                    dailyLimit: number;
+                    /** @description 오늘 남은 횟수 */
+                    left: number;
+                }[];
+                /** @description 마지막으로 산 것. 산 적이 없으면 null */
+                lastReceipt?: {
+                    code: string;
+                    diamonds: number;
+                    money: number;
+                } | null;
             };
             /** @description 출석 보상 (decisions.md 528번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다 */
             attendance: {
@@ -1910,6 +1960,32 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 보상을 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    buyShopItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 상품 코드 (shop.items[].code) */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 산 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -15,19 +15,22 @@ import { CAT_ODDS, catRevealPlan } from './catGrade'
 type Kind = 'cat' | 'weapon'
 
 /**
- * 뽑기 (decisions.md 508·517·526·530번): 고양이 뽑기와 무기 뽑기를 한 자리에서 고른다. 둘 다 다이아로 뽑고 값도 같다(한 번 draw, 10연차는
+ * 뽑기 (decisions.md 508·517·526·530번): 고양이 뽑기와 무기 뽑기를 한 자리에서 고른다. 상점 탭에 있다(541번). 둘 다 다이아로 뽑고 값도 같다(한 번 draw, 10연차는
  * tenDraw에 tenCount개). 상자가 떨다 열리는 연출도 같다. 결과는 서버 응답의 스냅샷이다.
  */
 export function IdleGacha({
   company,
   onCat,
+  initialKind,
 }: {
   company: Company
-  /** 고양이를 뽑았다: 그 고양이를 아래 상세에 보인다. */
+  /** 처음 보일 뽑기. 무기 탭에서 오면 무기 뽑기다 (540번). */
+  initialKind?: Kind
+  /** 고양이를 뽑았다. */
   onCat: (code: CatCode) => void
 }) {
   const busy = useRaisingStore((s) => s.busy)
-  const [kind, setKind] = useState<Kind>('cat')
+  const [kind, setKind] = useState<Kind>(initialKind ?? 'cat')
   const [catReveal, setCatReveal] = useState<{ id: number; result: CatDraw | null } | null>(null)
   const [gunReveal, setGunReveal] = useState<{ id: number; result: DrawResult | null } | null>(null)
   const [ten, setTen] = useState<{ id: number; kind: Kind; cards: TenCard[] | null } | null>(null)
@@ -177,7 +180,7 @@ export function IdleGacha({
       () => setTen(null),
     )
   const badge = drawBadge(company)
-  const short = '다이아가 모자라요 · 멘탈 보호 스테이지의 별로 얻어요'
+  const short = '다이아가 모자라요 · 출석·시즌패스·상점에서 얻어요'
   const note =
     kind === 'cat'
       ? drawn

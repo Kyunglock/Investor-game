@@ -1862,3 +1862,39 @@
 .idle-cat-grid button[data-grade="S"].owned {
   border-color: #e7b23c;
 }
+
+/* 무기 탭 (540번): 누가 들지 고르는 줄, 지금 든 무기, 장비 목록. */
+.idle-wearers {
+  flex-wrap: wrap;
+}
+.idle-weapon-held {
+  cursor: default;
+}
+.idle-weapon-draw {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px;
+  border: 1.5px dashed #d9a85a;
+  border-radius: 12px;
+  background: #fff7e2;
+  font:
+    700 12px "Noto Sans KR",
+    sans-serif;
+  color: #9a6420;
+}
+/* 상점 탭 (541번): 날마다의 상품은 성장 탭의 능력치 칸과 같은 모양이다. */
+.idle-shop-item .idle-buy {
+  min-width: 78px;
+}
+.idle-shop-got {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #eef6df;
+  font:
+    700 12px "Noto Sans KR",
+    sans-serif;
+  color: #3f7a2c;
+  text-align: center;
+}

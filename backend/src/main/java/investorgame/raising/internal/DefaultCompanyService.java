@@ -386,6 +386,7 @@ class DefaultCompanyService implements CompanyService {
             c.meetingChances, engine.meetingMax(), engine.meetingWaitSeconds(c, now)),
         rewards.view(c),
         rewards.passView(c),
+        rewards.shopView(c),
         lockedDesks,
         engine.mental.weaponViews(c),
         engine.mental.armoryView(c),
@@ -443,6 +444,15 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView attend(UUID sessionId) {
     CompanyRepository.Row row = lockActive(sessionId);
     rewards.attend(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView buyShop(UUID sessionId, String code) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    rewards.buy(row.state(), code);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

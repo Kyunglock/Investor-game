@@ -40,6 +40,7 @@ public record CompanyView(
     Meetings meetings,
     Attendance attendance,
     Pass pass,
+    Shop shop,
     List<LockedDesk> lockedDesks,
     List<Weapon> weapons,
     Armory armory,
@@ -117,6 +118,37 @@ public record CompanyView(
       String weaponGrade,
       String cat,
       String catName) {}
+
+  /**
+   * 상점 (decisions.md 541번): 게임 재화로만 사는 날마다의 상품. 한국 시간 자정에 남은 횟수가 다시 찬다.
+   *
+   * @param lastReceipt 마지막으로 산 것. 산 적이 없으면 null
+   */
+  public record Shop(List<ShopItem> items, ShopReceipt lastReceipt) {}
+
+  /**
+   * 상품 하나.
+   *
+   * @param priceDiamonds 다이아 값. 돈으로 사거나 무료면 0
+   * @param priceMoney 돈 값(지금의 초당 수입 기준). 다이아로 사거나 무료면 null
+   * @param giveDiamonds 주는 다이아. 돈을 주면 0
+   * @param giveIncomeMinutes 돈을 주면 회사의 초당 수입 몇 분어치인가. 다이아를 주면 0
+   * @param giveMoney 돈을 주면 지금 사면 들어올 돈. 다이아를 주면 null
+   * @param dailyLimit 하루에 살 수 있는 횟수
+   * @param left 오늘 남은 횟수
+   */
+  public record ShopItem(
+      String code,
+      String name,
+      long priceDiamonds,
+      java.math.BigDecimal priceMoney,
+      long giveDiamonds,
+      int giveIncomeMinutes,
+      java.math.BigDecimal giveMoney,
+      int dailyLimit,
+      int left) {}
+
+  public record ShopReceipt(String code, long diamonds, java.math.BigDecimal money) {}
 
   /**
    * 출석 보상 (decisions.md 528번): 하루에 한 번, 한국 시간 자정에 다시 열린다. 누적 출석이라 빠진 날이 있어도 이어서 간다.

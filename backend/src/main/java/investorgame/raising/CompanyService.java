@@ -81,6 +81,9 @@ public interface CompanyService {
   /** 오늘의 출석 보상을 받는다 (decisions.md 528번). 하루에 한 번, 한국 시간 자정 기준. 오늘 이미 받았으면 400. */
   CompanyView attend(UUID sessionId);
 
+  /** 상점에서 상품 하나를 산다 (decisions.md 541번). 하루 횟수를 다 썼거나 재화가 모자라면 400. */
+  CompanyView buyShop(UUID sessionId, String code);
+
   /**
    * 시즌패스의 단계 보상을 받는다 (decisions.md 529번). step이 null이면 받을 수 있는 것을 모두 받는다. 도달하지 않았거나 이미 받았으면 400.
    */

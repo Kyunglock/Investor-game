@@ -91,9 +91,8 @@ try {
     })
     await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5186/app/')
     await page.getByTestId('idle-battle').waitFor()
-    // 무기는 고양이 메뉴의 사장냥 장비 목록에 등급 높은 순으로 있다 (530번).
-    await page.getByRole('button', { name: '고양이', exact: true }).click()
-    await page.getByTestId('cat-gun').click()
+    // 무기는 무기 탭의 사장냥 장비 목록에 등급 높은 순으로 있다 (530·540번).
+    await page.getByRole('button', { name: /^무기/ }).click()
     await expect(page.getByTestId('cat-weapon').first()).toHaveAttribute('data-grade', 'LR')
     await page.screenshot({ path: resolve(out, `inventory-${grade}.png`) })
     await page.getByRole('button', { name: '닫기 ✕', exact: true }).click()
@@ -105,10 +104,9 @@ try {
       const oldCanvas = await page.getByTestId('idle-canvas').locator('canvas').elementHandle()
       assert.ok(oldCanvas)
       const next = grade === 'F' ? 'LR' : 'F'
-      await page.getByRole('button', { name: '고양이', exact: true }).click()
-      await page.getByTestId('cat-gun').click()
+      await page.getByRole('button', { name: /^무기/ }).click()
       await page.locator(`[data-testid="cat-weapon"][data-grade="${next}"]`).first().click()
-      await expect(page.getByTestId('cat-detail').getByTestId('cat-gun')).toContainText(next)
+      await expect(page.getByTestId('weapon-now')).toContainText(next)
       await expect.poll(() => oldCanvas.evaluate((canvas) => canvas.isConnected)).toBe(false)
       await expect(page.getByTestId('idle-canvas').locator('canvas')).toHaveCount(1)
       await page.getByRole('button', { name: '닫기 ✕', exact: true }).click()

@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
@@ -8,9 +8,7 @@ import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { magicTier } from '../mental/magic'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
-import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
-import { IdleGacha } from './IdleGacha'
 import { SkillBadge } from './SkillBadge'
 import { SKILLS } from './skills'
 
@@ -20,21 +18,21 @@ type Cat = NonNullable<Company['idle']>['cats'][number]
 const COLUMNS = 6
 
 /**
- * 고양이 메뉴 (decisions.md 488·491·493·526·530번): 다이아로 고양이와 무기를 뽑고, 위의 출전 칸 넷에 세우고, 사장냥과 고양이마다 가진 무기를
- * 하나씩 들린다. 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그 고양이의 고유 스킬 설명과 장비가 나온다 (501번). 결과는 서버가 정한다.
+ * 고양이 메뉴 (decisions.md 488·491·493·530번): 위의 출전 칸 넷에 세우고, 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그
+ * 고양이의 등급·고유 스킬 설명과 든 무기가 나온다 (501번). 무기를 바꾸는 곳은 무기 탭이고(540번) 뽑기는 상점 탭이다(541번). 결과는 서버가 정한다.
  */
-export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?: boolean }) {
+export function IdleCats({
+  company,
+  onGear,
+}: {
+  company: Company
+  /** 그 고양이(null이면 사장냥)의 무기를 고르러 무기 탭으로 간다 (540번). */
+  onGear: (code: CatCode | null) => void
+}) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   // 고른 고양이. null이면 사장냥이다.
   const [picked, setPicked] = useState<CatCode | null>(null)
-  const [arming, setArming] = useState(Boolean(gearAsked))
-  // 전투에서 "무기 바꾸기"로 왔다(Windows): 사장냥의 장비 목록을 연다.
-  useEffect(() => {
-    if (!gearAsked) return
-    setPicked(null)
-    setArming(true)
-  }, [gearAsked])
   const idle = company.idle
   if (!idle) return null
   const hero = heroOf(company)
@@ -46,20 +44,12 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
     : hero.weapon
   const pick = (code: CatCode | null) => {
     sfx.tap()
-    setArming(false)
     setPicked(picked === code ? null : code)
   }
   const skill = cat ? SKILLS[cat.skill] : null
   const canMerge = mergeable(company).length > 0
   return (
     <>
-      <IdleGacha
-        company={company}
-        onCat={(code) => {
-          setPicked(code)
-          setArming(false)
-        }}
-      />
       <p className="idle-subtitle">
         출전 {fielded.length} / {idle.fieldSlots} · 사장냥은 늘 함께 싸워요
       </p>
@@ -186,10 +176,9 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
           type="button"
           className="idle-cat-gun"
           data-testid="cat-gun"
-          aria-expanded={arming}
           onClick={() => {
             sfx.tap()
-            setArming(!arming)
+            onGear(cat?.code ?? null)
           }}
         >
           <GunSprite kind={gun.kind} grade={gun.grade} width={40} />
@@ -201,13 +190,12 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
             </small>
           </span>
           <em className="idle-gun-open">
-            장비 {arming ? '▴' : '▾'}
-            {canMerge && !arming && (
+            무기 탭 ▸
+            {canMerge && (
               <i className="idle-gun-dot" role="img" aria-label="합칠 수 있는 무기 있음" />
             )}
           </em>
         </button>
-        {arming && <CatGear company={company} wearer={cat} />}
       </article>
       <ul className="idle-cat-grid" aria-label={`고양이 인벤토리 · 동료 ${idle.cats.length}종`}>
         {Array.from(

@@ -1,7 +1,7 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { diamondText } from '@web/features/raising/gachaRules'
-import { useRaisingStore } from '@web/features/raising/store'
+import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useShownIdle } from '@web/features/raising/useIdleBattle'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { rate, readOfflineSeen, shouldShowOffline } from '../app/income'
@@ -10,6 +10,7 @@ import { Sheet } from '../app/Sheet'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 import { stageBadge, useAppUi } from '../app/ui'
 import { useCountUp } from '../app/useCountUp'
+import { mergeable } from '../mental/armory'
 import { idleThreat } from '../mental/assault'
 import { idleBuyOrderDamage } from '../mental/buyWall'
 import { heroOf } from '../mental/hero'
@@ -22,17 +23,29 @@ import { IdleCats } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
 import { IdlePass } from './IdlePass'
 import { IdleSandbox } from './IdleSandbox'
+import { IdleShop } from './IdleShop'
+import { IdleWeapons } from './IdleWeapons'
 import { IdleIcon } from './icons'
 import { OfflineIncome } from './OfflineIncome'
+import { freeLeft } from './shop'
 import './idle-home.css'
 
-type Menu = 'battle' | 'growth' | 'cats' | 'company'
-const menus: { key: Menu; label: string }[] = [
-  { key: 'battle', label: '돌파' },
-  { key: 'growth', label: '성장' },
-  { key: 'cats', label: '고양이' },
-  { key: 'company', label: '회사' },
-]
+type Menu = 'battle' | 'growth' | 'weapons' | 'cats' | 'shop' | 'company'
+/**
+ * 회사 탭은 꺼 두었다 (decisions.md 540번): 아래 메뉴의 회사 탭과 위의 회사 메뉴 단추(☰)가 나오지 않는다. 회사 화면의 코드는 그대로라 이 값을
+ * 켜면 돌아온다.
+ */
+export const COMPANY_ENABLED = false
+const menus: { key: Menu; label: string }[] = (
+  [
+    { key: 'battle', label: '돌파' },
+    { key: 'growth', label: '성장' },
+    { key: 'weapons', label: '무기' },
+    { key: 'cats', label: '고양이' },
+    { key: 'shop', label: '상점' },
+    { key: 'company', label: '회사' },
+  ] as const
+).filter((m) => COMPANY_ENABLED || m.key !== 'company')
 type Upgrade = NonNullable<Company['battleUpgrades']>[number]
 /** 능력치 (487번): 공격력·공격 속도·매수벽(체력 강화, 410번: 최대 멘탈과 그 절반인 매수벽 체력이 함께 오른다)·치명타 피해. */
 const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
@@ -80,9 +93,14 @@ export function IdleHome({
   office: ReactNode
 }) {
   const [ownMenu, setMenu] = useState<Menu>('battle')
-  // 전투에서 "무기 바꾸기"로 오면(Windows) 고양이 탭의 사장냥 장비가 열린다 (530번). 닫거나 다른 데로 가면 그 요청을 지운다.
+  // 전투에서 "무기 바꾸기"로 오면(Windows) 무기 탭이 사장냥의 장비로 열린다 (530·540번). 닫거나 다른 데로 가면 그 요청을 지운다.
   const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
-  const menu = weaponsAsked ? 'cats' : ownMenu
+  const menu = weaponsAsked ? 'weapons' : ownMenu
+  // 무기 탭에서 무기를 들 고양이. null이면 사장냥이다. 고양이 탭의 "무기 탭 ▸"이 그 고양이로 연다.
+  const [ownWearer, setWearer] = useState<CatCode | null>(null)
+  const wearer = weaponsAsked ? null : ownWearer
+  // 상점이 처음 보일 뽑기: 무기 탭에서 오면 무기 뽑기다.
+  const [shopKind, setShopKind] = useState<'cat' | 'weapon'>('cat')
   const go = (next: Menu) => {
     if (weaponsAsked) useAppUi.getState().closeSheet()
     setMenu(next)
@@ -110,6 +128,8 @@ export function IdleHome({
     return () => useAppUi.getState().setModalBack(previous)
   }, [menu])
   const navigate = (next: Menu) => {
+    // 아래 메뉴로 상점에 오면 고양이 뽑기부터 보인다.
+    if (next === 'shop') setShopKind('cat')
     if (next === 'company') {
       go('battle')
       onManage()
@@ -120,6 +140,8 @@ export function IdleHome({
   }
   const activeMenu = menu === 'battle' && managing ? 'company' : menu
   const affordable = company.battleUpgrades?.some((u) => !maxed(u) && u.price <= company.capital)
+  const canMerge = mergeable(company).length > 0
+  const shopFree = freeLeft(company)
   const nav = (
     <nav className="idle-nav" aria-label="게임 메뉴">
       {menus.map((item) => (
@@ -134,6 +156,12 @@ export function IdleHome({
           <span>{item.label}</span>
           {item.key === 'growth' && affordable && (
             <i className="idle-dot" role="img" aria-label="강화 가능" />
+          )}
+          {item.key === 'weapons' && canMerge && (
+            <i className="idle-dot" role="img" aria-label="합칠 수 있는 무기 있음" />
+          )}
+          {item.key === 'shop' && shopFree && (
+            <i className="idle-dot" role="img" aria-label="무료 상품 있음" data-testid="shop-dot" />
           )}
           {item.key === 'company' && meeting && (
             <i
@@ -205,9 +233,11 @@ export function IdleHome({
               <IdleIcon name="diamond" />
               {company.sandboxInfinite ? '∞' : diamondText(company.diamonds.amount)}
             </div>
-            <button type="button" aria-label="회사 메뉴" onClick={onManage}>
-              ☰
-            </button>
+            {COMPANY_ENABLED && (
+              <button type="button" aria-label="회사 메뉴" onClick={onManage}>
+                ☰
+              </button>
+            )}
           </header>
           <IdleOptions />
           {/* 설정 옆의 빠른 단추 (528·529번): 시즌패스를 열고, 출석판을 다시 연다. */}
@@ -243,7 +273,31 @@ export function IdleHome({
               <IdleStats company={company} />
             </>
           )}
-          {menu === 'cats' && <IdleCats company={company} gearAsked={weaponsAsked} />}
+          {menu === 'weapons' && (
+            <IdleWeapons
+              company={company}
+              wearer={wearer}
+              onWearer={(code) => {
+                if (weaponsAsked) useAppUi.getState().closeSheet()
+                setMenu('weapons')
+                setWearer(code)
+              }}
+              onDraw={() => {
+                setShopKind('weapon')
+                go('shop')
+              }}
+            />
+          )}
+          {menu === 'cats' && (
+            <IdleCats
+              company={company}
+              onGear={(code) => {
+                setWearer(code)
+                go('weapons')
+              }}
+            />
+          )}
+          {menu === 'shop' && <IdleShop key={shopKind} company={company} kind={shopKind} />}
           <p className="idle-sheet-note">
             {connected
               ? halted

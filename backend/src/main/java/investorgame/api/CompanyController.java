@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -264,6 +265,22 @@ class CompanyController {
         sessionId,
         company.companyId(),
         company.attendance().today(),
+        ClientIp.current());
+    return company;
+  }
+
+  /** 상점에서 상품 하나를 산다 (decisions.md 541번). 하루 횟수를 다 썼거나 재화가 모자라면 400. */
+  @PostMapping("/shop/{code}")
+  CompanyView buyShop(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable String code) {
+    UUID sessionId = cookies.requirePlayer(token);
+    CompanyView company = companies.buyShop(sessionId, code);
+    PLAY.info(
+        "company-shop session={} company={} item={} ip={}",
+        sessionId,
+        company.companyId(),
+        code,
         ClientIp.current());
     return company;
   }
