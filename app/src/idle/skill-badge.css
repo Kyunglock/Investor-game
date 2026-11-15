@@ -1,0 +1,74 @@
+/* 스킬 배지 (decisions.md 531번, #800): 그림의 부분마다 색을 달리한다. 반짝임은 은은하게, 움직임을 줄이면 끈다. */
+.skill-badge {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+/* 운석: 불꼬리는 노랑에서 바탕색으로, 돌의 자국은 선으로만. */
+.skill-badge-glyph .tail {
+  fill: #ffe98a;
+}
+.skill-badge-glyph .mark,
+.skill-badge-glyph .spark {
+  fill: none;
+  stroke-width: 1.4;
+}
+.skill-badge-glyph .spark {
+  stroke: #fff;
+  stroke-width: 2;
+}
+/* 물줄기: 굵은 선 둘을 겹쳐 외곽선을 낸다. */
+.skill-badge-glyph .jet-line {
+  fill: none;
+  stroke-width: 9;
+}
+.skill-badge-glyph .jet {
+  fill: none;
+  stroke: #eefaff;
+  stroke-width: 6;
+}
+/* 충차: 통나무는 밝게, 머리는 돌빛, 바퀴는 어둡게. */
+.skill-badge-glyph.is-ram .head {
+  fill: #e9edf2;
+}
+.skill-badge-glyph.is-ram .log {
+  fill: #f6d9a2;
+}
+.skill-badge-glyph.is-ram .wheel {
+  fill: #6a3f1b;
+}
+.skill-badge-glyph.is-meteor circle {
+  fill: #fff4c9;
+}
+.skill-badge.is-locked .skill-badge-glyph * {
+  fill: #ded8cc;
+}
+.skill-badge.is-locked .skill-badge-glyph .mark {
+  fill: none;
+}
+.skill-badge-glints path {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0.9;
+  animation: skill-badge-glint 3.2s ease-in-out infinite;
+}
+.skill-badge-glints path + path {
+  animation-delay: 1.6s;
+}
+@keyframes skill-badge-glint {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.5);
+  }
+  45%,
+  55% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skill-badge-glints path {
+    animation: none;
+  }
+}

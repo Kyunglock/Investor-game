@@ -1753,3 +1753,46 @@
     animation: none;
   }
 }
+
+/* 스킬 배지 (531번): 출전 칸·고양이 격자의 귀퉁이에 작게, 스킬 설명에는 크게. */
+.idle-cat-slot,
+.idle-cat-cell {
+  position: relative;
+}
+.idle-cat-badge {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  filter: drop-shadow(0 1px 1px #54331b55);
+  pointer-events: none;
+}
+.idle-cat-cell .idle-cat-badge {
+  left: 1px;
+  top: 1px;
+}
+.idle-skill-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 2px;
+}
+.idle-skill-tier {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 2px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #a08967;
+  opacity: 0.75;
+}
+.idle-skill-tier.is-now {
+  border-color: #d9a85a;
+  background: #fff;
+  color: #6b4322;
+  font-weight: 700;
+  opacity: 1;
+}
