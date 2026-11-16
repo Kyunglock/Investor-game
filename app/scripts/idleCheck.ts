@@ -162,7 +162,7 @@ try {
         moves.push('retreat')
         const wall = company.idle.wall
         company.idle.wall = Math.max(Math.floor((wall - 1) / 50) * 50 + 1, wall - 10)
-        company.idle.boss = company.idle.wall % 10 === 0
+        company.idle.boss = company.idle.wall % 50 === 0
         company.idle.hp = company.idle.maxHp = 1200
         company.idle.circuitSeconds = 0
         Object.assign(company.idle, {
@@ -622,17 +622,22 @@ try {
         await expect.poll(running, { timeout: 10000 }).toBe(false)
       }
       await expect.poll(async () => (await queuedWalls()).map((wall) => wall.wall)).toEqual([9, 10])
-      assert.equal((await queuedWalls())[1].boss, true)
-      // Every tenth wall is a 대량 매도벽 as before: no button, no halt (547).
+      // The tenth wall is an ordinary wall now (550): no big wall, no halt.
+      assert.equal((await queuedWalls())[1].boss, false)
       company.idle.wall = 10
-      company.idle.boss = true
       await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 10')
       await expect(page.getByTestId('idle-wall-number')).toHaveAttribute('data-state', 'auto')
       await expect
         .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
         .toEqual([11, 12])
-      // The boss challenge comes by itself at every 50th wall and starts with a circuit breaker.
+      // The boss wall stands at every 50th wall only: it shows behind wall 48 and 49.
+      company.idle.wall = 48
+      await expect
+        .poll(async () => (await queuedWalls()).map((wall) => wall.boss))
+        .toEqual([false, true])
+      // The boss challenge comes by itself and starts with a circuit breaker.
       company.idle.wall = 50
+      company.idle.boss = true
       company.idle.circuitSeconds = 4
       await expect(page.getByTestId('idle-wall-number')).toHaveText('거래 정지')
       await expect

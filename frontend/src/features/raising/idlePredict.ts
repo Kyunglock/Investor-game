@@ -7,7 +7,7 @@
 /** IdleEngine.maxHp: the same curve, or the two sides disagree about when a wall breaks. */
 export function idleMaxHp(wall: number) {
   const depth = wall - 1
-  return (20 + 12 * depth + 0.2 * depth * depth) * (wall % 10 === 0 ? 3 : 1)
+  return (20 + 12 * depth + 0.2 * depth * depth) * (wall % IDLE_BOSS_EVERY === 0 ? 3 : 1)
 }
 
 /** Hits the server never answered are forgotten after this long (decisions.md 497). */

@@ -212,13 +212,16 @@ class IdleEngineTest {
 
   @Test
   void aBossWallCannotBePierced() {
-    // 대량 매도벽(열 번째 벽마다)은 뚫리지 않는다: 맞지도 않고 그 뒤로 가지도 않는다.
-    assertThat(IdleEngine.pierceBlocked(10, 1)).isTrue();
-    assertThat(IdleEngine.pierceBlocked(11, 1)).isTrue();
-    assertThat(IdleEngine.pierceBlocked(11, 2)).isTrue();
-    assertThat(IdleEngine.pierceBlocked(12, 2)).isTrue();
-    assertThat(IdleEngine.pierceBlocked(9, 1)).isFalse();
-    assertThat(IdleEngine.pierceBlocked(13, 2)).isFalse();
+    // 대량 매도벽(보스, 50번째 벽마다)은 뚫리지 않는다: 맞지도 않고 그 뒤로 가지도 않는다.
+    assertThat(IdleEngine.pierceBlocked(50, 1)).isTrue();
+    assertThat(IdleEngine.pierceBlocked(51, 1)).isTrue();
+    assertThat(IdleEngine.pierceBlocked(51, 2)).isTrue();
+    assertThat(IdleEngine.pierceBlocked(52, 2)).isTrue();
+    assertThat(IdleEngine.pierceBlocked(49, 1)).isFalse();
+    assertThat(IdleEngine.pierceBlocked(53, 2)).isFalse();
+    // 열 번째 벽은 이제 보통 벽이다 (550번).
+    assertThat(IdleEngine.pierceBlocked(10, 1)).isFalse();
+    assertThat(IdleEngine.pierceBlocked(11, 2)).isFalse();
   }
 
   @Test
@@ -446,7 +449,7 @@ class IdleEngineTest {
 
   @Test
   void aWallPaysThirtySecondsOfItsTimeIncomeAndABossWallThreeTimes() {
-    // 537번: 벽 보상은 벽 체력이 아니라 그 벽의 시간 수입을 따른다. 첫 벽 0.6b, 10벽(큰손) 2.61b × 물가.
+    // 537번: 벽 보상은 벽 체력이 아니라 그 벽의 시간 수입을 따른다. 첫 벽 0.6b, 10벽 0.87b × 물가, 보스 벽(50번째)은 그 세 배.
     start(1);
     state.capital = 0;
     state.idle.damage = IdleEngine.maxHp(1) - 1;
@@ -459,8 +462,26 @@ class IdleEngineTest {
     state.capital = 0;
     tick(1000, new IdleHit(10, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(11);
-    double boss = 20000 * 1.45 * 30 * 3 * StrictMath.pow(1.1, 9);
-    assertThat(state.capital).isBetween(boss, boss * 1.03);
+    // The tenth wall is an ordinary wall now (550): no three-fold reward.
+    double tenth = 20000 * 1.45 * 30 * StrictMath.pow(1.1, 9);
+    assertThat(state.capital).isBetween(tenth, tenth * 1.08);
+    assertThat(IdleEngine.maxHp(10)).isCloseTo(144.2, offset(1e-9));
+    // The boss wall (every 50th) has three times the health and pays three times the reward.
+    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 1088.2, offset(1e-9));
+    state.idle.wall = 50;
+    state.idle.damage = IdleEngine.maxHp(50) - 1;
+    // Its own clear reward (549) was paid before: only the wall reward is counted here.
+    state.idle.bossCleared = 50;
+    double before = state.capital;
+    tick(1000, new IdleHit(50, "bullet", 1, 1.0));
+    assertThat(state.idle.wall).isEqualTo(51);
+    double paid = state.capital - before;
+    state.idle.wall = 49;
+    state.idle.damage = IdleEngine.maxHp(49) - 1;
+    before = state.capital;
+    tick(1000, new IdleHit(49, "bullet", 1, 1.0));
+    double plain = state.capital - before;
+    assertThat(paid).isBetween(plain * 2.9, plain * 3.5);
   }
 
   @Test
@@ -483,12 +504,12 @@ class IdleEngineTest {
   void theBossChallengeComesEveryFiftiethWallAndStartsWithACircuitBreaker() {
     start(9);
     state.battleLevels.put("damage", 1_000_000);
-    // The tenth wall is a 대량 매도벽 as before, entered without a button and without a halt.
+    // The tenth wall is an ordinary wall (550): no boss, no halt.
     tick(1000, new IdleHit(9, "bullet", 1, IdleEngine.maxHp(9), 0));
     assertThat(state.idle.wall).isEqualTo(10);
     assertThat(state.idle.cleared).isEqualTo(1);
     assertThat(state.idle.circuitSeconds).isZero();
-    assertThat(engine.view(state).boss()).isTrue();
+    assertThat(engine.view(state).boss()).isFalse();
     assertThat(engine.view(state).bossChallenge()).isFalse();
     tick(1000, new IdleHit(10, "bullet", 1, IdleEngine.maxHp(10), 0));
     assertThat(state.idle.wall).isEqualTo(11);

@@ -443,7 +443,7 @@ export const RAM_ART = 2.5
 /** 매도벽 칸 텍스처의 크기(px). 화면에서는 칸 크기로 늘여 놓는다. 금 간 정도 0~3. */
 export const CELL_TEX = { w: 360, h: 60 }
 export const CELL_CRACKS = 4
-/** boss면 대량 매도벽(열 번째 벽마다의 큰손 벽): 같은 블록을 보라로 물들인 그림이다(빨강은 매수벽 색이라 피한다). */
+/** boss면 대량 매도벽(50번째 벽마다의 보스, 큰손 벽): 같은 블록을 보라로 물들인 그림이다(빨강은 매수벽 색이라 피한다). */
 export const cellKey = (crack: number, boss = false) =>
   boss ? `cell-boss-${crack}` : `cell-${crack}`
 /** 대량 매도벽 블록의 색상(hue): 명암과 채도는 보통 블록 그대로 두고 색만 바꾼다. */

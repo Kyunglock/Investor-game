@@ -6,7 +6,7 @@ import { IDLE_RAID_ORDER, type IdleRaidKind } from '../mental/waves'
 import { readFrameMeter, saveFrameMeter } from './frameMeter'
 import { IdleFrameMeter } from './IdleFrameMeter'
 
-/** 벽 건너뛰기: 지금 벽에서 더하고 빼는 걸음과 바로 가는 벽. 큰손 벽(10의 배수)과 그 앞뒤를 보기 쉽게 골랐다. */
+/** 벽 건너뛰기: 지금 벽에서 더하고 빼는 걸음과 바로 가는 벽. 보스 벽(50의 배수)과 그 앞뒤를 보기 쉽게 골랐다. */
 const WALL_STEPS = [-10, -1, 1, 10, 50, 100] as const
 const WALL_PRESETS = [1, 50, 100, 200, 500, 1000] as const
 const MAX_WALL = 100000
@@ -140,7 +140,7 @@ export function IdleSandbox({ company }: { company: Company }) {
             <h2>테스트판 도구</h2>
             <p className="idle-sandbox-note" data-testid="idle-sandbox-info">
               지금 매도벽 {wall.toLocaleString()}
-              {idle?.boss ? ' (큰손)' : ''} · 벽 체력{' '}
+              {idle?.boss ? ' (보스)' : ''} · 벽 체력{' '}
               {Math.round(idle?.maxHp ?? 0).toLocaleString()} · 물량 ×
               {idleThreat(wall, idle?.maxHp ?? 0)}
             </p>

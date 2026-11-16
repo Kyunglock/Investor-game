@@ -20,7 +20,7 @@ const PREDICT = `${new URL(APP).pathname}@fs${fileURLToPath(
 const BOTTOM = process.env.IDLE_LEGACY ? 0.07 : 0.0001
 
 // IdleEngine.maxHp, written out again: the mock server must not lean on the code it checks.
-const maxHp = (wall) => (20 + 12 * (wall - 1) + 0.2 * (wall - 1) ** 2) * (wall % 10 === 0 ? 3 : 1)
+const maxHp = (wall) => (20 + 12 * (wall - 1) + 0.2 * (wall - 1) ** 2) * (wall % 50 === 0 ? 3 : 1)
 
 /**
  * The server's rule (IdleEngine.tick, decisions.md 532) without the anti-cheat budgets: `credit`
@@ -93,7 +93,7 @@ function mockServer(wall, credit = 1) {
       maxHp: maxHp(s.wall),
       circuitSeconds: s.circuitSeconds,
       sequence: s.sequence,
-      boss: s.wall % 10 === 0,
+      boss: s.wall % 50 === 0,
       upcoming: [0, 1].map((i) => ({
         wall: s.wall + 1 + i,
         hp: maxHp(s.wall + 1 + i) - s.queued[i],

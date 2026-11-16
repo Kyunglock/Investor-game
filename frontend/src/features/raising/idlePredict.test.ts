@@ -27,13 +27,14 @@ function server(
 const bullet = (wall: number, damage: number, depth = 0) => ({ wall, depth, damage })
 
 describe('idleMaxHp', () => {
-  it('is IdleEngine.maxHp: 20 + 12d + 0.2d², three times that on every tenth wall', () => {
+  it('is IdleEngine.maxHp: 20 + 12d + 0.2d², three times that on every 50th wall', () => {
     // Values from the Java formula (HP_BASE 20, HP_LINEAR 12, HP_SQUARE 0.2, BOSS_HP 3).
     expect(idleMaxHp(1)).toBe(20)
     expect(idleMaxHp(2)).toBeCloseTo(32.2, 9)
     expect(idleMaxHp(3)).toBeCloseTo(44.8, 9)
     expect(idleMaxHp(6)).toBe(85)
-    expect(idleMaxHp(10)).toBeCloseTo(432.6, 9)
+    expect(idleMaxHp(10)).toBeCloseTo(144.2, 9)
+    expect(idleMaxHp(50)).toBeCloseTo(3264.6, 9)
     expect(idleMaxHp(11)).toBe(160)
     expect(idleMaxHp(100)).toBeCloseTo(9504.6, 9)
     expect(idleMaxHp(201)).toBe(10420)
