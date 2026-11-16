@@ -150,13 +150,15 @@ try {
         'battle canvas stays mounted',
       )
     }
-    for (const name of [/^고양이$/, /^무기/]) {
-      await page.getByRole('button', { name, exact: true }).last().click()
+    // Cats and weapons share one tab (560).
+    const CAT_MENU = /^고양이·무기( 합칠 수 있는 무기 있음)?$/
+    for (const name of [CAT_MENU]) {
+      await page.getByRole('button', { name }).last().click()
       await expectStableBattle()
       await page.getByRole('button', { name: '닫기 ✕', exact: true }).click()
       await expectStableBattle()
     }
-    await page.getByRole('button', { name: '고양이', exact: true }).click()
+    await page.getByRole('button', { name: CAT_MENU }).click()
     const tray = page.getByTestId('idle-menu')
     assert(required(await tray.boundingBox()).y > 200, 'battle remains visible above tray')
     const cat = (code: string) => page.locator(`[data-testid=cat][data-code=${code}]`)
@@ -252,9 +254,12 @@ try {
     await expect(page.getByTestId('reward-grab')).toBeVisible()
     await drag(page.getByTestId('reward-grab'), target('reward:lilac'), true)
     await expect(page.getByTestId('weapon-reveal')).toHaveCount(0)
-    await expect(page.getByTestId('weapon-now')).toContainText('라일락냥')
-    await page.getByRole('button', { name: '고양이', exact: true }).last().click()
+    // The equipped reward lands on the wearer's equipment list inside the cat tab.
     await expect(page.getByTestId('cat-detail')).toHaveAttribute('data-code', 'lilac')
+    await expect(page.getByTestId('cat-gear')).toBeVisible()
+    await page.getByRole('button', { name: CAT_MENU }).last().click()
+    await expect(page.getByTestId('cat-detail')).toHaveAttribute('data-code', 'lilac')
+    await expect(page.getByTestId('cat-gear')).toHaveCount(0)
     await page.screenshot({ path: `/tmp/loadout-${width}.png`, fullPage: true })
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
@@ -271,7 +276,7 @@ try {
       () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
     )
     await expect(page.getByTestId('cat-gacha')).toBeVisible()
-    await expect(page.getByTestId('weapon-now')).toHaveCount(0)
+    await expect(page.getByTestId('cat-detail')).toHaveCount(0)
     assert.deepEqual(errors, [])
     console.log(
       `PASS ${width}px: touch swap/equip, mouse merge, cancel, rejection, tap fallback, reward equip, persistent selection`,

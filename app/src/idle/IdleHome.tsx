@@ -26,7 +26,6 @@ import { IdleOptions } from './IdleOptions'
 import { IdlePass } from './IdlePass'
 import { IdleSandbox } from './IdleSandbox'
 import { IdleShop } from './IdleShop'
-import { IdleWeapons } from './IdleWeapons'
 import { IdleIcon } from './icons'
 import { MenuIcon } from './MenuIcon'
 import { OfflineIncome } from './OfflineIncome'
@@ -36,7 +35,7 @@ import './toy-arcade.css'
 import './loadout-tray.css'
 import './upgrade-feedback.css'
 
-type Menu = 'battle' | 'growth' | 'weapons' | 'cats' | 'shop' | 'company'
+type Menu = 'battle' | 'growth' | 'cats' | 'shop' | 'company'
 /**
  * 회사 탭은 꺼 두었다 (decisions.md 540번): 아래 메뉴의 회사 탭과 위의 회사 메뉴 단추(☰)가 나오지 않는다. 회사 화면의 코드는 그대로라 이 값을
  * 켜면 돌아온다.
@@ -46,8 +45,8 @@ const menus: { key: Menu; label: string }[] = (
   [
     { key: 'battle', label: '돌파' },
     { key: 'growth', label: '성장' },
-    { key: 'weapons', label: '무기' },
-    { key: 'cats', label: '고양이' },
+    // 무기 탭은 고양이 탭에 합쳤다 (560번): 고양이를 고르고 그 자리에서 무기를 바꾸고 합친다.
+    { key: 'cats', label: '고양이·무기' },
     { key: 'shop', label: '상점' },
     { key: 'company', label: '회사' },
   ] as const
@@ -91,13 +90,16 @@ export function IdleHome({
   office: ReactNode
 }) {
   const [ownMenu, setMenu] = useState<Menu>('battle')
-  // 전투에서 "무기 바꾸기"로 오면(Windows) 무기 탭이 사장냥의 장비로 열린다 (530·540번). 닫거나 다른 데로 가면 그 요청을 지운다.
+  // 전투에서 "무기 바꾸기"로 오면(Windows) 고양이·무기 탭이 사장냥의 장비 목록으로 열린다 (530·560번). 닫거나 다른 데로 가면 그 요청을 지운다.
   const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
-  const menu = weaponsAsked ? 'weapons' : ownMenu
-  // 무기 탭에서 무기를 들 고양이. null이면 사장냥이다. 고양이 탭의 "무기 탭 ▸"이 그 고양이로 연다.
+  const menu = weaponsAsked ? 'cats' : ownMenu
+  // 고양이·무기 탭에서 고른 고양이. null이면 사장냥이다. 메뉴를 오가도 유지한다.
   const [ownWearer, setWearer] = useState<CatCode | null>(null)
   const wearer = weaponsAsked ? null : ownWearer
-  // 상점이 처음 보일 뽑기: 무기 탭에서 오면 무기 뽑기다.
+  // 고양이·무기 탭이 장비 목록을 펴고 있는가 (560번). 아래 메뉴로 들어오면 고양이 목록부터 보인다.
+  const [ownGear, setGear] = useState(false)
+  const gear = weaponsAsked || ownGear
+  // 상점이 처음 보일 뽑기: 장비 목록에서 오면 무기 뽑기다.
   const [shopKind, setShopKind] = useState<'cat' | 'weapon'>('cat')
   const go = (next: Menu) => {
     if (weaponsAsked) useAppUi.getState().closeSheet()
@@ -130,6 +132,7 @@ export function IdleHome({
   const navigate = (next: Menu) => {
     // 아래 메뉴로 상점에 오면 고양이 뽑기부터 보인다.
     if (next === 'shop') setShopKind('cat')
+    if (next === 'cats') setGear(false)
     if (next === 'company') {
       go('battle')
       onManage()
@@ -157,7 +160,7 @@ export function IdleHome({
           {item.key === 'growth' && affordable && (
             <i className="idle-dot" role="img" aria-label="강화 가능" />
           )}
-          {item.key === 'weapons' && canMerge && (
+          {item.key === 'cats' && canMerge && (
             <i className="idle-dot" role="img" aria-label="합칠 수 있는 무기 있음" />
           )}
           {item.key === 'shop' && shopFree && (
@@ -265,7 +268,7 @@ export function IdleHome({
           title={menus.find((m) => m.key === menu)?.label}
           onClose={() => go('battle')}
           testId="idle-menu"
-          className={`idle-sheet ${menu === 'cats' || menu === 'weapons' ? 'loadout-sheet' : ''}`}
+          className={`idle-sheet ${menu === 'cats' ? 'loadout-sheet' : ''}`}
           footer={nav}
         >
           {menu === 'growth' && (
@@ -274,14 +277,26 @@ export function IdleHome({
               <IdleStats company={company} />
             </>
           )}
-          {menu === 'weapons' && (
-            <IdleWeapons
+          {menu === 'cats' && (
+            <IdleCats
               company={company}
-              wearer={wearer}
-              onWearer={(code) => {
-                if (weaponsAsked) useAppUi.getState().closeSheet()
-                setMenu('weapons')
+              picked={wearer}
+              onPick={(code) => {
+                // 전투에서 온 요청(사장냥 장비)을 보다가 다른 고양이를 고르면 그 요청을 지우고 이 탭에 머문다.
+                if (weaponsAsked) {
+                  useAppUi.getState().closeSheet()
+                  setMenu('cats')
+                  setGear(true)
+                }
                 setWearer(code)
+              }}
+              gear={gear}
+              onGear={(open) => {
+                if (weaponsAsked) {
+                  useAppUi.getState().closeSheet()
+                  setMenu('cats')
+                }
+                setGear(open)
               }}
               onDraw={() => {
                 setShopKind('weapon')
@@ -289,7 +304,6 @@ export function IdleHome({
               }}
             />
           )}
-          {menu === 'cats' && <IdleCats company={company} picked={wearer} onPick={setWearer} />}
           {menu === 'shop' && (
             <IdleShop
               key={shopKind}
@@ -297,7 +311,9 @@ export function IdleHome({
               kind={shopKind}
               onUse={(kind, code) => {
                 setWearer(code)
-                go(kind === 'cat' ? 'cats' : 'weapons')
+                // 뽑은 무기를 들렸으면 장비 목록으로, 고양이를 편성했으면 고양이 목록으로 돌아온다.
+                setGear(kind !== 'cat')
+                go('cats')
               }}
             />
           )}

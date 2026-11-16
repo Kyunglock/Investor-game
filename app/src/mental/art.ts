@@ -2,6 +2,7 @@ import { CAT_H, CAT_W, type GunGrade } from '@web/features/game/cat/draw'
 
 import type Phaser from 'phaser'
 import { drawBattleGun } from './battleWeaponArt'
+import type { Magic } from './cards'
 import { CAT_GUN } from './catGun'
 import { CAT_SCALE, type CatModel } from './catModels'
 import { drawCatPose } from './catPoseArt'
@@ -191,6 +192,74 @@ export function bakeCatBody(
 }
 
 export const mateKey = (i: number) => `mate-${i}`
+
+/** 스킬 표식의 한 변 (557번). */
+export const SKILL_MARK = 28
+export const skillMarkKey = (magic: Magic) => `skill-mark-${magic}`
+/** 스킬마다 고유 색: 메뉴의 스킬 배지(idle/SkillBadge.tsx)와 같다. */
+const SKILL_MARK_COLORS: Record<Magic, { light: string; mid: string; dark: string; line: string }> =
+  {
+    water: { light: '#e6f7ff', mid: '#5cc0ff', dark: '#1f72d8', line: '#103f86' },
+    meteor: { light: '#fff0b8', mid: '#ff9a3d', dark: '#dc3b2a', line: '#7c1d12' },
+    lightning: { light: '#fffbd0', mid: '#ffd633', dark: '#f09a00', line: '#7a4a00' },
+    earth: { light: '#fbe8c2', mid: '#cf9257', dark: '#8a5326', line: '#4a2a10' },
+  }
+/** 스킬 그림 (48×48 칸): 스킬 배지의 첫 단계 그림과 같은 모양. 조각마다 칠할 색을 따로 준다(없으면 밝은 색). */
+const SKILL_MARK_GLYPHS: Record<Magic, { d: string; fill?: string }[]> = {
+  water: [{ d: 'M24 13.5c4.2 5 6.6 8.4 6.6 11.6a6.6 6.6 0 0 1-13.2 0c0-3.2 2.4-6.6 6.6-11.6Z' }],
+  meteor: [
+    { d: 'M16.5 24.3 34.3 13.3 23.9 31.7Z', fill: '#ffe98a' },
+    { d: 'M15.4 27.5a5.1 5.1 0 1 0 10.2 0a5.1 5.1 0 1 0-10.2 0Z', fill: '#fff4c9' },
+  ],
+  lightning: [{ d: 'M26 13.5 18.2 25h4.4l-1.8 9.5L29.6 22h-4.8Z' }],
+  earth: [
+    { d: 'M13 21.2h15v6.4H13Z', fill: '#f6d9a2' },
+    { d: 'M28 19.8 35 24.4 28 29Z', fill: '#e9edf2' },
+    { d: 'M14.3 30.6a2.7 2.7 0 1 0 5.4 0a2.7 2.7 0 1 0-5.4 0Z', fill: '#6a3f1b' },
+    { d: 'M22.3 30.6a2.7 2.7 0 1 0 5.4 0a2.7 2.7 0 1 0-5.4 0Z', fill: '#6a3f1b' },
+  ],
+}
+
+/**
+ * 고양이 머리 위의 스킬 표식 (557번): 그 고양이가 쓰는 스킬을 스킬 색의 둥근 틀과 그림으로 보인다. 메뉴의 스킬 배지와 같은 색·모양이라
+ * 전투 화면에서도 누가 무슨 스킬인지 알아본다.
+ */
+export function bakeSkillMarks(scene: Phaser.Scene) {
+  for (const magic of Object.keys(SKILL_MARK_COLORS) as Magic[]) {
+    const color = SKILL_MARK_COLORS[magic]
+    bake(scene, skillMarkKey(magic), SKILL_MARK, SKILL_MARK, (c) => {
+      // 배지의 48×48 칸에서 테두리(반지름 20)까지만 잘라 쓴다.
+      c.scale(SKILL_MARK / 42, SKILL_MARK / 42)
+      c.translate(-3, -3)
+      const disc = (r: number, fill: string | CanvasGradient) => {
+        c.beginPath()
+        c.arc(24, 24, r, 0, Math.PI * 2)
+        c.fillStyle = fill
+        c.fill()
+      }
+      const rim = c.createLinearGradient(0, 4, 0, 44)
+      rim.addColorStop(0, color.light)
+      rim.addColorStop(1, color.mid)
+      const face = c.createRadialGradient(18, 14, 0, 24, 24, 20)
+      face.addColorStop(0, color.mid)
+      face.addColorStop(1, color.dark)
+      disc(20, color.line)
+      disc(18, rim)
+      disc(16.4, color.line)
+      disc(15.4, face)
+      c.lineJoin = 'round'
+      c.lineCap = 'round'
+      c.lineWidth = 2.4
+      c.strokeStyle = color.line
+      for (const part of SKILL_MARK_GLYPHS[magic]) {
+        const path = new Path2D(part.d)
+        c.stroke(path)
+        c.fillStyle = part.fill ?? color.light
+        c.fill(path)
+      }
+    })
+  }
+}
 
 export function bakeMates(scene: Phaser.Scene, _grades: readonly GunGrade[]) {
   for (let i = 0; i < MATE_LOOKS.length; i++) {

@@ -28,6 +28,7 @@ import {
   bakeMagic,
   bakeMates,
   bakeOrders,
+  bakeSkillMarks,
   bakeStage,
   CELL_CRACKS,
   cellKey,
@@ -36,6 +37,8 @@ import {
   HERO_SIZE,
   mateKey,
   RAM_ART,
+  SKILL_MARK,
+  skillMarkKey,
   WALL_H,
   WALL_LABEL_STYLE,
 } from './art'
@@ -51,6 +54,7 @@ import {
   assaultTarget,
   cellShares,
   climbSpeed,
+  IDLE_ORDER_SPEED,
   idleAssaultSpec,
   MID_BOSS_NAME,
   pickFlow,
@@ -347,6 +351,8 @@ interface MagicCaster {
  */
 interface Mate {
   magicMark: Phaser.GameObjects.Text
+  /** 자동 전투 (557번): 이 고양이의 스킬 그림. 마법 표식(✦) 대신 머리 위에 뜬다. */
+  skillMark: Phaser.GameObjects.Image
   body: Phaser.GameObjects.Image
   gun: Phaser.GameObjects.Image
   aim: number
@@ -467,6 +473,8 @@ export interface DamageStats {
   /** 함께 싸우는 고양이가 쏜 총알 수와 지금 고양이 수 (393번). */
   mateCasts: number[]
   awakenedMates: number
+  /** 자동 전투 (557번): 고양이마다 머리 위에 뜬 스킬 그림. 스킬 표식이 없는 판에서는 비어 있다. */
+  skillMarks: (Magic | null)[]
   mateShots: number
   mates: number
 }
@@ -628,6 +636,7 @@ class BattleScene extends Phaser.Scene {
     casts: { water: 0, meteor: 0, lightning: 0, earth: 0 },
     mateCasts: [0, 0, 0],
     awakenedMates: 0,
+    skillMarks: [],
     mateShots: 0,
     mates: 0,
   }
@@ -1061,7 +1070,7 @@ class BattleScene extends Phaser.Scene {
         Math.random,
         this.opts.idle ? BUY_WALL.idleRebuildSeconds : undefined,
       )
-      this.buyWallFx = new BuyWallFx(this, unitK('order'))
+      this.buyWallFx = new BuyWallFx(this, unitK('order'), this.opts.idle ? IDLE_ORDER_SPEED : 1)
       this.drawBuyWall()
       // 자동 전투는 쌓인 벽 앞에서 시작하고, 기존 스테이지는 첫 카드 선택 뒤 벽까지 전진한다.
       if (this.opts.idle) {
@@ -1137,6 +1146,7 @@ class BattleScene extends Phaser.Scene {
       m.body.destroy()
       m.gun.destroy()
       m.magicMark.destroy()
+      m.skillMark.destroy()
     }
     while (this.mates.length < want) this.addMate()
     this.damageStats.mates = this.mates.length
@@ -1161,15 +1171,21 @@ class BattleScene extends Phaser.Scene {
         20,
       )
     }
+    // 자동 전투 (557번): 마법 표식(✦) 대신 그 고양이가 쓰는 스킬의 그림을 띄운다.
     this.mates.forEach((mate, index) => {
-      mate.magicMark.setVisible(index < awake)
+      const skill = own?.[index]
+      mate.magicMark.setVisible(!own && index < awake)
+      mate.skillMark.setVisible(skill !== undefined)
+      if (skill) mate.skillMark.setTexture(skillMarkKey(skill))
     })
     this.damageStats.awakenedMates = awake
+    this.damageStats.skillMarks = own ? this.mates.map((_, index) => own[index] ?? null) : []
   }
 
   /** 고양이 한 마리가 제자리 위에서 떨어져 내려와 합류한다: 쿵, 고리, 이름. */
   private addMate() {
     const i = this.mates.length
+    bakeSkillMarks(this)
     const y = this.mode === 'defense' ? this.playerY() : this.player.y
     const body = this.add
       .image(this.player.x, y, mateKey(this.mateLook(i)))
@@ -1184,6 +1200,11 @@ class BattleScene extends Phaser.Scene {
           strokeThickness: 4,
         })
         .setOrigin(0.5)
+        .setDepth(7)
+        .setVisible(false),
+      skillMark: this.add
+        .image(body.x, body.y - 58, skillMarkKey('water'))
+        .setDisplaySize(SKILL_MARK, SKILL_MARK)
         .setDepth(7)
         .setVisible(false),
       body,
@@ -4552,6 +4573,7 @@ class BattleScene extends Phaser.Scene {
       m.kick = recoilDecay(m.kick, dt)
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
       m.magicMark.setPosition(b.x, b.y - 58)
+      m.skillMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {
         b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
       }
