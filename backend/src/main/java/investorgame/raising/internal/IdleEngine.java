@@ -241,7 +241,8 @@ class IdleEngine {
   static final double REWARD_UPGRADES = 3;
   private static final double BOSS_REWARD = 3;
   // Capital per active game second at wall 1 (492). The price level alone grows it (553).
-  static final double INCOME = 20_000;
+  // 20,000 → 2,000 (554번): 초당 수입을 1/10로. 직원 수입(income.grade-per-second)도 함께 1/10이다.
+  static final double INCOME = 2_000;
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
   private static final double REVOLVER_CRITICAL = 3;
   private static final double CRITICAL = 2;

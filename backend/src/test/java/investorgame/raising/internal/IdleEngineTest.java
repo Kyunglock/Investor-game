@@ -81,7 +81,7 @@ class IdleEngineTest {
     assertThat(state.idle.activeSeconds).isEqualTo(40); // Foreground time still runs at 2x.
     // Time income is the first wall's times the wall's price level: 4% more per wall, the same
     // rate as the upgrade prices (decisions.md 553).
-    assertThat(state.capital).isEqualTo(Math.floor(40 * 20000 * StrictMath.pow(1.04, 50)));
+    assertThat(state.capital).isEqualTo(Math.floor(40 * 2000 * StrictMath.pow(1.04, 50)));
   }
 
   @Test
@@ -137,14 +137,14 @@ class IdleEngineTest {
     tick(86400000, new IdleHit(1, "bullet", 1000));
     assertThat(state.idle.damage).isZero();
     // The day away pays time income up to eight hours (decisions.md 523), never damage.
-    double away = 8 * 3600 * 40000.0;
-    assertThat(state.capital).isEqualTo(40000 + away);
+    double away = 8 * 3600 * 4000.0;
+    assertThat(state.capital).isEqualTo(4000 + away);
     engine.beat(state, "one", ++sequence, "stop");
     tick(1000, new IdleHit(1, "bullet", 1000));
     assertThat(state.idle.damage).isZero();
     assertThat(state.capital)
         .as("the second after the stop is paid as time away")
-        .isEqualTo(80000 + away);
+        .isEqualTo(8000 + away);
   }
 
   @Test
@@ -154,11 +154,11 @@ class IdleEngineTest {
     // Four seconds between beats on a slow link: the pistol fired about 15 bullets meanwhile.
     tick(4000, new IdleHit(1, "bullet", 14, 14.0));
     assertThat(state.idle.damage).isEqualTo(14);
-    assertThat(state.capital).isEqualTo(5 * 40000);
+    assertThat(state.capital).isEqualTo(5 * 4000);
     tick(10001, new IdleHit(1, "bullet", 3, 3.0));
     assertThat(state.idle.damage).isEqualTo(14);
     // The silence keeps no hits, but its time income is still paid (523).
-    assertThat(state.capital).isEqualTo(5 * 40000 + Math.floor(10.001 * 40000));
+    assertThat(state.capital).isEqualTo(5 * 4000 + Math.floor(10.001 * 4000));
   }
 
   @Test
