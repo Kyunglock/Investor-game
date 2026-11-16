@@ -306,6 +306,9 @@ export function idleThreat(wall: number, maxHp: number): number {
 /** 자동 전투에서 매도벽이 물량을 내는 빈도의 배율 (미션 대비, 495번). */
 export const IDLE_FLOW = 1.5
 
+/** 자동 전투에서 매도 물량과 매수 주문이 날아가는 빠르기의 배율 (558번): 티켓이 너무 빨라 읽히지 않아 늦췄다. */
+export const IDLE_ORDER_SPEED = 0.6
+
 /** 물량 구성에서 몬스터(패닉셀·투매·공매도·투기·손절매)를 뺀다. */
 export function ordersOnly(mix: AssaultWall['mix']): AssaultWall['mix'] {
   return Object.fromEntries(Object.entries(mix).filter(([kind]) => isOrder(kind as FlowKind)))
@@ -320,6 +323,8 @@ export function idleAssaultSpec(wall: number, maxHp = 0): AssaultSpec {
     ...spec,
     enemyHp: threat,
     enemyDmg: spec.enemyDmg * threat,
+    // 매도 물량이 내려오는 빠르기를 늦춘다 (558번).
+    enemySpeed: spec.enemySpeed * IDLE_ORDER_SPEED,
     // 매도벽에서 나오는 물량이 미션보다 잦다 (495번).
     enemyCount: spec.enemyCount * IDLE_FLOW,
     // 매도벽은 매도 물량만 낸다: 몬스터는 이따금 습격으로만 온다 (500번).

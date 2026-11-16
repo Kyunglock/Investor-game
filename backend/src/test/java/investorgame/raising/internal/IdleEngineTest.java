@@ -81,7 +81,7 @@ class IdleEngineTest {
     assertThat(state.idle.activeSeconds).isEqualTo(40); // Foreground time still runs at 2x.
     // Time income is the first wall's times the wall's price level: 4% more per wall, the same
     // rate as the upgrade prices (decisions.md 553).
-    assertThat(state.capital).isEqualTo(Math.floor(40 * 2000 * StrictMath.pow(1.04, 50)));
+    assertThat(state.capital).isEqualTo(Math.floor(40 * 1000 * StrictMath.pow(1.04, 50)));
   }
 
   @Test
@@ -137,14 +137,14 @@ class IdleEngineTest {
     tick(86400000, new IdleHit(1, "bullet", 1000));
     assertThat(state.idle.damage).isZero();
     // The day away pays time income up to eight hours (decisions.md 523), never damage.
-    double away = 8 * 3600 * 4000.0;
-    assertThat(state.capital).isEqualTo(4000 + away);
+    double away = 8 * 3600 * 2000.0;
+    assertThat(state.capital).isEqualTo(2000 + away);
     engine.beat(state, "one", ++sequence, "stop");
     tick(1000, new IdleHit(1, "bullet", 1000));
     assertThat(state.idle.damage).isZero();
     assertThat(state.capital)
         .as("the second after the stop is paid as time away")
-        .isEqualTo(8000 + away);
+        .isEqualTo(4000 + away);
   }
 
   @Test
@@ -154,11 +154,11 @@ class IdleEngineTest {
     // Four seconds between beats on a slow link: the pistol fired about 15 bullets meanwhile.
     tick(4000, new IdleHit(1, "bullet", 14, 14.0));
     assertThat(state.idle.damage).isEqualTo(14);
-    assertThat(state.capital).isEqualTo(5 * 4000);
+    assertThat(state.capital).isEqualTo(5 * 2000);
     tick(10001, new IdleHit(1, "bullet", 3, 3.0));
     assertThat(state.idle.damage).isEqualTo(14);
     // The silence keeps no hits, but its time income is still paid (523).
-    assertThat(state.capital).isEqualTo(5 * 4000 + Math.floor(10.001 * 4000));
+    assertThat(state.capital).isEqualTo(5 * 2000 + Math.floor(10.001 * 2000));
   }
 
   @Test
@@ -456,7 +456,7 @@ class IdleEngineTest {
     // 틱 1초(게임 2초)의 시간 수입 40,000이 함께 들어온다.
     tick(1000, new IdleHit(1, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(2);
-    assertThat(state.capital).isBetween(3_000_000.0, 3_050_000.0);
+    assertThat(state.capital).isBetween(1_500_000.0, 1_550_000.0);
     state.idle.wall = 10;
     state.idle.damage = IdleEngine.maxHp(10) - 1;
     state.capital = 0;

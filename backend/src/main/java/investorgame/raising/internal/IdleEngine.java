@@ -236,13 +236,14 @@ class IdleEngine {
   private static final double CAT_POWER = 0.5;
   private static final double CAT_LEVEL_BONUS = 0.2;
   // 벽 보상 (553번): 벽 하나를 깨면 그 벽 번호와 같은 단계의 전투 강화 값 REWARD_UPGRADES개 어치를 준다. 물가가 강화 값과 같은
-  // 빠르기로 크므로(CompanyEngine.inflation), N번째 벽을 깰 때까지 번 돈이 강화 넷(공격력·체력·매수·치명타)을 평균 N단계쯤 올린다.
-  // 보스 벽은 BOSS_REWARD배. 전에는 그 벽의 시간 수입 10초 어치였다 (537·552번).
-  static final double REWARD_UPGRADES = 3;
+  // 빠르기로 크므로(CompanyEngine.inflation), N번째 벽을 깰 때까지 번 돈이 끝없는 강화(공격력·체력·매수)를 평균 N단계쯤 올린다.
+  // 보스 벽은 BOSS_REWARD배. 전에는 그 벽의 시간 수입 10초 어치였다 (537·552번). 세 단계 어치를 한 단계 반으로 낮췄다 (559번).
+  static final double REWARD_UPGRADES = 1.5;
   private static final double BOSS_REWARD = 3;
   // Capital per active game second at wall 1 (492). The price level alone grows it (553).
   // 20,000 → 2,000 (554번): 초당 수입을 1/10로. 직원 수입(income.grade-per-second)도 함께 1/10이다.
-  static final double INCOME = 2_000;
+  // 2,000 → 1,000 (559번): 버는 돈을 모두 절반으로.
+  static final double INCOME = 1_000;
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
   private static final double REVOLVER_CRITICAL = 3;
   private static final double CRITICAL = 2;

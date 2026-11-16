@@ -25,8 +25,11 @@ export class BuyWallFx {
   }[]
   private scene: Phaser.Scene
   private orderScale: number
-  constructor(scene: Phaser.Scene, orderScale: number) {
+  /** 매수 주문이 날아가는 빠르기의 배율 (558번): 자동 전투에서는 늦춘다. */
+  private speedScale: number
+  constructor(scene: Phaser.Scene, orderScale: number, speedScale = 1) {
     this.scene = scene
+    this.speedScale = speedScale
     this.orderScale = orderScale
     this.surface = scene.add.image(0, 0, 'buy-wall').setOrigin(0).setDepth(4)
     this.ink = scene.add.graphics().setDepth(4)
@@ -101,7 +104,7 @@ export class BuyWallFx {
     this.breakLeft = Math.max(0, this.breakLeft - dt)
     for (const shot of this.shots) {
       if (!shot.active) continue
-      const next = shot.y - dt * BUY_ORDER_SPEED
+      const next = shot.y - dt * BUY_ORDER_SPEED * this.speedScale
       const left = hit(shot.x, shot.y, next, shot.damage, shot.barrage)
       if (left <= 1e-6 || next < -30) shot.active = false
       else if (left < shot.damage) {

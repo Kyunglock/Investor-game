@@ -360,6 +360,15 @@ try {
         () => (window as unknown as { __mentalDamage?: { mates: number } }).__mentalDamage?.mates,
       )
     await expect.poll(mates).toBe(1)
+    // The fielded cat wears its own skill's picture overhead, not the old magic star (557).
+    const skillMarks = () =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __mentalDamage?: { skillMarks: (string | null)[] } })
+            .__mentalDamage?.skillMarks,
+      )
+    await expect.poll(skillMarks).toHaveLength(1)
+    expect(['water', 'meteor', 'lightning', 'earth']).toContain((await skillMarks())?.[0])
     await detail.getByTestId('cat-field').click()
     await expect(detail.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'false')
     await expect.poll(mates).toBe(0)

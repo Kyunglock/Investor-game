@@ -12,6 +12,7 @@ import {
   assaultTarget,
   cellShares,
   climbSpeed,
+  IDLE_ORDER_SPEED,
   IDLE_THREAT_HP,
   idleAssaultSpec,
   idleThreat,
@@ -241,6 +242,9 @@ describe('매도벽 경험치 (#700)', () => {
     expect(next.enemyCount).toBeGreaterThan(first.enemyCount)
     expect(next.enemyDmg).toBeGreaterThan(first.enemyDmg)
     expect(next.enemyHp).toBe(1)
+    // 매도 물량은 미션의 0.6배 빠르기로 내려온다 (558번).
+    expect(first.enemySpeed).toBe(assaultSpec(1).enemySpeed * IDLE_ORDER_SPEED)
+    expect(IDLE_ORDER_SPEED).toBe(0.6)
   })
   it('자동 전투의 물량은 매도벽 체력을 따라 커진다 (498번)', () => {
     // 첫 벽(체력 20)은 그대로이고, 벽 체력이 IDLE_THREAT_HP만큼 늘 때마다 한 배씩 는다.
