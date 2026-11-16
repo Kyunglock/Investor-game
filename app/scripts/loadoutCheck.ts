@@ -90,6 +90,7 @@ try {
       const body = route.request().postDataJSON()
       if (/\/(field|weapon|equip|merge)$/.test(path)) {
         mutations.push({ path, body })
+        await new Promise((resolve) => setTimeout(resolve, 250))
         if (reject) {
           await route.fulfill({
             status: 409,
@@ -136,6 +137,7 @@ try {
       to: ReturnType<typeof target>,
       touch = false,
     ) => {
+      await expect(from).toBeEnabled()
       await from.scrollIntoViewIfNeeded()
       const f = required(await from.boundingBox()),
         t = required(await to.boundingBox())
@@ -145,7 +147,7 @@ try {
           type: 'touchStart',
           touchPoints: [{ x: f.x + f.width / 2, y: f.y + f.height / 2 }],
         })
-        await page.waitForTimeout(330)
+        await expect(page.locator('.idle-gear-ghost, .reward-grab.is-grabbed')).toBeVisible()
         await cdp.send('Input.dispatchTouchEvent', {
           type: 'touchMove',
           touchPoints: [{ x: t.x + t.width / 2, y: t.y + t.height / 2 }],
@@ -181,6 +183,7 @@ try {
     reject = false
     await target('slot:mint').click()
     await expect(page.getByTestId('cat-detail')).toHaveAttribute('data-code', 'snow')
+    await expect(page.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
     // Inline equipment retains the selected cat, including one that was previously on the bench.
     await page.getByTestId('cat-gun').click()
     const freeGun = () =>
