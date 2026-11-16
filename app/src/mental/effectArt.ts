@@ -73,6 +73,171 @@ export function drawWave(c: Paint) {
   }
 }
 
+/** 얼음 창 (561번): 오른쪽(나아가는 쪽)이 뾰족한 결정. 44×16. */
+export function drawIceLance(c: Paint) {
+  const g = c.createLinearGradient(0, 0, 44, 0)
+  g.addColorStop(0, '#bff2ff22')
+  g.addColorStop(0.35, '#8fe3f5')
+  g.addColorStop(1, '#f4fdff')
+  shape(
+    c,
+    [
+      [1, 8],
+      [12, 3],
+      [30, 2],
+      [43, 8],
+      [30, 14],
+      [12, 13],
+    ],
+    '#135a78',
+  )
+  c.beginPath()
+  c.moveTo(3, 8)
+  c.lineTo(13, 4.4)
+  c.lineTo(29.5, 3.5)
+  c.lineTo(40.5, 8)
+  c.lineTo(29.5, 12.5)
+  c.lineTo(13, 11.6)
+  c.closePath()
+  c.fillStyle = g
+  c.fill()
+  // 결정의 모서리와 반짝임.
+  c.beginPath()
+  c.moveTo(13, 4.4)
+  c.lineTo(20, 8)
+  c.lineTo(13, 11.6)
+  c.moveTo(20, 8)
+  c.lineTo(40.5, 8)
+  c.strokeStyle = '#ffffffcc'
+  c.lineWidth = 1
+  c.stroke()
+  c.beginPath()
+  c.arc(31, 6, 1.4, 0, Math.PI * 2)
+  c.fillStyle = '#ffffff'
+  c.fill()
+}
+
+/** 돌풍 (561번): 큰 물결과 같은 초승달 꼴에 옅은 풀빛 바람 줄기. 44×120. */
+export function drawGust(c: Paint) {
+  c.beginPath()
+  c.moveTo(3, 5)
+  c.bezierCurveTo(41, 24, 52, 87, 4, 116)
+  c.bezierCurveTo(23, 82, 22, 38, 3, 5)
+  const g = c.createLinearGradient(0, 0, 44, 0)
+  g.addColorStop(0, '#2f9d7400')
+  g.addColorStop(0.45, '#7fd8a888')
+  g.addColorStop(0.85, '#c5f5d6cc')
+  g.addColorStop(1, '#f4fff7')
+  c.fillStyle = g
+  c.fill()
+  for (let i = 0; i < 4; i++) {
+    c.beginPath()
+    c.moveTo(4 + i * 3, 10 + i * 9)
+    c.bezierCurveTo(33 + i * 3, 38, 35 + i * 3, 80, 6 + i * 2, 111 - i * 8)
+    c.strokeStyle = i === 0 ? '#ffffff' : '#dcffe8cc'
+    c.lineWidth = i === 0 ? 2.6 : 1.3
+    c.stroke()
+  }
+}
+
+/** spellbook 마법의 색 (563번). */
+type Palette = { light: string; mid: string; dark: string; line: string }
+
+/** 창 (563번): 오른쪽이 뾰족한 44×16. 얼음 창과 같은 꼴에 마법의 색. */
+export function drawLance(c: Paint, p: Palette) {
+  shape(
+    c,
+    [
+      [1, 8],
+      [12, 3],
+      [30, 2],
+      [43, 8],
+      [30, 14],
+      [12, 13],
+    ],
+    p.line,
+  )
+  const g = c.createLinearGradient(0, 0, 44, 0)
+  g.addColorStop(0, `${p.mid}33`)
+  g.addColorStop(0.4, p.mid)
+  g.addColorStop(1, p.light)
+  shape(
+    c,
+    [
+      [3, 8],
+      [13, 4.4],
+      [29.5, 3.5],
+      [40.5, 8],
+      [29.5, 12.5],
+      [13, 11.6],
+    ],
+    p.mid,
+  )
+  c.fillStyle = g
+  c.fill()
+  c.beginPath()
+  c.moveTo(14, 8)
+  c.lineTo(40, 8)
+  c.strokeStyle = '#ffffffcc'
+  c.lineWidth = 1.2
+  c.stroke()
+}
+
+/** 물결 (563번): 오른쪽으로 부푼 초승달 44×120에 마법의 색. */
+export function drawCrescent(c: Paint, p: Palette) {
+  c.beginPath()
+  c.moveTo(3, 5)
+  c.bezierCurveTo(41, 24, 52, 87, 4, 116)
+  c.bezierCurveTo(23, 82, 22, 38, 3, 5)
+  const g = c.createLinearGradient(0, 0, 44, 0)
+  g.addColorStop(0, `${p.dark}00`)
+  g.addColorStop(0.45, `${p.dark}aa`)
+  g.addColorStop(0.85, p.mid)
+  g.addColorStop(1, p.light)
+  c.fillStyle = g
+  c.fill()
+  for (let i = 0; i < 3; i++) {
+    c.beginPath()
+    c.moveTo(5 + i * 3, 12 + i * 10)
+    c.bezierCurveTo(35 + i * 3, 39, 37 + i * 3, 78, 7 + i * 2, 109 - i * 7)
+    c.strokeStyle = i === 0 ? p.light : `${p.light}99`
+    c.lineWidth = i === 0 ? 2.6 : 1.3
+    c.stroke()
+  }
+}
+
+/** 구슬 (563번): 32×32. 폭탄은 어두운 몸에 심지가 달렸다. */
+export function drawOrb(c: Paint, p: Palette, bomb = false) {
+  c.beginPath()
+  c.arc(16, 17, 12.5, 0, Math.PI * 2)
+  c.fillStyle = p.line
+  c.fill()
+  const g = c.createRadialGradient(12, 12, 1, 16, 17, 12)
+  g.addColorStop(0, bomb ? '#b9bdc8' : p.light)
+  g.addColorStop(0.55, p.mid)
+  g.addColorStop(1, p.dark)
+  c.beginPath()
+  c.arc(16, 17, 11, 0, Math.PI * 2)
+  c.fillStyle = g
+  c.fill()
+  c.beginPath()
+  c.arc(12, 12.5, 2.6, 0, Math.PI * 2)
+  c.fillStyle = '#ffffffcc'
+  c.fill()
+  if (bomb) {
+    c.beginPath()
+    c.moveTo(21, 8)
+    c.lineTo(26, 3)
+    c.strokeStyle = '#c9a26a'
+    c.lineWidth = 2.4
+    c.stroke()
+    c.beginPath()
+    c.arc(27, 2.5, 2.2, 0, Math.PI * 2)
+    c.fillStyle = '#ffd24a'
+    c.fill()
+  }
+}
+
 export function drawEmber(c: Paint) {
   c.beginPath()
   c.moveTo(14, 1)

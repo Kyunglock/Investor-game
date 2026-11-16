@@ -292,7 +292,12 @@ export function assaultSpec(
  * 자동 전투의 물량 배율 (498번): 매도벽 체력이 이만큼 늘 때마다 물량이 한 배씩 커진다. 벽을 깨는 데 드는 화력이 벽 체력을 따라가므로, 물량도
  * 벽 체력을 따라가야 깊은 벽에서 한 방에 지워지지 않는다. 첫 벽들(체력 수십)은 거의 그대로다.
  */
-export const IDLE_THREAT_HP = 760
+export const IDLE_THREAT_HP = 380
+/**
+ * 자동 전투의 매도 물량 세기 (562번): 매도 주문·시장가·대량 매도의 수량(체력이자 매수벽을 깎는 양)에 곱한다. 매수벽 체력과 매수 주문은
+ * 이 배율을 따르지 않아, 그만큼 매도 물량이 매수 쪽보다 세다.
+ */
+export const IDLE_SELL_POWER = 2
 /** 큰손 벽의 체력 배율(서버 IdleEngine.BOSS_HP, 518번): 물량은 큰손 벽이라고 세 배가 되지 않는다. */
 export const IDLE_BOSS_HP = 3
 

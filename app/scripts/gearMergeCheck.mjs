@@ -89,8 +89,7 @@ function world() {
         firePercent: 100,
         criticalPercent: 100,
         fielded: i < 3,
-        skill,
-        skillName,
+        skills: [{ code: skill, name: skillName }],
         skillLevel: code === 'night' ? 5 : Math.floor(i / 2) + 1,
         skillNextLevel: code === 'night' ? 0 : i + 2 + (i % 2),
         // 등급은 종마다 정해져 있다 (539번).

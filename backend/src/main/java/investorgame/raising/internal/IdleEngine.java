@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -47,11 +48,12 @@ class IdleEngine {
     return wall % BOSS_EVERY == 0;
   }
 
-  // Credit buckets: the bullet, the four cat skills, the buy barrage (decisions.md 503), and the
+  // Credit buckets: the bullet, the fifteen cat skills, the buy barrage (decisions.md 503), and the
   // buy wall's own buy orders (514).
-  private static final int KINDS = 7;
-  private static final int BARRAGE = 5;
-  private static final int BUY = 6;
+  private static final int SKILLS = 15;
+  private static final int KINDS = SKILLS + 3;
+  private static final int BARRAGE = SKILLS + 1;
+  private static final int BUY = SKILLS + 2;
   // Active skills (503): the player presses them. Seconds are game seconds (twice real time).
   // barrage: the buy wall pours buy orders; rally: every gun fires twice as fast; fortify: the buy
   // wall is rebuilt and cannot be hurt (the wall is the screen's, so the server only keeps time).
@@ -70,12 +72,14 @@ class IdleEngine {
   // the fastest (buyWall.ts shotSeconds - shotJitter).
   private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;
   // Matches the app's mental/assault.ts idleThreat.
-  private static final double THREAT_HP = 760;
+  // Halved with the wall health (562) so the buy side's scale stays what it was.
+  private static final double THREAT_HP = 380;
   // Wall health (518): base + linear x depth + square x depth^2, every 50th wall (the boss, 550) x
   // BOSS_HP.
-  private static final double HP_BASE = 20;
-  private static final double HP_LINEAR = 12;
-  private static final double HP_SQUARE = 0.2;
+  // Halved in 562: 20 + 12 x depth + 0.2 x depth^2 before.
+  private static final double HP_BASE = 10;
+  private static final double HP_LINEAR = 6;
+  private static final double HP_SQUARE = 0.1;
   private static final double BOSS_HP = 3;
 
   /**
@@ -96,33 +100,89 @@ class IdleEngine {
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
   // silence is a closed or sleeping app and pays nothing.
   private static final long GRACE_MS = 10_000;
-  // Attack kinds after the bullet (kind 0): skills. Each cat has one as its own ability and casts
-  // it while fielded (decisions.md 501). Walls no longer unlock skills.
+  // Attack kinds after the bullet (kind 0): skills. A cat's skills are its own and it casts them
+  // while fielded (decisions.md 501). Only A and S grade cats have any (561): A one, S two.
+  // Ice and wind joined the first four in 561: a slow heavy lance and a quick gust.
   // A skill has five levels (515), the renderer's tables (mental/magic.ts): cooldown, damage per
   // hit as a multiple of the boss cat's gun, and hits on the wall per cast (meteors per cast; a
   // bolt and one chain per lightning stroke). The level follows the cat's level.
   private static final int SKILL_MAX_LEVEL = 5;
   private static final int SKILL_CAT_LEVELS = 10;
+
+  /** A stat that changes evenly from its level 1 value to its level 5 value (563). */
+  private static double[] ramp(double from, double to) {
+    double[] values = new double[SKILL_MAX_LEVEL];
+    for (int i = 0; i < values.length; i++) values[i] = from + (to - from) * i / 4;
+    return values;
+  }
+
+  private static double[] hits(double... perLevel) {
+    return perLevel;
+  }
+
+  private static final double[] ONE_HIT = {1, 1, 1, 1, 1};
+  // The first six keep their own tables. The nine after them (563) are the app's
+  // mental/spellbook.ts: cooldown and damage ramp from level 1 to level 5, and a falling spell
+  // (hail, blossom, bomb) lands as many times as it drops.
+  private static final String[] CODES = {
+    "water", "meteor", "bolt", "ram", "ice", "wind", "fire", "poison", "light", "dark", "sand",
+    "star", "hail", "blossom", "bomb"
+  };
+  private static final String[] NAMES = {
+    "물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬", "얼음 스킬", "바람 스킬", "불 스킬", "독 스킬", "빛 스킬", "어둠 스킬", "모래 스킬",
+    "별 스킬", "우박 스킬", "꽃비 스킬", "폭탄 스킬"
+  };
   private static final double[][] COOLDOWNS = {
     {2.4, 2.1, 1.8, 1.6, 1.4},
     {3.6, 3.3, 3, 2.8, 2.6},
     {2.6, 2.3, 2, 1.8, 1.6},
-    {3.6, 3.2, 3, 2.8, 2.6}
+    {3.6, 3.2, 3, 2.8, 2.6},
+    {3.2, 2.9, 2.6, 2.4, 2.2},
+    {2.8, 2.5, 2.2, 2, 1.8},
+    ramp(3, 2.2),
+    ramp(2.2, 1.4),
+    ramp(3.4, 2.4),
+    ramp(3, 2.2),
+    ramp(2.6, 1.8),
+    ramp(2, 1.3),
+    ramp(3.4, 2.6),
+    ramp(3, 2.2),
+    ramp(5, 3.8)
   };
   private static final double[][] SKILL_DAMAGE = {
     {1.5, 2, 2.6, 3, 3.4},
     {4.8, 8.25, 4.2, 5.05, 4.42},
     {2.5, 3.5, 4.5, 5.2, 6},
-    {1.2 * 3.4, 1.6 * 3.6, 2.1 * 3.8, 2.5 * 4, 2.9 * 4.2}
+    {1.2 * 3.4, 1.6 * 3.6, 2.1 * 3.8, 2.5 * 4, 2.9 * 4.2},
+    {3.2, 4.4, 5.6, 6.6, 7.6},
+    {1.8, 2.4, 3.1, 3.6, 4.1},
+    ramp(2.4, 5.6),
+    ramp(1.2, 2.8),
+    ramp(3.6, 8.4),
+    ramp(2.2, 5),
+    ramp(1.5, 3.5),
+    ramp(1.4, 3.2),
+    ramp(2, 2.8),
+    ramp(1.6, 2.4),
+    ramp(9, 20)
   };
   private static final double[][] SKILL_HITS = {
-    {1, 1, 1, 1, 1},
+    ONE_HIT,
     {1, 1, 3, 3, 4},
     {2, 2, 2, 3, 3},
-    {1, 1, 1, 1, 1}
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    hits(2, 2, 3, 4, 5),
+    hits(2, 2, 3, 3, 4),
+    ONE_HIT
   };
-  private static final String[] CODES = {"water", "meteor", "bolt", "ram"};
-  private static final String[] NAMES = {"물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬"};
   // Cats (decisions.md 488, 492, 493): each has a trait for its own gun. Drawn with a ticket.
   private static final List<String> CATS =
       List.of(
@@ -221,12 +281,32 @@ class IdleEngine {
     1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1,
     1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5
   };
-  // Each cat's own skill, as an index into CODES (501): sky meteor, mint water, lilac bolt,
-  // sunset ram, night meteor, snow water. Matches the app's idle/loadout.ts CAT_SKILLS.
-  private static final int[] CAT_SKILL = {
-    1, 0, 2, 3, 1, 0, 1, 0, 2, 3, 1, 0, 1, 0, 2, 3, 1, 0, 1, 0, 2, 3, 1, 0, 1, 0, 2, 3, 1, 0, 1, 0,
-    2, 3, 1, 0, 1, 0, 2
-  };
+  // Each cat's own skills, as indexes into CODES (501, 561). C and B grade cats have none, an A
+  // grade cat has one and an S grade cat has two.
+  private static final Map<String, int[]> SKILLED =
+      Map.ofEntries(
+          // A grade: one skill each.
+          Map.entry("night", new int[] {1}),
+          Map.entry("snow", new int[] {4}),
+          Map.entry("panda", new int[] {3}),
+          Map.entry("ocean", new int[] {0}),
+          Map.entry("rose", new int[] {13}),
+          Map.entry("tiger", new int[] {5}),
+          Map.entry("siam", new int[] {10}),
+          // S grade: two each. No two cats share a skill (563): fifteen skills, fifteen slots.
+          Map.entry("star", new int[] {11, 8}),
+          Map.entry("silver", new int[] {2, 14}),
+          Map.entry("wisteria", new int[] {7, 9}),
+          Map.entry("frost", new int[] {12, 6}));
+  private static final int[] NO_SKILLS = {};
+  private static final int[][] CAT_SKILLS =
+      CATS.stream().map(code -> SKILLED.getOrDefault(code, NO_SKILLS)).toArray(int[][]::new);
+
+  private static boolean casts(int cat, int skill) {
+    for (int own : CAT_SKILLS[cat]) if (own == skill) return true;
+    return false;
+  }
+
   private static final long[] OLD_UNLOCKS = {5, 15, 30, 50};
   private static final String[] OLD_SKILL_CATS = {"mint", "sky", "lilac", "sunset"};
   // Cats used to join at these walls. Saves from then keep them.
@@ -293,9 +373,8 @@ class IdleEngine {
       // Skills used to unlock at these walls (water, meteor, bolt, ram). A save that had one keeps
       // it as a cat with that skill, fielded while a slot is free (501).
       for (int i = 0; i < OLD_UNLOCKS.length; i++) {
-        int skill = i;
-        boolean has =
-            c.idle.cats.keySet().stream().anyMatch(k -> CAT_SKILL[CATS.indexOf(k)] == skill);
+        // The four old skill cats, whether or not they still have a skill (561).
+        boolean has = c.idle.cats.containsKey(OLD_SKILL_CATS[i]);
         if (c.idle.wall > OLD_UNLOCKS[i] && !has) {
           c.idle.cats.put(OLD_SKILL_CATS[i], 1);
           if (c.idle.fielded.size() < FIELD_SLOTS) c.idle.fielded.add(OLD_SKILL_CATS[i]);
@@ -506,13 +585,14 @@ class IdleEngine {
     for (String code : s.fielded) {
       int cat = CATS.indexOf(code);
       if (cat < 0) continue;
-      int skill = CAT_SKILL[cat];
       int level = skillLevel(s.cats.getOrDefault(code, 1)) - 1;
-      total +=
-          shooters.getFirst().damage()
-              * SKILL_DAMAGE[skill][level]
-              * (skill == 1 ? SKILL_HITS[skill][level] : 1)
-              / COOLDOWNS[skill][level];
+      for (int skill : CAT_SKILLS[cat]) {
+        total +=
+            shooters.getFirst().damage()
+                * SKILL_DAMAGE[skill][level]
+                * (skill == 1 || skill >= 12 ? SKILL_HITS[skill][level] : 1)
+                / COOLDOWNS[skill][level];
+      }
     }
     return SPEED * total;
   }
@@ -545,13 +625,14 @@ class IdleEngine {
     for (String code : s.fielded) {
       int cat = CATS.indexOf(code);
       if (cat < 0) continue;
-      int skill = CAT_SKILL[cat];
       int level = skillLevel(s.cats.getOrDefault(code, 1)) - 1;
-      total +=
-          shooters.getFirst().damage()
-              * SKILL_DAMAGE[skill][level]
-              * SKILL_HITS[skill][level]
-              / COOLDOWNS[skill][level];
+      for (int skill : CAT_SKILLS[cat]) {
+        total +=
+            shooters.getFirst().damage()
+                * SKILL_DAMAGE[skill][level]
+                * SKILL_HITS[skill][level]
+                / COOLDOWNS[skill][level];
+      }
     }
     total += BUY_ORDER_DAMAGE * POWER_BUY_ORDERS * buyUp(c);
     double hpUp = 0;
@@ -617,7 +698,8 @@ class IdleEngine {
     int[] casters = new int[CODES.length];
     for (String code : s.fielded) {
       int cat = CATS.indexOf(code);
-      if (cat >= 0) casters[CAT_SKILL[cat]]++;
+      if (cat < 0) continue;
+      for (int skill : CAT_SKILLS[cat]) casters[skill]++;
     }
     return casters;
   }
@@ -657,7 +739,7 @@ class IdleEngine {
     for (int i = 0; i < FAR && s.farDamage != null && i < s.farDamage.length; i++) {
       queued[2 + i] = s.farDamage[i];
     }
-    for (int kind = 0; kind < 5 && active > 0; kind++) {
+    for (int kind = 0; kind <= SKILLS && active > 0; kind++) {
       if (kind > 0 && casters[kind - 1] == 0) continue;
       // A skill is cast by each fielded cat that has it, at that cat's level (515): the hit budget
       // adds up over them and one hit may be as strong as the highest level's.
@@ -666,7 +748,7 @@ class IdleEngine {
       double gained = kind == 0 ? active / (1 / bulletsPerSecond) : 0;
       for (String cat : kind == 0 ? List.<String>of() : s.fielded) {
         int at = CATS.indexOf(cat);
-        if (at < 0 || CAT_SKILL[at] != kind - 1) continue;
+        if (at < 0 || !casts(at, kind - 1)) continue;
         int level = skillLevel(s.cats.getOrDefault(cat, 1)) - 1;
         perHit = Math.max(perHit, SKILL_DAMAGE[kind - 1][level]);
         perSecond += SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
@@ -1006,7 +1088,7 @@ class IdleEngine {
                   int skill = i;
                   int level =
                       s.fielded.stream()
-                          .filter(k -> CATS.contains(k) && CAT_SKILL[CATS.indexOf(k)] == skill)
+                          .filter(k -> CATS.contains(k) && casts(CATS.indexOf(k), skill))
                           .mapToInt(k -> skillLevel(s.cats.getOrDefault(k, 1)))
                           .max()
                           .orElse(0);
@@ -1034,8 +1116,9 @@ class IdleEngine {
                       (int) Math.round(100 * CAT_CRITICAL[cat]),
                       s.fielded.contains(code),
                       weapon == null ? null : new CompanyView.CatWeapon(weapon.kind, weapon.grade),
-                      CODES[CAT_SKILL[cat]],
-                      NAMES[CAT_SKILL[cat]],
+                      java.util.Arrays.stream(CAT_SKILLS[cat])
+                          .mapToObj(skill -> new CompanyView.CatSkill(CODES[skill], NAMES[skill]))
+                          .toList(),
                       skillLevel(Math.max(1, level)),
                       nextSkillAt(Math.max(1, level)),
                       CAT_GRADES.get(CAT_GRADE[cat]));

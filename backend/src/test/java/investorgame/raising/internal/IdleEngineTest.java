@@ -102,6 +102,9 @@ class IdleEngineTest {
   @Test
   void collisionAmountsMatchDisplayWithoutHiddenMultiplier() {
     start(51);
+    // Only A and S grade cats have skills (561): the ocean cat casts water, the night cat meteors.
+    state.idle.cats.putAll(java.util.Map.of("ocean", 1, "night", 1));
+    state.idle.fielded.addAll(List.of("ocean", "night"));
     tick(
         3000,
         new IdleHit(51, "bullet", 1, 0.75),
@@ -117,6 +120,8 @@ class IdleEngineTest {
   void fireUpgradeCannotMultiplySingleMeteorDamage() {
     state.battleLevels.put("fire", 100);
     start(16);
+    state.idle.cats.put("night", 1);
+    state.idle.fielded.add("night");
     tick(3000, new IdleHit(16, "meteor", 1, 4.8));
     assertThat(state.idle.damage).isEqualTo(4.8);
   }
@@ -152,11 +157,11 @@ class IdleEngineTest {
     start(1);
     tick(1000);
     // Four seconds between beats on a slow link: the pistol fired about 15 bullets meanwhile.
-    tick(4000, new IdleHit(1, "bullet", 14, 14.0));
-    assertThat(state.idle.damage).isEqualTo(14);
+    tick(4000, new IdleHit(1, "bullet", 9, 9.0));
+    assertThat(state.idle.damage).isEqualTo(9);
     assertThat(state.capital).isEqualTo(5 * 2000);
     tick(10001, new IdleHit(1, "bullet", 3, 3.0));
-    assertThat(state.idle.damage).isEqualTo(14);
+    assertThat(state.idle.damage).isEqualTo(9);
     // The silence keeps no hits, but its time income is still paid (523).
     assertThat(state.capital).isEqualTo(5 * 2000 + Math.floor(10.001 * 2000));
   }
@@ -259,8 +264,8 @@ class IdleEngineTest {
     state.idle.wall = 100;
     state.idle.cats =
         new java.util.LinkedHashMap<>(
-            java.util.Map.of("sky", 9, "mint", 9, "lilac", 9, "sunset", 9));
-    state.idle.fielded = new java.util.ArrayList<>(List.of("sky", "mint", "lilac", "sunset"));
+            java.util.Map.of("ocean", 9, "night", 9, "silver", 9, "panda", 9));
+    state.idle.fielded = new java.util.ArrayList<>(List.of("ocean", "night", "silver", "panda"));
     tick(
         3000,
         new IdleHit(100, "water", 1),
@@ -430,9 +435,19 @@ class IdleEngineTest {
     assertThat(cat.apply("caramel").damagePercent()).isEqualTo(70);
     assertThat(cat.apply("ocean").damagePercent()).isEqualTo(100);
     assertThat(cat.apply("star").damagePercent()).isEqualTo(150);
-    // S는 스킬마다 하나다.
-    assertThat(cats.stream().filter(c -> c.grade().equals("S")).map(c -> c.skill()))
-        .containsExactlyInAnyOrder("water", "meteor", "bolt", "ram");
+    // 마법은 A등급부터다 (561번): C·B는 없고 A는 하나, S는 둘이다. 모든 스킬이 쓰인다.
+    for (var c : cats) {
+      int want = c.grade().equals("S") ? 2 : c.grade().equals("A") ? 1 : 0;
+      assertThat(c.skills()).as(c.code()).hasSize(want);
+      assertThat(c.skills().stream().map(skill -> skill.code()).distinct().count()).isEqualTo(want);
+    }
+    assertThat(
+            cats.stream().flatMap(c -> c.skills().stream()).map(skill -> skill.code()).distinct())
+        .containsExactlyInAnyOrder(
+            "water", "meteor", "bolt", "ram", "ice", "wind", "fire", "poison", "light", "dark",
+            "sand", "star", "hail", "blossom", "bomb");
+    // 열다섯 가지 스킬이 열다섯 칸에 하나씩이다 (563번): 같은 스킬을 가진 고양이는 없다.
+    assertThat(cats.stream().mapToInt(c -> c.skills().size()).sum()).isEqualTo(15);
     // 뽑기: 등급의 몫은 C 60 · B 28 · A 10 · S 2%이고 등급 안에서는 고르다.
     var random = new HashSeededRandom(7);
     java.util.Map<String, Integer> drawn = new java.util.HashMap<>();
@@ -465,9 +480,9 @@ class IdleEngineTest {
     // The tenth wall is an ordinary wall now (550): no three-fold reward.
     double tenth = 1_000_000 * IdleEngine.REWARD_UPGRADES * StrictMath.pow(1.04, 9);
     assertThat(state.capital).isBetween(tenth, tenth * 1.05);
-    assertThat(IdleEngine.maxHp(10)).isCloseTo(144.2, offset(1e-9));
+    assertThat(IdleEngine.maxHp(10)).isCloseTo(72.1, offset(1e-9));
     // The boss wall (every 50th) has three times the health and pays three times the reward.
-    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 1088.2, offset(1e-9));
+    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 544.1, offset(1e-9));
     state.idle.wall = 50;
     state.idle.damage = IdleEngine.maxHp(50) - 1;
     // Its own clear reward (549) was paid before: only the wall reward is counted here.
@@ -497,7 +512,7 @@ class IdleEngineTest {
     tick(1000, new IdleHit(10, "bullet", 1));
     assertThat(state.diamonds).isEqualTo(diamonds);
     // Walls no longer unlock skills (decisions.md 501): without a cat nothing is cast.
-    assertThat(engine.view(state).skills()).hasSize(4).noneMatch(skill -> skill.owned());
+    assertThat(engine.view(state).skills()).hasSize(15).noneMatch(skill -> skill.owned());
   }
 
   @Test
@@ -709,8 +724,13 @@ class IdleEngineTest {
                   .fielded())
           .isTrue();
       assertThat(view.dps()).isPositive();
-      assertThat(view.skills())
-          .anyMatch(skill -> skill.code().equals(cat.skill()) && skill.owned());
+      for (var own : cat.skills()) {
+        assertThat(view.skills())
+            .anyMatch(skill -> skill.code().equals(own.code()) && skill.owned());
+      }
+      assertThat(view.skills().stream().filter(skill -> skill.owned()).count())
+          .as(cat.code())
+          .isEqualTo(cat.skills().size());
       engine.fieldCat(state, cat.code(), false);
     }
     assertThat(engine.view(state).cats().getFirst()).isEqualTo(before);
@@ -725,7 +745,7 @@ class IdleEngineTest {
     // A skill is a cat's own ability (decisions.md 501): deep walls alone cast nothing.
     tick(3000, new IdleHit(60, "meteor", 1));
     assertThat(state.idle.damage).isZero();
-    assertThat(engine.view(state).skills()).hasSize(4).noneMatch(skill -> skill.owned());
+    assertThat(engine.view(state).skills()).hasSize(15).noneMatch(skill -> skill.owned());
     assertThatThrownBy(() -> engine.drawCat(state, random))
         .as("no diamonds, no cat")
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
@@ -770,15 +790,20 @@ class IdleEngineTest {
   void onlyFieldedCatsShootAndCastTheirOwnSkill() {
     start(16);
     assertThat(engine.view(state).cats().getFirst())
-        .as("the sky cat's own skill is the meteor")
-        .matches(cat -> cat.code().equals("sky") && cat.skill().equals("meteor"));
-    double withCat = engine.view(state).dps();
+        .as("the sky cat is C grade: no skill (561)")
+        .matches(cat -> cat.code().equals("sky") && cat.skills().isEmpty());
+    assertThat(engine.view(state).skills()).noneMatch(skill -> skill.owned());
+    // The night cat (A grade) has one skill of its own: the meteor.
     engine.fieldCat(state, "sky", false);
+    state.idle.cats.put("night", 1);
+    engine.fieldCat(state, "night", true);
+    double withCat = engine.view(state).dps();
+    engine.fieldCat(state, "night", false);
     assertThat(engine.view(state).dps()).isLessThan(withCat);
     assertThat(engine.view(state).skills()).noneMatch(skill -> skill.owned());
     tick(3000, new IdleHit(16, "meteor", 1));
     assertThat(state.idle.damage).as("a resting cat's skill does nothing").isZero();
-    engine.fieldCat(state, "sky", true);
+    engine.fieldCat(state, "night", true);
     tick(3000, new IdleHit(16, "meteor", 1), new IdleHit(16, "water", 1));
     assertThat(state.idle.damage).as("only the fielded cat's own skill lands").isEqualTo(4.8);
     assertThat(engine.view(state).skills())
@@ -821,7 +846,7 @@ class IdleEngineTest {
     assertThat(engine.view(state).earned().doubleValue()).isEqualTo(income);
     // The wall's reward is on the same scale, with no cap.
     state.idle.damage = IdleEngine.maxHp(2001) - 1;
-    state.idle.hitCredits = new double[7];
+    state.idle.hitCredits = new double[18];
     tick(500, new IdleHit(2001, "bullet", 1, 4.0));
     assertThat(state.idle.wall).isEqualTo(2002);
     // 벽 보상은 그 벽 물가의 강화 세 단계 값이다 (553번).
@@ -875,38 +900,33 @@ class IdleEngineTest {
     start(1);
     state.idle.wall = 100;
     for (int i = 0; i < 3; i++) tick(1000);
-    state.idle.hitCredits = new double[7];
+    state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     double plain = state.idle.damage;
     assertThat(plain).isPositive();
     engine.useActive(state, "rally");
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[7];
+    state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * plain, org.assertj.core.data.Offset.offset(1e-9));
     // Five real seconds later it is over.
     for (int i = 0; i < 5; i++) tick(1000);
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[7];
+    state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage).isCloseTo(plain, org.assertj.core.data.Offset.offset(1e-9));
   }
 
   @Test
-  void twoCatsWithTheSameSkillCastItTwiceAsOften() {
+  void aSkillIsCastOncePerCooldownByItsOneCat() {
     start(1);
-    state.idle.cats.put("sky", 1);
-    state.idle.fielded.add("sky");
-    // 1.8 s at double speed is one 3.6 s cooldown.
-    tick(1800, new IdleHit(1, "meteor", 2));
-    assertThat(state.idle.damage).as("one caster, one meteor per cooldown").isEqualTo(4.8);
-    // The night cat's own skill is the meteor too.
+    state.idle.wall = 100;
     state.idle.cats.put("night", 1);
     state.idle.fielded.add("night");
-    state.idle.damage = 0;
-    state.idle.hitCredits = new double[7];
-    tick(1800, new IdleHit(1, "meteor", 4));
-    assertThat(state.idle.damage).isEqualTo(2 * 4.8);
+    // 1.8 s at double speed is one 3.6 s cooldown: a second reported meteor is not credited.
+    // No two cats share a skill (563), so one cat is all a skill ever has.
+    tick(1800, new IdleHit(100, "meteor", 2));
+    assertThat(state.idle.damage).as("one caster, one meteor per cooldown").isEqualTo(4.8);
   }
 
   @Test
@@ -917,11 +937,9 @@ class IdleEngineTest {
     state.idle.fielded.clear();
     state.idle.catSkills = false;
     var view = engine.view(state);
-    // Water, meteor and bolt were unlocked at walls 5, 15 and 30; the ram (50) was not.
-    assertThat(view.skills())
-        .filteredOn(skill -> skill.owned())
-        .extracting(skill -> skill.code())
-        .containsExactly("water", "meteor", "bolt");
+    // Water, meteor and bolt were unlocked at walls 5, 15 and 30; the ram (50) was not. The cats
+    // are kept, but C grade cats no longer have a skill (561).
+    assertThat(view.skills()).noneMatch(skill -> skill.owned());
     assertThat(view.cats())
         .filteredOn(cat -> cat.fielded())
         .extracting(cat -> cat.code())
@@ -1019,16 +1037,16 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isCloseTo(2 * order * up, offset(1e-9));
     // Buy orders do not spend the bullets' budget, and the reverse.
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[7];
+    state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     double bullets = state.idle.damage;
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[7];
+    state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0), new IdleHit(100, "buy", 1, 1000.0));
     assertThat(state.idle.damage).isCloseTo(bullets + order * up, offset(1e-9));
     // The budget is the buy wall's fastest fire: far more than that is not accepted.
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[7];
+    state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "buy", 1000, 1000 * 1000.0));
     assertThat(state.idle.damage).isLessThan(30 * order * up);
   }
@@ -1053,21 +1071,21 @@ class IdleEngineTest {
     assertThat(IdleEngine.skillLevel(1000)).isEqualTo(5);
     start(1);
     state.idle.wall = 100;
-    state.idle.cats.put("mint", 1);
-    state.idle.fielded.add("mint");
-    var cat = engine.view(state).cats().stream().filter(c -> "mint".equals(c.code())).findFirst();
+    state.idle.cats.put("ocean", 1);
+    state.idle.fielded.add("ocean");
+    var cat = engine.view(state).cats().stream().filter(c -> "ocean".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(1);
     assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(10);
     // Level 1 water: 1.5 times the gun, once per 2.4 s. 1.2 s at double speed is one cooldown.
     tick(1200, new IdleHit(100, "water", 3, 3 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(1.5, offset(1e-9));
     // Cat level 20 is skill level 3: 2.6 times the gun, once per 1.8 s.
-    state.idle.cats.put("mint", 20);
+    state.idle.cats.put("ocean", 20);
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[7];
+    state.idle.hitCredits = new double[18];
     tick(900, new IdleHit(100, "water", 3, 3 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2.6, offset(1e-9));
-    cat = engine.view(state).cats().stream().filter(c -> "mint".equals(c.code())).findFirst();
+    cat = engine.view(state).cats().stream().filter(c -> "ocean".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(3);
     assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(30);
     assertThat(engine.view(state).skills().getFirst().level()).isEqualTo(3);
@@ -1077,12 +1095,47 @@ class IdleEngineTest {
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(5);
     assertThat(cat.orElseThrow().skillNextLevel()).isZero();
     // A level 3 meteor shower drops three rocks per cast: three hits per 3 s.
-    state.idle.cats.put("sky", 20);
-    state.idle.fielded.add("sky");
+    state.idle.cats.put("night", 20);
+    state.idle.fielded.add("night");
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[7];
+    state.idle.hitCredits = new double[18];
     tick(1500, new IdleHit(100, "meteor", 10, 10 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(3 * 4.2, offset(1e-9));
+  }
+
+  @Test
+  void anSGradeCatCastsBothOfItsSkills() {
+    // 마법은 A등급부터, S등급은 둘 (561번). 서리냥은 우박과 불을 쓴다 (563번).
+    start(1);
+    state.idle.wall = 100;
+    state.idle.cats.put("frost", 1);
+    state.idle.fielded.add("frost");
+    assertThat(engine.view(state).skills())
+        .filteredOn(skill -> skill.owned())
+        .extracting(skill -> skill.code())
+        .containsExactly("fire", "hail");
+    // 1.7 s at double speed is one 3.4 s hail cooldown (two stones at level 1) and one 3 s fire
+    // cooldown.
+    tick(
+        1700,
+        new IdleHit(100, "hail", 2, 1000.0),
+        new IdleHit(100, "fire", 1, 1000.0),
+        new IdleHit(100, "wind", 1, 1000.0));
+    assertThat(state.idle.damage).as("hail 2 x 2 + fire 2.4, no wind").isCloseTo(6.4, offset(1e-9));
+    // The tiger cat (A grade) has the one skill: the wind.
+    state.idle.cats.put("tiger", 1);
+    state.idle.fielded.add("tiger");
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[18];
+    tick(1400, new IdleHit(100, "wind", 1, 1000.0));
+    assertThat(state.idle.damage).isCloseTo(1.8, offset(1e-9));
+    // A level 5 bomb is one hit of twenty times the gun, once per 3.8 s.
+    state.idle.cats.put("silver", 40);
+    state.idle.fielded.add("silver");
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[18];
+    tick(1900, new IdleHit(100, "bomb", 1, 1000.0));
+    assertThat(state.idle.damage).isCloseTo(20, offset(1e-9));
   }
 
   @Test

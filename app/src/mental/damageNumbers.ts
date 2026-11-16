@@ -1,4 +1,5 @@
 import { shareLabel } from './shares'
+import { EXTRA_SPELLS, type ExtraSpell, SPELLBOOK } from './spellbook'
 
 /**
  * 데미지 숫자 (decisions.md 391번): 적이 피해를 받는 모든 경우에 숫자를 띄운다. 334번의 "한 방에 안 죽는 적에만"을 뒤집었다. 숫자가 화면을 덮지
@@ -16,6 +17,9 @@ export type DamageKind =
   | 'earth'
   | 'siege'
   | 'chain'
+  | 'ice'
+  | 'wind'
+  | ExtraSpell
 
 export interface DamageStyle {
   /** 글자 색(윤곽은 잉크색). 치명타는 따로 둔 풀의 금빛 글자에 빨간 윤곽이다. */
@@ -41,6 +45,16 @@ export const DAMAGE_STYLE: Record<DamageKind, DamageStyle> = {
   earth: { color: '#e0a860', scale: 0.7, life: 460, rise: 26, merge: true },
   siege: { color: '#ffb35c', scale: 0.95, life: 600, rise: 32, merge: false },
   chain: { color: '#ffe94d', scale: 0.6, life: 420, rise: 22, merge: true },
+  // 얼음·바람 (561번): 고양이 스킬로만 나간다.
+  ice: { color: '#bdf0ff', scale: 0.7, life: 460, rise: 26, merge: true },
+  wind: { color: '#b9f3cf', scale: 0.7, life: 460, rise: 26, merge: true },
+  // spellbook의 마법들 (563번): 색만 다르다.
+  ...(Object.fromEntries(
+    EXTRA_SPELLS.map((spell) => [
+      spell,
+      { color: SPELLBOOK[spell].number, scale: 0.7, life: 460, rise: 26, merge: true },
+    ]),
+  ) as Record<ExtraSpell, DamageStyle>),
 }
 
 /** 같은 적의 같은 피해를 하나로 합치는 시간(ms): 처음 뜬 때부터 센다(합쳐도 오래 남지 않게). */

@@ -265,7 +265,7 @@ public record CompanyView(
    * @param firePercent 이 고양이 총의 쏘는 빠르기(%). 특성이 없으면 100
    * @param criticalPercent 이 고양이 총의 치명타 배율(%). 특성이 없으면 100
    * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
-   * @param skill 이 고양이의 고유 스킬 코드(water·meteor·bolt·ram). 출전해 있는 동안 발동한다 (501번)
+   * @param skills 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고 A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다
    * @param grade 등급 C·B·A·S (539번). 종마다 정해져 있고, 높을수록 총이 세고 뽑기에서 드물다
    */
   public record IdleCat(
@@ -277,13 +277,15 @@ public record CompanyView(
       int criticalPercent,
       boolean fielded,
       CatWeapon weapon,
-      String skill,
-      String skillName,
+      List<CatSkill> skills,
       int skillLevel,
       int skillNextLevel,
       String grade) {}
 
   public record CatWeapon(String kind, String grade) {}
+
+  /** 고양이의 고유 스킬 하나 (561번): 코드(water·meteor·bolt·ram·ice·wind)와 이름. */
+  public record CatSkill(String code, String name) {}
 
   public record IdleWall(long wall, double hp, double maxHp) {}
 

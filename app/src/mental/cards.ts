@@ -7,8 +7,6 @@ import {
   meteorStats,
   waterStats,
 } from './magic'
-import type { WeaponKind } from './weaponEffects'
-
 /**
  * 멘탈 카드 (decisions.md 328·330·377·392·393번). 처음 한 장, 그리고 레벨이 오를 때마다 한 장을 고른다. 효과는 한 판 안의 화면 규칙이라 앱이 가진다.
  *
@@ -16,6 +14,9 @@ import type { WeaponKind } from './weaponEffects'
  * 나가고(392번, magic.ts), 고를 때마다 한 레벨씩 오른다. 마법 카드의 등급은 그 카드로 오르는 레벨을 보인다: Lv.1 희귀, Lv.2 영웅, Lv.3부터 전설.
  * 희귀 카드 "고양이 한 마리 더"(393번)는 사장냥과 똑같이 싸우는 고양이를 한 마리 더 부른다(최대 MAX_MATES).
  */
+import { EXTRA_SPELLS, type ExtraSpell } from './spellbook'
+import type { WeaponKind } from './weaponEffects'
+
 export type CardGrade = 'N' | 'R' | 'SR' | 'UR'
 export type Magic = 'water' | 'meteor' | 'lightning' | 'earth'
 export type CardCode = 'atk' | 'spd' | 'cat' | 'cat-magic' | Magic
@@ -139,6 +140,13 @@ export function magicCard(magic: Magic, from: number): Card {
 
 export const MAGICS: readonly Magic[] = ['water', 'meteor', 'lightning', 'earth']
 
+/**
+ * 고양이 스킬로 쓰는 마법까지 (561·563번): 얼음·바람과 spellbook.ts의 마법들은 자동 전투의 고양이 스킬로만 나가고 카드로는
+ * 나오지 않는다.
+ */
+export type Spell = Magic | 'ice' | 'wind' | ExtraSpell
+export const SPELLS: readonly Spell[] = [...MAGICS, 'ice', 'wind', ...EXTRA_SPELLS]
+
 /** 동료는 같은 무기로 싸우고, 각성 카드를 골라야 마법을 쓴다. */
 export function mateCard(have: number): Card {
   const to = Math.min(MAX_MATES, have + 1)
@@ -215,10 +223,10 @@ export interface Loadout {
   /** 고양이가 따로 든 총 (488번), 줄 선 차례대로. 없는 자리의 고양이는 사장냥과 같은 총을 쏜다. */
   mateGuns: MateGun[]
   /**
-   * 자동 전투 (501번): 스킬은 고양이의 고유 능력이다. 줄 선 차례대로 그 고양이의 마법 하나. 이 칸이 있으면 고양이는 제 마법만 쓰고 사장냥은 마법을
-   * 쓰지 않는다. 없으면(미션) 사장냥과 각성한 고양이가 가진 마법을 모두 쓴다.
+   * 자동 전투 (501번): 스킬은 고양이의 고유 능력이다. 줄 선 차례대로 그 고양이의 마법들(561번: C·B등급은 없고 A는 하나, S는 둘). 이 칸이
+   * 있으면 고양이는 제 마법만 쓰고 사장냥은 마법을 쓰지 않는다. 없으면(미션) 사장냥과 각성한 고양이가 가진 마법을 모두 쓴다.
    */
-  mateMagic?: Magic[]
+  mateMagic?: Spell[][]
   /** 자동 전투 (515번): mateMagic과 같은 차례로, 그 고양이의 스킬 레벨(1~5). 없으면 loadout의 마법 레벨을 쓴다. */
   mateMagicLevels?: number[]
 }

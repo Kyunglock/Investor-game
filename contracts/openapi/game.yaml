@@ -220,7 +220,7 @@ paths:
                     required: [wall, kind, count]
                     properties:
                       wall: { type: integer, format: int64, minimum: 1 }
-                      kind: { type: string, enum: [bullet, water, meteor, bolt, ram, barrage, buy], description: barrage는 액티브 스킬 매수세례의 매수 주문 (503번), buy는 매수벽의 보통 매수 주문 (514번) }
+                      kind: { type: string, enum: [bullet, water, meteor, bolt, ram, ice, wind, fire, poison, light, dark, sand, star, hail, blossom, bomb, barrage, buy], description: barrage는 액티브 스킬 매수세례의 매수 주문 (503번), buy는 매수벽의 보통 매수 주문 (514번) }
                       count: { type: integer, minimum: 1, maximum: 1000 }
                       damage: { type: number, minimum: 0, maximum: 1000000000000, description: 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 }
                       depth: { type: integer, minimum: 0, maximum: 2, description: "총알이 이 벽에 닿기 전에 뚫고 온 벽의 수. 0은 화면이 치고 있던 맨 앞 벽(직접 명중)이다. 화면이 서버보다 먼저 벽을 부수므로(532번) 직접 명중은 서버의 맨 앞 벽부터 차례로 깎고 넘친 것은 다음 벽으로 넘어간다. 뚫고 간 명중(1, 2)은 wall에 적힌 벽에 쌓인다. 없으면 옛 화면: 서버의 맨 앞 벽에서 떨어진 거리로 본다" }
@@ -1374,7 +1374,7 @@ components:
                   readyIn: { type: number, description: 다시 쓸 수 있을 때까지 남은 시간(초). 0이면 쓸 수 있다 }
             skills:
               type: array
-              description: 스킬 넷(물·메테오·번개·충차). 스킬은 고양이의 고유 능력이다 (decisions.md 501번)
+              description: 스킬 열다섯(물·메테오·번개·충차·얼음·바람과 불·독·빛·어둠·모래·별·우박·꽃비·폭탄, 561·563번). 스킬은 고양이의 고유 능력이다 (decisions.md 501번)
               items:
                 type: object
                 required: [code, name, owned, level]
@@ -1388,10 +1388,10 @@ components:
             power: { type: number, description: "전투력 (538번). 성장 탭이 보여 주는 숫자 하나: 모든 총·스킬의 초당 피해(치명타 포함)와 매수 주문, 매수벽 체력 강화를 묶었다. 벽 번호는 보지 않는다" }
             cats:
               type: array
-              description: 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다
+              description: 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다. 스킬은 A등급부터 있다 (561번)
               items:
                 type: object
-                required: [code, name, level, damagePercent, firePercent, criticalPercent, fielded, weapon, skill, skillName, skillLevel, skillNextLevel, grade]
+                required: [code, name, level, damagePercent, firePercent, criticalPercent, fielded, weapon, skills, skillLevel, skillNextLevel, grade]
                 properties:
                   code: { type: string, enum: [sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat] }
                   name: { type: string }
@@ -1400,9 +1400,16 @@ components:
                   firePercent: { type: integer, description: 이 고양이 총의 쏘는 빠르기(%). 특성이 없으면 100 }
                   criticalPercent: { type: integer, description: 이 고양이 총의 치명타 배율(%). 특성이 없으면 100 }
                   fielded: { type: boolean }
-                  skill: { type: string, enum: [water, meteor, bolt, ram], description: 이 고양이의 고유 스킬 (501번). 출전해 있는 동안 발동한다 }
-                  skillName: { type: string }
-                  skillLevel: { type: integer, description: 고유 스킬의 레벨 1~5 (515번). 고양이 Lv.10·20·30·40에 하나씩 오른다 (534번) }
+                  skills:
+                    type: array
+                    description: 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고(빈 배열) A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다
+                    items:
+                      type: object
+                      required: [code, name]
+                      properties:
+                        code: { type: string, enum: [water, meteor, bolt, ram, ice, wind, fire, poison, light, dark, sand, star, hail, blossom, bomb] }
+                        name: { type: string }
+                  skillLevel: { type: integer, description: 고유 스킬의 레벨 1~5 (515번). 고양이 Lv.10·20·30·40에 하나씩 오른다 (534번). 스킬이 둘이면 같은 레벨이다 }
                   skillNextLevel: { type: integer, description: 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 }
                   grade: { type: string, enum: [C, B, A, S], description: "등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.4배 · A 2배 · S 3배) 뽑기에서 드물다" }
                   weapon:

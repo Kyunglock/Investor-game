@@ -1,5 +1,12 @@
 import { type ReactNode, useId } from 'react'
 import { magicTier } from '../mental/magic'
+import {
+  EXTRA_SPELLS,
+  type ExtraSpell,
+  ICE_GLYPH,
+  SPELLBOOK,
+  WIND_GLYPH,
+} from '../mental/spellbook'
 import type { SkillCode } from './skills'
 import './skill-badge.css'
 
@@ -9,6 +16,14 @@ const COLORS: Record<SkillCode, { light: string; mid: string; dark: string; line
   meteor: { light: '#fff0b8', mid: '#ff9a3d', dark: '#dc3b2a', line: '#7c1d12' },
   bolt: { light: '#fffbd0', mid: '#ffd633', dark: '#f09a00', line: '#7a4a00' },
   ram: { light: '#fbe8c2', mid: '#cf9257', dark: '#8a5326', line: '#4a2a10' },
+  // 얼음 하늘빛, 바람 풀빛 (561번).
+  ice: { light: '#f2fdff', mid: '#8fe3f5', dark: '#2f9fc4', line: '#135a78' },
+  wind: { light: '#f1fff5', mid: '#8fe0b0', dark: '#2f9d74', line: '#125a40' },
+  // spellbook의 마법들 (563번): 색과 그림은 표에 있다.
+  ...(Object.fromEntries(EXTRA_SPELLS.map((spell) => [spell, SPELLBOOK[spell].colors])) as Record<
+    ExtraSpell,
+    { light: string; mid: string; dark: string; line: string }
+  >),
 }
 /** 못 가진 스킬: 흑백. */
 const GRAY = { light: '#e4dfd5', mid: '#cfc8ba', dark: '#a39b8c', line: '#6f685b' }
@@ -118,6 +133,47 @@ const GLYPHS: Record<SkillCode, Record<1 | 2 | 3, ReactNode>> = {
       </>
     ),
   },
+  // 얼음 (561번): 결정 → 큰 결정 → 눈꽃처럼 빛나는 결정.
+  ice: {
+    1: <path d={ICE_GLYPH} transform="translate(4.8 4.8) scale(.8)" />,
+    2: <path d={ICE_GLYPH} />,
+    3: (
+      <>
+        <path d={ICE_GLYPH} />
+        <path className="spark" d="M24 8.5v3M24 36.5v3M8.5 24h3M36.5 24h3" />
+      </>
+    ),
+  },
+  // 바람 (561번): 소용돌이 → 큰 소용돌이 → 바람 줄기가 더해진 회오리.
+  wind: {
+    1: <path d={WIND_GLYPH} transform="translate(4.8 4.8) scale(.8)" />,
+    2: <path d={WIND_GLYPH} />,
+    3: (
+      <>
+        <path d={WIND_GLYPH} />
+        <path className="spark" d="M9 15.5h3.5M9 35h6M35.5 14.5H39" />
+      </>
+    ),
+  },
+  // spellbook의 마법들 (563번): 그림 하나가 작게 → 크게 → 반짝임을 더해.
+  ...(Object.fromEntries(
+    EXTRA_SPELLS.map((spell) => {
+      const d = SPELLBOOK[spell].glyph
+      return [
+        spell,
+        {
+          1: <path d={d} transform="translate(4.8 4.8) scale(.8)" />,
+          2: <path d={d} />,
+          3: (
+            <>
+              <path d={d} />
+              <path className="spark" d="M10 13l3 2.4M38 13l-3 2.4M10 35l3-2.4M38 35l-3-2.4" />
+            </>
+          ),
+        },
+      ]
+    }),
+  ) as Record<ExtraSpell, Record<1 | 2 | 3, ReactNode>>),
 }
 
 /** 별 하나 (반지름 r). */

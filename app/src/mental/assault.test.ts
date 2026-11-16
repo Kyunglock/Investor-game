@@ -247,14 +247,14 @@ describe('매도벽 경험치 (#700)', () => {
     expect(IDLE_ORDER_SPEED).toBe(0.6)
   })
   it('자동 전투의 물량은 매도벽 체력을 따라 커진다 (498번)', () => {
-    // 첫 벽(체력 20)은 그대로이고, 벽 체력이 IDLE_THREAT_HP만큼 늘 때마다 한 배씩 는다.
-    expect(idleThreat(1, 20)).toBe(1)
+    // 첫 벽(체력 10, 562번)은 그대로이고, 벽 체력이 IDLE_THREAT_HP만큼 늘 때마다 한 배씩 는다.
+    expect(idleThreat(1, 10)).toBe(1)
     expect(idleThreat(51, IDLE_THREAT_HP)).toBe(2)
-    expect(idleThreat(201, 10420)).toBe(15)
+    expect(idleThreat(201, 5210)).toBe(15)
     // 큰손 벽은 체력이 세 배지만 물량은 이웃 벽과 비슷하다 (518번).
-    expect(idleThreat(200, 3 * 10328.2)).toBe(15)
+    expect(idleThreat(200, 3 * 5164.1)).toBe(15)
     expect(idleThreat(5, 0)).toBe(1)
-    const deep = idleAssaultSpec(201, 10420)
+    const deep = idleAssaultSpec(201, 5210)
     const same = idleAssaultSpec(201)
     expect(deep.enemyHp).toBe(15)
     expect(deep.enemyDmg).toBe(same.enemyDmg * 15)
