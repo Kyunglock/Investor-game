@@ -132,6 +132,7 @@ try {
     const loadingErrors: string[] = []
     const actions: string[] = []
     const reportedHits: { wall: number; kind: string; count: number; damage: number }[] = []
+    const moves: string[] = []
     let catDraws = 0
     const hires: number[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -155,6 +156,22 @@ try {
       // Cat gacha, fielding and equipment (decisions.md 488): the mock keeps the server's shape.
       const path = new URL(route.request().url()).pathname
       const sent = route.request().postDataJSON()
+      // The boss challenge and the retreat after the buy wall fell (decisions.md 546).
+      const idleState = company.idle as typeof company.idle & {
+        epoch?: number
+        circuitFired?: boolean
+      }
+      if (path.endsWith('/idle/boss') || path.endsWith('/idle/retreat')) {
+        moves.push(path.endsWith('/boss') ? 'boss' : 'retreat')
+        const wall = company.idle.wall
+        const back = Math.max(1, wall - 10)
+        company.idle.wall = path.endsWith('/boss') ? wall + 1 : back % 10 === 0 ? back + 1 : back
+        company.idle.boss = company.idle.wall % 10 === 0
+        company.idle.hp = company.idle.maxHp = 1200
+        company.idle.circuitSeconds = 0
+        idleState.circuitFired = false
+        idleState.epoch = (idleState.epoch ?? 0) + 1
+      }
       const cat = company.idle.cats.find((c) => c.code === sent?.code)
       if (path.endsWith('/draws')) hires.push(sent.count)
       if (path.endsWith('/cat/draw')) {
@@ -605,12 +622,63 @@ try {
       }
       await expect.poll(async () => (await queuedWalls()).map((wall) => wall.wall)).toEqual([9, 10])
       assert.equal((await queuedWalls())[1].boss, true)
-      company.idle.wall = 10
-      company.idle.boss = true
-      await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 10')
+      // The wall before the boss stands again and carries the boss challenge button (546).
+      await expect(page.getByTestId('idle-boss')).toHaveCount(0)
+      // The long fast fight above may have lost its buy wall and gone back already.
+      moves.length = 0
+      company.idle.wall = 9
+      await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 9 반복')
+      await expect(page.getByTestId('idle-wall-number')).toHaveAttribute('data-state', 'hold')
+      const bossButton = page.getByTestId('idle-boss')
+      await expect(bossButton).toContainText('보스 도전')
+      await expect(bossButton).toContainText('매도벽 10')
+      const bossBox = await bossButton.boundingBox()
+      assert(bossBox && bossBox.width >= 44 && bossBox.height >= 44, 'boss button is a full target')
+      await page.screenshot({ path: '/tmp/idle-boss-ready.png' })
+      await bossButton.click()
+      await expect(page.getByTestId('idle-wall-number')).toHaveText('보스 10')
+      await expect(page.getByTestId('idle-wall-number')).toHaveAttribute('data-state', 'boss')
+      await expect(page.getByTestId('idle-boss')).toHaveCount(0)
+      assert.deepEqual(moves, ['boss'])
       await expect
         .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
         .toEqual([11, 12])
+      // The boss wall at half health: the circuit breaker halts trading once (546).
+      company.idle.hp = company.idle.maxHp * 0.45
+      await expect(page.getByTestId('idle-wall-number')).toHaveText('거래 정지')
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            Boolean(
+              (window as unknown as { __mentalMarket: () => { circuit: unknown } }).__mentalMarket()
+                .circuit,
+            ),
+          ),
+        )
+        .toBe(true)
+      await page.screenshot({ path: '/tmp/idle-boss-circuit.png' })
+      Object.assign(company.idle, { circuitFired: true })
+      await expect(page.getByTestId('idle-wall-number')).toHaveText('보스 10', { timeout: 10000 })
+      // The buy wall falls: every enemy is gone and the fight goes ten walls back, never onto a
+      // boss wall (546).
+      await page.waitForTimeout(1500)
+      const flowsLeft = await page.evaluate(() => {
+        const dev = window as unknown as {
+          __mentalBuyWallHit: (n: number) => void
+          __mentalMarket: () => { flows: number }
+        }
+        dev.__mentalBuyWallHit(1e12)
+        return dev.__mentalMarket().flows
+      })
+      assert.equal(flowsLeft, 0, 'no sell order or monster is left when the buy wall falls')
+      await expect(page.getByTestId('idle-raid')).toContainText('매수벽 붕괴')
+      await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 1')
+      assert.deepEqual(moves, ['boss', 'retreat'])
+      await page.screenshot({ path: '/tmp/idle-retreat.png' })
+      company.idle.wall = 10
+      company.idle.boss = true
+      Object.assign(company.idle, { circuitFired: true })
+      await expect(page.getByTestId('idle-wall-number')).toHaveText('보스 10')
       company.idle.wall = 11
       company.idle.boss = false
       await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 11')

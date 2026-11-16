@@ -8,7 +8,14 @@ import { useRaisingStore } from './store'
 // every hit that will be sent is also replayed here on top of the server's last answer.
 const predictor = new IdlePredictor()
 let predicted: string | undefined
-const NEW_WALL: IdleShown = { wall: 1, hp: 120, maxHp: 120, upcoming: [], circuitSeconds: 0 }
+const NEW_WALL: IdleShown = {
+  wall: 1,
+  hp: 120,
+  maxHp: 120,
+  upcoming: [],
+  circuitSeconds: 0,
+  serial: 0,
+}
 
 /** The wall and health to show for the server's `company.idle`: its state plus the hits it has not handled yet. */
 export function shownIdle(idle: IdleServer | null | undefined): IdleShown {
@@ -28,6 +35,34 @@ function inOrder<T>(send: () => Promise<T>): Promise<T> {
   const sent = queue.then(send, send)
   queue = sent.catch(() => undefined)
   return sent
+}
+
+/** Moves under way: hits on the wall being left do not count on the wall the fight moves to. */
+let moving = 0
+
+/**
+ * A move that breaks no wall (decisions.md 546): `retreat` after the buy wall fell (ten walls
+ * back), `boss` for the boss challenge button. It leaves in order with the heartbeats, and the
+ * hits not yet sent are dropped with the wall they were on.
+ */
+export async function moveIdle(to: 'retreat' | 'boss'): Promise<boolean> {
+  moving++
+  window.dispatchEvent(new Event('idle-moved'))
+  predictor.clear()
+  try {
+    const res = await inOrder(() =>
+      api.POST(to === 'retreat' ? '/api/company/idle/retreat' : '/api/company/idle/boss'),
+    )
+    if (!res.data) return false
+    useRaisingStore.setState({ company: res.data })
+    return true
+  } catch {
+    return false
+  } finally {
+    moving--
+    window.dispatchEvent(new Event('idle-moved'))
+    predictor.clear()
+  }
 }
 
 /**
@@ -110,7 +145,7 @@ export function useIdleBattle(companyId?: string) {
       }
     }
     const hit = (event: Event) => {
-      if (!started || blocked || disposed || !visible()) return
+      if (!started || blocked || disposed || !visible() || moving > 0) return
       const company = useRaisingStore.getState().company
       // No hit counts during a trading halt, the screen's own (532) or the server's.
       if (company?.companyId !== companyId || !company.idle) return
@@ -137,6 +172,8 @@ export function useIdleBattle(companyId?: string) {
     window.addEventListener('pagehide', stop)
     window.addEventListener('idle-wall-hit', hit)
     window.addEventListener('idle-app-active', native)
+    const moved = () => contacts.clear()
+    window.addEventListener('idle-moved', moved)
     const timer = setInterval(() => void tick(), 1000)
     void tick()
     return () => {
@@ -146,6 +183,7 @@ export function useIdleBattle(companyId?: string) {
       window.removeEventListener('pagehide', stop)
       window.removeEventListener('idle-wall-hit', hit)
       window.removeEventListener('idle-app-active', native)
+      window.removeEventListener('idle-moved', moved)
       stop()
     }
   }, [companyId])

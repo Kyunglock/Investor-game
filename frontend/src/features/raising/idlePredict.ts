@@ -16,7 +16,7 @@ export const IDLE_HIT_MS = 12000
 const QUEUED = 6
 /** Game seconds per real second (IdleEngine.SPEED). */
 const SPEED = 2
-/** Game seconds a circuit breaker lasts; it starts on walls 6, 16, 26… */
+/** Game seconds a circuit breaker lasts (IdleEngine.CIRCUIT_SECONDS). */
 const CIRCUIT_SECONDS = 4
 /** Game seconds of the server's halt that no longer stop a screen that already went on. */
 const RESUMED_SECONDS = 1
@@ -38,6 +38,12 @@ export interface IdleServer extends IdleWallHealth {
   upcoming?: IdleWallHealth[]
   circuitSeconds?: number
   sequence?: number
+  /** Walls broken so far: the wall before a boss keeps its number when it breaks (decisions.md 546). */
+  cleared?: number
+  /** Moves that broke no wall: a buy-wall retreat, a boss challenge, the jump tool (546). */
+  epoch?: number
+  /** The boss wall in front already had its circuit breaker (546). */
+  circuitFired?: boolean
 }
 
 /** What the renderer and the HUD show. */
@@ -45,6 +51,8 @@ export interface IdleShown extends IdleWallHealth {
   upcoming: IdleWallHealth[]
   circuitSeconds: number
   sequence?: number
+  /** Changes whenever another wall stands in front, also one with the same number (546). */
+  serial: number
 }
 
 export interface IdleLocalHit {
@@ -58,18 +66,26 @@ export interface IdleLocalHit {
   sequence?: number
 }
 
-/** 서킷브레이커는 꺼 두었다 (IdleEngine.CIRCUIT_ENABLED와 같이 바꾼다). */
-const CIRCUIT_ENABLED: boolean = false
-const circuitWall = (wall: number) => CIRCUIT_ENABLED && wall % 10 === 6
+/** 서킷브레이커는 보스 도전에서만 건다 (546번, IdleEngine.CIRCUIT_ENABLED와 같이 바꾼다). */
+const CIRCUIT_ENABLED: boolean = true
+/** IdleEngine.bossWall: 열 번째 벽마다 서는 대량 매도벽. 보스 도전으로만 들어간다. */
+const idleBossWall = (wall: number) => wall % 10 === 0
+/** IdleEngine.holdWall: 보스 바로 앞의 벽. 부숴도 같은 벽이 다시 선다. */
+export const idleHoldWall = (wall: number) => wall % 10 === 9
 
 export class IdlePredictor {
   private hits: IdleLocalHit[] = []
   private version = 0
-  /** The furthest progress shown so far: the shown wall and the damage on it never go back. */
-  private floor: { wall: number; damage: number } | null = null
+  /**
+   * The furthest progress shown so far: the shown wall and the damage on it never go back. `at`
+   * counts broken walls, so a wall that stands again under the same number is a new one (546).
+   */
+  private floor: { at: number; wall: number; damage: number } | null = null
   /** The most damage shown on each wall behind the shown one. */
   private behind = new Map<number, number>()
   private serverWall = 0
+  private serverAt = 0
+  private epoch: number | undefined
   /** A circuit breaker the screen started before the server did. */
   private circuit: { wall: number; at: number } | null = null
   /** When the server's circuit time was first seen, to count it down between heartbeats. */
@@ -115,6 +131,8 @@ export class IdlePredictor {
     this.floor = null
     this.behind.clear()
     this.serverWall = 0
+    this.serverAt = 0
+    this.epoch = undefined
     this.circuit = null
     this.halt = null
     this.resumed = 0
@@ -138,7 +156,7 @@ export class IdlePredictor {
       return cache.shown
     const shown = this.compute(server, now)
     this.cache = { server, version: this.version, time, shown }
-    this.tell(`${shown.wall}:${shown.circuitSeconds > 0}`)
+    this.tell(`${shown.wall}:${shown.serial}:${shown.circuitSeconds > 0}`)
     return shown
   }
 
@@ -170,6 +188,9 @@ export class IdlePredictor {
     // Replay (IdleEngine.tick). Within a heartbeat the pierced hits land first, then the direct
     // hits as one stream of damage from the front wall on.
     let front = server.wall
+    // Without a count of broken walls (an older server) the wall number stands in for it.
+    const serverAt = server.cleared ?? server.wall
+    let at = serverAt
     let damage = Math.max(0, server.maxHp - server.hp)
     const queued = Array.from({ length: QUEUED }, (_, i) => {
       const next = server.upcoming?.find((u) => u.wall === server.wall + 1 + i)
@@ -177,13 +198,28 @@ export class IdlePredictor {
     })
     let stopped = false
     const breakWalls = () => {
-      while (halted <= 0 && !stopped && damage + 1e-7 >= maxHp(front)) {
+      while (halted <= 0 && !stopped) {
+        // The boss wall halts trading once at half health (546): what is over waits on that wall.
+        if (
+          CIRCUIT_ENABLED &&
+          idleBossWall(front) &&
+          damage * 2 + 1e-7 >= maxHp(front) &&
+          !(at === serverAt && server.circuitFired)
+        ) {
+          stopped = true
+          return
+        }
+        if (damage + 1e-7 < maxHp(front)) return
         const left = Math.max(0, damage - maxHp(front))
+        at++
+        // The wall before a boss stands again: the boss is entered with the button only (546).
+        if (idleHoldWall(front)) {
+          damage = left
+          continue
+        }
         front++
         damage = (queued.shift() ?? 0) + left
         queued.push(0)
-        // A circuit breaker is never passed: what is left waits on that wall.
-        if (circuitWall(front)) stopped = true
       }
     }
     breakWalls()
@@ -210,22 +246,33 @@ export class IdlePredictor {
 
     // The screen's own circuit breaker: it starts at the break and waits for the server's.
     let circuitSeconds = halted
-    if (stopped && front > server.wall) {
+    if (stopped) {
       if (this.circuit?.wall !== front) this.circuit = { wall: front, at: now }
       circuitSeconds = Math.max(0.05, CIRCUIT_SECONDS - ((now - this.circuit.at) / 1000) * SPEED)
     } else this.circuit = null
 
     // What was shown is never taken back (the debt): the shown wall just stops losing health until
     // the server's side has caught up. A long way ahead, or a server that went back, starts over.
+    // A retreat, a boss challenge or a jump (another epoch) moved the fight: nothing shown counts.
     const floor = this.floor
-    if (!floor || server.wall < this.serverWall || floor.wall - front > SNAP_WALLS) {
-      this.floor = { wall: front, damage }
+    if (
+      !floor ||
+      server.epoch !== this.epoch ||
+      server.wall < this.serverWall ||
+      serverAt < this.serverAt ||
+      floor.at - at > SNAP_WALLS
+    ) {
+      this.floor = { at, wall: front, damage }
       this.behind.clear()
-    } else if (front > floor.wall) {
-      this.floor = { wall: front, damage: Math.max(damage, this.behind.get(front) ?? 0) }
-    } else if (front === floor.wall) floor.damage = Math.max(floor.damage, damage)
+    } else if (at > floor.at) {
+      // A wall that stands again took no pierced hits: only a new number has damage from behind.
+      const pierced = front === floor.wall ? 0 : (this.behind.get(front) ?? 0)
+      this.floor = { at, wall: front, damage: Math.max(damage, pierced) }
+    } else if (at === floor.at) floor.damage = Math.max(floor.damage, damage)
     this.serverWall = server.wall
-    const shown = this.floor ?? { wall: front, damage }
+    this.serverAt = serverAt
+    this.epoch = server.epoch
+    const shown = this.floor ?? { at, wall: front, damage }
     for (const wall of this.behind.keys()) if (wall <= shown.wall) this.behind.delete(wall)
     const upcoming = [1, 2].map((ahead) => {
       const wall = shown.wall + ahead
@@ -241,6 +288,7 @@ export class IdlePredictor {
       upcoming,
       circuitSeconds,
       sequence: server.sequence,
+      serial: shown.at,
     }
   }
 
