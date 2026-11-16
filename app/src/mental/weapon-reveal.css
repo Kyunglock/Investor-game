@@ -296,6 +296,8 @@
   margin: 0 auto;
 }
 .cat-reveal-badge {
+  display: flex;
+  gap: 2px;
   position: absolute;
   right: -14px;
   bottom: -4px;

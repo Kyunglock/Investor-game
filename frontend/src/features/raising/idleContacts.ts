@@ -1,4 +1,13 @@
-export type IdleAttackKind = 'bullet' | 'water' | 'meteor' | 'bolt' | 'ram' | 'barrage' | 'buy'
+export type IdleAttackKind =
+  | 'bullet'
+  | 'water'
+  | 'meteor'
+  | 'bolt'
+  | 'ram'
+  | 'ice'
+  | 'wind'
+  | 'barrage'
+  | 'buy'
 export interface IdleContact {
   wall: number
   kind: IdleAttackKind

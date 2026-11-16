@@ -88,13 +88,15 @@ try {
         income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },
         offline: null as { at: number; seconds: number; earned: number; capped: boolean } | null,
         cats: [
-          // Each cat has a skill of its own (decisions.md 501).
+          // A cat's skills are its own (decisions.md 501). This fixture gives each of the first
+          // cats one so the skill screens can be checked; the lilac cat has none and the snow cat
+          // two, as C/B grade and S grade cats do on the server (561).
           ['sky', '하늘냥', 125, 100, 'meteor', '메테오 스킬'],
           ['mint', '민트냥', 100, 100, 'water', '물 스킬'],
-          ['lilac', '라일락냥', 100, 150, 'bolt', '번개 스킬'],
+          ['lilac', '라일락냥', 100, 150, '', ''],
           ['sunset', '노을냥', 110, 100, 'ram', '충차 스킬'],
           ['night', '밤냥', 100, 125, 'meteor', '메테오 스킬'],
-          ['snow', '눈꽃냥', 140, 100, 'water', '물 스킬'],
+          ['snow', '눈꽃냥', 140, 100, 'ice', '얼음 스킬'],
           ...extraCats.map((cat) => [cat.code, cat.name, 125, 100, 'meteor', '메테오 스킬']),
         ].map(([code, name, firePercent, criticalPercent, skill, skillName]) => ({
           code,
@@ -104,8 +106,10 @@ try {
           firePercent,
           criticalPercent,
           fielded: false,
-          skill,
-          skillName,
+          skills: [
+            ...(skill ? [{ code: skill, name: skillName }] : []),
+            ...(code === 'snow' ? [{ code: 'wind', name: '바람 스킬' }] : []),
+          ],
           // A skill gains a level at cat level 10, 20, 30, 40 (decisions.md 534).
           skillLevel: 1,
           skillNextLevel: 10,
@@ -186,7 +190,9 @@ try {
         cat.weapon = sent.kind ? { kind: sent.kind, grade: sent.grade } : null
       }
       for (const skill of company.idle.skills) {
-        skill.owned = company.idle.cats.some((c) => c.fielded && c.skill === skill.code)
+        skill.owned = company.idle.cats.some(
+          (c) => c.fielded && c.skills.some((own) => own.code === skill.code),
+        )
         skill.level = skill.owned ? 1 : 0
       }
       await route.fulfill({ json: company })
@@ -342,6 +348,14 @@ try {
     await expect(
       page.locator('[data-testid=cat][data-code=mint]').getByTestId('skill-badge'),
     ).toHaveAttribute('data-level', '0')
+    // Skills start at A grade (561): a cat without one wears no badge, a cat with two wears both.
+    await expect(
+      page.locator('[data-testid=cat][data-code=lilac]').getByTestId('skill-badge'),
+    ).toHaveCount(0)
+    const twin = page.locator('[data-testid=cat][data-code=snow]').getByTestId('skill-badge')
+    await expect(twin).toHaveCount(2)
+    await expect(twin.first()).toHaveAttribute('data-skill', 'ice')
+    await expect(twin.last()).toHaveAttribute('data-skill', 'wind')
     // The glint twinkles gently, and stays still when motion is reduced.
     assert.equal(
       await badge
@@ -364,11 +378,10 @@ try {
     const skillMarks = () =>
       page.evaluate(
         () =>
-          (window as unknown as { __mentalDamage?: { skillMarks: (string | null)[] } })
-            .__mentalDamage?.skillMarks,
+          (window as unknown as { __mentalDamage?: { skillMarks: string[][] } }).__mentalDamage
+            ?.skillMarks,
       )
-    await expect.poll(skillMarks).toHaveLength(1)
-    expect(['water', 'meteor', 'lightning', 'earth']).toContain((await skillMarks())?.[0])
+    await expect.poll(skillMarks).toEqual([['meteor']])
     await detail.getByTestId('cat-field').click()
     await expect(detail.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'false')
     await expect.poll(mates).toBe(0)

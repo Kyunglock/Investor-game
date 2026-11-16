@@ -1,4 +1,4 @@
-import type { Magic } from './cards'
+import type { Spell } from './cards'
 
 /**
  * 물·메테오·번개·땅 마법 (decisions.md 392번, 377번의 "총알에 덤으로 붙는 마법"을 뒤집음. 땅은 433번). 마법은 총알과 따로, 제 주기마다 스스로 나간다. 처음 고르면 Lv.1이고
@@ -29,6 +29,10 @@ export interface WaterStats {
   /** 맞은 적의 빠르기 배율과 그 시간(초). */
   slowFactor: number
   slowSeconds: number
+  /** 얼음 (561번): 맞은 적이 얼어붙어 멈추는 시간(초). 물은 0. */
+  stunSeconds: number
+  /** 바람 (561번): 맞은 적이 뒤로 밀려나는 시간(초). 물은 0. */
+  pushSeconds: number
 }
 
 export interface MeteorStats {
@@ -87,6 +91,8 @@ const WATER: readonly WaterStats[] = [
     splash: 34,
     slowFactor: 0.6,
     slowSeconds: 1.5,
+    stunSeconds: 0,
+    pushSeconds: 0,
   },
   {
     cooldown: 2.1,
@@ -97,6 +103,8 @@ const WATER: readonly WaterStats[] = [
     splash: 0,
     slowFactor: 0.5,
     slowSeconds: 2,
+    stunSeconds: 0,
+    pushSeconds: 0,
   },
   {
     cooldown: 1.8,
@@ -107,6 +115,8 @@ const WATER: readonly WaterStats[] = [
     splash: 0,
     slowFactor: 0.4,
     slowSeconds: 2.5,
+    stunSeconds: 0,
+    pushSeconds: 0,
   },
   {
     cooldown: 1.6,
@@ -117,6 +127,8 @@ const WATER: readonly WaterStats[] = [
     splash: 0,
     slowFactor: 0.35,
     slowSeconds: 2.8,
+    stunSeconds: 0,
+    pushSeconds: 0,
   },
   {
     cooldown: 1.4,
@@ -127,8 +139,53 @@ const WATER: readonly WaterStats[] = [
     splash: 0,
     slowFactor: 0.3,
     slowSeconds: 3,
+    stunSeconds: 0,
+    pushSeconds: 0,
   },
 ]
+
+/**
+ * 얼음 (561번): 얼음 창이 곧게 날아가 지나가는 적을 모두 꿰뚫고 잠깐 얼린다. 느리게 차지만 한 방이 크다.
+ * 주기와 피해는 서버(IdleEngine COOLDOWNS·SKILL_DAMAGE)와 같아야 한다.
+ */
+const ICE: readonly WaterStats[] = [
+  [3.2, 3.2, 12, 0.4],
+  [2.9, 4.4, 14, 0.5],
+  [2.6, 5.6, 17, 0.6],
+  [2.4, 6.6, 20, 0.7],
+  [2.2, 7.6, 23, 0.8],
+].map(([cooldown, damage, half, stunSeconds]) => ({
+  cooldown,
+  damage,
+  half,
+  speed: 900,
+  pierce: true,
+  splash: 0,
+  slowFactor: 0.6,
+  slowSeconds: 1.5,
+  stunSeconds,
+  pushSeconds: 0,
+}))
+
+/** 바람 (561번): 넓은 돌풍이 쓸고 가며 지나가는 적을 뒤로 밀어낸다. 자주 불지만 한 방은 가볍다. */
+const WIND: readonly WaterStats[] = [
+  [2.8, 1.8, 55, 0.12],
+  [2.5, 2.4, 65, 0.15],
+  [2.2, 3.1, 78, 0.18],
+  [2, 3.6, 88, 0.21],
+  [1.8, 4.1, 98, 0.24],
+].map(([cooldown, damage, half, pushSeconds]) => ({
+  cooldown,
+  damage,
+  half,
+  speed: 520,
+  pierce: true,
+  splash: 0,
+  slowFactor: 1,
+  slowSeconds: 0,
+  stunSeconds: 0,
+  pushSeconds,
+}))
 
 const METEOR: readonly MeteorStats[] = [
   { cooldown: 3.6, damage: 4.8, radius: 50, count: 1, warning: 0.5, stunSeconds: 0.3 },
@@ -158,9 +215,15 @@ export const waterStats = (level: number) => at(WATER, level)
 export const meteorStats = (level: number) => at(METEOR, level)
 export const lightningStats = (level: number) => at(LIGHTNING, level)
 export const earthStats = (level: number) => at(EARTH, level)
+export const iceStats = (level: number) => at(ICE, level)
+export const windStats = (level: number) => at(WIND, level)
+/** 물처럼 날아가는 마법 셋(물·얼음·바람)의 수치. */
+export const flowStats = (spell: 'water' | 'ice' | 'wind', level: number) =>
+  spell === 'ice' ? iceStats(level) : spell === 'wind' ? windStats(level) : waterStats(level)
 
-export function magicCooldown(magic: Magic, level: number): number {
-  if (magic === 'water') return waterStats(level).cooldown
+export function magicCooldown(magic: Spell, level: number): number {
+  if (magic === 'water' || magic === 'ice' || magic === 'wind')
+    return flowStats(magic, level).cooldown
   if (magic === 'meteor') return meteorStats(level).cooldown
   if (magic === 'earth') return earthStats(level).cooldown
   return lightningStats(level).cooldown
@@ -174,27 +237,29 @@ export const MAGIC_RETRY_SECONDS = 0.25
  * 제 자리에서 쏜다. 처음 배우거나 레벨이 오르면 곧바로 한 번 나간다.
  */
 export class MagicClock {
-  private readonly next: Record<Magic, number> = {
+  private readonly next: Record<Spell, number> = {
     water: 0,
     meteor: 0,
     lightning: 0,
     earth: 0,
+    ice: 0,
+    wind: 0,
   }
 
-  due(magic: Magic, level: number, elapsed: number): boolean {
+  due(magic: Spell, level: number, elapsed: number): boolean {
     return level > 0 && elapsed >= this.next[magic]
   }
 
-  cast(magic: Magic, level: number, elapsed: number) {
+  cast(magic: Spell, level: number, elapsed: number) {
     this.next[magic] = elapsed + magicCooldown(magic, level)
   }
 
-  retry(magic: Magic, elapsed: number) {
+  retry(magic: Spell, elapsed: number) {
     this.next[magic] = elapsed + MAGIC_RETRY_SECONDS
   }
 
   /** 레벨이 올랐다: 새 연출을 바로(at초부터) 보여 준다. 고양이가 여럿이면 at을 조금씩 늦춰 한꺼번에 겹쳐 나가지 않게 한다(393번). */
-  ready(magic: Magic, at = 0) {
+  ready(magic: Spell, at = 0) {
     this.next[magic] = at
   }
 }

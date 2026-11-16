@@ -139,6 +139,12 @@ export function magicCard(magic: Magic, from: number): Card {
 
 export const MAGICS: readonly Magic[] = ['water', 'meteor', 'lightning', 'earth']
 
+/**
+ * 고양이 스킬로 쓰는 마법까지 (561번): 얼음과 바람은 자동 전투의 고양이 스킬로만 나가고 카드로는 나오지 않는다.
+ */
+export type Spell = Magic | 'ice' | 'wind'
+export const SPELLS: readonly Spell[] = [...MAGICS, 'ice', 'wind']
+
 /** 동료는 같은 무기로 싸우고, 각성 카드를 골라야 마법을 쓴다. */
 export function mateCard(have: number): Card {
   const to = Math.min(MAX_MATES, have + 1)
@@ -215,10 +221,10 @@ export interface Loadout {
   /** 고양이가 따로 든 총 (488번), 줄 선 차례대로. 없는 자리의 고양이는 사장냥과 같은 총을 쏜다. */
   mateGuns: MateGun[]
   /**
-   * 자동 전투 (501번): 스킬은 고양이의 고유 능력이다. 줄 선 차례대로 그 고양이의 마법 하나. 이 칸이 있으면 고양이는 제 마법만 쓰고 사장냥은 마법을
-   * 쓰지 않는다. 없으면(미션) 사장냥과 각성한 고양이가 가진 마법을 모두 쓴다.
+   * 자동 전투 (501번): 스킬은 고양이의 고유 능력이다. 줄 선 차례대로 그 고양이의 마법들(561번: C·B등급은 없고 A는 하나, S는 둘). 이 칸이
+   * 있으면 고양이는 제 마법만 쓰고 사장냥은 마법을 쓰지 않는다. 없으면(미션) 사장냥과 각성한 고양이가 가진 마법을 모두 쓴다.
    */
-  mateMagic?: Magic[]
+  mateMagic?: Spell[][]
   /** 자동 전투 (515번): mateMagic과 같은 차례로, 그 고양이의 스킬 레벨(1~5). 없으면 loadout의 마법 레벨을 쓴다. */
   mateMagicLevels?: number[]
 }

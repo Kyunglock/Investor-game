@@ -12,6 +12,7 @@ import { CatPortrait as Portrait } from './CatPortrait'
 import { type CatDraw, CatReveal } from './CatReveal'
 import { CAT_ODDS, catRevealPlan } from './catGrade'
 import { RewardPlacement } from './RewardPlacement'
+import { skillNames } from './skills'
 
 type Kind = 'cat' | 'weapon'
 
@@ -188,8 +189,8 @@ export function IdleGacha({
     kind === 'cat'
       ? drawn
         ? drawn.isNew
-          ? `${drawn.cat.grade} 등급 ${drawn.cat.name} 합류! 고유 스킬 ${drawn.cat.skillName}`
-          : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}% · ${drawn.cat.skillName} Lv.${drawn.cat.skillLevel}`
+          ? `${drawn.cat.grade} 등급 ${drawn.cat.name} 합류!${drawn.cat.skills.length > 0 ? ` 고유 스킬 ${skillNames(drawn.cat)}` : ''}`
+          : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}%${drawn.cat.skills.length > 0 ? ` · ${skillNames(drawn.cat)} Lv.${drawn.cat.skillLevel}` : ''}`
         : canOne
           ? `${CAT_ODDS} · 또 나오면 레벨 업 · 10연차는 ${diamonds.tenCount}마리`
           : short

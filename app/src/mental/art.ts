@@ -2,12 +2,20 @@ import { CAT_H, CAT_W, type GunGrade } from '@web/features/game/cat/draw'
 
 import type Phaser from 'phaser'
 import { drawBattleGun } from './battleWeaponArt'
-import type { Magic } from './cards'
+import type { Spell } from './cards'
 import { CAT_GUN } from './catGun'
 import { CAT_SCALE, type CatModel } from './catModels'
 import { drawCatPose } from './catPoseArt'
 import { drawCatRun } from './catRunArt'
-import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
+import {
+  drawEmber,
+  drawGust,
+  drawIceLance,
+  drawPillar,
+  drawWater,
+  drawWave,
+  drawWoodenRam,
+} from './effectArt'
 import { orderShares, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
@@ -195,17 +203,24 @@ export const mateKey = (i: number) => `mate-${i}`
 
 /** 스킬 표식의 한 변 (557번). */
 export const SKILL_MARK = 28
-export const skillMarkKey = (magic: Magic) => `skill-mark-${magic}`
+export const skillMarkKey = (magic: Spell) => `skill-mark-${magic}`
 /** 스킬마다 고유 색: 메뉴의 스킬 배지(idle/SkillBadge.tsx)와 같다. */
-const SKILL_MARK_COLORS: Record<Magic, { light: string; mid: string; dark: string; line: string }> =
+const SKILL_MARK_COLORS: Record<Spell, { light: string; mid: string; dark: string; line: string }> =
   {
     water: { light: '#e6f7ff', mid: '#5cc0ff', dark: '#1f72d8', line: '#103f86' },
     meteor: { light: '#fff0b8', mid: '#ff9a3d', dark: '#dc3b2a', line: '#7c1d12' },
     lightning: { light: '#fffbd0', mid: '#ffd633', dark: '#f09a00', line: '#7a4a00' },
     earth: { light: '#fbe8c2', mid: '#cf9257', dark: '#8a5326', line: '#4a2a10' },
+    ice: { light: '#f2fdff', mid: '#8fe3f5', dark: '#2f9fc4', line: '#135a78' },
+    wind: { light: '#f1fff5', mid: '#8fe0b0', dark: '#2f9d74', line: '#125a40' },
   }
+/** 얼음 결정과 바람 소용돌이 (561번): 스킬 배지(idle/SkillBadge.tsx)의 첫 단계 그림과 같다. */
+export const ICE_GLYPH = 'M24 12.5 28.5 20l7 4-7 4L24 35.5 19.5 28l-7-4 7-4Z'
+export const WIND_GLYPH =
+  'M13 20.5h14.5a4 4 0 1 0-4-4h2.6a1.4 1.4 0 1 1 1.4 1.4H13ZM13 25.5h20a4.5 4.5 0 1 1-4.5 4.5h2.6a1.9 1.9 0 1 0 1.9-1.9H13Z'
+
 /** 스킬 그림 (48×48 칸): 스킬 배지의 첫 단계 그림과 같은 모양. 조각마다 칠할 색을 따로 준다(없으면 밝은 색). */
-const SKILL_MARK_GLYPHS: Record<Magic, { d: string; fill?: string }[]> = {
+const SKILL_MARK_GLYPHS: Record<Spell, { d: string; fill?: string }[]> = {
   water: [{ d: 'M24 13.5c4.2 5 6.6 8.4 6.6 11.6a6.6 6.6 0 0 1-13.2 0c0-3.2 2.4-6.6 6.6-11.6Z' }],
   meteor: [
     { d: 'M16.5 24.3 34.3 13.3 23.9 31.7Z', fill: '#ffe98a' },
@@ -218,6 +233,8 @@ const SKILL_MARK_GLYPHS: Record<Magic, { d: string; fill?: string }[]> = {
     { d: 'M14.3 30.6a2.7 2.7 0 1 0 5.4 0a2.7 2.7 0 1 0-5.4 0Z', fill: '#6a3f1b' },
     { d: 'M22.3 30.6a2.7 2.7 0 1 0 5.4 0a2.7 2.7 0 1 0-5.4 0Z', fill: '#6a3f1b' },
   ],
+  ice: [{ d: ICE_GLYPH }],
+  wind: [{ d: WIND_GLYPH }],
 }
 
 /**
@@ -225,7 +242,7 @@ const SKILL_MARK_GLYPHS: Record<Magic, { d: string; fill?: string }[]> = {
  * 전투 화면에서도 누가 무슨 스킬인지 알아본다.
  */
 export function bakeSkillMarks(scene: Phaser.Scene) {
-  for (const magic of Object.keys(SKILL_MARK_COLORS) as Magic[]) {
+  for (const magic of Object.keys(SKILL_MARK_COLORS) as Spell[]) {
     const color = SKILL_MARK_COLORS[magic]
     bake(scene, skillMarkKey(magic), SKILL_MARK, SKILL_MARK, (c) => {
       // 배지의 48×48 칸에서 테두리(반지름 20)까지만 잘라 쓴다.
@@ -434,6 +451,9 @@ export function bakeMagic(scene: Phaser.Scene) {
   bake(scene, 'magic-drop', 32, 20, drawWater)
   // 큰 물결: 오른쪽(나아가는 쪽)으로 부푼 초승달. 앞은 흰 거품, 뒤로 갈수록 옅은 파랑.
   bake(scene, 'magic-wave', 44, 120, drawWave)
+  // 얼음 창과 돌풍 (561번): 고양이 스킬로만 나간다.
+  bake(scene, 'magic-ice', 44, 16, drawIceLance)
+  bake(scene, 'magic-gust', 44, 120, drawGust)
   // 불덩이: 흰 심 → 노랑 → 주황 → 빨강으로 번진다.
   bake(scene, 'magic-ember', 28, 28, drawEmber)
   // 불기둥: 아래가 하얗게 뜨겁고 위로 갈수록 빨갛게 사라지는 일렁이는 기둥. 원점은 아래 가운데.

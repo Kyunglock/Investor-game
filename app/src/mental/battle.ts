@@ -74,9 +74,10 @@ import {
   bulletStats,
   type Loadout,
   MAGICS,
-  type Magic,
   type MagicLevels,
   type MateGun,
+  SPELLS,
+  type Spell,
   xpToNext,
 } from './cards'
 import { CAT_GUN, catGunAim, catGunPose, catShotAngle, catShoulder } from './catGun'
@@ -115,6 +116,7 @@ import {
   densest,
   type EarthStats,
   earthStats,
+  flowStats,
   type LightningStats,
   lightningPlan,
   lightningStats,
@@ -127,7 +129,6 @@ import {
   siegeTarget,
   sweepHits,
   type WaterStats,
-  waterStats,
 } from './magic'
 import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { OrderBarrierQueue } from './orderBarrier'
@@ -352,7 +353,8 @@ interface MagicCaster {
 interface Mate {
   magicMark: Phaser.GameObjects.Text
   /** 자동 전투 (557번): 이 고양이의 스킬 그림. 마법 표식(✦) 대신 머리 위에 뜬다. */
-  skillMark: Phaser.GameObjects.Image
+  skillMarks: Phaser.GameObjects.Image[]
+  skillCount: number
   body: Phaser.GameObjects.Image
   gun: Phaser.GameObjects.Image
   aim: number
@@ -418,6 +420,8 @@ interface WaterShot {
   depth: number
   travelled: number
   hitList: Enemy[]
+  /** 물처럼 날아가는 마법 셋 (561번): 물, 얼음 창, 돌풍. 수치와 빛깔, 맞은 적에게 하는 일이 다르다. */
+  spell: 'water' | 'ice' | 'wind'
 }
 /** 미리 만든 운석·경고 원·크레이터를 돌려 쓴다. */
 interface MeteorShot {
@@ -458,6 +462,8 @@ const RAM_RANGE = 1500
 const SPIKE_GAP = 48
 /** 물이 날아갈 수 있는 거리(px)와, 끝에서 이만큼 남으면 옅어지기 시작한다. */
 const WATER_RANGE = 820
+/** 돌풍이 적을 밀어내는 빠르기(px/초): 수치의 pushSeconds만큼 밀린다. */
+const WIND_PUSH = 420
 const WATER_FADE = 140
 
 /** 개발 서버의 확인 스크립트(app/scripts/stageCheck.ts)가 읽는 데미지 숫자 집계. 운영 빌드에는 내보내지 않는다. */
@@ -469,12 +475,12 @@ export interface DamageStats {
   peak: number
   /** 마법이 나간 횟수 (392번)와 땅 충차가 벽·큰손을 들이받은 횟수 (433번). */
   rams: number
-  casts: Record<Magic, number>
+  casts: Record<Spell, number>
   /** 함께 싸우는 고양이가 쏜 총알 수와 지금 고양이 수 (393번). */
   mateCasts: number[]
   awakenedMates: number
-  /** 자동 전투 (557번): 고양이마다 머리 위에 뜬 스킬 그림. 스킬 표식이 없는 판에서는 비어 있다. */
-  skillMarks: (Magic | null)[]
+  /** 자동 전투 (557·561번): 고양이마다 머리 위에 뜬 스킬 그림들(없으면 빈 배열). 스킬 표식이 없는 판에서는 비어 있다. */
+  skillMarks: Spell[][]
   mateShots: number
   mates: number
 }
@@ -628,12 +634,14 @@ class BattleScene extends Phaser.Scene {
       earth: 0,
       siege: 0,
       chain: 0,
+      ice: 0,
+      wind: 0,
     },
     rams: 0,
     merged: 0,
     killing: 0,
     peak: 0,
-    casts: { water: 0, meteor: 0, lightning: 0, earth: 0 },
+    casts: { water: 0, meteor: 0, lightning: 0, earth: 0, ice: 0, wind: 0 },
     mateCasts: [0, 0, 0],
     awakenedMates: 0,
     skillMarks: [],
@@ -1146,7 +1154,7 @@ class BattleScene extends Phaser.Scene {
       m.body.destroy()
       m.gun.destroy()
       m.magicMark.destroy()
-      m.skillMark.destroy()
+      for (const mark of m.skillMarks) mark.destroy()
     }
     while (this.mates.length < want) this.addMate()
     this.damageStats.mates = this.mates.length
@@ -1158,7 +1166,7 @@ class BattleScene extends Phaser.Scene {
       const index = this.casters.length - 1
       const mate = this.mates[index]
       const clock = new MagicClock()
-      for (const magic of MAGICS) clock.ready(magic, this.elapsed + (index + 1) * CAST_STAGGER)
+      for (const magic of SPELLS) clock.ready(magic, this.elapsed + (index + 1) * CAST_STAGGER)
       this.casters.push({ mate: index, at: () => ({ x: mate.body.x, y: mate.body.y - 24 }), clock })
       if (own) continue
       this.ring(mate.body.x, mate.body.y, 0xc7a4ff, 64, 500)
@@ -1173,13 +1181,17 @@ class BattleScene extends Phaser.Scene {
     }
     // 자동 전투 (557번): 마법 표식(✦) 대신 그 고양이가 쓰는 스킬의 그림을 띄운다.
     this.mates.forEach((mate, index) => {
-      const skill = own?.[index]
+      const skills = own?.[index] ?? []
       mate.magicMark.setVisible(!own && index < awake)
-      mate.skillMark.setVisible(skill !== undefined)
-      if (skill) mate.skillMark.setTexture(skillMarkKey(skill))
+      // C·B등급은 스킬이 없어 아무것도 뜨지 않고, S등급은 두 개가 나란히 뜬다 (561번).
+      mate.skillMarks.forEach((mark, i) => {
+        mark.setVisible(i < skills.length)
+        if (i < skills.length) mark.setTexture(skillMarkKey(skills[i]))
+      })
+      mate.skillCount = skills.length
     })
     this.damageStats.awakenedMates = awake
-    this.damageStats.skillMarks = own ? this.mates.map((_, index) => own[index] ?? null) : []
+    this.damageStats.skillMarks = own ? this.mates.map((_, index) => own[index] ?? []) : []
   }
 
   /** 고양이 한 마리가 제자리 위에서 떨어져 내려와 합류한다: 쿵, 고리, 이름. */
@@ -1202,11 +1214,14 @@ class BattleScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDepth(7)
         .setVisible(false),
-      skillMark: this.add
-        .image(body.x, body.y - 58, skillMarkKey('water'))
-        .setDisplaySize(SKILL_MARK, SKILL_MARK)
-        .setDepth(7)
-        .setVisible(false),
+      skillMarks: [0, 1].map(() =>
+        this.add
+          .image(body.x, body.y - 58, skillMarkKey('water'))
+          .setDisplaySize(SKILL_MARK, SKILL_MARK)
+          .setDepth(7)
+          .setVisible(false),
+      ),
+      skillCount: 0,
       body,
       gun: this.add
         .image(
@@ -3569,6 +3584,7 @@ class BattleScene extends Phaser.Scene {
     for (let i = 0; i < 16; i++) {
       this.waters.push({
         img: hidden('magic-drop', 4),
+        spell: 'water',
         active: false,
         level: 1,
         x: 0,
@@ -3732,17 +3748,17 @@ class BattleScene extends Phaser.Scene {
     for (const caster of this.casters) {
       if (caster.mate !== undefined && this.mates[caster.mate].drop !== 0) continue
       if (own && caster.mate === undefined) continue
-      for (const m of MAGICS) {
-        if (own && caster.mate !== undefined && own[caster.mate] !== m) continue
+      for (const m of own ? SPELLS : MAGICS) {
+        if (own && caster.mate !== undefined && !own[caster.mate]?.includes(m)) continue
         // 자동 전투의 스킬 레벨은 고양이마다 다르다 (515번): 같은 스킬의 두 마리도 저마다 제 레벨로 쓴다.
         const level =
           (own && caster.mate !== undefined ? this.loadout.mateMagicLevels?.[caster.mate] : null) ??
-          this.loadout[m]
+          (m === 'ice' || m === 'wind' ? 0 : this.loadout[m])
         if (!caster.clock.due(m, level, this.elapsed)) continue
         const from = caster.at()
         const cast =
-          m === 'water'
-            ? this.castWater(from, level)
+          m === 'water' || m === 'ice' || m === 'wind'
+            ? this.castWater(from, level, m)
             : m === 'meteor'
               ? this.castMeteor(from, level)
               : m === 'earth'
@@ -3767,29 +3783,58 @@ class BattleScene extends Phaser.Scene {
 
   // 물: 가까운 적에게 물방울(Lv.1, 맞으면 터져 둘레를 적신다) → 물줄기(Lv.2, 꿰뚫는다) → 큰 물결(Lv.3, 넓게 쓸고 간다). 맞은 적은 느려진다.
 
-  private castWater(from: { x: number; y: number }, level: number): boolean {
+  /**
+   * 물처럼 날아가는 마법 셋의 모양 (561번): 물은 레벨에 따라 물방울 → 물줄기 → 큰 물결, 얼음은 늘 곧은 창(물줄기 모양), 바람은 늘 넓은
+   * 돌풍(물결 모양)이다.
+   */
+  private flowForm(spell: WaterShot['spell'], level: number): 'drop' | 'jet' | 'wave' {
+    if (spell === 'ice') return 'jet'
+    if (spell === 'wind') return 'wave'
+    const tier = magicTier(level)
+    return tier === 1 ? 'drop' : tier === 2 ? 'jet' : 'wave'
+  }
+
+  private castWater(
+    from: { x: number; y: number },
+    level: number,
+    spell: WaterShot['spell'] = 'water',
+  ): boolean {
     const target = nearestTo(this.magicTargets(), from)
     const s = this.waters.find((w) => !w.active)
     if (!target || !s) return false
     const tier = magicTier(level)
+    const form = this.flowForm(spell, level)
     const a = Math.atan2(target.y - from.y, target.x - from.x)
     s.active = true
     s.level = level
+    s.spell = spell
     s.x = from.x
     s.y = from.y
     s.dx = Math.cos(a)
     s.dy = Math.sin(a)
     s.travelled = 0
     s.hitList.length = 0
-    s.depth = tier === 3 ? 18 : 12
+    s.depth = form === 'wave' ? 18 : 12
     s.img
-      .setTexture(tier === 3 ? 'magic-wave' : 'magic-drop')
+      .setTexture(
+        spell === 'ice'
+          ? 'magic-ice'
+          : spell === 'wind'
+            ? 'magic-gust'
+            : form === 'wave'
+              ? 'magic-wave'
+              : 'magic-drop',
+      )
       .setPosition(s.x, s.y)
       .setRotation(a)
       .setAlpha(1)
       .setVisible(true)
-    if (tier === 1) s.img.setDisplaySize(36, 23)
-    else if (tier === 2) s.img.setDisplaySize(92, 26)
+    if (form === 'drop') s.img.setDisplaySize(36, 23)
+    else if (form === 'jet') {
+      // 얼음 창은 레벨이 오를수록 길고 굵다.
+      const k = spell === 'ice' ? 1 + (level - 1) * 0.12 : 1
+      s.img.setDisplaySize(92 * k, (spell === 'ice' ? 30 : 26) * k)
+    }
     this.moveWater(s, 0)
     this.waterFx.explode(this.fx(3 * tier), from.x, from.y)
     this.playSound('splash')
@@ -3797,14 +3842,15 @@ class BattleScene extends Phaser.Scene {
   }
 
   private moveWater(s: WaterShot, dt: number) {
-    const st = waterStats(s.level)
+    const st = flowStats(s.spell, s.level)
     const tier = magicTier(s.level)
+    const form = this.flowForm(s.spell, s.level)
     const step = st.speed * dt
     s.x += s.dx * step
     s.y += s.dy * step
     s.travelled += step
     // 큰 물결은 나아가며 넓어진다.
-    s.half = tier === 3 ? Math.min(st.half, 24 + s.travelled * 0.5) : st.half
+    s.half = form === 'wave' ? Math.min(st.half, 24 + s.travelled * 0.5) : st.half
     const { w, h } = this.view()
     const left = WATER_RANGE - s.travelled
     if (left <= 0 || s.y < -80 || s.y > h + 80 || s.x < -80 || s.x > w + 80) {
@@ -3812,12 +3858,12 @@ class BattleScene extends Phaser.Scene {
       return
     }
     s.img.setPosition(s.x, s.y).setAlpha(Math.min(1, left / WATER_FADE))
-    if (tier === 3) s.img.setDisplaySize(58 * this.grow(s.level), s.half * 2.1)
+    if (form === 'wave') s.img.setDisplaySize(58 * this.grow(s.level), s.half * 2.1)
     if (dt > 0) {
       // 꼬리 물보라: 물방울은 가끔, 물줄기는 촘촘히, 물결은 폭 전체에서 거품이 튄다.
-      if (tier === 1) {
+      if (form === 'drop') {
         if (Math.random() < 0.5) this.waterFx.emitParticleAt(s.x - s.dx * 12, s.y - s.dy * 12)
-      } else if (tier === 2) {
+      } else if (form === 'jet') {
         this.waterFx.emitParticleAt(s.x - s.dx * 30, s.y - s.dy * 30, 2)
       } else {
         for (let i = 0; i < this.fx(2); i++) {
@@ -3835,7 +3881,7 @@ class BattleScene extends Phaser.Scene {
       }
       s.hitList.push(e)
       this.waterFx.explode(this.fx(2 + tier), e.x, e.y)
-      this.waterHit(e, st, angle)
+      this.waterHit(e, st, angle, false, s.spell)
     }
   }
 
@@ -3851,9 +3897,23 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  private waterHit(e: Enemy, st: WaterStats, angle: number, area = false) {
-    this.slow(e, st.slowFactor, st.slowSeconds)
-    this.hit(e, st.damage * this.loadout.damage, angle, 'water', area)
+  private waterHit(
+    e: Enemy,
+    st: WaterStats,
+    angle: number,
+    area = false,
+    spell: WaterShot['spell'] = 'water',
+  ) {
+    if (st.slowSeconds > 0) this.slow(e, st.slowFactor, st.slowSeconds)
+    // 얼음 (561번): 맞은 적이 잠깐 얼어붙는다. 매도벽 칸과 큰손은 얼지 않는다.
+    if (st.stunSeconds > 0 && !e.cell && !e.boss) {
+      e.stunUntil = Math.max(e.stunUntil, this.elapsed + st.stunSeconds)
+    }
+    // 바람 (561번): 맞은 적이 온 쪽으로 밀려난다. 매도벽 칸과 큰손은 밀리지 않는다.
+    if (st.pushSeconds > 0 && !e.cell && !e.boss) {
+      e.setY(Math.max(-20, e.y - st.pushSeconds * WIND_PUSH))
+    }
+    this.hit(e, st.damage * this.loadout.damage, angle, spell, area)
   }
 
   private endWater(s: WaterShot) {
@@ -4329,7 +4389,7 @@ class BattleScene extends Phaser.Scene {
     if (!Number.isFinite(damage) || damage <= 0) return
     const code: IdleAttackKind =
       this.reportAs ??
-      (kind === 'water' || kind === 'meteor'
+      (kind === 'water' || kind === 'meteor' || kind === 'ice' || kind === 'wind'
         ? kind
         : kind === 'lightning' || kind === 'chain'
           ? 'bolt'
@@ -4573,7 +4633,10 @@ class BattleScene extends Phaser.Scene {
       m.kick = recoilDecay(m.kick, dt)
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
       m.magicMark.setPosition(b.x, b.y - 58)
-      m.skillMark.setPosition(b.x, b.y - 58)
+      // 스킬이 둘이면 머리 위에 나란히 선다.
+      m.skillMarks.forEach((mark, k) => {
+        mark.setPosition(b.x + (k - (m.skillCount - 1) / 2) * (SKILL_MARK - 4), b.y - 58)
+      })
       if (!this.tweens.isTweening(b)) {
         b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
       }

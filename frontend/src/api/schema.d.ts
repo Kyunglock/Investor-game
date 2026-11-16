@@ -212,7 +212,7 @@ export interface paths {
                              * @description barrage는 액티브 스킬 매수세례의 매수 주문 (503번)
                              * @enum {string}
                              */
-                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "barrage" | "buy";
+                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "barrage" | "buy";
                             count: number;
                             /** @description 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 */
                             damage?: number;
@@ -1421,7 +1421,7 @@ export interface components {
                     /** @description 다시 쓸 수 있을 때까지 남은 시간(초). 0이면 쓸 수 있다 */
                     readyIn: number;
                 }[];
-                /** @description 스킬 넷(물·메테오·번개·충차). 스킬은 고양이의 고유 능력이다 (decisions.md 501번) */
+                /** @description 스킬 여섯(물·메테오·번개·충차·얼음·바람, 561번). 스킬은 고양이의 고유 능력이다 (decisions.md 501번) */
                 skills: {
                     code: string;
                     name: string;
@@ -1436,7 +1436,7 @@ export interface components {
                 wallDps: number;
                 /** @description 전투력 (538번). 성장 탭이 보여 주는 숫자 하나: 모든 총·스킬의 초당 피해(치명타 포함)와 매수 주문, 매수벽 체력 강화를 묶었다. 벽 번호는 보지 않는다 */
                 power: number;
-                /** @description 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다 */
+                /** @description 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다. 스킬은 A등급부터 있다 (561번) */
                 cats: {
                     /** @enum {string} */
                     code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
@@ -1450,13 +1450,13 @@ export interface components {
                     /** @description 이 고양이 총의 치명타 배율(%). 특성이 없으면 100 */
                     criticalPercent: number;
                     fielded: boolean;
-                    /**
-                     * @description 이 고양이의 고유 스킬 (501번). 출전해 있는 동안 발동한다
-                     * @enum {string}
-                     */
-                    skill: "water" | "meteor" | "bolt" | "ram";
-                    skillName: string;
-                    /** @description 고유 스킬의 레벨 1~5 (515번). 고양이 Lv.10·20·30·40에 하나씩 오른다 (534번) */
+                    /** @description 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고(빈 배열) A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다 */
+                    skills: {
+                        /** @enum {string} */
+                        code: "water" | "meteor" | "bolt" | "ram" | "ice" | "wind";
+                        name: string;
+                    }[];
+                    /** @description 고유 스킬의 레벨 1~5 (515번). 고양이 Lv.10·20·30·40에 하나씩 오른다 (534번). 스킬이 둘이면 같은 레벨이다 */
                     skillLevel: number;
                     /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
                     skillNextLevel: number;

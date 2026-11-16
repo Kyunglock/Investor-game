@@ -16,19 +16,31 @@ export const CAT_LOOKS = {
 } as Record<CatCode, number>
 
 /** 서버의 스킬 코드 → 전투의 마법. */
-const SKILL_MAGIC = { water: 'water', meteor: 'meteor', bolt: 'lightning', ram: 'earth' } as const
+const SKILL_MAGIC = {
+  water: 'water',
+  meteor: 'meteor',
+  bolt: 'lightning',
+  ram: 'earth',
+  ice: 'ice',
+  wind: 'wind',
+} as const
 
 export function idleLoadout(company: Company) {
   const hero = heroOf(company)
   const loadout = loadoutOf(hero.weapon, hero.upgrades)
-  // 스킬은 고양이의 고유 능력이다 (501번): 출전한 고양이가 제 총을 쏘고 제 스킬 하나를 쓴다. 총이 없으면 기본 권총이다(서버 IdleEngine과 같다).
+  // 스킬은 고양이의 고유 능력이다 (501번): 출전한 고양이가 제 총을 쏘고 제 스킬을 쓴다. 스킬은 A등급부터 있고 S등급은 둘이다 (561번).
+  // 총이 없으면 기본 권총이다(서버 IdleEngine과 같다).
   const cats = company.idle?.cats.filter((cat) => cat.fielded) ?? []
-  loadout.mateMagic = cats.map((cat) => SKILL_MAGIC[cat.skill])
+  loadout.mateMagic = cats.map((cat) => cat.skills.map((skill) => SKILL_MAGIC[skill.code]))
   // 스킬 레벨은 고양이마다 다르다 (515번). 마법 칸(loadout.water 등)에는 그 스킬의 가장 높은 레벨을 둔다.
   loadout.mateMagicLevels = cats.map((cat) => cat.skillLevel)
   for (const cat of cats) {
-    const magic = SKILL_MAGIC[cat.skill]
-    loadout[magic] = Math.max(loadout[magic], cat.skillLevel)
+    for (const skill of cat.skills) {
+      const magic = SKILL_MAGIC[skill.code]
+      // 얼음·바람은 카드 마법이 아니라 마법 칸이 없다.
+      if (magic !== 'ice' && magic !== 'wind')
+        loadout[magic] = Math.max(loadout[magic], cat.skillLevel)
+    }
   }
   loadout.mates = cats.length
   loadout.mateGuns = cats.map((cat) => {

@@ -16,6 +16,8 @@ export type DamageKind =
   | 'earth'
   | 'siege'
   | 'chain'
+  | 'ice'
+  | 'wind'
 
 export interface DamageStyle {
   /** 글자 색(윤곽은 잉크색). 치명타는 따로 둔 풀의 금빛 글자에 빨간 윤곽이다. */
@@ -41,6 +43,9 @@ export const DAMAGE_STYLE: Record<DamageKind, DamageStyle> = {
   earth: { color: '#e0a860', scale: 0.7, life: 460, rise: 26, merge: true },
   siege: { color: '#ffb35c', scale: 0.95, life: 600, rise: 32, merge: false },
   chain: { color: '#ffe94d', scale: 0.6, life: 420, rise: 22, merge: true },
+  // 얼음·바람 (561번): 고양이 스킬로만 나간다.
+  ice: { color: '#bdf0ff', scale: 0.7, life: 460, rise: 26, merge: true },
+  wind: { color: '#b9f3cf', scale: 0.7, life: 460, rise: 26, merge: true },
 }
 
 /** 같은 적의 같은 피해를 하나로 합치는 시간(ms): 처음 뜬 때부터 센다(합쳐도 오래 남지 않게). */

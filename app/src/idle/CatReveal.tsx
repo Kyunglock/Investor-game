@@ -7,6 +7,7 @@ import { sfx } from '../fx/sound'
 import { CatPortrait, catTrait } from './CatPortrait'
 import { catRevealPlan } from './catGrade'
 import { SkillBadge } from './SkillBadge'
+import { skillNames } from './skills'
 import '../mental/weapon-reveal.css'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
@@ -139,14 +140,26 @@ export function CatReveal({
                 {result.isNew ? 'NEW! 새 고양이' : `레벨 업! Lv.${result.cat.level}`}
               </p>
               <span className="weapon-reveal-grade" data-testid="cat-drawn-grade">
-                {result.cat.grade} 등급 · 고유 {result.cat.skillName} Lv.{result.cat.skillLevel}
+                {result.cat.grade} 등급
+                {result.cat.skills.length > 0 &&
+                  ` · 고유 ${skillNames(result.cat)} Lv.${result.cat.skillLevel}`}
               </span>
               <div className="weapon-reveal-art cat-reveal-art">
                 <CatPortrait code={result.cat.code} />
                 {/* 고유 스킬 배지 (531번): 초상화 귀퉁이에 건다. */}
-                <span className="cat-reveal-badge">
-                  <SkillBadge skill={result.cat.skill} level={result.cat.skillLevel} size={58} />
-                </span>
+                {/* 스킬은 A등급부터 있고 S등급은 둘이다 (561번). */}
+                {result.cat.skills.length > 0 && (
+                  <span className="cat-reveal-badge">
+                    {result.cat.skills.map((skill) => (
+                      <SkillBadge
+                        key={skill.code}
+                        skill={skill.code}
+                        level={result.cat.skillLevel}
+                        size={result.cat.skills.length > 1 ? 46 : 58}
+                      />
+                    ))}
+                  </span>
+                )}
               </div>
               <h2>{result.cat.name}</h2>
               <p className="weapon-reveal-stats">
@@ -155,11 +168,17 @@ export function CatReveal({
               <p className="weapon-reveal-effect">
                 <b>{result.isNew ? '출전 칸에 세우면 함께 싸워요' : '총의 화력이 올랐어요'}</b>
                 <br />
-                출전해 있는 동안 {result.cat.skillName}이 나가요
-                <br />
-                {result.cat.skillNextLevel > 0
-                  ? `고양이 Lv.${result.cat.skillNextLevel}이 되면 스킬이 Lv.${result.cat.skillLevel + 1}로 올라요`
-                  : '스킬이 최고 레벨이에요'}
+                {result.cat.skills.length === 0
+                  ? '스킬은 A등급 고양이부터 있어요'
+                  : `출전해 있는 동안 ${skillNames(result.cat)}이 나가요`}
+                {result.cat.skills.length > 0 && (
+                  <>
+                    <br />
+                    {result.cat.skillNextLevel > 0
+                      ? `고양이 Lv.${result.cat.skillNextLevel}이 되면 스킬이 Lv.${result.cat.skillLevel + 1}로 올라요`
+                      : '스킬이 최고 레벨이에요'}
+                  </>
+                )}
               </p>
               {useAction}
               <div className="weapon-reveal-actions">

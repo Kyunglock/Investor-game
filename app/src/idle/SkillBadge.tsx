@@ -1,4 +1,5 @@
 import { type ReactNode, useId } from 'react'
+import { ICE_GLYPH, WIND_GLYPH } from '../mental/art'
 import { magicTier } from '../mental/magic'
 import type { SkillCode } from './skills'
 import './skill-badge.css'
@@ -9,6 +10,9 @@ const COLORS: Record<SkillCode, { light: string; mid: string; dark: string; line
   meteor: { light: '#fff0b8', mid: '#ff9a3d', dark: '#dc3b2a', line: '#7c1d12' },
   bolt: { light: '#fffbd0', mid: '#ffd633', dark: '#f09a00', line: '#7a4a00' },
   ram: { light: '#fbe8c2', mid: '#cf9257', dark: '#8a5326', line: '#4a2a10' },
+  // 얼음 하늘빛, 바람 풀빛 (561번).
+  ice: { light: '#f2fdff', mid: '#8fe3f5', dark: '#2f9fc4', line: '#135a78' },
+  wind: { light: '#f1fff5', mid: '#8fe0b0', dark: '#2f9d74', line: '#125a40' },
 }
 /** 못 가진 스킬: 흑백. */
 const GRAY = { light: '#e4dfd5', mid: '#cfc8ba', dark: '#a39b8c', line: '#6f685b' }
@@ -115,6 +119,28 @@ const GLYPHS: Record<SkillCode, Record<1 | 2 | 3, ReactNode>> = {
         <circle className="wheel" cx="13.4" cy="32" r="3.4" />
         <circle className="wheel" cx="22.6" cy="32" r="3.4" />
         <path className="spark" d="M38.4 16.4l2.6-2.4M39.4 23.6h3.4M38.4 30.4l2.6 2.4" />
+      </>
+    ),
+  },
+  // 얼음 (561번): 결정 → 큰 결정 → 눈꽃처럼 빛나는 결정.
+  ice: {
+    1: <path d={ICE_GLYPH} transform="translate(4.8 4.8) scale(.8)" />,
+    2: <path d={ICE_GLYPH} />,
+    3: (
+      <>
+        <path d={ICE_GLYPH} />
+        <path className="spark" d="M24 8.5v3M24 36.5v3M8.5 24h3M36.5 24h3" />
+      </>
+    ),
+  },
+  // 바람 (561번): 소용돌이 → 큰 소용돌이 → 바람 줄기가 더해진 회오리.
+  wind: {
+    1: <path d={WIND_GLYPH} transform="translate(4.8 4.8) scale(.8)" />,
+    2: <path d={WIND_GLYPH} />,
+    3: (
+      <>
+        <path d={WIND_GLYPH} />
+        <path className="spark" d="M9 15.5h3.5M9 35h6M35.5 14.5H39" />
       </>
     ),
   },

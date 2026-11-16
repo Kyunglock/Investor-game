@@ -73,6 +73,73 @@ export function drawWave(c: Paint) {
   }
 }
 
+/** 얼음 창 (561번): 오른쪽(나아가는 쪽)이 뾰족한 결정. 44×16. */
+export function drawIceLance(c: Paint) {
+  const g = c.createLinearGradient(0, 0, 44, 0)
+  g.addColorStop(0, '#bff2ff22')
+  g.addColorStop(0.35, '#8fe3f5')
+  g.addColorStop(1, '#f4fdff')
+  shape(
+    c,
+    [
+      [1, 8],
+      [12, 3],
+      [30, 2],
+      [43, 8],
+      [30, 14],
+      [12, 13],
+    ],
+    '#135a78',
+  )
+  c.beginPath()
+  c.moveTo(3, 8)
+  c.lineTo(13, 4.4)
+  c.lineTo(29.5, 3.5)
+  c.lineTo(40.5, 8)
+  c.lineTo(29.5, 12.5)
+  c.lineTo(13, 11.6)
+  c.closePath()
+  c.fillStyle = g
+  c.fill()
+  // 결정의 모서리와 반짝임.
+  c.beginPath()
+  c.moveTo(13, 4.4)
+  c.lineTo(20, 8)
+  c.lineTo(13, 11.6)
+  c.moveTo(20, 8)
+  c.lineTo(40.5, 8)
+  c.strokeStyle = '#ffffffcc'
+  c.lineWidth = 1
+  c.stroke()
+  c.beginPath()
+  c.arc(31, 6, 1.4, 0, Math.PI * 2)
+  c.fillStyle = '#ffffff'
+  c.fill()
+}
+
+/** 돌풍 (561번): 큰 물결과 같은 초승달 꼴에 옅은 풀빛 바람 줄기. 44×120. */
+export function drawGust(c: Paint) {
+  c.beginPath()
+  c.moveTo(3, 5)
+  c.bezierCurveTo(41, 24, 52, 87, 4, 116)
+  c.bezierCurveTo(23, 82, 22, 38, 3, 5)
+  const g = c.createLinearGradient(0, 0, 44, 0)
+  g.addColorStop(0, '#2f9d7400')
+  g.addColorStop(0.45, '#7fd8a888')
+  g.addColorStop(0.85, '#c5f5d6cc')
+  g.addColorStop(1, '#f4fff7')
+  c.fillStyle = g
+  c.fill()
+  for (let i = 0; i < 4; i++) {
+    c.beginPath()
+    c.moveTo(4 + i * 3, 10 + i * 9)
+    c.bezierCurveTo(33 + i * 3, 38, 35 + i * 3, 80, 6 + i * 2, 111 - i * 8)
+    c.strokeStyle = i === 0 ? '#ffffff' : '#dcffe8cc'
+    c.lineWidth = i === 0 ? 2.6 : 1.3
+    c.stroke()
+  }
+}
+
 export function drawEmber(c: Paint) {
   c.beginPath()
   c.moveTo(14, 1)

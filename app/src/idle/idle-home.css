@@ -1810,6 +1810,9 @@
   position: absolute;
   left: 2px;
   top: 2px;
+  /* S등급은 스킬 배지 둘이 나란히 선다 (561번). */
+  display: flex;
+  gap: 1px;
   filter: drop-shadow(0 1px 1px #54331b55);
   pointer-events: none;
 }
@@ -1954,4 +1957,12 @@
 .idle-sandbox-chips [aria-pressed="true"] {
   outline: 2px solid #8a5bd6;
   outline-offset: 1px;
+}
+
+/* 스킬이 없는 고양이 (561번): 스킬은 A등급부터다. */
+.idle-cat-noskill {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 11px;
+  color: #957854;
 }

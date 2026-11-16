@@ -1,11 +1,11 @@
 import type { Company } from '@web/api/client'
 
-export type SkillCode = NonNullable<Company['idle']>['cats'][number]['skill']
+export type SkillCode = NonNullable<Company['idle']>['cats'][number]['skills'][number]['code']
 
 /**
  * 고양이 고유 스킬의 설명 (decisions.md 501·515·530번): 하는 일(does)과 레벨이 오르면 달라지는 점(grows), 세 단계의
  * 모습(tiers, 스킬 Lv.1·2·3부터. 배지 그림도 이 단계를 따른다, 531번). 스킬은 고양이 레벨 10마다(Lv.10·20·30·40)
- * 한 레벨 오른다. 규칙은 mental/magic.ts에 있다.
+ * 한 레벨 오른다. 규칙은 mental/magic.ts에 있다. 스킬은 A등급 고양이부터 있고 S등급은 둘이다 (561번).
  */
 export const SKILLS: Record<
   SkillCode,
@@ -31,4 +31,20 @@ export const SKILLS: Record<
     grows: '레벨이 오르면 충차가 커지고 벽을 더 세게 들이받아요',
     tiers: ['돌 충차', '바위 충차', '대지 충차'],
   },
+  // 얼음·바람 (561번).
+  ice: {
+    does: '얼음 창이 곧게 날아가 지나가는 적을 꿰뚫고 잠깐 얼려요',
+    grows: '레벨이 오르면 창이 굵어지고 더 세게·오래 얼려요',
+    tiers: ['얼음 조각', '얼음 창', '눈꽃 창'],
+  },
+  wind: {
+    does: '넓은 돌풍이 쓸고 가며 적을 뒤로 밀어내요',
+    grows: '레벨이 오르면 돌풍이 넓어지고 더 자주·멀리 밀어내요',
+    tiers: ['산들바람', '돌풍', '회오리'],
+  },
+}
+
+/** 고양이가 가진 스킬 이름들 (561번): "얼음 스킬·물 스킬". 스킬이 없으면(C·B등급) 빈 글자다. */
+export function skillNames(cat: { skills: readonly { name: string }[] }): string {
+  return cat.skills.map((skill) => skill.name).join('·')
 }
