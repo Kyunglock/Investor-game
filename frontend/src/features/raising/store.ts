@@ -47,7 +47,7 @@ interface RaisingState {
    * 회사(실패면 null)를 돌려준다.
    */
   buyBattleUpgrade: (
-    kind: 'damage' | 'fire' | 'hp' | 'buy' | 'crit',
+    kind: 'damage' | 'fire' | 'hp' | 'buy',
     levels?: number,
   ) => Promise<Company | null>
   /**

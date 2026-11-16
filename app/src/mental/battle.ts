@@ -909,12 +909,7 @@ class BattleScene extends Phaser.Scene {
         bullet.disableBody(true, true)
       }
       const kind = bullet.kind
-      const shot = weaponDamage(
-        kind,
-        bullet.damage,
-        Math.random(),
-        (1 + this.loadout.critBonus) * bullet.critical - 1,
-      )
+      const shot = weaponDamage(kind, bullet.damage, Math.random(), bullet.critical - 1)
       if (kind === 'smg') {
         this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }

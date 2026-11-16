@@ -22,7 +22,7 @@ describe('무기마다 다른 효과 (decisions.md 376번)', () => {
     expect(weaponDamage('revolver', 2, 0.1)).toEqual({ damage: 2 * CRIT_MULT, crit: true })
     expect(weaponDamage('revolver', 2, 0.9)).toEqual({ damage: 2, crit: false })
     expect(weaponDamage('pistol', 2, 0.3)).toEqual({ damage: 2, crit: false })
-    // 다른 무기도 20%로 두 배, 치명타 피해 강화는 배율에 곱한다 (487번).
+    // 다른 무기도 20%로 두 배, 고양이 특성의 치명타 피해는 배율에 곱한다 (487·556번).
     expect(weaponDamage('pistol', 2, 0.05)).toEqual({ damage: 2 * BASE_CRIT_MULT, crit: true })
     expect(weaponDamage('pistol', 2, BASE_CRIT_CHANCE).crit).toBe(false)
     expect(weaponDamage('revolver', 2, 0.1, 0.5).damage).toBe(2 * CRIT_MULT * 1.5)

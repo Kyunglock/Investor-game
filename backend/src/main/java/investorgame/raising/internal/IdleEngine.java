@@ -309,18 +309,16 @@ class IdleEngine {
     CompanyState.Idle s = state(c);
     double damageUp = 1;
     double fireUp = 1;
-    double criticalUp = 1;
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
       double bonus = 1 + u.bonusPercent() / 100.0;
       switch (u.kind()) {
         case "damage" -> damageUp = bonus;
         case "fire" -> fireUp = bonus;
-        case "crit" -> criticalUp = bonus;
         default -> {}
       }
     }
     List<Shooter> shooters = new ArrayList<>();
-    shooters.add(shooter(c.weapon, damageUp, fireUp, criticalUp));
+    shooters.add(shooter(c.weapon, damageUp, fireUp, 1.0));
     for (String code : s.fielded) {
       int cat = CATS.indexOf(code);
       shooters.add(
@@ -328,7 +326,7 @@ class IdleEngine {
               s.catWeapons.get(code),
               damageUp * power(s.cats.get(code)) * CAT_DAMAGE[cat] * GRADE_DAMAGE[CAT_GRADE[cat]],
               fireUp * CAT_FIRE[cat],
-              criticalUp * CAT_CRITICAL[cat]));
+              CAT_CRITICAL[cat]));
     }
     return shooters;
   }
@@ -339,7 +337,7 @@ class IdleEngine {
 
   /** A cat without a gun, and a company from before weapons, shoots the starting pistol. */
   private Shooter shooter(
-      CompanyState.Weapon weapon, double damageUp, double fireUp, double criticalUp) {
+      CompanyState.Weapon weapon, double damageUp, double fireUp, double catCritical) {
     String kind = weapon == null ? MentalEngine.PISTOL : weapon.kind;
     CompanyProperties.Weapon stats =
         engine.mental.stats(
@@ -348,7 +346,7 @@ class IdleEngine {
         Math.min(1_000_000_000, stats.damagePercent() / 100.0 * damageUp),
         1000.0 / stats.fireMs() * fireUp,
         1 + Math.max(0, Math.min(3, stats.power())) * 0.4,
-        ("revolver".equals(kind) ? REVOLVER_CRITICAL : CRITICAL) * criticalUp,
+        ("revolver".equals(kind) ? REVOLVER_CRITICAL : CRITICAL) * catCritical,
         stats.power() >= 2);
   }
 

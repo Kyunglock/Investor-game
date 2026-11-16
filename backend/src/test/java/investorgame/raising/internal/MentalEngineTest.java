@@ -249,7 +249,7 @@ class MentalEngineTest {
     assertThat(c.capital).as("쓴 돈도 돌려주지 않는다").isEqualTo(5_000_000_000L);
     assertThat(ENGINE.mental.upgradeViews(c))
         .extracting(CompanyView.BattleUpgrade::level)
-        .containsExactly(0, 0, 0, 0, 0);
+        .containsExactly(0, 0, 0, 0);
   }
 
   private static CompanyView.BattleUpgrade view(CompanyState c, String kind) {
@@ -402,15 +402,15 @@ class MentalEngineTest {
     CompanyState c = company(5);
     CompanyProperties.Upgrades rule = PROPERTIES.mental().upgrades();
     assertThat(MentalEngine.UPGRADES)
-        .as("고양이 속도 강화는 뺐고(394번) 체력(410번)과 치명타 피해(487번)를 넣었다")
-        .containsExactly("damage", "fire", "hp", "buy", "crit");
+        .as("고양이 속도 강화는 뺐고(394번) 체력(410번)을 넣었다. 치명타 피해는 없앴다(556번)")
+        .containsExactly("damage", "fire", "hp", "buy");
     assertThat(rule.stepPercent())
-        .as("공격력·체력 3%, 연사 2%, 치명타 피해 6% (492번)")
+        .as("공격력·체력 3%, 연사 2% (492번). 치명타 피해는 없앴다 (556번)")
         .containsEntry("damage", 3)
         .containsEntry("fire", 2)
         .containsEntry("hp", 3)
         .containsEntry("buy", 3)
-        .containsEntry("crit", 6);
+        .doesNotContainKey("crit");
     assertThat(rule.maxPercent()).as("연사만 100%에서 멈춘다 (487번)").containsOnly(Map.entry("fire", 100));
     long before = (long) c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "damage", 1)).isEqualTo(1);
@@ -472,10 +472,17 @@ class MentalEngineTest {
     assertThat(view(c, "fire").level()).isEqualTo(50);
     assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);
 
-    // 치명타 피해는 한 단계에 6%씩 끝없이 (487·492번).
-    assertThat(ENGINE.mental.buyUpgrade(c, "crit", 5)).isEqualTo(5);
-    assertThat(view(c, "crit").bonusPercent()).isEqualTo(30);
-    assertThat(view(c, "crit").maxLevel()).isZero();
+    // 치명타 피해 강화는 없앴다 (556번): 살 수 없고, 저장에 남은 단계는 쓴 돈을 돌려주고 지운다.
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "crit", 1))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(ENGINE.mental.hasRemovedUpgrades(c)).isFalse();
+    assertThat(ENGINE.mental.refundRemovedUpgrades(c)).isFalse();
+    c.battleLevels.put("crit", 2);
+    double held = c.capital;
+    assertThat(ENGINE.mental.hasRemovedUpgrades(c)).isTrue();
+    assertThat(ENGINE.mental.refundRemovedUpgrades(c)).isTrue();
+    assertThat(c.capital).isEqualTo(held + rule.basePrice() + 1_040_000L);
+    assertThat(c.battleLevels).doesNotContainKey("crit");
 
     // 자본이 닿는 데까지만 산다. 한 단계도 못 사면 400.
     CompanyState poor = company(6);
