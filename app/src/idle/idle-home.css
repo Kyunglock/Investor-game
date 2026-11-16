@@ -996,61 +996,11 @@
   background: #2b234033;
   pointer-events: none;
 }
-/* 보스 도전 (546번): 보스 앞의 벽에서만 뜬다. 액티브 스킬 맞은편, 전투 화면 왼쪽에 선다. */
-.idle-boss {
-  position: absolute;
-  left: 6px;
-  top: 44%;
-  z-index: 2;
-  display: grid;
-  place-content: center;
-  gap: 3px;
-  width: 78px;
-  min-height: 60px;
-  padding: 6px 4px;
-  border: 2px solid #8f2f3c;
-  border-radius: 14px;
-  background: linear-gradient(#ff8b7b, #e8434f);
-  box-shadow: 0 3px 0 #9b2c38;
-  text-align: center;
-  color: #fff;
-  animation: idle-boss-pulse 1.4s ease-in-out infinite;
-}
-.idle-boss b {
-  font-size: 14px;
-  line-height: 1.15;
-  word-break: keep-all;
-}
-.idle-boss small {
-  font-size: 9px;
-  line-height: 1.25;
-  word-break: keep-all;
-  opacity: 0.92;
-}
-.idle-boss:disabled {
-  border-color: #b9ad95;
-  background: #e8dfcc;
-  box-shadow: 0 3px 0 #b9ad95;
-  color: #7a6b55;
-  animation: none;
-}
+/* 보스 도전 중의 벽 번호 (547번). */
 .idle-wall-number[data-state="boss"] {
   border-color: #8f2f3c;
   background: #ffe1dde8;
   color: #9b2c38;
-}
-/* 크기는 그대로 두고 빛만 뛴다: 누르는 자리가 움직이지 않는다. */
-@keyframes idle-boss-pulse {
-  50% {
-    box-shadow:
-      0 3px 0 #9b2c38,
-      0 0 0 5px #ffd84d99;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .idle-boss {
-    animation: none;
-  }
 }
 /* 10연차 (517번): 한 번 뽑기 옆. 덤 표시(+1)가 단추 위에 걸친다 (526번). */
 .idle-gacha .idle-buy {

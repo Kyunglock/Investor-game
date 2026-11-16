@@ -1,5 +1,5 @@
 import type { Company } from '@web/api/client'
-import { moveIdle, shownIdle } from '@web/features/raising/useIdleBattle'
+import { retreatIdle, shownIdle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import type { ActiveCode } from '../mental/actives'
 import { idleAssaultSpec } from '../mental/assault'
@@ -77,7 +77,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
               color: '#ff8a5c',
               id: (old?.id ?? 0) + 1,
             }))
-            void moveIdle('retreat')
+            void retreatIdle()
           },
           onHud: () => {},
           onBanner: () => {},

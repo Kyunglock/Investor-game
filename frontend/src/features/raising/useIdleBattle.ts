@@ -41,18 +41,15 @@ function inOrder<T>(send: () => Promise<T>): Promise<T> {
 let moving = 0
 
 /**
- * A move that breaks no wall (decisions.md 546): `retreat` after the buy wall fell (ten walls
- * back), `boss` for the boss challenge button. It leaves in order with the heartbeats, and the
- * hits not yet sent are dropped with the wall they were on.
+ * The buy wall fell (decisions.md 546): the fight goes ten walls back. The request leaves in order
+ * with the heartbeats, and the hits not yet sent are dropped with the wall they were on.
  */
-export async function moveIdle(to: 'retreat' | 'boss'): Promise<boolean> {
+export async function retreatIdle(): Promise<boolean> {
   moving++
   window.dispatchEvent(new Event('idle-moved'))
   predictor.clear()
   try {
-    const res = await inOrder(() =>
-      api.POST(to === 'retreat' ? '/api/company/idle/retreat' : '/api/company/idle/boss'),
-    )
+    const res = await inOrder(() => api.POST('/api/company/idle/retreat'))
     if (!res.data) return false
     useRaisingStore.setState({ company: res.data })
     return true

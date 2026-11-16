@@ -330,10 +330,9 @@ class IdleEngineTest {
     assertThat(state.idle.wall).isEqualTo(3);
     assertThat(state.idle.damage).isEqualTo(5);
     assertThat(state.idle.nextDamage).isEqualTo(3);
-    // One huge hit runs through several walls, and no circuit breaker stops it at 6 (533). It
-    // never goes past the wall before the boss (546).
+    // One huge hit runs through several walls, and no circuit breaker stops it at 6 (533).
     tick(1000, new IdleHit(3, "bullet", 1000));
-    assertThat(state.idle.wall).isBetween(7L, 9L);
+    assertThat(state.idle.wall).isGreaterThan(6);
     assertThat(state.idle.circuitSeconds).isZero();
   }
 
@@ -364,7 +363,7 @@ class IdleEngineTest {
     state.idle.afterNextDamage = IdleEngine.maxHp(7) - 1;
     tick(1000, new IdleHit(5, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(6);
-    // Wall 6 does not halt trading (533): only a boss wall does (546).
+    // Wall 6 does not halt trading (533): only a boss challenge does (547).
     assertThat(state.idle.circuitSeconds).isZero();
     long paid = (long) state.capital;
     tick(1000);
@@ -457,8 +456,6 @@ class IdleEngineTest {
     assertThat(state.capital).isBetween(600_000.0, 650_000.0);
     state.idle.wall = 10;
     state.idle.damage = IdleEngine.maxHp(10) - 1;
-    // The boss wall's circuit breaker (546) already ran.
-    state.idle.circuitFired = true;
     state.capital = 0;
     tick(1000, new IdleHit(10, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(11);
@@ -470,7 +467,6 @@ class IdleEngineTest {
   void bossRewardsAndUnlocksRequireRealWallClear() {
     start(10);
     state.idle.damage = IdleEngine.maxHp(10) - 1;
-    state.idle.circuitFired = true;
     tick(1000);
     long diamonds = state.diamonds;
     tick(1000, new IdleHit(10, "bullet", 1));
@@ -484,63 +480,38 @@ class IdleEngineTest {
   }
 
   @Test
-  void theWallBeforeTheBossStandsAgainUntilTheBossIsChallenged() {
+  void theBossChallengeComesEveryFiftiethWallAndStartsWithACircuitBreaker() {
     start(9);
-    state.battleLevels.put("damage", 10000);
-    state.capital = 0;
-    long epoch = state.idle.epoch;
-    tick(1000, new IdleHit(9, "bullet", 1, IdleEngine.maxHp(9) + 5, 0));
-    // Broken and paid, but the same wall stands again with what was left of the hit on it.
-    assertThat(state.idle.wall).isEqualTo(9);
+    state.battleLevels.put("damage", 1_000_000);
+    // The tenth wall is a 대량 매도벽 as before, entered without a button and without a halt.
+    tick(1000, new IdleHit(9, "bullet", 1, IdleEngine.maxHp(9), 0));
+    assertThat(state.idle.wall).isEqualTo(10);
     assertThat(state.idle.cleared).isEqualTo(1);
-    assertThat(state.idle.damage).isEqualTo(5);
-    assertThat(state.capital).isGreaterThan(0);
-    assertThat(engine.view(state).bossReady()).isTrue();
-    assertThat(state.idle.epoch).isEqualTo(epoch);
-    // One hit worth three walls breaks it three times and still does not reach the boss.
-    tick(1000, new IdleHit(9, "bullet", 1, IdleEngine.maxHp(9) * 3, 0));
-    assertThat(state.idle.wall).isEqualTo(9);
-    assertThat(state.idle.cleared).isEqualTo(4);
-    engine.challengeBoss(state);
-    assertThat(state.idle.wall).isEqualTo(10);
-    assertThat(state.idle.damage).isZero();
-    assertThat(state.idle.epoch).isEqualTo(epoch + 1);
-    assertThat(engine.view(state).boss()).isTrue();
-    assertThat(engine.view(state).bossReady()).isFalse();
-    // Only the wall before a boss has the button.
-    assertThatThrownBy(() -> engine.challengeBoss(state)).isInstanceOf(RuntimeException.class);
-    state.idle.wall = 5;
-    assertThatThrownBy(() -> engine.challengeBoss(state)).isInstanceOf(RuntimeException.class);
-  }
-
-  @Test
-  void theBossWallHaltsTradingOnceAtHalfHealth() {
-    start(10);
-    state.battleLevels.put("damage", 10000);
-    double half = IdleEngine.maxHp(10) / 2;
-    tick(1000, new IdleHit(10, "bullet", 1, half - 1, 0));
     assertThat(state.idle.circuitSeconds).isZero();
-    // The hit that takes it to half starts the halt. What is over waits on the wall.
-    tick(1000, new IdleHit(10, "bullet", 1, 11.0, 0));
+    assertThat(engine.view(state).boss()).isTrue();
+    assertThat(engine.view(state).bossChallenge()).isFalse();
+    tick(1000, new IdleHit(10, "bullet", 1, IdleEngine.maxHp(10), 0));
+    assertThat(state.idle.wall).isEqualTo(11);
+    assertThat(state.idle.circuitSeconds).isZero();
+
+    // The 50th wall: one hit through wall 49 and the whole boss stops in front of the boss.
+    start(49);
+    tick(1000, new IdleHit(49, "bullet", 1, IdleEngine.maxHp(49) + IdleEngine.maxHp(50) + 5, 0));
+    assertThat(state.idle.wall).isEqualTo(50);
     assertThat(state.idle.circuitSeconds).isEqualTo(IdleEngine.CIRCUIT_SECONDS);
-    assertThat(state.idle.wall).isEqualTo(10);
-    double damage = state.idle.damage;
+    assertThat(engine.view(state).bossChallenge()).isTrue();
+    double waiting = state.idle.damage;
+    assertThat(waiting).isEqualTo(IdleEngine.maxHp(50) + 5);
     // No hit counts during the halt: one real second is two of its four game seconds.
-    tick(1000, new IdleHit(10, "bullet", 1, half, 0));
+    tick(1000, new IdleHit(50, "bullet", 1, 100.0, 0));
     assertThat(state.idle.circuitSeconds).isEqualTo(2);
-    assertThat(state.idle.damage).isEqualTo(damage);
+    assertThat(state.idle.damage).isEqualTo(waiting);
+    assertThat(state.idle.wall).isEqualTo(50);
+    // Trading resumes: what waited on the boss breaks it, and wall 51 does not halt.
     tick(1000);
     assertThat(state.idle.circuitSeconds).isZero();
-    // It does not halt a second time on the same wall, and the boss breaks into wall 11.
-    assertThat(state.idle.wall).isEqualTo(10);
-    assertThat(state.idle.circuitFired).isTrue();
-    tick(1000, new IdleHit(10, "bullet", 1, 1.0, 0));
-    assertThat(state.idle.circuitSeconds).isZero();
-    assertThat(state.idle.wall).isEqualTo(10);
-    tick(1000, new IdleHit(10, "bullet", 1, half, 0));
-    assertThat(state.idle.wall).isEqualTo(11);
-    assertThat(state.idle.circuitFired).isFalse();
-    assertThat(state.idle.circuitSeconds).isZero();
+    assertThat(state.idle.wall).isEqualTo(51);
+    assertThat(state.idle.damage).isEqualTo(5);
   }
 
   @Test
@@ -554,19 +525,18 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isZero();
     assertThat(state.idle.nextDamage).isZero();
     assertThat(state.idle.epoch).isEqualTo(epoch + 1);
-    // Never onto a boss wall: a lost boss challenge starts its ten walls over.
-    assertThat(IdleEngine.retreatWall(30)).isEqualTo(21);
+    // Never onto a boss challenge wall, never below the first wall.
+    assertThat(IdleEngine.retreatWall(60)).isEqualTo(51);
+    assertThat(IdleEngine.retreatWall(50)).isEqualTo(40);
+    assertThat(IdleEngine.retreatWall(30)).isEqualTo(20);
     assertThat(IdleEngine.retreatWall(10)).isEqualTo(1);
     assertThat(IdleEngine.retreatWall(4)).isEqualTo(1);
-    assertThat(IdleEngine.retreatWall(11)).isEqualTo(1);
-    // A halt in a lost boss challenge is gone, and the next challenge halts again.
-    state.idle.wall = 30;
+    // A halt in a lost boss challenge is gone, and reaching the boss again halts again.
+    state.idle.wall = 50;
     state.idle.circuitSeconds = 3;
-    state.idle.circuitFired = true;
     engine.retreat(state);
-    assertThat(state.idle.wall).isEqualTo(21);
+    assertThat(state.idle.wall).isEqualTo(40);
     assertThat(state.idle.circuitSeconds).isZero();
-    assertThat(state.idle.circuitFired).isFalse();
   }
 
   @Test

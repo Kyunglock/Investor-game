@@ -371,13 +371,6 @@ class CompanyController {
     return companies.retreatIdle(cookies.requirePlayer(token));
   }
 
-  /** 보스 도전: 보스 앞의 벽에서 대량 매도벽으로 들어간다 (decisions.md 546번). */
-  @PostMapping("/idle/boss")
-  CompanyView challengeIdleBoss(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.challengeIdleBoss(cookies.requirePlayer(token));
-  }
-
   @PostMapping("/cat/field")
   CompanyView fieldCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
