@@ -538,6 +538,12 @@
 .idle-stat-icon .idle-icon {
   font-size: 26px;
 }
+.idle-stat-icon .idle-growth-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
 .idle-cat-info > small {
   display: block;
   font:
