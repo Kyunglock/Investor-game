@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { GunSprite } from '../mental/GunSprite'
 import type { Weapon } from '../mental/hero'
@@ -22,6 +22,13 @@ export function RewardPlacement({
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const [picked, setPicked] = useState(false)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   const cats = company.idle?.cats ?? []
   const fielded = cats.filter((c) => c.fielded)
   const alreadyFielded = 'cat' in reward && cats.some((c) => c.code === reward.cat && c.fielded)
@@ -42,7 +49,7 @@ export function RewardPlacement({
       if (!alreadyFielded) await store.fieldCat(reward.cat, true, t.code ?? undefined)
     } else if (t.code) await store.equipCat(t.code, reward.weapon)
     else await store.equipWeapon(reward.weapon.kind, reward.weapon.grade)
-    if (!useRaisingStore.getState().error) {
+    if (mounted.current && !useRaisingStore.getState().error) {
       haptic.light()
       onDone('cat' in reward ? reward.cat : t.code)
     }

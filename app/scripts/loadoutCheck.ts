@@ -231,6 +231,18 @@ try {
       await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
       false,
     )
+    // A late equip response updates the game, but must not pull the user out of the shop.
+    await page.getByTestId('cat-gun').click()
+    await page.locator('[data-testid=cat-weapon][data-grade=D]').click()
+    const equipped = page.waitForResponse((response) => response.url().endsWith('/cat/weapon'))
+    await page.getByTestId('gear-equip').click()
+    await page.getByRole('button', { name: /^상점/ }).last().click()
+    await equipped
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    )
+    await expect(page.getByTestId('cat-gacha')).toBeVisible()
+    await expect(page.getByTestId('weapon-now')).toHaveCount(0)
     assert.deepEqual(errors, [])
     console.log(
       `PASS ${width}px: touch swap/equip, mouse merge, cancel, rejection, tap fallback, reward equip, persistent selection`,

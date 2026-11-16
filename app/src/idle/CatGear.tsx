@@ -70,7 +70,7 @@ export function CatGear({
     await (code
       ? store.equipCat(code, { kind: w.kind, grade: w.grade })
       : store.equipWeapon(w.kind, w.grade))
-    if (!useRaisingStore.getState().error) {
+    if (mounted.current && !useRaisingStore.getState().error) {
       sfx.tap()
       haptic.light()
       setNotice(
