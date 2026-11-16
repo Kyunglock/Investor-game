@@ -214,6 +214,8 @@ export interface IdleSnapshot {
   wall: number
   hp: number
   maxHp: number
+  /** 앞에 선 벽이 바뀔 때마다 바뀐다: 보스 앞의 벽은 부서져도 같은 번호로 다시 선다 (546번). */
+  serial?: number
 }
 
 export interface BattleOptions {
@@ -223,6 +225,8 @@ export interface BattleOptions {
   onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number, depth: number) => void
   /** 자동 전투의 몬스터 습격 알림 (500번). */
   onIdleRaid?: (text: string, color: string) => void
+  /** 자동 전투의 매수벽이 무너졌다 (546번): 서버에 알려 열 벽 앞으로 돌아간다. */
+  onBuyWallBreak?: () => void
 
   /** 처음 배속(gameSpeed.ts). 없으면 1배. */
   speed?: GameSpeed
@@ -529,6 +533,9 @@ class BattleScene extends Phaser.Scene {
   private pierceIndex = 0
   private pierceOwners = [{}, {}]
   private idleWall = 0
+  private idleSerial: number | undefined
+  /** 앞의 벽이 부서진 것이 아니라 자리를 옮겼다 (546번): 매수벽 붕괴로 물러났거나('back') 보스 도전으로 들어갔다('boss'). */
+  private idleMoved: 'back' | 'boss' | null = null
   /** 지금 벽에 방금 맞힌 피해(실제 ms와 양). 서버 값이 따라올 때까지 화면의 벽 체력에서 먼저 뺀다 (493번). */
   /** 먼저 빼 둔 명중. sequence는 실려 나간 접속 신호의 순번이고, 아직 안 나갔으면 없다 (496번). */
   private idleTransition = false
@@ -1064,6 +1071,7 @@ class BattleScene extends Phaser.Scene {
       // 자동 전투는 쌓인 벽 앞에서 시작하고, 기존 스테이지는 첫 카드 선택 뒤 벽까지 전진한다.
       if (this.opts.idle) {
         this.idleWall = this.opts.idle().wall
+        this.idleSerial = this.opts.idle().serial
         this.idleQueue = new IdleWallQueueFx(this)
         this.pierceShots = Array.from({ length: 16 }, () =>
           this.add
@@ -1674,9 +1682,13 @@ class BattleScene extends Phaser.Scene {
     wall.broken = true
     this.wallsBroken++
     // 벽 하나를 통째로 무너뜨리면 경험치를 한 번에 더 준다 (#700).
-    const breakXp = wallBreakXp(xpToNext(this.level))
-    this.pop(this.view().w / 2, wall.y - 72, `EXP +${breakXp}`, '#7be0c3', 22)
-    this.gainXp(breakXp)
+    const moved = this.idleMoved
+    this.idleMoved = null
+    if (!moved) {
+      const breakXp = wallBreakXp(xpToNext(this.level))
+      this.pop(this.view().w / 2, wall.y - 72, `EXP +${breakXp}`, '#7be0c3', 22)
+      this.gainXp(breakXp)
+    }
     this.sinceBreak = 0
     this.stuck = 0
     // 치고 오르는 동안 화면이 쭉 내려가 남아 있던 물량이 사장냥에게 쏟아져 맞았다: 남은 물량은 벽과 함께 체결되고, 치고 오르는 동안은 맞지 않는다.
@@ -1689,7 +1701,9 @@ class BattleScene extends Phaser.Scene {
     const burstY = wall.y - 12
     const centerX = this.view().w / 2
     this.ring(centerX, burstY, 0xffe5a3, lane.width * 0.75, 380)
-    this.pop(centerX, burstY - 24, '매도벽 격파!', '#ffe5a3', 28)
+    // 부순 것이 아니라 자리를 옮긴 벽에는 격파를 적지 않는다 (546번).
+    if (moved === 'boss') this.pop(centerX, burstY - 24, '보스 도전!', '#ff8a8a', 28)
+    else if (!moved) this.pop(centerX, burstY - 24, '매도벽 격파!', '#ffe5a3', 28)
     for (let i = 0; i < 7; i++) {
       const x = lane.left + ((i + 0.5) * lane.width) / 7
       // 중앙부터 바깥으로 짧게 연쇄 폭발. 벽이 교체되어도 좌표는 고정한다.
@@ -1723,6 +1737,7 @@ class BattleScene extends Phaser.Scene {
         this.wallsBroken = 0
         const snapshot = this.opts.idle?.()
         this.idleWall = snapshot?.wall ?? this.idleWall
+        this.idleSerial = snapshot?.serial
         // 벽이 깊어질수록 미션처럼 물량이 잦고 무거워진다 (493번).
         Object.assign(spec, idleAssaultSpec(this.idleWall, snapshot?.maxHp))
         this.countScale = spec.enemyCount
@@ -1886,10 +1901,21 @@ class BattleScene extends Phaser.Scene {
   private syncIdleWall() {
     if (!this.opts.idle || this.idleTransition) return
     const snapshot = this.opts.idle()
-    if (!this.idleWall) this.idleWall = snapshot.wall
+    if (!this.idleWall) {
+      this.idleWall = snapshot.wall
+      this.idleSerial = snapshot.serial
+    }
     const wall = this.walls.find((w) => !w.broken)
     if (!wall) return
-    if (snapshot.wall !== this.idleWall) {
+    // 보스 앞의 벽은 부서져도 번호가 그대로다 (546번): 번호가 같아도 serial이 바뀌면 새 벽이다.
+    if (snapshot.wall !== this.idleWall || snapshot.serial !== this.idleSerial) {
+      // 보스 앞의 벽은 부서져도 번호가 그대로라, 번호가 오른 것은 보스 도전이고 내린 것은 후퇴다.
+      this.idleMoved =
+        snapshot.wall < this.idleWall
+          ? 'back'
+          : this.idleWall % 10 === 9 && snapshot.wall > this.idleWall
+            ? 'boss'
+            : null
       if (this.circuit) this.endCircuit()
       if (this.bossEnemy?.active) this.kill(this.bossEnemy, false)
       for (const cell of [...wall.cells]) if (cell.active && !cell.dying) this.kill(cell, false)
@@ -1939,6 +1965,17 @@ class BattleScene extends Phaser.Scene {
         e.dying = false
         this.kill(e, true)
       })
+    }
+  }
+
+  /** 자동 전투에서 물러날 때 (546번): 매도 물량과 습격 몬스터가 모두 사라진다. 벽 칸과 큰손은 벽이 바뀔 때 함께 치운다. */
+  private clearIdleEnemies() {
+    this.panicRushLeft = 0
+    for (const child of [...this.enemies.getChildren()]) {
+      const e = child as Enemy
+      if (!e.active || e.cell || e.boss) continue
+      e.dying = false
+      this.kill(e, false)
     }
   }
 
@@ -2421,6 +2458,10 @@ class BattleScene extends Phaser.Scene {
       simSpeed: this.simSpeed,
       climbed: this.climbed,
       nextWallIn: this.nextWallIn,
+      /** 화면에 남은 매도 물량·몬스터 수(벽 칸·큰손 빼고). */
+      flows: (this.enemies.getChildren() as Enemy[]).filter(
+        (e) => e.active && !e.dying && !e.cell && !e.boss,
+      ).length,
       pushedEnemies: (this.enemies.getChildren() as Enemy[])
         .filter((e) => e.active && !e.dying && e.wallPushUntil > this.elapsed)
         .map((e) => ({ y: e.y, velocityY: e.body?.velocity.y })),
@@ -3136,7 +3177,7 @@ class BattleScene extends Phaser.Scene {
     const lost = broken ? before : before - this.buyWall.hp
     this.pop(x, this.buyWallY() - 55, `매수 -${shareLabel(lost)}`, '#ffb278', 20)
     if (broken && this.opts.idle) {
-      this.pop(this.view().w / 2, this.buyWallY() - 84, '매수벽 붕괴! 공격 중단', '#ff8a5c', 22)
+      this.pop(this.view().w / 2, this.buyWallY() - 84, '매수벽 붕괴! 후퇴', '#ff8a5c', 22)
     }
     if (broken) {
       const loss = Math.max(1, Math.round(this.loadout.maxMental * BUY_WALL.mentalLossRatio))
@@ -3146,8 +3187,11 @@ class BattleScene extends Phaser.Scene {
       this.pushEnemiesBack(0.35)
       // 자동 전투는 무너진 동안 공격이 멈춘다(492번): 쌓인 물량이 새 벽을 곧바로 다시 무너뜨리지 않게, 무너지며 화면의 물량을 모두 받아 낸다 (494번).
       if (this.opts.idle) {
-        this.sweepFlows(0)
+        // 매수벽이 무너지면 열 벽 앞으로 돌아간다 (546번): 화면의 적은 몬스터까지 모두 사라지고, 거래 정지도 거기서 끝난다.
+        if (this.circuit) this.endCircuit()
+        this.clearIdleEnemies()
         this.stuck = 0
+        this.opts.onBuyWallBreak?.()
       }
       sfx.crumble()
       haptic.medium()

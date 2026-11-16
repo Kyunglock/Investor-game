@@ -1,5 +1,5 @@
 import type { Company } from '@web/api/client'
-import { shownIdle } from '@web/features/raising/useIdleBattle'
+import { moveIdle, shownIdle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import type { ActiveCode } from '../mental/actives'
 import { idleAssaultSpec } from '../mental/assault'
@@ -69,6 +69,16 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
           },
           // 몬스터 습격만 알린다 (decisions.md 500번). 그 밖의 전투 알림은 자동 전투에서 띄우지 않는다.
           onIdleRaid: (text, color) => setRaid((old) => ({ text, color, id: (old?.id ?? 0) + 1 })),
+          // 매수벽이 무너지면 열 벽 앞으로 돌아간다 (546번).
+          onBuyWallBreak: () => {
+            if (disposed || !latest.current.connected) return
+            setRaid((old) => ({
+              text: '매수벽 붕괴! 열 벽 뒤로 후퇴',
+              color: '#ff8a5c',
+              id: (old?.id ?? 0) + 1,
+            }))
+            void moveIdle('retreat')
+          },
           onHud: () => {},
           onBanner: () => {},
           onHurt: () => {},

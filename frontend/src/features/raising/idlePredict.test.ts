@@ -2,8 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { IDLE_HIT_MS, IdlePredictor, type IdleServer, idleMaxHp } from './idlePredict'
 
 /** The server's answer for a wall with `damage` on it and `queued` on the two walls behind. */
-function server(wall: number, damage = 0, sequence = 0, queued = [0, 0], circuitSeconds = 0) {
+function server(
+  wall: number,
+  damage = 0,
+  sequence = 0,
+  queued = [0, 0],
+  circuitSeconds = 0,
+  more: Partial<IdleServer> = {},
+) {
   return {
+    ...more,
     wall,
     hp: Math.max(0, idleMaxHp(wall) - damage),
     maxHp: idleMaxHp(wall),
@@ -45,6 +53,7 @@ describe('the screen breaks the wall first (decisions.md 532)', () => {
       ],
       circuitSeconds: 0,
       sequence: 7,
+      serial: 3,
     })
   })
 
@@ -171,7 +180,73 @@ describe('the screen breaks the wall first (decisions.md 532)', () => {
     expect(p.view(server(2), 300).wall).toBe(2)
   })
 
-  it.each([6, 16])('does not start a circuit breaker at wall %i (switched off)', (wall) => {
+  it('lets the wall before a boss stand again under the same number (decisions.md 546)', () => {
+    const p = new IdlePredictor()
+    const s = server(9, 0, 0, [0, 0], 0, { cleared: 40, epoch: 2 })
+    expect(p.view(s, 0)).toMatchObject({ wall: 9, serial: 40 })
+    p.add(bullet(9, idleMaxHp(9) + 5), 10)
+    // Broken: a new wall 9 with what was left of the hit on it. The boss is not entered.
+    const again = p.view(s, 10)
+    expect(again).toMatchObject({ wall: 9, serial: 41 })
+    expect(again.hp).toBeCloseTo(idleMaxHp(9) - 5, 9)
+    expect(again.upcoming.map((u) => u.wall)).toEqual([10, 11])
+    p.add(bullet(9, idleMaxHp(9) * 2), 20)
+    expect(p.view(s, 20)).toMatchObject({ wall: 9, serial: 43 })
+    // The server's answer for the same breaks changes nothing shown.
+    p.sent(1)
+    const caught = p.view(server(9, 5, 1, [0, 0], 0, { cleared: 43, epoch: 2 }), 30)
+    expect(caught).toMatchObject({ wall: 9, serial: 43 })
+    expect(caught.hp).toBeCloseTo(idleMaxHp(9) - 5, 9)
+  })
+
+  it('starts over when the fight moved without a break: retreat, boss challenge (546)', () => {
+    const p = new IdlePredictor()
+    const before = server(9, 0, 0, [0, 0], 0, { cleared: 40, epoch: 2 })
+    p.add(bullet(9, idleMaxHp(9) + 5), 0)
+    expect(p.view(before, 0).serial).toBe(41)
+    p.clear()
+    // The boss challenge: wall 10 with nothing on it, although fewer walls are counted broken.
+    const boss = server(10, 0, 1, [0, 0], 0, { cleared: 40, epoch: 3 })
+    expect(p.view(boss, 100)).toMatchObject({ wall: 10, hp: idleMaxHp(10), serial: 40 })
+    // The buy wall fell there: ten walls back.
+    const back = server(1, 0, 2, [0, 0], 0, { cleared: 40, epoch: 4 })
+    expect(p.view(back, 200)).toMatchObject({ wall: 1, hp: 20, serial: 40 })
+  })
+
+  it('halts the boss wall once at half health and waits for the server (546)', () => {
+    const p = new IdlePredictor()
+    const half = idleMaxHp(10) / 2
+    const s = server(10, half - 5, 0, [0, 0], 0, { cleared: 9, epoch: 1, circuitFired: false })
+    expect(p.view(s, 0).circuitSeconds).toBe(0)
+    // The hit that reaches half halts trading here, before the server knows.
+    p.add(bullet(10, 5 + half + 30), 1000)
+    expect(p.view(s, 1000)).toMatchObject({ wall: 10, circuitSeconds: 4 })
+    expect(p.view(s, 2000).circuitSeconds).toBe(2)
+    // It does not run out before the server has halted too.
+    expect(p.view(s, 9000).circuitSeconds).toBeGreaterThan(0)
+    // The server's halt, then the wall breaks with what waited on it.
+    p.sent(1)
+    const halted = server(10, half * 2 + 30, 1, [0, 0], 4, {
+      cleared: 9,
+      epoch: 1,
+      circuitFired: true,
+    })
+    expect(p.view(halted, 10000)).toMatchObject({ wall: 10, circuitSeconds: 4 })
+    const resumed = server(11, 30, 2, [0, 0], 0, { cleared: 10, epoch: 1, circuitFired: false })
+    const shown = p.view(resumed, 12000)
+    expect(shown).toMatchObject({ wall: 11, circuitSeconds: 0, serial: 10 })
+    expect(shown.hp).toBeCloseTo(idleMaxHp(11) - 30, 9)
+  })
+
+  it('does not halt a boss wall whose circuit breaker already ran (546)', () => {
+    const p = new IdlePredictor()
+    const half = idleMaxHp(10) / 2
+    const s = server(10, half + 1, 0, [0, 0], 0, { cleared: 9, epoch: 1, circuitFired: true })
+    p.add(bullet(10, half), 0)
+    expect(p.view(s, 0)).toMatchObject({ wall: 11, circuitSeconds: 0 })
+  })
+
+  it.each([6, 16])('does not start a circuit breaker at wall %i (decisions.md 533)', (wall) => {
     const p = new IdlePredictor()
     const s = server(wall - 1)
     p.add(bullet(wall - 1, idleMaxHp(wall - 1) + idleMaxHp(wall) + 50), 1000)

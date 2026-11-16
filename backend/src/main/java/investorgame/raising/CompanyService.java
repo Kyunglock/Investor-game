@@ -119,6 +119,12 @@ public interface CompanyService {
   /** 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 재사용 대기 중이면 400. */
   CompanyView useActive(UUID sessionId, String code);
 
+  /** 매수벽이 무너졌다 (decisions.md 546번): 열 벽 앞으로 돌아간다. 쌓인 피해와 거래 정지는 지운다. */
+  CompanyView retreatIdle(UUID sessionId);
+
+  /** 보스 도전 (decisions.md 546번): 보스 바로 앞의 벽에서 대량 매도벽 앞에 선다. 다른 벽에서는 400. */
+  CompanyView challengeIdleBoss(UUID sessionId);
+
   /**
    * 테스트판 (decisions.md 499번): 이 세션의 테스트판 회사를 돌려준다. 없으면 차리고, 자본·채용권·뽑기권을 채운다. 테스트판 회사는 무엇을 하든 그 전에
    * 다시 채워지고 업계 순위에 남지 않는다.
