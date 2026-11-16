@@ -284,6 +284,18 @@
 .idle-nav .idle-icon {
   font-size: 25px;
 }
+.idle-nav .idle-menu-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.idle-nav button:has(.idle-menu-icon) {
+  gap: 2px;
+  padding-top: 3px;
+  padding-bottom: 4px;
+  color: #674329;
+}
 .idle-nav .on {
   color: #744322;
   background: linear-gradient(#ffe3a1, #ffcc6d);

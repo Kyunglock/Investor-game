@@ -26,6 +26,7 @@ import { IdleSandbox } from './IdleSandbox'
 import { IdleShop } from './IdleShop'
 import { IdleWeapons } from './IdleWeapons'
 import { IdleIcon } from './icons'
+import { MenuIcon } from './MenuIcon'
 import { OfflineIncome } from './OfflineIncome'
 import { freeLeft } from './shop'
 import './idle-home.css'
@@ -152,7 +153,7 @@ export function IdleHome({
           aria-current={activeMenu === item.key ? 'page' : undefined}
           onClick={() => navigate(item.key)}
         >
-          <IdleIcon name={item.key} />
+          <MenuIcon name={item.key} />
           <span>{item.label}</span>
           {item.key === 'growth' && affordable && (
             <i className="idle-dot" role="img" aria-label="강화 가능" />
