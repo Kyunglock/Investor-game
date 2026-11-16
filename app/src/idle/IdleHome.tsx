@@ -11,6 +11,8 @@ import { Sheet } from '../app/Sheet'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 import { stageBadge, useAppUi } from '../app/ui'
 import { useCountUp } from '../app/useCountUp'
+import { haptic } from '../fx/haptics'
+import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
 import { idleThreat } from '../mental/assault'
 import { idleBuyOrderDamage } from '../mental/buyWall'
@@ -34,6 +36,7 @@ import { freeLeft } from './shop'
 import './idle-home.css'
 import './toy-arcade.css'
 import './loadout-tray.css'
+import './upgrade-feedback.css'
 
 type Menu = 'battle' | 'growth' | 'weapons' | 'cats' | 'shop' | 'company'
 /**
@@ -329,6 +332,7 @@ const powerText = (power: number) =>
  * 전투력 (decisions.md 538번): 성장 탭의 숫자 하나. 서버가 강화·무기·고양이를 묶어 준다. 오르면 오른 만큼을 잠깐 옆에 띄운다.
  */
 function IdlePower({ power }: { power: number }) {
+  const shown = useCountUp(power, 450)
   const last = useRef(power)
   const [gain, setGain] = useState(0)
   useEffect(() => {
@@ -351,7 +355,7 @@ function IdlePower({ power }: { power: number }) {
             +{powerText(gain)}
           </i>
         )}
-        {powerText(power)}
+        {powerText(shown)}
       </strong>
     </div>
   )
@@ -359,7 +363,27 @@ function IdlePower({ power }: { power: number }) {
 
 function IdleStats({ company }: { company: Company }) {
   const [count, setCount] = useState(1)
-  const [buying, setBuying] = useState(false)
+  const [buying, setBuying] = useState<Upgrade['kind'] | null>(null)
+  const inFlight = useRef(false)
+  const mounted = useRef(false)
+  const sequence = useRef(0)
+  const [receipt, setReceipt] = useState<{
+    kind: Upgrade['kind']
+    id: number
+    levels: number
+    bonus: number
+  } | null>(null)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  useEffect(() => {
+    if (!receipt) return
+    const timer = window.setTimeout(() => setReceipt(null), 1400)
+    return () => window.clearTimeout(timer)
+  }, [receipt])
   const [error, setError] = useState<string | null>(null)
   return (
     <>
@@ -381,7 +405,21 @@ function IdleStats({ company }: { company: Company }) {
           levels--
         const price = queuedCost(u.price, u.priceGrowthPercent, 0, levels)
         return (
-          <article className="idle-stat" key={u.kind} data-testid="idle-stat" data-kind={u.kind}>
+          <article
+            className="idle-stat"
+            key={u.kind}
+            data-testid="idle-stat"
+            data-kind={u.kind}
+            data-upgraded={receipt?.kind === u.kind || undefined}
+          >
+            {receipt?.kind === u.kind && (
+              <span key={receipt.id} className="idle-upgrade-burst" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+            )}
             <span className="idle-stat-icon" aria-hidden="true">
               <GrowthIcon name={u.kind} />
             </span>
@@ -396,31 +434,62 @@ function IdleStats({ company }: { company: Company }) {
                     ? buyNote(company, u)
                     : STATS[u.kind].note}
               </small>
-              <p>
-                {full
-                  ? `+${u.bonusPercent}% · 최대`
-                  : `+${u.bonusPercent}% → +${u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels}%`}
+              <p aria-live="polite" aria-atomic="true">
+                {receipt?.kind === u.kind ? (
+                  <span key={receipt.id} className="idle-upgrade-gain" data-testid="upgrade-gain">
+                    강화 완료! Lv.+{receipt.levels} · +{Number(receipt.bonus.toFixed(2))}%
+                  </span>
+                ) : full ? (
+                  `+${u.bonusPercent}% · 최대`
+                ) : (
+                  `+${u.bonusPercent}% → +${u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels}%`
+                )}
               </p>
             </div>
             <button
               type="button"
               className="idle-buy"
-              disabled={full || buying || company.capital < price}
+              disabled={full || buying !== null || company.capital < price}
+              aria-busy={buying === u.kind}
+              data-pending={buying === u.kind || undefined}
               onClick={async () => {
-                setBuying(true)
+                if (inFlight.current) return
+                inFlight.current = true
+                setBuying(u.kind)
+                setReceipt(null)
                 setError(null)
+                haptic.light()
                 try {
                   const result = await useRaisingStore.getState().buyBattleUpgrade(u.kind, levels)
-                  if (!result)
+                  if (!mounted.current) return
+                  const after = result?.battleUpgrades?.find((item) => item.kind === u.kind)
+                  if (after && after.level > u.level) {
+                    setReceipt({
+                      kind: u.kind,
+                      id: ++sequence.current,
+                      levels: after.level - u.level,
+                      bonus: after.bonusPercent - u.bonusPercent,
+                    })
+                    sfx.levelUp()
+                    haptic.success()
+                  } else {
                     setError(
-                      useRaisingStore.getState().error ?? '연결이 끊겼어요. 다시 시도해 주세요.',
+                      useRaisingStore.getState().error ?? '강화되지 않았어요. 다시 시도해 주세요.',
                     )
+                    haptic.error()
+                  }
+                } catch {
+                  if (mounted.current) {
+                    setError('연결이 끊겼어요. 다시 시도해 주세요.')
+                    haptic.error()
+                  }
                 } finally {
-                  setBuying(false)
+                  inFlight.current = false
+                  if (mounted.current) setBuying(null)
                 }
               }}
             >
-              {full ? 'MAX' : `강화 ×${levels}`}
+              {buying === u.kind ? '강화 중…' : full ? 'MAX' : `강화 ×${levels}`}
               {!full && <small>{money(price)}</small>}
             </button>
           </article>
