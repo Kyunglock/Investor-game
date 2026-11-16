@@ -31,6 +31,11 @@ class IdleEngine {
   /** 보스 도전이 나오는 간격 (547번): 50번째 벽마다. 열 번째 벽마다의 대량 매도벽(518번)은 그대로다. */
   static final long BOSS_EVERY = 50;
 
+  /** 보스를 처음 깨면 따로 주는 보상 (549번): 다이아, 그리고 그 벽 보상(대량 매도벽의 3배가 든 값)의 이 배수만큼의 돈. 같은 보스는 한 번만 준다. */
+  static final long BOSS_CLEAR_DIAMONDS = 100;
+
+  static final double BOSS_CLEAR_REWARDS = 5;
+
   /** 매수벽이 무너지면 이만큼 앞의 벽으로 돌아간다 (546번). */
   static final long RETREAT_WALLS = 10;
 
@@ -770,6 +775,14 @@ class IdleEngine {
       // 시즌패스 경험치 (529번): 벽 하나에 exp.wall.
       engine.pass.gain(c, engine.pass.rule().exp().wall(), todayDate());
       double left = Math.max(0, s.damage - maxHp(s.wall));
+      // 보스 클리어 보상 (549번): 벽 보상과 따로, 그 보스를 처음 깼을 때 한 번.
+      if (bossWall(s.wall) && s.wall > s.bossCleared) {
+        double money = Math.floor(reward(c) * BOSS_CLEAR_REWARDS);
+        s.bossCleared = s.wall;
+        s.bossRewardMoney = money;
+        earned += money;
+        c.diamonds += BOSS_CLEAR_DIAMONDS;
+      }
       s.cleared++;
       s.wall++;
       s.damage = queued[0] + left;
@@ -1034,6 +1047,10 @@ class IdleEngine {
         s.cleared,
         s.epoch,
         bossWall(s.wall),
+        s.bossCleared <= 0
+            ? null
+            : new CompanyView.BossReward(
+                s.bossCleared, BOSS_CLEAR_DIAMONDS, CompanyView.money(s.bossRewardMoney)),
         java.util.stream.IntStream.range(0, ACTIVES.size())
             .mapToObj(
                 i ->

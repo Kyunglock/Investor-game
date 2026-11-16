@@ -206,6 +206,14 @@ public record CompanyView(
     return new java.math.BigDecimal(Double.isFinite(amount) ? Math.floor(amount) : 0);
   }
 
+  /**
+   * 마지막으로 받은 보스 클리어 보상 (decisions.md 549번). 화면이 wall이 바뀐 것을 보고 한 번 알려 준다.
+   *
+   * @param wall 깬 보스의 벽 번호
+   * @param money 벽 보상과 따로 받은 돈
+   */
+  public record BossReward(long wall, long diamonds, java.math.BigDecimal money) {}
+
   public record Idle(
       long wall,
       double hp,
@@ -223,6 +231,7 @@ public record CompanyView(
       long cleared,
       long epoch,
       boolean bossChallenge,
+      BossReward bossReward,
       List<IdleActive> actives,
       List<CatDraw> lastDraws,
       Income income,

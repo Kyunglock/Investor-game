@@ -2452,6 +2452,8 @@ class BattleScene extends Phaser.Scene {
       simSpeed: this.simSpeed,
       climbed: this.climbed,
       nextWallIn: this.nextWallIn,
+      /** 날아가는 총알 수. */
+      bullets: (this.bullets.getChildren() as Bullet[]).filter((b) => b.active).length,
       /** 화면에 남은 매도 물량·몬스터 수(벽 칸·큰손 빼고). */
       flows: (this.enemies.getChildren() as Enemy[]).filter(
         (e) => e.active && !e.dying && !e.cell && !e.boss,
@@ -4639,6 +4641,19 @@ class BattleScene extends Phaser.Scene {
         for (const e of wall.cells) {
           e.setAlpha(1)
           e.cell?.label.setAlpha(1)
+        }
+      }
+      // 보스 도전의 서킷브레이커 (549번): 이미 날아가던 매도 물량·몬스터, 매수 주문, 총알을 모두 없애고 빈 판에서 시작한다.
+      if (this.opts.idle) {
+        this.clearIdleEnemies()
+        this.buyWallFx?.clearOrders()
+        for (const child of this.bullets.getChildren()) {
+          const bullet = child as Bullet
+          if (bullet.active) bullet.disableBody(true, true)
+        }
+        for (const shot of this.pierceShots) {
+          this.tweens.killTweensOf(shot)
+          shot.setVisible(false)
         }
       }
       this.circuitSellQueue.clear()

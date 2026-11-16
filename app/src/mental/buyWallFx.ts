@@ -112,6 +112,13 @@ export class BuyWallFx {
       shot.body.setPosition(shot.x, shot.y).setVisible(shot.active)
     }
   }
+  /** 날아가던 매수 주문을 모두 없앤다 (549번): 보스 도전의 서킷브레이커가 걸릴 때. */
+  clearOrders() {
+    for (const shot of this.shots) {
+      shot.active = false
+      shot.body.setVisible(false)
+    }
+  }
   beginCircuit() {
     this.circuitQueue.clear()
   }
