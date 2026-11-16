@@ -1251,10 +1251,11 @@ class CompanyEngine {
   }
 
   /**
-   * 자동 전투의 물가 (decisions.md 505번): 벽 하나를 돌파할 때마다 벽 보상·시간 수입이 함께 이만큼 곱해진다. 돈의 단위가 벽을 따라 a, b, c … z로
-   * 커진다. 전투 강화의 값은 물가를 따르지 않고 단계로만 정한다 (519번). 실수가 넘치지 않게 지수는 6,000벽에서 멈춘다.
+   * 자동 전투의 물가 (decisions.md 505·553번): 벽 하나를 돌파할 때마다 벽 보상·시간 수입이 함께 이만큼 곱해진다. 전투 강화의 값이 단계마다 오르는
+   * 비율(application.yml upgrades.price-growth-percent, 4%)과 같아야 한다: 그래야 N번째 벽에서 버는 돈과 N단계 강화의 값이 나란히
+   * 큰다. 전에는 1.1이라 돈이 강화 값보다 훨씬 빨리 컸다. 강화 값 자체는 물가를 따르지 않고 단계로만 정한다 (519번). 지수는 6,000벽에서 멈춘다.
    */
-  static final double INFLATION = 1.1;
+  static final double INFLATION = 1.04;
 
   static double inflation(CompanyState company) {
     long wall = company.idle == null ? 1 : company.idle.wall;

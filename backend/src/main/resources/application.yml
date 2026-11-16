@@ -259,6 +259,7 @@ raising:
         max-bonus: 30
       # 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사를 단계마다 step-percent%씩, 최대 단계 없이 끝없이. 값은 처음
       # base-price(1b)이고 단계마다 price-growth-percent%씩 오른다(100단계째 약 0.5억, 200단계째 약 25억). 한 요청에 max-batch단계까지 묶어 산다.
+      # price-growth-percent는 자동 전투의 물가(CompanyEngine.INFLATION)와 같은 비율이어야 한다 (553번): 돈과 강화 값이 나란히 큰다.
       # 멘탈 전투의 바탕 수치(무기 위)에 영구로 붙는다. 고양이 속도 강화는 394번에서 뺐다. 체력(hp)은 최대 멘탈을 단계마다 step-percent%씩 (410번)
       upgrades:
         base-price: 1000000
