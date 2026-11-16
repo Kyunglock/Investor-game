@@ -1,7 +1,7 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { DiamondPrice } from '@web/features/raising/DiamondIcon'
-import { useRaisingStore } from '@web/features/raising/store'
+import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
@@ -14,7 +14,15 @@ import { freeLeft, giveText, type ShopItem, shopBlock } from './shop'
  * 상점 탭 (decisions.md 541번): 위에는 고양이·무기 뽑기(전에는 고양이 탭에 있었다), 아래에는 날마다의 상품이다. 실제 돈은 쓰지 않고 다이아와
  * 게임 돈으로만 산다. 값·남은 횟수·결과는 서버가 정한다.
  */
-export function IdleShop({ company, kind }: { company: Company; kind?: 'cat' | 'weapon' }) {
+export function IdleShop({
+  company,
+  kind,
+  onUse,
+}: {
+  company: Company
+  kind?: 'cat' | 'weapon'
+  onUse?: (kind: 'cat' | 'weapon', code: CatCode | null) => void
+}) {
   const [buying, setBuying] = useState(false)
   const [got, setGot] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +47,7 @@ export function IdleShop({ company, kind }: { company: Company; kind?: 'cat' | '
   }
   return (
     <>
-      <IdleGacha company={company} initialKind={kind} onCat={() => {}} />
+      <IdleGacha company={company} initialKind={kind} onCat={() => {}} onUse={onUse} />
       <p className="idle-subtitle">
         오늘의 상품 · 매일 자정에 다시 열려요
         {freeLeft(company) && ' · 무료 상품이 남아 있어요'}

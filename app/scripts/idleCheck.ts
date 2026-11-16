@@ -336,6 +336,7 @@ try {
     await pickCat('sky')
     const detail = page.getByTestId('cat-detail')
     await expect(detail).toHaveAttribute('data-code', 'sky')
+    await detail.locator('summary').click()
     // The cat's own skill starts at level 1 and says when it levels up (decisions.md 515).
     // Picking a cat explains its skill (decisions.md 530): what it does, how it grows, the next level.
     await expect(detail.getByTestId('cat-skill')).toContainText('고유 스킬 메테오 스킬 Lv.1')
@@ -418,8 +419,11 @@ try {
     await page.locator('[data-testid=cat][data-code=sky]').click()
     await detail.getByTestId('cat-field').click()
     await page.screenshot({ path: `/tmp/idle-cats-${width}.png`, fullPage: true })
-    // The cat's gun leads to the weapons tab with that cat chosen (decisions.md 540).
+    // Equipment opens inside the cat tray; switching to weapons keeps the same wearer.
     await detail.getByTestId('cat-gun').click()
+    await expect(detail).toHaveAttribute('data-code', 'sky')
+    await expect(page.getByTestId('cat-gear')).toBeVisible()
+    await page.getByRole('button', { name: WEAPON_MENU }).last().click()
     await expect(page.getByTestId('weapon-now')).toContainText('하늘냥의 무기')
     await expect(page.locator('[data-testid=gear-wearer][data-code=sky]')).toHaveAttribute(
       'aria-pressed',

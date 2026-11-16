@@ -1,6 +1,7 @@
 import type { Company } from '@web/api/client'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
@@ -8,10 +9,12 @@ import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { magicTier } from '../mental/magic'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
+import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { sortCats } from './catGrade'
 import { SkillBadge } from './SkillBadge'
 import { SKILLS } from './skills'
+import { useLoadoutDrag } from './useLoadoutDrag'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
@@ -20,88 +23,125 @@ const COLUMNS = 6
 
 /**
  * 고양이 메뉴 (decisions.md 488·491·493·530번): 위의 출전 칸 넷에 세우고, 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그
- * 고양이의 등급·고유 스킬 설명과 든 무기가 나온다 (501번). 무기를 바꾸는 곳은 무기 탭이고(540번) 뽑기는 상점 탭이다(541번). 결과는 서버가 정한다.
+ * 고양이의 등급·고유 스킬 설명과 든 무기가 나온다 (501번). 무기는 같은 패널에서 바꾸고 뽑기는 상점 탭이다(541번). 결과는 서버가 정한다.
  */
 export function IdleCats({
   company,
-  onGear,
+  picked,
+  onPick,
 }: {
   company: Company
-  /** 그 고양이(null이면 사장냥)의 무기를 고르러 무기 탭으로 간다 (540번). */
-  onGear: (code: CatCode | null) => void
+  /** 메뉴를 오가도 선택한 고양이를 유지한다. null은 사장냥이다. */
+  picked: CatCode | null
+  onPick: (code: CatCode | null) => void
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   // 고른 고양이. null이면 사장냥이다.
-  const [picked, setPicked] = useState<CatCode | null>(null)
+  const [gearOpen, setGearOpen] = useState(false)
+  const setPicked = onPick
   const idle = company.idle
-  if (!idle) return null
   const hero = heroOf(company)
   const same = (w: Weapon, held: Cat['weapon']) => w.kind === held?.kind && w.grade === held.grade
-  const fielded = idle.cats.filter((cat) => cat.fielded)
+  const fielded = (idle?.cats ?? []).filter((cat) => cat.fielded)
   // 인벤토리: 가진 고양이를 등급순으로 먼저, 없는 고양이를 등급순으로 뒤에.
-  const sorted = sortCats(idle.cats)
-  const cat = idle.cats.find((c) => c.code === picked && c.level > 0) ?? null
+  const sorted = sortCats(idle?.cats ?? [])
+  const cat = (idle?.cats ?? []).find((c) => c.code === picked && c.level > 0) ?? null
   const gun = cat
     ? (company.weapons?.find((w) => same(w, cat.weapon)) ?? DEFAULT_WEAPON)
     : hero.weapon
   const pick = (code: CatCode | null) => {
     sfx.tap()
-    setPicked(picked === code ? null : code)
+    setPicked(code)
   }
   const skill = cat ? SKILLS[cat.skill] : null
+  const place = async (code: CatCode, target: string) => {
+    const store = useRaisingStore.getState()
+    if (store.busy) return
+    const c = store.company?.idle?.cats.find((c) => c.code === code)
+    if (!c || c.fielded) return
+    await store.fieldCat(
+      code,
+      true,
+      target.startsWith('slot:empty') ? undefined : (target.slice(5) as CatCode),
+    )
+    if (!useRaisingStore.getState().error) {
+      onPick(code)
+      haptic.light()
+      sfx.tap()
+    }
+  }
+  const accepts = (code: CatCode, target: string) =>
+    !busy && target.startsWith('slot:') && !(idle?.cats ?? []).find((c) => c.code === code)?.fielded
+  const { drag, down, consumeClick } = useLoadoutDrag<CatCode>(accepts, (code, target) => {
+    void place(code, target)
+  })
   const canMerge = mergeable(company).length > 0
   return (
     <>
-      <p className="idle-subtitle">
-        출전 {fielded.length} / {idle.fieldSlots} · 사장냥은 늘 함께 싸워요
-      </p>
-      <ul className="idle-cat-field-row" aria-label="출전 칸">
-        <li>
-          <button
-            type="button"
-            className={`idle-cat-boss ${cat ? '' : 'is-picked'}`}
-            data-testid="cat-boss"
-            aria-label={`${BOSS_NAME} · 늘 출전`}
-            aria-pressed={!cat}
-            onClick={() => pick(null)}
-          >
-            <Portrait />
-            <small className="idle-cat-slot-name">{BOSS_NAME}</small>
-          </button>
-        </li>
-        {Array.from({ length: idle.fieldSlots }, (_, i) => fielded[i] ?? null).map((c, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: 출전 칸은 자리 번호가 곧 열쇠다.
-          <li key={i}>
-            {c ? (
-              <button
-                type="button"
-                className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''}`}
-                data-testid="cat-slot"
-                data-code={c.code}
-                aria-label={`출전 ${i + 1}번 ${c.name}`}
-                onClick={() => pick(c.code)}
-              >
-                <Portrait code={c.code} />
-                <span className="idle-cat-badge">
-                  <SkillBadge skill={c.skill} level={c.skillLevel} size={22} />
-                </span>
-                <em className={`idle-cat-grade idle-cat-grade-tag is-${c.grade}`}>{c.grade}</em>
-                <small className="idle-cat-slot-name">{c.name}</small>
-              </button>
-            ) : (
-              <span
-                className="idle-cat-empty"
-                data-testid="cat-slot"
-                role="img"
-                aria-label="빈 출전 칸"
-              >
-                ＋
-              </span>
-            )}
+      <div className="loadout-team">
+        <p className="idle-subtitle">
+          출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 사장냥은 늘 함께 싸워요
+        </p>
+        <ul className="idle-cat-field-row" aria-label="출전 칸">
+          <li>
+            <button
+              type="button"
+              className={`idle-cat-boss ${cat ? '' : 'is-picked'}`}
+              data-testid="cat-boss"
+              data-loadout-target="wearer:boss"
+              aria-label={`${BOSS_NAME} · 늘 출전`}
+              aria-pressed={!cat}
+              onClick={() => pick(null)}
+            >
+              <Portrait />
+              <small className="idle-cat-slot-name">{BOSS_NAME}</small>
+            </button>
           </li>
-        ))}
-      </ul>
+          {Array.from({ length: idle?.fieldSlots ?? 0 }, (_, i) => fielded[i] ?? null).map(
+            (c, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: 출전 칸은 자리 번호가 곧 열쇠다.
+              <li key={i}>
+                {c ? (
+                  <button
+                    type="button"
+                    className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''} ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:${c.code}` ? 'is-drop-over' : ''}`}
+                    data-testid="cat-slot"
+                    data-loadout-target={gearOpen ? `wearer:${c.code}` : `slot:${c.code}`}
+                    data-code={c.code}
+                    aria-label={`출전 ${i + 1}번 ${c.name}`}
+                    onClick={() => {
+                      if (!gearOpen && cat && !cat.fielded) void place(cat.code, `slot:${c.code}`)
+                      else pick(c.code)
+                    }}
+                  >
+                    <Portrait code={c.code} />
+                    <span className="idle-cat-badge">
+                      <SkillBadge skill={c.skill} level={c.skillLevel} size={22} />
+                    </span>
+                    <em className={`idle-cat-grade idle-cat-grade-tag is-${c.grade}`}>{c.grade}</em>
+                    <small className="idle-cat-slot-name">{c.name}</small>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={`idle-cat-empty ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:empty${i}` ? 'is-drop-over' : ''}`}
+                    data-loadout-target={`slot:empty${i}`}
+                    disabled={busy}
+                    onClick={() => {
+                      if (cat && !cat.fielded) void place(cat.code, `slot:empty${i}`)
+                    }}
+                    data-testid="cat-slot"
+                    aria-label="빈 출전 칸에 선택한 고양이 출전"
+                  >
+                    ＋
+                  </button>
+                )}
+              </li>
+            ),
+          )}
+        </ul>
+      </div>
       <article className="idle-cat owned" data-testid="cat-detail" data-code={cat?.code ?? 'boss'}>
         <Portrait code={cat?.code} />
         <div className="idle-cat-info">
@@ -125,55 +165,64 @@ export function IdleCats({
             className="idle-cat-field"
             data-testid="cat-field"
             aria-pressed={cat.fielded}
-            disabled={busy || (!cat.fielded && fielded.length >= idle.fieldSlots)}
+            disabled={busy || (!cat.fielded && fielded.length >= (idle?.fieldSlots ?? 0))}
             onClick={() => {
               sfx.tap()
               haptic.light()
               void useRaisingStore.getState().fieldCat(cat.code, !cat.fielded)
             }}
           >
-            {cat.fielded ? '출전 중' : fielded.length >= idle.fieldSlots ? '칸 없음' : '출전'}
+            {cat.fielded
+              ? '출전 중'
+              : fielded.length >= (idle?.fieldSlots ?? 0)
+                ? '칸 없음'
+                : '출전'}
           </button>
         ) : (
           <span className="idle-cat-field idle-cat-always">늘 출전</span>
         )}
         {/* 스킬 설명 (530번): 하는 일, 레벨이 오르면 달라지는 점, 다음 스킬 레벨까지 필요한 고양이 레벨. */}
         {cat && skill && (
-          <section className="idle-cat-skill" data-testid="cat-skill" data-skill={cat.skill}>
-            <SkillBadge skill={cat.skill} level={cat.skillLevel} size={60} />
-            <div className="idle-skill-text">
-              <b className="idle-skill-title">
-                고유 스킬 {cat.skillName}{' '}
-                <small className="idle-skill-lv">Lv.{cat.skillLevel}</small>
-              </b>
-              <p className="idle-skill-line">{skill.does}</p>
-              <p className="idle-skill-line">{skill.grows}</p>
-              {/* 레벨에 따라 바뀌는 모습 (531번): 지금 단계에 테를 두른다. */}
-              <ol className="idle-skill-tiers" aria-label="레벨에 따라 바뀌는 모습">
-                {skill.tiers.map((name, i) => {
-                  const now = magicTier(cat.skillLevel) === i + 1
-                  return (
-                    <li
-                      key={name}
-                      className={`idle-skill-tier ${now ? 'is-now' : ''}`}
-                      aria-current={now || undefined}
-                    >
-                      <SkillBadge skill={cat.skill} level={i + 1} size={24} />
-                      {name}
-                    </li>
-                  )
-                })}
-              </ol>
-              <p className="idle-skill-line idle-skill-next" data-testid="cat-skill-next">
-                {cat.skillNextLevel > 0
-                  ? `고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1} · 앞으로 ${cat.skillNextLevel - cat.level}레벨`
-                  : '스킬 최고 레벨이에요'}
-              </p>
-              <p className="idle-skill-line">
-                {cat.fielded ? '출전 중이라 발동하고 있어요' : '출전하면 발동해요'}
-              </p>
-            </div>
-          </section>
+          <details>
+            <summary>
+              고유 스킬 · {cat.skillName} Lv.{cat.skillLevel}
+            </summary>
+            <section className="idle-cat-skill" data-testid="cat-skill" data-skill={cat.skill}>
+              <SkillBadge skill={cat.skill} level={cat.skillLevel} size={60} />
+              <div className="idle-skill-text">
+                <b className="idle-skill-title">
+                  고유 스킬 {cat.skillName}{' '}
+                  <small className="idle-skill-lv">Lv.{cat.skillLevel}</small>
+                </b>
+                <p className="idle-skill-line">{skill.does}</p>
+                <p className="idle-skill-line">{skill.grows}</p>
+                {/* 레벨에 따라 바뀌는 모습 (531번): 지금 단계에 테를 두른다. */}
+                <ol className="idle-skill-tiers" aria-label="레벨에 따라 바뀌는 모습">
+                  {skill.tiers.map((name, i) => {
+                    const now = magicTier(cat.skillLevel) === i + 1
+                    return (
+                      <li
+                        key={name}
+                        className={`idle-skill-tier ${now ? 'is-now' : ''}`}
+                        aria-current={now || undefined}
+                      >
+                        <SkillBadge skill={cat.skill} level={i + 1} size={24} />
+                        {name}
+                      </li>
+                    )
+                  })}
+                </ol>
+                <p className="idle-skill-line idle-skill-next" data-testid="cat-skill-next">
+                  {cat.skillNextLevel > 0
+                    ? `고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1} · 앞으로 ${cat.skillNextLevel - cat.level}레벨`
+                    : '스킬 최고 레벨이에요'}
+                </p>
+                <p className="idle-skill-line">
+                  {cat.fielded ? '출전 중이라 발동하고 있어요' : '출전하면 발동해요'}
+                </p>
+              </div>
+            </section>
+          </details>
         )}
         <button
           type="button"
@@ -181,7 +230,7 @@ export function IdleCats({
           data-testid="cat-gun"
           onClick={() => {
             sfx.tap()
-            onGear(cat?.code ?? null)
+            setGearOpen(!gearOpen)
           }}
         >
           <GunSprite kind={gun.kind} grade={gun.grade} width={40} />
@@ -193,53 +242,87 @@ export function IdleCats({
             </small>
           </span>
           <em className="idle-gun-open">
-            무기 탭 ▸
+            {gearOpen ? '고양이 목록 ▾' : '무기 변경 ▸'}
             {canMerge && (
               <i className="idle-gun-dot" role="img" aria-label="합칠 수 있는 무기 있음" />
             )}
           </em>
         </button>
       </article>
-      <ul className="idle-cat-grid" aria-label={`고양이 인벤토리 · 동료 ${idle.cats.length}종`}>
-        {Array.from(
-          { length: Math.max(18, Math.ceil(idle.cats.length / COLUMNS) * COLUMNS) },
-          (_, i) => sorted[i] ?? null,
-        ).map((c, i) =>
-          c ? (
-            <li key={c.code}>
-              <button
-                type="button"
-                className={`idle-cat-cell ${c.level > 0 ? 'owned' : ''} ${c.fielded ? 'fielded' : ''} ${picked === c.code ? 'is-picked' : ''}`}
-                data-testid="cat"
-                data-code={c.code}
-                data-grade={c.grade}
-                disabled={c.level < 1}
-                aria-label={
-                  c.level > 0
-                    ? `${c.grade} 등급 ${c.name} 레벨 ${c.level}${c.fielded ? ' 출전 중' : ''} · 고유 스킬 ${c.skillName}`
-                    : `${c.grade} 등급 ${c.name} 아직 없음 · 고유 스킬 ${c.skillName}`
-                }
-                onClick={() => pick(c.code)}
-              >
-                <Portrait code={c.code} locked={c.level < 1} />
-                {/* 고유 스킬 (531번): 못 가진 고양이의 스킬은 흑백에 자물쇠다. */}
-                <span className="idle-cat-badge">
-                  <SkillBadge skill={c.skill} level={c.skillLevel} size={18} locked={c.level < 1} />
-                </span>
-                <em
-                  className={`idle-cat-grade idle-cat-grade-tag is-${c.grade} ${c.level < 1 ? 'is-locked' : ''}`}
-                >
-                  {c.grade}
-                </em>
-                {c.level > 0 && <i>Lv.{c.level}</i>}
-              </button>
-            </li>
-          ) : (
-            // biome-ignore lint/suspicious/noArrayIndexKey: 빈 칸은 자리 번호가 곧 열쇠다.
-            <li key={i} className="idle-cat-cell-empty" />
-          ),
+      {gearOpen ? (
+        <CatGear company={company} wearer={cat} onSelect={onPick} />
+      ) : (
+        <>
+          <p className="loadout-hint" aria-live="polite">
+            {drag?.over
+              ? '놓으면 출전 고양이를 교체해요'
+              : '길게 집어 출전 칸에 놓기 · 또는 고양이 선택 후 출전 칸 누르기'}
+          </p>
+          <ul
+            className="idle-cat-grid"
+            aria-label={`고양이 인벤토리 · 동료 ${(idle?.cats ?? []).length}종`}
+          >
+            {Array.from(
+              { length: Math.max(18, Math.ceil((idle?.cats ?? []).length / COLUMNS) * COLUMNS) },
+              (_, i) => sorted[i] ?? null,
+            ).map((c, i) =>
+              c ? (
+                <li key={c.code}>
+                  <button
+                    type="button"
+                    className={`idle-cat-cell ${c.level > 0 ? 'owned' : ''} ${c.fielded ? 'fielded' : ''} ${picked === c.code ? 'is-picked' : ''}`}
+                    data-testid="cat"
+                    data-code={c.code}
+                    data-grade={c.grade}
+                    disabled={c.level < 1}
+                    aria-label={
+                      c.level > 0
+                        ? `${c.grade} 등급 ${c.name} 레벨 ${c.level}${c.fielded ? ' 출전 중' : ''} · 고유 스킬 ${c.skillName}`
+                        : `${c.grade} 등급 ${c.name} 아직 없음 · 고유 스킬 ${c.skillName}`
+                    }
+                    onPointerDown={busy || c.level < 1 || c.fielded ? undefined : down(c.code)}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onClick={(event) => {
+                      if (!consumeClick(event.detail)) pick(c.code)
+                    }}
+                  >
+                    <Portrait code={c.code} locked={c.level < 1} />
+                    {/* 고유 스킬 (531번): 못 가진 고양이의 스킬은 흑백에 자물쇠다. */}
+                    <span className="idle-cat-badge">
+                      <SkillBadge
+                        skill={c.skill}
+                        level={c.skillLevel}
+                        size={18}
+                        locked={c.level < 1}
+                      />
+                    </span>
+                    <em
+                      className={`idle-cat-grade idle-cat-grade-tag is-${c.grade} ${c.level < 1 ? 'is-locked' : ''}`}
+                    >
+                      {c.grade}
+                    </em>
+                    {c.level > 0 && <i>Lv.{c.level}</i>}
+                  </button>
+                </li>
+              ) : (
+                // biome-ignore lint/suspicious/noArrayIndexKey: 빈 칸은 자리 번호가 곧 열쇠다.
+                <li key={i} className="idle-cat-cell-empty" />
+              ),
+            )}
+          </ul>
+        </>
+      )}
+      {drag &&
+        createPortal(
+          <div
+            className="idle-gear-ghost"
+            style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}
+            aria-hidden="true"
+          >
+            <Portrait code={drag.item} />
+          </div>,
+          document.body,
         )}
-      </ul>
       {error && <p role="alert">{error}</p>}
     </>
   )

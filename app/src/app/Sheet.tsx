@@ -34,9 +34,9 @@ export function Sheet({
       if (event.key !== 'Tab' || !root) return
       const controls = Array.from(
         root.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), [tabindex="0"]',
+          'summary, button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), [tabindex="0"]',
         ),
-      )
+      ).filter((element) => element.getClientRects().length > 0)
       const first = controls[0]
       const last = controls.at(-1)
       if (!first) {

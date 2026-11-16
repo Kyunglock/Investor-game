@@ -144,7 +144,7 @@ public interface CompanyService {
   CompanyView sandboxWeapon(UUID sessionId, String grade);
 
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
-  CompanyView fieldCat(UUID sessionId, String code, boolean fielded);
+  CompanyView fieldCat(UUID sessionId, String code, boolean fielded, String replaceCode);
 
   /** 고양이에게 가진 무기 하나를 들린다 (488번). kind와 grade가 null이면 뺀다. */
   CompanyView equipCat(UUID sessionId, String code, String kind, String grade);

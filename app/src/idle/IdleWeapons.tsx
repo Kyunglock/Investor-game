@@ -10,9 +10,9 @@ import { CatPortrait as Portrait } from './CatPortrait'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
-/** 무기를 들 수 있는 이: 출전한 고양이와, 쉬고 있어도 무기를 쥔 고양이(그 무기를 빼 줄 수 있게). 사장냥은 늘 맨 앞이다. */
+/** 무기를 들 수 있는 모든 보유 고양이. 미출전·무장착 고양이도 장비를 미리 준비할 수 있다. 사장냥은 늘 맨 앞이다. */
 export function gearWearers(company: Company): Cat[] {
-  return (company.idle?.cats ?? []).filter((c) => c.level > 0 && (c.fielded || c.weapon !== null))
+  return (company.idle?.cats ?? []).filter((c) => c.level > 0)
 }
 
 /**
@@ -46,39 +46,43 @@ export function IdleWeapons({
   }
   return (
     <>
-      <p className="idle-subtitle">누가 들지 고르고, 아래에서 무기를 눌러 장착해요</p>
-      <ul className="idle-cat-field-row idle-wearers" aria-label="무기를 들 고양이">
-        <li>
-          <button
-            type="button"
-            className={`idle-cat-boss ${cat ? '' : 'is-picked'}`}
-            data-testid="gear-wearer"
-            data-code="boss"
-            aria-pressed={!cat}
-            aria-label={`${BOSS_NAME} 무기 고르기`}
-            onClick={() => pick(null)}
-          >
-            <Portrait />
-            <small className="idle-cat-slot-name">{BOSS_NAME}</small>
-          </button>
-        </li>
-        {wearers.map((c) => (
-          <li key={c.code}>
+      <div className="loadout-team">
+        <p className="idle-subtitle">무기를 길게 집어 고양이에게 놓으면 장착해요</p>
+        <ul className="idle-cat-field-row idle-wearers" aria-label="무기를 들 고양이">
+          <li>
             <button
               type="button"
-              className={`idle-cat-slot ${cat?.code === c.code ? 'is-picked' : ''}`}
+              className={`idle-cat-boss ${cat ? '' : 'is-picked'}`}
               data-testid="gear-wearer"
-              data-code={c.code}
-              aria-pressed={cat?.code === c.code}
-              aria-label={`${c.name} 무기 고르기${c.fielded ? '' : ' · 쉬는 중'}`}
-              onClick={() => pick(c.code)}
+              data-code="boss"
+              data-loadout-target="wearer:boss"
+              aria-pressed={!cat}
+              aria-label={`${BOSS_NAME} 무기 고르기`}
+              onClick={() => pick(null)}
             >
-              <Portrait code={c.code} />
-              <small className="idle-cat-slot-name">{c.name}</small>
+              <Portrait />
+              <small className="idle-cat-slot-name">{BOSS_NAME}</small>
             </button>
           </li>
-        ))}
-      </ul>
+          {wearers.map((c) => (
+            <li key={c.code}>
+              <button
+                type="button"
+                className={`idle-cat-slot ${cat?.code === c.code ? 'is-picked' : ''}`}
+                data-testid="gear-wearer"
+                data-code={c.code}
+                data-loadout-target={`wearer:${c.code}`}
+                aria-pressed={cat?.code === c.code}
+                aria-label={`${c.name} 무기 고르기${c.fielded ? '' : ' · 쉬는 중'}`}
+                onClick={() => pick(c.code)}
+              >
+                <Portrait code={c.code} />
+                <small className="idle-cat-slot-name">{c.name}</small>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
       <article className="idle-cat owned idle-weapon-now" data-testid="weapon-now">
         <div className="idle-cat-gun idle-weapon-held">
           <GunSprite kind={gun.kind} grade={gun.grade} width={48} />
@@ -91,7 +95,7 @@ export function IdleWeapons({
             </small>
           </span>
         </div>
-        <CatGear company={company} wearer={cat} />
+        <CatGear company={company} wearer={cat} onSelect={onWearer} />
       </article>
       <button
         type="button"

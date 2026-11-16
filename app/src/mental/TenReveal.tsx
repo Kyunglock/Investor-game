@@ -46,6 +46,7 @@ export function TenReveal({
   againNote,
   onClose,
   onAgain,
+  useAction,
 }: {
   label: string
   testId: string
@@ -56,6 +57,7 @@ export function TenReveal({
   /** 다시 뽑기 단추 아래 줄: 10연차의 다이아 값 */
   againNote: ReactNode
   onClose: () => void
+  useAction?: ReactNode
   onAgain: () => void
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
@@ -176,6 +178,7 @@ export function TenReveal({
                   </li>
                 ))}
               </ul>
+              {useAction}
               <div className="weapon-reveal-actions">
                 <button type="button" onClick={onClose} data-testid={`${testId}-close`}>
                   닫기

@@ -1085,6 +1085,34 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isCloseTo(3 * 4.2, offset(1e-9));
   }
 
+  @Test
+  void 꽉_찬_팀의_고양이를_한번에_교체한다() {
+    start(16);
+    for (String code : List.of("sky", "mint", "lilac", "sunset", "night"))
+      state.idle.cats.put(code, 1);
+    state.idle.fielded = new java.util.ArrayList<>(List.of("sky", "mint", "lilac", "sunset"));
+    engine.fieldCat(state, "night", true, "mint");
+    assertThat(state.idle.fielded).containsExactly("sky", "night", "lilac", "sunset");
+    assertThat(state.idle.cats).containsKey("mint");
+  }
+
+  @Test
+  void 교체_대상이_바뀌었거나_미보유이면_기존_팀을_보존한다() {
+    start(16);
+    state.idle.cats.put("sky", 1);
+    state.idle.cats.put("mint", 1);
+    state.idle.fielded = new java.util.ArrayList<>(List.of("sky"));
+    assertThatThrownBy(() -> engine.fieldCat(state, "mint", true, "night"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.fieldCat(state, "night", true, "sky"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.fieldCat(state, "mint", false, "sky"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.fieldCat(state, "sky", true, "sky"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    assertThat(state.idle.fielded).containsExactly("sky");
+  }
+
   private investorgame.raising.CompanyView.CatWeapon weaponOf(String code) {
     return engine.view(state).cats().stream()
         .filter(cat -> cat.code().equals(code))
