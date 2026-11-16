@@ -556,9 +556,11 @@ try {
     // The queue is rebuilt while a broken wall falls: a read in that moment finds it empty. These
     // reads wait for the two walls to be back instead of throwing on an empty queue.
     const rearWalls = async () => {
-      await expect.poll(async () => (await queuedWalls()).length).toBe(2)
-      const walls = await queuedWalls()
-      return walls.length === 2 ? walls : rearWalls()
+      for (;;) {
+        await expect.poll(async () => (await queuedWalls()).length).toBe(2)
+        const walls = await queuedWalls()
+        if (walls.length === 2) return walls
+      }
     }
     const intact = (await rearWalls())[0].crack
     company.idle.upcoming = [
