@@ -31,6 +31,7 @@ import { MenuIcon } from './MenuIcon'
 import { OfflineIncome } from './OfflineIncome'
 import { freeLeft } from './shop'
 import './idle-home.css'
+import './toy-arcade.css'
 
 type Menu = 'battle' | 'growth' | 'weapons' | 'cats' | 'shop' | 'company'
 /**
@@ -241,11 +242,12 @@ export function IdleHome({
               </button>
             )}
           </header>
-          <IdleOptions />
-          {/* 설정 옆의 빠른 단추 (528·529번): 시즌패스를 열고, 출석판을 다시 연다. */}
-          <div className="idle-quick">
-            <IdlePass company={company} />
-            <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
+          <div className="idle-toolbar" role="toolbar" aria-label="전투 편의 메뉴">
+            <IdleOptions />
+            <div className="idle-quick">
+              <IdlePass company={company} />
+              <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
+            </div>
           </div>
           <IdleSandbox company={company} />
           <IdleActives company={company} connected={connected} />
