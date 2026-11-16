@@ -28,7 +28,10 @@ class IdleEngine {
   /** Game seconds one trading halt lasts. */
   static final double CIRCUIT_SECONDS = 4;
 
-  /** 보스 도전이 나오는 간격 (547번): 50번째 벽마다. 열 번째 벽마다의 대량 매도벽(518번)은 그대로다. */
+  /**
+   * 보스 도전이 나오는 간격 (547번): 50번째 벽마다. 대량 매도벽(체력·보상 3배, 큰손, 관통되지 않음)은 이 벽에만 선다: 열 번째 벽마다 서던 것(518번)은
+   * 없앴다 (550번).
+   */
   static final long BOSS_EVERY = 50;
 
   /** 보스를 처음 깨면 따로 주는 보상 (549번): 다이아, 그리고 그 벽 보상(대량 매도벽의 3배가 든 값)의 이 배수만큼의 돈. 같은 보스는 한 번만 준다. */
@@ -68,7 +71,8 @@ class IdleEngine {
   private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;
   // Matches the app's mental/assault.ts idleThreat.
   private static final double THREAT_HP = 760;
-  // Wall health (518): base + linear x depth + square x depth^2, every tenth wall x BOSS_HP.
+  // Wall health (518): base + linear x depth + square x depth^2, every 50th wall (the boss, 550) x
+  // BOSS_HP.
   private static final double HP_BASE = 20;
   private static final double HP_LINEAR = 12;
   private static final double HP_SQUARE = 0.2;
@@ -426,7 +430,7 @@ class IdleEngine {
     return Math.floor(
         wallIncome(s)
             * REWARD_SECONDS
-            * (s.wall % 10 == 0 ? BOSS_REWARD : 1)
+            * (bossWall(s.wall) ? BOSS_REWARD : 1)
             * CompanyEngine.inflation(c));
   }
 
@@ -480,8 +484,9 @@ class IdleEngine {
 
   static double maxHp(long wall) {
     // The first walls fall in seconds; later ones grow faster than linearly so upgrades matter
-    // (492). The curve was softened in 518: the square term halved, every tenth wall x3.
-    return plainHp(wall) * (wall % 10 == 0 ? BOSS_HP : 1);
+    // (492). The curve was softened in 518: the square term halved, the boss wall x3 (every 50th
+    // since 550).
+    return plainHp(wall) * (bossWall(wall) ? BOSS_HP : 1);
   }
 
   /**
@@ -489,7 +494,7 @@ class IdleEngine {
    * 대량 매도벽 on the way: that front wall, a wall between, or the target itself.
    */
   static boolean pierceBlocked(long wall, int depth) {
-    for (long at = wall - depth; at <= wall; at++) if (at % 10 == 0) return true;
+    for (long at = wall - depth; at <= wall; at++) if (bossWall(at)) return true;
     return false;
   }
 
@@ -701,7 +706,8 @@ class IdleEngine {
         // Only a bullet's pierce reaches the queued walls (520): explosions and skills stop at the
         // front wall.
         if (depth > 0 && kind != 0) continue;
-        // A 대량 매도벽 (every tenth wall) cannot be pierced: not when it is the screen's front wall,
+        // A 대량 매도벽 (the boss, every 50th wall) cannot be pierced: not when it is the screen's front
+        // wall,
         // and a pierced bullet neither hits it nor goes past it. Matches the app's idlePierceReach.
         if (depth > 0 && pierceBlocked(hit.wall(), depth)) continue;
         double reported =
@@ -1032,7 +1038,7 @@ class IdleEngine {
         maxHp(s.wall),
         dps(c),
         CompanyView.money(s.earned),
-        s.wall % 10 == 0,
+        bossWall(s.wall),
         skills,
         cats,
         FIELD_SLOTS,
