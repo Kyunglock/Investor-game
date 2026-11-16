@@ -565,15 +565,6 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView challengeIdleBoss(UUID sessionId) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    idle.challengeBoss(row.state());
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
   public CompanyView fieldCat(UUID sessionId, String code, boolean fielded) {
     CompanyRepository.Row row = lockActive(sessionId);
     idle.fieldCat(row.state(), code, fielded);

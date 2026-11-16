@@ -20,25 +20,23 @@ class IdleEngine {
   private static final double SPEED = 2;
 
   /**
-   * 서킷브레이커 (decisions.md 546번): 보스 도전에서만 건다. 대량 매도벽(열 번째 벽)의 체력이 절반까지 깎이면 한 번 거래를 멈춘다. 화면 예측
-   * idlePredict.ts의 CIRCUIT_ENABLED와 같이 바꾼다.
+   * 서킷브레이커 (decisions.md 547번): 보스 도전이 시작될 때 건다. 보스 도전은 BOSS_EVERY번째 벽마다 저절로 나오고, 그 벽 앞에 서는 순간 거래가
+   * 멈춘다. 화면 예측 idlePredict.ts의 CIRCUIT_ENABLED·BOSS_EVERY와 같이 바꾼다.
    */
   static final boolean CIRCUIT_ENABLED = true;
 
   /** Game seconds one trading halt lasts. */
   static final double CIRCUIT_SECONDS = 4;
 
+  /** 보스 도전이 나오는 간격 (547번): 50번째 벽마다. 열 번째 벽마다의 대량 매도벽(518번)은 그대로다. */
+  static final long BOSS_EVERY = 50;
+
   /** 매수벽이 무너지면 이만큼 앞의 벽으로 돌아간다 (546번). */
   static final long RETREAT_WALLS = 10;
 
-  /** 대량 매도벽(보스): 열 번째 벽마다. 보스 도전 단추로만 들어간다 (546번). */
+  /** 보스 도전의 벽 (547번). */
   static boolean bossWall(long wall) {
-    return wall % 10 == 0;
-  }
-
-  /** 보스 바로 앞의 벽: 부숴도 다음 벽으로 가지 않고 같은 벽이 다시 선다 (546번). */
-  static boolean holdWall(long wall) {
-    return wall % 10 == 9;
+    return wall % BOSS_EVERY == 0;
   }
 
   // Credit buckets: the bullet, the four cat skills, the buy barrage (decisions.md 503), and the
@@ -765,16 +763,6 @@ class IdleEngine {
     }
     // What the walls really took lately, per active second: the stat shown next to the estimate.
     if (active > 0) s.wallDps += (dealt / active - s.wallDps) * Math.min(1, active / 10);
-    // 보스 도전의 서킷브레이커 (546번): 대량 매도벽이 절반까지 깎이면 한 번 거래를 멈춘다. 넘친 피해는 그 벽에 얹혀 기다린다.
-    if (CIRCUIT_ENABLED
-        && bossWall(s.wall)
-        && !s.circuitFired
-        && s.circuitSeconds == 0
-        && s.damage * 2 + 1e-7 >= maxHp(s.wall)) {
-      s.circuitSeconds = CIRCUIT_SECONDS;
-      s.circuitFired = true;
-      s.hitCredits = new double[KINDS];
-    }
     // Walls break in order, and what is left of the breaking damage goes on to the next wall
     // (532): the screen broke it at that hit and kept shooting.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
@@ -783,17 +771,15 @@ class IdleEngine {
       engine.pass.gain(c, engine.pass.rule().exp().wall(), todayDate());
       double left = Math.max(0, s.damage - maxHp(s.wall));
       s.cleared++;
-      s.circuitFired = false;
-      if (holdWall(s.wall)) {
-        // The wall before the boss stands again (546): the boss is entered with the button only.
-        // The boss wall cannot be pierced, so nothing is queued on it.
-        s.damage = left;
-        continue;
-      }
       s.wall++;
       s.damage = queued[0] + left;
       System.arraycopy(queued, 1, queued, 0, queued.length - 1);
       queued[queued.length - 1] = 0;
+      // 보스 도전은 서킷브레이커로 시작한다 (547번): 넘친 피해는 그 벽에 얹혀 기다리고, 거래가 풀려야 들어간다.
+      if (CIRCUIT_ENABLED && bossWall(s.wall)) {
+        s.circuitSeconds = CIRCUIT_SECONDS;
+        s.hitCredits = new double[KINDS];
+      }
     }
     s.nextDamage = queued[0];
     s.afterNextDamage = queued[1];
@@ -856,7 +842,6 @@ class IdleEngine {
     s.afterNextDamage = 0;
     s.farDamage = null;
     s.circuitSeconds = 0;
-    s.circuitFired = false;
     s.hitCredits = new double[KINDS];
     s.epoch++;
   }
@@ -868,19 +853,12 @@ class IdleEngine {
   }
 
   /**
-   * 매수벽이 무너졌다 (decisions.md 546번): 열 벽 앞으로 돌아간다. 보스 도전 중이었다면 그 보스 앞 구간의 첫 벽이다. 매수벽은 화면의 것이라 서버는
-   * 무너졌는지 따지지 않는다: 돌아가면 수입과 보상이 줄 뿐이다.
+   * 매수벽이 무너졌다 (decisions.md 546번): 열 벽 앞으로 돌아간다. 돌아간 자리가 보스 도전의 벽이면 그다음 벽이다. 매수벽은 화면의 것이라 서버는 무너졌는지
+   * 따지지 않는다: 돌아가면 수입과 보상이 줄 뿐이다.
    */
   void retreat(CompanyState c) {
     CompanyState.Idle s = state(c);
     move(s, retreatWall(s.wall));
-  }
-
-  /** 보스 도전 (546번): 보스 바로 앞의 벽에서만 누를 수 있다. 대량 매도벽 앞에 선다. */
-  void challengeBoss(CompanyState c) {
-    CompanyState.Idle s = state(c);
-    if (!holdWall(s.wall)) throw new InvalidRequestException("보스 앞의 벽에서만 도전할 수 있다");
-    move(s, s.wall + 1);
   }
 
   static final long MAX_JUMP_WALL = 100_000;
@@ -1051,8 +1029,7 @@ class IdleEngine {
         s.sequence,
         s.cleared,
         s.epoch,
-        s.circuitFired,
-        holdWall(s.wall),
+        bossWall(s.wall),
         java.util.stream.IntStream.range(0, ACTIVES.size())
             .mapToObj(
                 i ->

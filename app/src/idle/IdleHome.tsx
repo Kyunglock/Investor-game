@@ -1,7 +1,7 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { diamondText } from '@web/features/raising/gachaRules'
-import { idleHoldWall } from '@web/features/raising/idlePredict'
+import { idleBossChallenge } from '@web/features/raising/idlePredict'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useShownIdle } from '@web/features/raising/useIdleBattle'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
@@ -20,7 +20,6 @@ import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../men
 import { GrowthIcon } from './GrowthIcon'
 import { IdleActives } from './IdleActives'
 import { IdleAttendance } from './IdleAttendance'
-import { IdleBoss } from './IdleBoss'
 import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
@@ -114,9 +113,8 @@ export function IdleHome({
   // 벽 번호와 거래 정지는 화면이 먼저 부순 벽을 따른다 (532번). 돈은 서버가 확정한 값만 쓴다.
   const shown = useShownIdle(idle)
   const halted = shown.circuitSeconds > 0
-  // 보스 앞의 벽은 부숴도 다시 서고, 대량 매도벽은 보스 도전으로 들어온 것이다 (546번).
-  const holding = idleHoldWall(shown.wall)
-  const bossFight = shown.wall % 10 === 0
+  // 보스 도전 (547번): 50번째 벽마다 저절로 나오고 서킷브레이커로 시작한다.
+  const bossFight = idleBossChallenge(shown.wall)
   // 자본은 1초마다 서버에서 새로 온다 (#803): 숫자가 그 사이를 굴러가며 계속 불어난다.
   const capital = useCountUp(company.capital)
   // 종목회의를 열거나 이어 갈 수 있으면 회사 메뉴에 점을 단다 (#803).
@@ -223,22 +221,12 @@ export function IdleHome({
             <strong
               className="idle-wall-number"
               data-testid="idle-wall-number"
-              data-state={
-                connected
-                  ? halted
-                    ? 'halt'
-                    : bossFight
-                      ? 'boss'
-                      : holding
-                        ? 'hold'
-                        : 'auto'
-                  : 'wait'
-              }
+              data-state={connected ? (halted ? 'halt' : bossFight ? 'boss' : 'auto') : 'wait'}
             >
               {connected
                 ? halted
                   ? '거래 정지'
-                  : `${bossFight ? '보스 ' : '매도벽 '}${shown.wall.toLocaleString()}${holding ? ' 반복' : ''}`
+                  : `${bossFight ? '보스 ' : '매도벽 '}${shown.wall.toLocaleString()}`
                 : '연결 대기'}
             </strong>
             {/* 다이아 (526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. */}
@@ -266,7 +254,6 @@ export function IdleHome({
           </div>
           <IdleSandbox company={company} />
           <IdleActives company={company} connected={connected} />
-          <IdleBoss company={company} connected={connected} />
           {blocked && (
             <div className="idle-blocked" role="alert" data-testid="idle-blocked">
               <p>다른 화면에서 전투 중이라 여기는 멈췄어요</p>

@@ -214,7 +214,7 @@ export interface IdleSnapshot {
   wall: number
   hp: number
   maxHp: number
-  /** 앞에 선 벽이 바뀔 때마다 바뀐다: 보스 앞의 벽은 부서져도 같은 번호로 다시 선다 (546번). */
+  /** 앞에 선 벽이 바뀔 때마다 바뀐다 (546번). */
   serial?: number
 }
 
@@ -534,8 +534,8 @@ class BattleScene extends Phaser.Scene {
   private pierceOwners = [{}, {}]
   private idleWall = 0
   private idleSerial: number | undefined
-  /** 앞의 벽이 부서진 것이 아니라 자리를 옮겼다 (546번): 매수벽 붕괴로 물러났거나('back') 보스 도전으로 들어갔다('boss'). */
-  private idleMoved: 'back' | 'boss' | null = null
+  /** 앞의 벽이 부서진 것이 아니라 매수벽 붕괴로 물러났다 (546번). */
+  private idleMoved = false
   /** 지금 벽에 방금 맞힌 피해(실제 ms와 양). 서버 값이 따라올 때까지 화면의 벽 체력에서 먼저 뺀다 (493번). */
   /** 먼저 빼 둔 명중. sequence는 실려 나간 접속 신호의 순번이고, 아직 안 나갔으면 없다 (496번). */
   private idleTransition = false
@@ -1683,7 +1683,7 @@ class BattleScene extends Phaser.Scene {
     this.wallsBroken++
     // 벽 하나를 통째로 무너뜨리면 경험치를 한 번에 더 준다 (#700).
     const moved = this.idleMoved
-    this.idleMoved = null
+    this.idleMoved = false
     if (!moved) {
       const breakXp = wallBreakXp(xpToNext(this.level))
       this.pop(this.view().w / 2, wall.y - 72, `EXP +${breakXp}`, '#7be0c3', 22)
@@ -1701,9 +1701,8 @@ class BattleScene extends Phaser.Scene {
     const burstY = wall.y - 12
     const centerX = this.view().w / 2
     this.ring(centerX, burstY, 0xffe5a3, lane.width * 0.75, 380)
-    // 부순 것이 아니라 자리를 옮긴 벽에는 격파를 적지 않는다 (546번).
-    if (moved === 'boss') this.pop(centerX, burstY - 24, '보스 도전!', '#ff8a8a', 28)
-    else if (!moved) this.pop(centerX, burstY - 24, '매도벽 격파!', '#ffe5a3', 28)
+    // 부순 것이 아니라 물러난 벽에는 격파를 적지 않는다 (546번).
+    if (!moved) this.pop(centerX, burstY - 24, '매도벽 격파!', '#ffe5a3', 28)
     for (let i = 0; i < 7; i++) {
       const x = lane.left + ((i + 0.5) * lane.width) / 7
       // 중앙부터 바깥으로 짧게 연쇄 폭발. 벽이 교체되어도 좌표는 고정한다.
@@ -1907,15 +1906,10 @@ class BattleScene extends Phaser.Scene {
     }
     const wall = this.walls.find((w) => !w.broken)
     if (!wall) return
-    // 보스 앞의 벽은 부서져도 번호가 그대로다 (546번): 번호가 같아도 serial이 바뀌면 새 벽이다.
+    // 번호가 같아도 serial이 바뀌면 새 벽이다 (546번).
     if (snapshot.wall !== this.idleWall || snapshot.serial !== this.idleSerial) {
-      // 보스 앞의 벽은 부서져도 번호가 그대로라, 번호가 오른 것은 보스 도전이고 내린 것은 후퇴다.
-      this.idleMoved =
-        snapshot.wall < this.idleWall
-          ? 'back'
-          : this.idleWall % 10 === 9 && snapshot.wall > this.idleWall
-            ? 'boss'
-            : null
+      // 번호가 내린 것은 부순 것이 아니라 후퇴다.
+      this.idleMoved = snapshot.wall < this.idleWall
       if (this.circuit) this.endCircuit()
       if (this.bossEnemy?.active) this.kill(this.bossEnemy, false)
       for (const cell of [...wall.cells]) if (cell.active && !cell.dying) this.kill(cell, false)

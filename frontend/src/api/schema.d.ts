@@ -272,29 +272,9 @@ export interface paths {
         put?: never;
         /**
          * 매수벽이 무너져 열 벽 앞으로 돌아간다 (decisions.md 546번)
-         * @description 화면의 매수벽이 무너지면 보낸다. 열 벽 앞(1번 벽 아래로는 가지 않고, 보스 벽이면 그다음 벽)에 새 벽으로 서고 쌓인 피해와 거래 정지는 지운다.
+         * @description 화면의 매수벽이 무너지면 보낸다. 열 벽 앞(1번 벽 아래로는 가지 않고, 보스 도전의 벽이면 그다음 벽)에 새 벽으로 서고 쌓인 피해와 거래 정지는 지운다.
          */
         post: operations["retreatIdle"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/idle/boss": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 보스 도전으로 대량 매도벽에 들어간다 (decisions.md 546번)
-         * @description 보스 바로 앞의 벽(idle.bossReady)에서만 된다. 다른 벽에서는 400. 대량 매도벽의 체력이 절반까지 깎이면 서킷브레이커가 한 번 걸린다.
-         */
-        post: operations["challengeIdleBoss"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1386,18 +1366,16 @@ export interface components {
                 sequence?: number;
                 /**
                  * Format: int64
-                 * @description 부순 벽의 수. 보스 앞의 벽은 부숴도 번호가 그대로라 화면이 새 벽인 줄 아는 데 쓴다 (546번)
+                 * @description 부순 벽의 수. 화면이 앞에 선 벽이 새 벽인 줄 아는 데 쓴다 (546번)
                  */
                 cleared?: number;
                 /**
                  * Format: int64
-                 * @description 벽을 부수지 않고 자리를 옮긴 횟수(매수벽 붕괴로 돌아감·보스 도전·테스트판 건너뛰기). 바뀌면 화면이 예측을 새로 시작한다 (546번)
+                 * @description 벽을 부수지 않고 자리를 옮긴 횟수(매수벽 붕괴로 돌아감·테스트판 건너뛰기). 바뀌면 화면이 예측을 새로 시작한다 (546번)
                  */
                 epoch?: number;
-                /** @description 지금 선 대량 매도벽에서 서킷브레이커가 이미 걸렸다 (546번) */
-                circuitFired?: boolean;
-                /** @description 보스 바로 앞의 벽이다. 부숴도 같은 벽이 다시 서고 보스 도전을 누를 수 있다 (546번) */
-                bossReady?: boolean;
+                /** @description 보스 도전의 벽(50번째 벽마다)이다. 이 벽 앞에 서면 서킷브레이커로 시작한다 (547번) */
+                bossChallenge?: boolean;
                 /** @description 뒤쪽 두 매도벽의 체력. 스플래시 피해를 저장하며 보상은 앞에서부터 지급 */
                 upcoming?: {
                     /** Format: int64 */
@@ -1961,29 +1939,6 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    challengeIdleBoss: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 옮긴 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
         };
