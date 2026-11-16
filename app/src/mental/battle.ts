@@ -1098,6 +1098,8 @@ class BattleScene extends Phaser.Scene {
 
   /** 플레이어의 세로 자리(붙박이, 332·340번): 디펜스는 멘탈벽 뒤(아래)에 숨어 벽 너머로 쏜다. 전진 모드는 처음 자리(아래쪽)다. */
   private playerY() {
+    // 방치 화면은 메뉴·편의 단추를 캔버스 밖에 배치하므로 예전 하단 메뉴 여백을 다시 빼지 않는다.
+    if (this.opts.idle) return this.view().h - 70
     return this.mode === 'defense' && this.genre.target === 'wall'
       ? this.wallY() + 78
       : this.view().h - (this.assault ? 175 : 140)

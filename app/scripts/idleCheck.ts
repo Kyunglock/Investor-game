@@ -225,6 +225,13 @@ try {
       )
       .toBe(true)
     assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)
+    // A안: 편의 메뉴와 하단 탭은 캔버스 밖에 두고, 상단은 첫 매도벽보다 위에 유지한다.
+    const arenaBounds = await page.getByTestId('idle-canvas').boundingBox()
+    const toolbarBounds = await page.getByRole('toolbar', { name: '전투 편의 메뉴' }).boundingBox()
+    const hudBounds = await page.locator('.idle-hud').boundingBox()
+    assert(arenaBounds && toolbarBounds && hudBounds)
+    assert(arenaBounds.height > 0 && arenaBounds.y + arenaBounds.height <= toolbarBounds.y + 1)
+    assert(hudBounds.y + hudBounds.height <= 55)
     await page.getByRole('button', { name: '성장' }).click()
     await expect(page.getByTestId('idle-menu')).toBeVisible()
     // 전투력 하나만 보인다 (538번): 화력과 실제 벽 피해는 뺐다.

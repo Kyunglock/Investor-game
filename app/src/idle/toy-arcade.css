@@ -1,0 +1,334 @@
+/* 승인 A안: 파란 토이 콘솔, 주황 선택 키, 초록 강화 키. */
+.idle-home {
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  background: #1555bb;
+}
+.idle-home > .idle-canvas {
+  position: relative;
+  grid-row: 1;
+  grid-column: 1;
+  inset: auto;
+  min-height: 0;
+  overflow: hidden;
+  border-inline: 3px solid #2378df;
+}
+.idle-home > .idle-office {
+  grid-column: 1;
+}
+.idle-hud {
+  top: max(4px, env(safe-area-inset-top));
+  left: 4px;
+  right: 4px;
+  gap: 4px;
+  padding: 4px;
+  border: 2px solid #8cddff;
+  border-radius: 14px;
+  background: linear-gradient(#379dff, #1568dc 48%, #0746a9);
+  box-shadow:
+    inset 0 2px 0 #ffffff7a,
+    0 3px 0 #073d8f;
+  color: #fff;
+}
+.idle-hud .idle-cash,
+.idle-hud .idle-wall-number {
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid #06449d;
+  border-radius: 9px;
+  background: linear-gradient(#0645a1, #1766cd);
+  box-shadow:
+    inset 0 2px 3px #00275970,
+    0 1px 0 #67b8ff;
+  color: #fff;
+  text-shadow: 0 1px 1px #003374;
+}
+.idle-hud .idle-wall-number {
+  display: grid;
+  align-items: center;
+}
+
+.idle-hud .idle-diamonds .idle-icon {
+  color: #72edff;
+}
+.idle-coin {
+  background: linear-gradient(#fff18c, #ffad00);
+  border-color: #ffdd63;
+  color: #9a4a00;
+  box-shadow:
+    0 2px 0 #bd7100,
+    inset 0 0 0 2px #ffd34b;
+}
+.idle-toolbar {
+  grid-row: 2;
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 8px 5px;
+  background: linear-gradient(#ffedb0, #f8cd73);
+  border-inline: 3px solid #2378df;
+}
+.idle-toolbar .idle-options,
+.idle-toolbar .idle-quick {
+  position: relative;
+  inset: auto;
+  flex-direction: row;
+  gap: 10px;
+}
+.idle-toolbar .idle-options-open,
+.idle-toolbar .idle-quick-button {
+  width: 44px;
+  height: 36px;
+  border: 2px solid #94dfff;
+  border-radius: 11px;
+  background: linear-gradient(#50b8ff, #1267dc 60%, #084bad);
+  color: #fff3bf;
+  box-shadow:
+    inset 0 2px 0 #ffffff88,
+    0 3px 0 #064293;
+}
+.idle-toolbar .idle-options-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  border: 3px solid #287be2;
+  background: #fff7df;
+  box-shadow: 0 4px 0 #084293;
+}
+
+.idle-nav {
+  padding: 8px 7px max(10px, env(safe-area-inset-bottom));
+  gap: 5px;
+  border: 3px solid #62bcff;
+  border-bottom: 0;
+  border-radius: 19px 19px 0 0;
+  background: linear-gradient(#398fff, #0d5dd1 42%, #073e9d);
+  box-shadow:
+    inset 0 3px 0 #b0eaff,
+    0 -3px 0 #094598;
+}
+.idle-nav button,
+.idle-nav button:has(.idle-menu-icon) {
+  min-width: 0;
+  min-height: 60px;
+  padding: 5px 0 4px;
+  gap: 2px;
+  border: 2px solid #79ceff;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(#4ab0ff, #1676e9 42%, #0c4eae);
+  box-shadow:
+    inset 0 2px 0 #e0f7ffb3,
+    0 3px 0 #032f76;
+  text-shadow: 0 2px 0 #063878;
+  font-size: 13px;
+  transition: transform 120ms ease;
+}
+.idle-nav button.on {
+  color: #fff;
+  background: linear-gradient(#ffd563, #ffad0c 42%, #f17b00);
+  border-color: #fff0a5;
+  box-shadow:
+    inset 0 2px 0 #fff8d4,
+    0 3px 0 #a94900;
+  text-shadow: 0 2px 0 #954000;
+  transform: translateY(-3px);
+}
+.idle-nav button:active {
+  transform: translateY(2px);
+}
+.idle-nav .idle-dot {
+  width: 8px;
+  height: 8px;
+  background: #ff492c;
+  top: 3px;
+  right: 6px;
+}
+.idle-sheet > section {
+  border: 5px solid #277ce5;
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+  padding: 10px 12px 16px;
+  background: #fff5d9;
+  box-shadow:
+    inset 0 3px 0 #a2ddff,
+    0 -4px 0 #074599,
+    0 -8px 25px #06357966;
+  max-height: calc(94dvh - 88px);
+  min-height: min(360px, calc(90dvh - 88px));
+}
+.idle-sheet > section > [aria-hidden="true"] {
+  background: #80c5ff;
+}
+.idle-sheet > section h3 {
+  padding: 5px 22px;
+  border: 2px solid #ffe89a;
+  border-radius: 15px;
+  background: linear-gradient(#ffc44e, #ff9907 55%, #e97800);
+  box-shadow:
+    inset 0 2px 0 #fff1b9,
+    0 3px 0 #aa4d00;
+  color: #fff;
+  text-shadow: 0 2px 0 #8a3900;
+  font-size: 24px;
+}
+
+.idle-power {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 2px solid #6bbcff;
+  border-radius: 16px;
+  background: linear-gradient(#2787ec, #0856bd);
+  box-shadow:
+    inset 0 2px 0 #b4e3ff,
+    0 3px 0 #043b8a;
+  color: #fff;
+}
+.idle-power small {
+  color: #d5eaff;
+}
+.idle-power strong {
+  color: #ffed83;
+  font-size: 26px;
+  text-shadow: 0 2px 0 #053b83;
+}
+.idle-buy-count {
+  margin: 13px 0 8px;
+  color: #664423;
+}
+.idle-buy-count > div {
+  background: transparent;
+  gap: 5px;
+  padding: 0;
+}
+.idle-buy-count button {
+  min-height: 36px;
+  border: 2px solid #c2c9d4;
+  border-radius: 10px;
+  background: linear-gradient(#fff, #e4e7ed);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 2px 0 #929fb0;
+  color: #154783;
+  font:
+    13px "Jua",
+    sans-serif;
+}
+.idle-buy-count [aria-pressed="true"] {
+  background: linear-gradient(#ffe563, #ffbc16);
+  border-color: #fff1a8;
+  box-shadow: 0 2px 0 #c38300;
+  color: #754000;
+}
+.idle-stat {
+  padding: 10px 8px;
+  margin-top: 9px;
+  border: 2px solid #e2c590;
+  border-radius: 16px;
+  background: linear-gradient(#fffef1, #fff2cf);
+  box-shadow:
+    inset 0 2px 0 #fff,
+    0 2px 0 #cfb477;
+}
+.idle-stat-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+}
+.idle-stat-info {
+  min-width: 0;
+}
+.idle-stat-info b {
+  font-size: 15px;
+  color: #4b2d16;
+}
+.idle-stat-info small {
+  color: #725335;
+}
+.idle-stat-info p {
+  font-size: 13px;
+  color: #327119;
+}
+.idle-buy {
+  min-height: 48px;
+  border: 2px solid #d6ff8c;
+  border-radius: 13px;
+  background: linear-gradient(#a7e72e, #6cc900 45%, #389300);
+  box-shadow:
+    inset 0 2px 0 #edffc5,
+    0 3px 0 #256500;
+  color: #fff;
+  text-shadow: 0 1px 1px #245700;
+  font:
+    14px "Jua",
+    sans-serif;
+}
+.idle-buy small {
+  color: #fffbd5;
+  font-weight: 700;
+}
+.idle-buy:disabled {
+  opacity: 1;
+  background: linear-gradient(#c6cbd2, #929ba7);
+  border-color: #e6e9ed;
+  box-shadow:
+    inset 0 2px 0 #fff,
+    0 3px 0 #687485;
+  color: #fff;
+  text-shadow: 0 1px 1px #455366;
+}
+.idle-buy:disabled small {
+  color: #fff;
+}
+.idle-buy:not(:disabled):active {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 0 #edffc5;
+}
+.idle-home > .idle-nav {
+  grid-row: 3;
+}
+.idle-hud .idle-cash-lines small {
+  color: #ffe399;
+  font-size: 9px;
+}
+.idle-sheet > section > div > button {
+  border: 2px solid #ffefb2;
+  border-radius: 12px;
+  background: linear-gradient(#ffba41, #f17f0d);
+  color: #6b2b00;
+  box-shadow: 0 3px 0 #b65a09;
+  font-family: "Jua", sans-serif;
+}
+@media (max-width: 359px) {
+  .idle-sheet > section {
+    padding-inline: 8px;
+  }
+  .idle-nav button,
+  .idle-nav button:has(.idle-menu-icon) {
+    font-size: 12px;
+  }
+  .idle-stat {
+    gap: 6px;
+    padding: 8px 5px;
+  }
+  .idle-stat-icon {
+    width: 32px;
+    height: 38px;
+  }
+  .idle-stat-info b {
+    font-size: 12px;
+  }
+  .idle-buy {
+    min-width: 70px;
+    padding-inline: 5px;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-nav button {
+    transition: none;
+  }
+}
