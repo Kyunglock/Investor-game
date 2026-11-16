@@ -16,6 +16,7 @@ import { idleBuyOrderDamage } from '../mental/buyWall'
 import { heroOf } from '../mental/hero'
 import { sharesOf } from '../mental/shares'
 import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../mental/weaponEffects'
+import { GrowthIcon } from './GrowthIcon'
 import { IdleActives } from './IdleActives'
 import { IdleAttendance } from './IdleAttendance'
 import { IdleCanvas } from './IdleCanvas'
@@ -374,7 +375,7 @@ function IdleStats({ company }: { company: Company }) {
         return (
           <article className="idle-stat" key={u.kind} data-testid="idle-stat" data-kind={u.kind}>
             <span className="idle-stat-icon" aria-hidden="true">
-              <IdleIcon name={u.kind} />
+              <GrowthIcon name={u.kind} />
             </span>
             <div className="idle-stat-info">
               <b>
