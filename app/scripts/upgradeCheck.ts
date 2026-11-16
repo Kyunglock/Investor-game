@@ -15,7 +15,7 @@ try {
     })
     const company = {
       ...structuredClone(fixture),
-      battleUpgrades: ['damage', 'fire', 'hp', 'buy', 'crit'].map((kind) => ({
+      battleUpgrades: ['damage', 'fire', 'hp', 'buy'].map((kind) => ({
         kind,
         level: 0,
         price: 100,

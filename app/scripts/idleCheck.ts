@@ -64,15 +64,6 @@ try {
           nextBonusPercent: 10,
           maxLevel: 0,
         },
-        {
-          kind: 'crit',
-          level: 0,
-          price: 1000000,
-          priceGrowthPercent: 10,
-          bonusPercent: 0,
-          nextBonusPercent: 20,
-          maxLevel: 0,
-        },
       ],
       idle: {
         wall: 1,
@@ -253,7 +244,7 @@ try {
     await expect(page.getByTestId('idle-power')).toContainText('1,038')
     await expect(page.getByText('실제 벽 피해')).toHaveCount(0)
     // Four stats (decisions.md 487): fire speed stops at its cap, the others can be bought.
-    await expect(page.getByTestId('idle-stat')).toHaveCount(5)
+    await expect(page.getByTestId('idle-stat')).toHaveCount(4)
     const stat = (kind: string) => page.locator(`[data-testid=idle-stat][data-kind=${kind}]`)
     await expect(stat('fire')).toContainText('공격 속도')
     await expect(stat('fire')).toContainText('+100% · 최대')
@@ -261,8 +252,7 @@ try {
     await expect(stat('fire').getByRole('button')).toHaveText('MAX')
     await expect(stat('hp')).toContainText('매수벽 체력')
     await expect(stat('buy')).toContainText('매수벽 공격')
-    await expect(stat('crit')).toContainText('치명타 피해')
-    await expect(stat('crit')).toContainText('+0% → +20%')
+    await expect(stat('crit')).toHaveCount(0)
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
     // Growth holds the stats only (decisions.md 530): no tab row, no inventory, no skill list.
     await expect(page.getByRole('tab')).toHaveCount(0)

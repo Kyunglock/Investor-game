@@ -57,7 +57,8 @@ class DefaultCompanyService implements CompanyService {
         && c.weapon != null
         && c.weaponGachaReady
         && !resting
-        && !engine.mental.needsWeaponReset(c)) {
+        && !engine.mental.needsWeaponReset(c)
+        && !engine.mental.hasRemovedUpgrades(c)) {
       return row;
     }
     CompanyRepository.Row locked = companies.lockActive(row.sessionId()).orElse(row);
@@ -67,7 +68,9 @@ class DefaultCompanyService implements CompanyService {
     boolean seated = engine.seatAll(locked.state());
     // 무기·채용 뽑기의 옛 칸을 먼저 옮긴 뒤에 남은 뽑기권을 다이아로 바꾼다 (526번).
     boolean diamonds = engine.adoptDiamonds(locked.state());
-    if (gacha || mental || moved || seated || diamonds) {
+    // 없앤 강화(치명타 피해, 556번)는 쓴 돈을 돌려주고 지운다.
+    boolean refunded = engine.mental.refundRemovedUpgrades(locked.state());
+    if (gacha || mental || moved || seated || diamonds || refunded) {
       companies.update(locked.id(), locked.state(), false);
     }
     return locked;

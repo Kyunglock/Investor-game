@@ -99,7 +99,7 @@ export const SLOW_FACTOR = 0.6
 /** 소총 관통: 탄 하나가 맞히는 적의 수. 다른 무기는 하나. */
 export const RIFLE_PIERCE = 4
 
-/** 한 발의 피해와 치명타 여부. roll은 0~1 난수(테스트에서 고정). critBonus는 치명타 피해 강화(487번): 배율에 1 + 이만큼을 곱한다. */
+/** 한 발의 피해와 치명타 여부. roll은 0~1 난수(테스트에서 고정). critBonus는 고양이 특성의 치명타 피해(성장 강화는 없앴다, 556번): 배율에 1 + 이만큼을 곱한다. */
 export function weaponDamage(kind: WeaponKind, damage: number, roll: number, critBonus = 0) {
   const revolver = kind === 'revolver'
   const crit = roll < (revolver ? CRIT_CHANCE : BASE_CRIT_CHANCE)

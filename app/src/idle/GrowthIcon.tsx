@@ -6,7 +6,6 @@ const FRAMES = {
   fire: '480 140 390 420',
   hp: '885 140 410 420',
   buy: '1310 140 400 420',
-  crit: '1710 140 440 420',
 }
 
 export function GrowthIcon({ name }: { name: keyof typeof FRAMES }) {

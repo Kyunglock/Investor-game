@@ -16,9 +16,7 @@ import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
 import { idleThreat } from '../mental/assault'
 import { idleBuyOrderDamage } from '../mental/buyWall'
-import { heroOf } from '../mental/hero'
 import { sharesOf } from '../mental/shares'
-import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../mental/weaponEffects'
 import { GrowthIcon } from './GrowthIcon'
 import { IdleActives } from './IdleActives'
 import { IdleAttendance } from './IdleAttendance'
@@ -55,22 +53,14 @@ const menus: { key: Menu; label: string }[] = (
   ] as const
 ).filter((m) => COMPANY_ENABLED || m.key !== 'company')
 type Upgrade = NonNullable<Company['battleUpgrades']>[number]
-/** 능력치 (487번): 공격력·공격 속도·매수벽(체력 강화, 410번: 최대 멘탈과 그 절반인 매수벽 체력이 함께 오른다)·치명타 피해. */
+/** 능력치 (487번): 공격력·공격 속도·매수벽(체력 강화, 410번: 최대 멘탈과 그 절반인 매수벽 체력이 함께 오른다). 치명타 피해 강화는 없앴다 (556번). */
 const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
   damage: { name: '공격력', note: '탄 공격력' },
   fire: { name: '공격 속도', note: '쏘는 빠르기' },
   hp: { name: '매수벽 체력', note: '매수벽이 무너지면 열 벽 뒤로 물러나요' },
   buy: { name: '매수벽 공격', note: '매수 주문의 피해 · 무기와 따로 세요' },
-  crit: { name: '치명타 피해', note: '치명타 배율' },
 }
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
-/** 지금 든 무기의 치명타 (492번): 확률과 강화를 더한 배율을 그대로 보여 준다. */
-function critNote(company: Company, u: Upgrade) {
-  const revolver = heroOf(company).weapon.kind === 'revolver'
-  const chance = revolver ? CRIT_CHANCE : BASE_CRIT_CHANCE
-  const mult = (revolver ? CRIT_MULT : BASE_CRIT_MULT) * (1 + u.bonusPercent / 100)
-  return `지금 무기는 ${Math.round(chance * 100)}% 확률로 ${mult.toFixed(2)}배`
-}
 
 /** 매수 주문 한 장의 수량 (514번): 무기와 상관없이 그 벽의 물량 배율과 이 강화만 따른다. */
 function buyNote(company: Company, u: Upgrade) {
@@ -427,13 +417,7 @@ function IdleStats({ company }: { company: Company }) {
               <b>
                 {STATS[u.kind].name} <small>Lv.{u.level}</small>
               </b>
-              <small>
-                {u.kind === 'crit'
-                  ? critNote(company, u)
-                  : u.kind === 'buy'
-                    ? buyNote(company, u)
-                    : STATS[u.kind].note}
-              </small>
+              <small>{u.kind === 'buy' ? buyNote(company, u) : STATS[u.kind].note}</small>
               <p aria-live="polite" aria-atomic="true">
                 {receipt?.kind === u.kind ? (
                   <span key={receipt.id} className="idle-upgrade-gain" data-testid="upgrade-gain">

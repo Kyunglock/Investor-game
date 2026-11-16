@@ -394,7 +394,7 @@ class IdleEngineTest {
     state.idle.wall = 500;
     assertThat(engine.view(state).power()).as("the wall is not in it").isEqualTo(base);
     double last = base;
-    for (String kind : List.of("damage", "fire", "hp", "buy", "crit")) {
+    for (String kind : List.of("damage", "fire", "hp", "buy")) {
       state.battleLevels.put(kind, 10);
       double now = engine.view(state).power();
       assertThat(now).as(kind).isGreaterThan(last);

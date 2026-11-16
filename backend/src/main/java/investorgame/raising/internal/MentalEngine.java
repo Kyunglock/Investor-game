@@ -32,7 +32,10 @@ class MentalEngine {
   static final List<String> DRAW_GRADES = List.of("F", "E", "D", "C", "B", "A");
 
   /** 자본으로 사는 전투 강화 (367·394·410번): 공격력·연사·체력(최대 멘탈). 고양이 속도는 394번에서 뺐다. */
-  static final List<String> UPGRADES = List.of("damage", "fire", "hp", "buy", "crit");
+  static final List<String> UPGRADES = List.of("damage", "fire", "hp", "buy");
+
+  /** 없앤 강화 (556번): 치명타 피해. 저장에 남은 단계는 쓴 돈을 돌려주고 지운다. */
+  static final List<String> REMOVED_UPGRADES = List.of("crit");
 
   /** 처음 드는 무기: 일반 권총. */
   static final String PISTOL = "pistol";
@@ -241,6 +244,27 @@ class MentalEngine {
     }
     c.battleLevels.put(kind, level + bought);
     return bought;
+  }
+
+  /** 없앤 강화의 단계가 저장에 남아 있는가 (556번). */
+  boolean hasRemovedUpgrades(CompanyState c) {
+    return REMOVED_UPGRADES.stream().anyMatch(c.battleLevels::containsKey);
+  }
+
+  /** 없앤 강화(556번)를 저장에서 지우고, 그 단계들을 살 때 쓴 돈을 자본으로 돌려준다. 지웠으면 true. */
+  boolean refundRemovedUpgrades(CompanyState c) {
+    boolean changed = false;
+    for (String kind : REMOVED_UPGRADES) {
+      Integer level = c.battleLevels.remove(kind);
+      if (level == null) {
+        continue;
+      }
+      for (int i = 0; i < level; i++) {
+        c.capital += upgradePrice(i);
+      }
+      changed = true;
+    }
+    return changed;
   }
 
   /** 효과 상한(487번)에 닿는 단계. 상한이 없으면 Integer.MAX_VALUE. */
