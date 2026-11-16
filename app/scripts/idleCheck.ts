@@ -553,18 +553,28 @@ try {
           ).__mentalWalls()[0]?.upcoming ?? [],
       )
     await expect.poll(async () => (await queuedWalls()).map((wall) => wall.wall)).toEqual([7, 8])
-    const intact = (await queuedWalls())[0].crack
+    // The queue is rebuilt while a broken wall falls: a read in that moment finds it empty. These
+    // reads wait for the two walls to be back instead of throwing on an empty queue.
+    const rearWalls = async () => {
+      await expect.poll(async () => (await queuedWalls()).length).toBe(2)
+      const walls = await queuedWalls()
+      return walls.length === 2 ? walls : rearWalls()
+    }
+    const intact = (await rearWalls())[0].crack
     company.idle.upcoming = [
       { wall: 7, hp: 30, maxHp: 264 },
       { wall: 8, hp: 100, maxHp: 288 },
     ]
     // The server's 30, less the pierced hits it has not handled yet (decisions.md 520, 532).
-    await expect.poll(async () => (await queuedWalls())[0].hp).toBeLessThanOrEqual(30)
-    assert((await queuedWalls())[0].hp >= 1)
-    assert.notEqual((await queuedWalls())[0].crack, intact)
+    await expect
+      .poll(async () => (await queuedWalls())[0]?.hp ?? Number.POSITIVE_INFINITY)
+      .toBeLessThanOrEqual(30)
+    const rear = await rearWalls()
+    assert(rear[0].hp >= 1)
+    assert.notEqual(rear[0].crack, intact)
     // The walls behind show their remaining shares only (decisions.md 542): 30 of 264 health is
     // at most 4,500 of 39,600 shares, and the untouched one further back still reads more.
-    const labels = (await queuedWalls()).map((wall) => wall.label)
+    const labels = rear.map((wall) => wall.label)
     assert(
       labels.every((label) => /^[\d,]+주$/.test(label)),
       `rear wall labels: ${labels}`,
