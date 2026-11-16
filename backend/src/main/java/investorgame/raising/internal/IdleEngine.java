@@ -235,14 +235,13 @@ class IdleEngine {
   // A cat's gun hits for this share of the weapon's damage; each level above 1 adds the bonus.
   private static final double CAT_POWER = 0.5;
   private static final double CAT_LEVEL_BONUS = 0.2;
-  // A cleared wall pays this many game seconds of its own time income, a boss wall BOSS_REWARD
-  // times that (537). It used to pay per point of wall health, which outgrew the time income.
-  // 30 → 10 (552번): 사용자가 벽 보상이 여전히 너무 크다고 했다.
-  static final double REWARD_SECONDS = 10;
+  // 벽 보상 (553번): 벽 하나를 깨면 그 벽 번호와 같은 단계의 전투 강화 값 REWARD_UPGRADES개 어치를 준다. 물가가 강화 값과 같은
+  // 빠르기로 크므로(CompanyEngine.inflation), N번째 벽을 깰 때까지 번 돈이 강화 넷(공격력·체력·매수·치명타)을 평균 N단계쯤 올린다.
+  // 보스 벽은 BOSS_REWARD배. 전에는 그 벽의 시간 수입 10초 어치였다 (537·552번).
+  static final double REWARD_UPGRADES = 3;
   private static final double BOSS_REWARD = 3;
-  // Capital per active game second at wall 1 (492).
-  private static final double INCOME = 20_000;
-  private static final double INCOME_GROWTH = 0.05;
+  // Capital per active game second at wall 1 (492). The price level alone grows it (553).
+  static final double INCOME = 20_000;
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
   private static final double REVOLVER_CRITICAL = 3;
   private static final double CRITICAL = 2;
@@ -423,29 +422,21 @@ class IdleEngine {
   }
 
   /**
-   * What clearing the front wall pays (537): REWARD_SECONDS of the wall's own time income at its
-   * price level, three times that on a boss wall. Employees and the stage bonus are not in it.
+   * What clearing the front wall pays (553): REWARD_UPGRADES upgrade steps at the wall's price
+   * level, three times that on a boss wall. Employees and the stage bonus are not in it.
    */
-  private static double reward(CompanyState c) {
-    CompanyState.Idle s = c.idle;
+  private double reward(CompanyState c) {
     return Math.floor(
-        wallIncome(s)
-            * REWARD_SECONDS
-            * (bossWall(s.wall) ? BOSS_REWARD : 1)
+        engine.mental.upgradePrice(0)
+            * REWARD_UPGRADES
+            * (bossWall(c.idle.wall) ? BOSS_REWARD : 1)
             * CompanyEngine.inflation(c));
   }
 
-  /** The wall's own time income per game second, before the price level (492). */
-  private static double wallIncome(CompanyState.Idle s) {
-    return INCOME * (1 + INCOME_GROWTH * Math.min(s.wall - 1, 10_000));
-  }
-
-  /**
-   * The company's income per game second (523): (the wall's time income + every employee's income)
-   * x the wall's price level (505) x (1 + the mental stage bonus).
-   */
+  /** The company's income per game second: the wall's and the employees', at the price level. */
   double incomeRate(CompanyState c) {
-    return (wallIncome(state(c)) + engine.staffIncome(c))
+    state(c); // Makes sure the idle state exists before the price level reads it.
+    return (INCOME + engine.staffIncome(c))
         * CompanyEngine.inflation(c)
         * (1 + engine.mental.bonusPercent(c) / 100.0);
   }
