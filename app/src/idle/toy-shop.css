@@ -1,0 +1,226 @@
+/* 상점 A안: 다른 탭과 전투 HUD는 건드리지 않고 기존 토이 콘솔 안에 진열한다. */
+.idle-shop {
+  color: #25486c;
+}
+.idle-shop-wallet {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 12px 0 8px;
+  padding: 8px 10px;
+  border: 1px solid #b4d3f1;
+  border-radius: 10px;
+  background: #edf7ff;
+  font-size: 13px;
+}
+.idle-shop-wallet > span:first-child {
+  margin-right: auto;
+  font-size: 11px;
+  color: #526e8a;
+}
+.idle-shop .idle-gacha {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.idle-shop .idle-gacha-kinds {
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid #abc8e8;
+  background: #d7e6f4;
+}
+.idle-shop .idle-gacha-kind {
+  min-height: 40px;
+  padding: 4px;
+  gap: 5px;
+  color: #426383;
+  font:
+    15px "Jua",
+    sans-serif;
+}
+.idle-shop .idle-gacha-kind[aria-selected="true"] {
+  color: #fff;
+  background: linear-gradient(#398ef0, #2268c3);
+  box-shadow:
+    inset 0 1px #92c9ff,
+    0 2px #174c95;
+}
+.idle-shop .idle-gacha-machine {
+  margin-top: 12px;
+  padding: 7px 7px 0;
+  border: 3px solid #3273bb;
+  border-radius: 17px;
+  background: linear-gradient(#89c5ff, #4b99df);
+  box-shadow:
+    inset 0 2px #c7e8ff,
+    0 4px #20558b;
+}
+.idle-shop .idle-gacha-window {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 142px;
+  overflow: hidden;
+  border: 2px solid #4585b9;
+  border-radius: 11px;
+  background: radial-gradient(ellipse at bottom, #f4fcff, #d5efff 65%, #aad5f2);
+  box-shadow: inset 0 3px 8px #397cb92b;
+}
+.idle-shop .idle-gacha-window::before {
+  content: "";
+  position: absolute;
+  inset: -60px auto -60px 12%;
+  z-index: -1;
+  width: 26px;
+  background: #ffffff70;
+  transform: rotate(28deg);
+  pointer-events: none;
+}
+.idle-shop .idle-gacha-capsule {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  border: 3px solid #fff9e5;
+  border-radius: 50%;
+  background: linear-gradient(#fffdf7 55%, #b8d9ee 55%);
+  box-shadow:
+    0 6px #80b2d1,
+    0 10px 10px #407ca32b;
+  transform: rotate(-9deg) translateY(8px);
+}
+.idle-shop .idle-gacha-capsule:nth-child(2) {
+  width: 84px;
+  height: 84px;
+  transform: translateY(-8px);
+}
+.idle-shop .idle-gacha-capsule:last-child {
+  transform: rotate(9deg) translateY(8px);
+}
+.idle-shop .idle-gacha-capsule .idle-cat-portrait {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+.idle-shop .idle-gacha-machine > p {
+  margin: 0;
+  padding: 9px 3px 8px;
+  color: #fff;
+  text-align: center;
+  font:
+    14px "Jua",
+    sans-serif;
+  text-shadow: 0 1px #326c9f;
+}
+.idle-shop .idle-gacha-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+.idle-shop .idle-gacha-note {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  padding: 3px 2px;
+  color: #725b3a;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.idle-shop .idle-gacha-row .idle-buy {
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  font-size: 17px;
+}
+.idle-shop .idle-gacha-row .idle-buy:not(.idle-buy-ten):not(:disabled) {
+  border-color: #e9c88a;
+  background: linear-gradient(#fffdf0, #ffe2a5);
+  box-shadow:
+    inset 0 2px #fff,
+    0 3px #b98e4f;
+  color: #77532a;
+  text-shadow: none;
+}
+.idle-shop-daily {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 18px 0 6px;
+}
+.idle-shop-daily h4 {
+  margin: 0;
+  font:
+    18px "Jua",
+    sans-serif;
+}
+.idle-shop-daily > span {
+  font-size: 11px;
+  color: #80643e;
+}
+.idle-shop-free-note {
+  margin: 0 0 8px;
+  color: #49752b;
+  font-size: 12px;
+}
+.idle-shop .idle-shop-item {
+  padding: 12px 10px;
+  border-radius: 13px;
+}
+.idle-shop .idle-shop-item[data-free="true"][data-sold="false"] {
+  border-color: #a8c977;
+  background: linear-gradient(#fffef0, #f4f3d0);
+}
+.idle-shop .idle-shop-item .idle-stat-icon {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #ebce93;
+  border-radius: 12px;
+  background: #ffefbc;
+}
+.idle-shop .idle-shop-item .idle-stat-info b {
+  color: #294b70;
+}
+.idle-shop .idle-shop-item .idle-stat-info small {
+  overflow-wrap: anywhere;
+}
+.idle-shop .idle-gacha-row .idle-buy:not(.idle-buy-ten):not(:disabled) small {
+  color: #77532a;
+}
+.idle-shop .idle-shop-got {
+  color: #35661f;
+}
+@media (max-width: 359px) {
+  .idle-shop .idle-gacha-window {
+    min-height: 126px;
+    gap: 6px;
+  }
+  .idle-shop .idle-gacha-capsule {
+    width: 58px;
+    height: 58px;
+  }
+  .idle-shop .idle-gacha-capsule:nth-child(2) {
+    width: 76px;
+    height: 76px;
+  }
+  .idle-shop .idle-shop-item {
+    padding: 10px 6px;
+  }
+  .idle-shop .idle-shop-item .idle-stat-icon {
+    width: 32px;
+    height: 36px;
+  }
+}

@@ -225,6 +225,36 @@ export function IdleGacha({
             </button>
           ))}
         </div>
+        <div className="idle-gacha-machine" aria-hidden="true">
+          <div className="idle-gacha-window">
+            {kind === 'cat' ? (
+              <>
+                <div className="idle-gacha-capsule">
+                  <Portrait code="sky" />
+                </div>
+                <div className="idle-gacha-capsule">
+                  <Portrait code="mint" />
+                </div>
+                <div className="idle-gacha-capsule">
+                  <Portrait code="lilac" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="idle-gacha-capsule">
+                  <GunSprite kind="pistol" grade="F" width={64} />
+                </div>
+                <div className="idle-gacha-capsule">
+                  <GunSprite kind="rifle" grade="C" width={76} />
+                </div>
+                <div className="idle-gacha-capsule">
+                  <GunSprite kind="shotgun" grade="A" width={64} />
+                </div>
+              </>
+            )}
+          </div>
+          <p>{kind === 'cat' ? '새로운 동료를 만나보세요!' : '나만의 무기를 찾아보세요!'}</p>
+        </div>
         <div className="idle-gacha-row">
           <small className="idle-gacha-note" data-testid="draw-note">
             {note}
@@ -236,7 +266,7 @@ export function IdleGacha({
             disabled={showing || busy || !canOne}
             onClick={() => void (kind === 'cat' ? drawCat() : drawWeapon())}
           >
-            뽑기
+            1회 뽑기
             <small>
               <DiamondPrice amount={diamonds.draw} />
             </small>

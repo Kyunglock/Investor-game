@@ -20,6 +20,7 @@ import {
   stars,
   TRICKLE_SECONDS,
 } from './advance'
+import { ARENA_FRAME, ARENA_MAPS, arenaMap } from './arenaMaps'
 import {
   bakeCatBody,
   bakeCatGun,
@@ -837,6 +838,12 @@ class BattleScene extends Phaser.Scene {
       return
     }
     this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+    const mapTexture = this.textures.get('art-arenaMaps')
+    for (const map of ARENA_MAPS) {
+      if (!mapTexture.has(map.key)) {
+        mapTexture.add(map.key, 0, map.x, ARENA_FRAME.y, ARENA_FRAME.width, ARENA_FRAME.height)
+      }
+    }
     this.opts.onReady?.()
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero.weapon.grade)
@@ -896,6 +903,7 @@ class BattleScene extends Phaser.Scene {
       // 같은 그림을 위에 하나 더 이어 붙여 함께 내린다: 그림 하나로 끝없이 올라가는 길. 뒤집어 붙이면 이음매는 맞지만 집이 거꾸로 보였다.
       this.bg2 = this.add.image(0, -h, 'art-street').setOrigin(0).setDisplaySize(w, h)
     }
+    if (this.opts.idle) this.setArenaMap(this.opts.idle().wall)
     this.scale.on('resize', fitView)
     this.events.once('shutdown', () => this.scale.off('resize', fitView))
 
@@ -1388,6 +1396,15 @@ class BattleScene extends Phaser.Scene {
 
   // ── 공격 판: 매도벽을 부수고 올라간다 (413번, #573)
 
+  private setArenaMap(wall: number) {
+    const map = arenaMap(wall)
+    if (this.bg?.frame.name === map.key) return
+    const { w, h } = this.view()
+    for (const bg of [this.bg, this.bg2]) {
+      bg?.setTexture('art-arenaMaps', map.key).setDisplaySize(w, h)
+    }
+  }
+
   /** 이어지는 배경과 호가 줄·가격 눈금·속도선을 만든다. 고양이는 제자리에 고정한다. */
   private createAssault(w: number, h: number) {
     this.bg2 = this.add.image(0, -h, 'art-street').setOrigin(0).setDisplaySize(w, h)
@@ -1790,6 +1807,7 @@ class BattleScene extends Phaser.Scene {
         const snapshot = this.opts.idle?.()
         this.idleWall = snapshot?.wall ?? this.idleWall
         this.idleSerial = snapshot?.serial
+        this.setArenaMap(this.idleWall)
         // 벽이 깊어질수록 미션처럼 물량이 잦고 무거워진다 (493번).
         Object.assign(spec, idleAssaultSpec(this.idleWall, snapshot?.maxHp))
         this.countScale = spec.enemyCount
@@ -2501,6 +2519,7 @@ class BattleScene extends Phaser.Scene {
   inspectMarket() {
     return {
       ...this.marketStats,
+      arena: { front: this.bg?.frame.name, back: this.bg2?.frame.name },
       boss: this.bossEnemy?.active ? { hp: this.bossEnemy.hp, maxHp: this.bossEnemy.maxHp } : null,
       simSpeed: this.simSpeed,
       climbed: this.climbed,
