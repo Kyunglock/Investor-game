@@ -127,6 +127,35 @@ try {
     await page.goto(process.env.APP_URL || 'http://localhost:5182/app/')
     await expect(page.getByTestId('idle-battle')).toBeVisible({ timeout: 30000 })
     await expect(page.locator('[data-testid=idle-canvas] canvas')).toBeVisible({ timeout: 30000 })
+    const canvas = page.locator('[data-testid=idle-canvas] canvas')
+    const originalCanvas = required(await canvas.elementHandle())
+    const viewport = async () => {
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      )
+      return canvas.evaluate((node: HTMLCanvasElement) => {
+        const { x, y, width, height } = node.getBoundingClientRect()
+        return { x, y, width, height, bitmapWidth: node.width, bitmapHeight: node.height }
+      })
+    }
+    const battleViewport = await viewport()
+    const expectStableBattle = async () => {
+      assert.deepEqual(
+        await viewport(),
+        battleViewport,
+        'opening a panel must preserve battle viewport',
+      )
+      assert(
+        await originalCanvas.evaluate((node) => node.isConnected),
+        'battle canvas stays mounted',
+      )
+    }
+    for (const name of [/^고양이$/, /^무기/]) {
+      await page.getByRole('button', { name, exact: true }).last().click()
+      await expectStableBattle()
+      await page.getByRole('button', { name: '닫기 ✕', exact: true }).click()
+      await expectStableBattle()
+    }
     await page.getByRole('button', { name: '고양이', exact: true }).click()
     const tray = page.getByTestId('idle-menu')
     assert(required(await tray.boundingBox()).y > 200, 'battle remains visible above tray')

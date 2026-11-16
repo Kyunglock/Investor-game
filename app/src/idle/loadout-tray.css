@@ -25,14 +25,7 @@
   border-radius: 8px;
   background: #fff9e9;
 }
-.idle-home.loadout-open > .idle-canvas {
-  position: absolute;
-  top: 48px;
-  left: 0;
-  right: 0;
-  height: max(100px, calc(100dvh - min(62dvh, 560px) - 136px - env(safe-area-inset-bottom)));
-}
-/* 전투를 덮지 않는 장비 트레이. 출전 칸은 인벤토리가 스크롤되어도 손이 닿는다. */
+/* 전투 화면 크기를 유지한 채 겹쳐 여는 트레이. 출전 칸은 스크롤해도 유지한다. */
 .idle-sheet.loadout-sheet > section {
   height: min(62dvh, 560px);
   max-height: calc(100dvh - 160px);

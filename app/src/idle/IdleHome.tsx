@@ -193,7 +193,7 @@ export function IdleHome({
   )
   return (
     <section
-      className={`idle-home ${menu === 'cats' || menu === 'weapons' ? 'loadout-open' : ''}`}
+      className="idle-home"
       data-testid="idle-battle"
       aria-label={managing ? '회사' : '무한 매도벽 돌파'}
     >
