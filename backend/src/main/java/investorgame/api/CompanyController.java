@@ -375,10 +375,11 @@ class CompanyController {
   CompanyView fieldCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody CatFieldRequest request) {
-    return companies.fieldCat(cookies.requirePlayer(token), request.code(), request.fielded());
+    return companies.fieldCat(
+        cookies.requirePlayer(token), request.code(), request.fielded(), request.replaceCode());
   }
 
-  record CatFieldRequest(@NotBlank String code, @NotNull Boolean fielded) {}
+  record CatFieldRequest(@NotBlank String code, @NotNull Boolean fielded, String replaceCode) {}
 
   /** 고양이에게 가진 무기 하나를 들린다. kind와 grade를 비우면 뺀다 (decisions.md 488번). */
   @PostMapping("/cat/weapon")

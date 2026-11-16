@@ -2231,6 +2231,8 @@ export interface operations {
                     /** @enum {string} */
                     code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
                     fielded: boolean;
+                    /** @description 출전 중인 이 고양이를 한 번에 교체 */
+                    replaceCode?: string;
                 };
             };
         };

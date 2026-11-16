@@ -501,6 +501,7 @@ paths:
               properties:
                 code: { type: string, enum: [sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat] }
                 fielded: { type: boolean }
+                replaceCode: { type: string, description: 출전 중인 이 고양이를 한 번에 교체 }
       responses:
         '200':
           description: 바꾼 뒤의 회사

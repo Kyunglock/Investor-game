@@ -11,6 +11,7 @@ import { weaponRevealPlan } from '../mental/weaponRevealPlan'
 import { CatPortrait as Portrait } from './CatPortrait'
 import { type CatDraw, CatReveal } from './CatReveal'
 import { CAT_ODDS, catRevealPlan } from './catGrade'
+import { RewardPlacement } from './RewardPlacement'
 
 type Kind = 'cat' | 'weapon'
 
@@ -22,10 +23,12 @@ export function IdleGacha({
   company,
   onCat,
   initialKind,
+  onUse,
 }: {
   company: Company
   /** 처음 보일 뽑기. 무기 탭에서 오면 무기 뽑기다 (540번). */
   initialKind?: Kind
+  onUse?: (kind: Kind, code: CatCode | null) => void
   /** 고양이를 뽑았다. */
   onCat: (code: CatCode) => void
 }) {
@@ -266,6 +269,19 @@ export function IdleGacha({
           cards={ten.cards}
           canAgain={canTen}
           againNote={<DiamondPrice amount={diamonds.tenDraw} />}
+          useAction={
+            onUse ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setTen(null)
+                  onUse(ten.kind, drawn?.cat.code ?? null)
+                }}
+              >
+                {ten.kind === 'cat' ? '팀 편성하기' : '무기 장착·합성하기'}
+              </button>
+            ) : undefined
+          }
           onClose={() => setTen(null)}
           onAgain={() => void (ten.kind === 'cat' ? drawTenCats() : drawTenWeapons())}
         />
@@ -276,6 +292,18 @@ export function IdleGacha({
           result={catReveal.result}
           price={diamonds.draw}
           canAgain={canOne}
+          useAction={
+            catReveal.result && onUse ? (
+              <RewardPlacement
+                company={company}
+                reward={{ cat: catReveal.result.cat.code }}
+                onDone={(code) => {
+                  setCatReveal(null)
+                  onUse('cat', code)
+                }}
+              />
+            ) : undefined
+          }
           onClose={() => setCatReveal(null)}
           onAgain={() => void drawCat()}
         />
@@ -286,6 +314,18 @@ export function IdleGacha({
           result={gunReveal.result}
           price={diamonds.draw}
           canAgain={canOne}
+          useAction={
+            gunReveal.result && onUse ? (
+              <RewardPlacement
+                company={company}
+                reward={{ weapon: gunReveal.result.weapon }}
+                onDone={(code) => {
+                  setGunReveal(null)
+                  onUse('weapon', code)
+                }}
+              />
+            ) : undefined
+          }
           onClose={() => setGunReveal(null)}
           onAgain={() => void drawWeapon()}
         />

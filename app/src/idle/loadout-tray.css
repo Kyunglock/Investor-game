@@ -1,0 +1,186 @@
+.loadout-compare button {
+  border: 2px solid #1755a4;
+  border-radius: 8px;
+  background: #3489f0;
+  color: white;
+  padding: 8px;
+  min-height: 44px;
+}
+.idle-gear-ghost .idle-cat-portrait {
+  width: 65px;
+  height: 65px;
+}
+.reward-placement .idle-cat-portrait {
+  width: 42px;
+  height: 42px;
+}
+.reward-targets button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  min-height: 55px;
+  border: 2px solid #b78448;
+  border-radius: 8px;
+  background: #fff9e9;
+}
+.idle-home.loadout-open > .idle-canvas {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  height: max(100px, calc(100dvh - min(62dvh, 560px) - 136px - env(safe-area-inset-bottom)));
+}
+/* 전투를 덮지 않는 장비 트레이. 출전 칸은 인벤토리가 스크롤되어도 손이 닿는다. */
+.idle-sheet.loadout-sheet > section {
+  height: min(62dvh, 560px);
+  max-height: calc(100dvh - 160px);
+  min-height: 0;
+  padding: 6px 10px 10px;
+  scroll-padding-top: 135px;
+}
+.loadout-team {
+  position: sticky;
+  top: -6px;
+  z-index: 3;
+  background: #fff5d9;
+  padding: 4px 0 7px;
+  border-bottom: 2px solid #d8ba7c;
+}
+.loadout-sheet .idle-cat-field-row {
+  margin: 5px 0 0;
+  gap: 5px;
+  display: flex;
+  overflow-x: auto;
+  padding: 3px;
+}
+.loadout-sheet .idle-cat-field-row > li {
+  flex: 0 0 58px;
+}
+.loadout-sheet .idle-cat-field-row button {
+  width: 100%;
+  min-height: 60px;
+}
+.loadout-sheet .idle-cat-field-row .idle-cat-portrait {
+  width: 44px;
+  height: 44px;
+}
+.loadout-sheet .idle-cat-slot-name {
+  font-size: 10px;
+}
+.loadout-sheet .idle-cat.owned {
+  padding: 8px;
+  margin: 8px 0;
+}
+.loadout-sheet .idle-cat.owned > .idle-cat-portrait {
+  width: 42px;
+  height: 42px;
+}
+.loadout-sheet .idle-cat details {
+  grid-column: 1 / -1;
+}
+.loadout-sheet summary {
+  cursor: pointer;
+  font-size: 12px;
+  padding: 8px 0;
+}
+.loadout-sheet .idle-cat-gun {
+  margin-top: 4px;
+}
+.loadout-sheet .idle-gear-grid {
+  margin-top: 6px;
+}
+.loadout-sheet .idle-cat-cell,
+.loadout-sheet .idle-gear-cell {
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: pan-y;
+}
+.loadout-sheet .is-drop-ready {
+  outline: 2px solid #25984c;
+  outline-offset: 1px;
+}
+.loadout-sheet .is-drop-over {
+  background: #d7fdb2;
+  transform: scale(1.06);
+  outline: 3px solid #137b37;
+}
+.loadout-hint {
+  font-size: 11px;
+  color: #705138;
+  margin: 6px 0;
+  min-height: 28px;
+}
+.loadout-compare {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: #fff4cc;
+  border: 2px solid #ae7737;
+  border-radius: 12px;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  box-shadow: 0 -3px 12px #3f251b25;
+}
+.loadout-compare > span {
+  width: 100%;
+  font-size: 12px;
+}
+
+.loadout-compare button:last-child {
+  background: #fff5d9;
+  color: #553a27;
+  border-color: #b78448;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadout-sheet .is-drop-over {
+    transform: none;
+  }
+}
+.reward-placement {
+  margin: 8px 0;
+  padding: 8px;
+  border-radius: 12px;
+  background: #fff4d7;
+  color: #553a27;
+  width: 100%;
+}
+.reward-placement .reward-grab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.reward-targets {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.reward-targets small {
+  font-size: 10px;
+}
+.reward-placement .is-drop-ready {
+  border-color: #298635;
+}
+.reward-placement .is-drop-over {
+  background: #c8f3a9;
+  transform: scale(1.05);
+}
+.reward-placement > small {
+  font-size: 11px;
+}
+
+.reward-placement .reward-grab.is-grabbed {
+  transform: scale(1.04);
+  background: #ddf8bf;
+}

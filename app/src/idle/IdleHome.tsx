@@ -33,6 +33,7 @@ import { OfflineIncome } from './OfflineIncome'
 import { freeLeft } from './shop'
 import './idle-home.css'
 import './toy-arcade.css'
+import './loadout-tray.css'
 
 type Menu = 'battle' | 'growth' | 'weapons' | 'cats' | 'shop' | 'company'
 /**
@@ -192,7 +193,7 @@ export function IdleHome({
   )
   return (
     <section
-      className="idle-home"
+      className={`idle-home ${menu === 'cats' || menu === 'weapons' ? 'loadout-open' : ''}`}
       data-testid="idle-battle"
       aria-label={managing ? '회사' : '무한 매도벽 돌파'}
     >
@@ -271,7 +272,7 @@ export function IdleHome({
           title={menus.find((m) => m.key === menu)?.label}
           onClose={() => go('battle')}
           testId="idle-menu"
-          className="idle-sheet"
+          className={`idle-sheet ${menu === 'cats' || menu === 'weapons' ? 'loadout-sheet' : ''}`}
           footer={nav}
         >
           {menu === 'growth' && (
@@ -295,16 +296,18 @@ export function IdleHome({
               }}
             />
           )}
-          {menu === 'cats' && (
-            <IdleCats
+          {menu === 'cats' && <IdleCats company={company} picked={wearer} onPick={setWearer} />}
+          {menu === 'shop' && (
+            <IdleShop
+              key={shopKind}
               company={company}
-              onGear={(code) => {
+              kind={shopKind}
+              onUse={(kind, code) => {
                 setWearer(code)
-                go('weapons')
+                go(kind === 'cat' ? 'cats' : 'weapons')
               }}
             />
           )}
-          {menu === 'shop' && <IdleShop key={shopKind} company={company} kind={shopKind} />}
           <p className="idle-sheet-note">
             {connected
               ? halted

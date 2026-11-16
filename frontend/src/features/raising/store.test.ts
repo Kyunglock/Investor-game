@@ -150,3 +150,24 @@ describe('시즌패스 (529번)', () => {
     expect(post).toHaveBeenLastCalledWith('/api/sandbox/next-season')
   })
 })
+
+describe('고양이 교체', () => {
+  it('한 요청으로 교체하고 서버의 최종 팀만 반영한다', async () => {
+    const after = { ...before, capital: 123 }
+    post.mockResolvedValueOnce({ data: after } as never)
+    await useRaisingStore.getState().fieldCat('mint', true, 'sky')
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(post).toHaveBeenCalledWith('/api/company/cat/field', {
+      body: { code: 'mint', fielded: true, replaceCode: 'sky' },
+    })
+    expect(useRaisingStore.getState().company).toBe(after)
+  })
+
+  it('교체가 거절되어도 기존 팀을 지우지 않는다', async () => {
+    post.mockResolvedValueOnce({ error: { message: '출전 구성이 바뀌었어요' } } as never)
+    await useRaisingStore.getState().fieldCat('mint', true, 'sky')
+    expect(useRaisingStore.getState().company).toBe(before)
+    expect(useRaisingStore.getState().error).toBe('출전 구성이 바뀌었어요')
+    expect(useRaisingStore.getState().busy).toBe(false)
+  })
+})

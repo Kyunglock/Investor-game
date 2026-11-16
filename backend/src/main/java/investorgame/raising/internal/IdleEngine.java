@@ -893,13 +893,30 @@ class IdleEngine {
   static final int MAX_CAT_LEVEL = 1000;
 
   void fieldCat(CompanyState c, String code, boolean fielded) {
+    fieldCat(c, code, fielded, null);
+  }
+
+  /** Validate the whole swap before changing the team; a stale target must not remove anyone. */
+  void fieldCat(CompanyState c, String code, boolean fielded, String replaceCode) {
     CompanyState.Idle s = state(c);
     if (!s.cats.containsKey(code)) throw new InvalidRequestException("가지지 않은 고양이다: " + code);
-    s.fielded.remove(code);
-    if (fielded && s.fielded.size() >= FIELD_SLOTS) {
-      throw new InvalidRequestException("출전 칸이 꽉 찼다: " + FIELD_SLOTS + "마리까지 출전한다");
+    if (replaceCode != null) {
+      if (!fielded
+          || code.equals(replaceCode)
+          || s.fielded.contains(code)
+          || !s.fielded.contains(replaceCode)) {
+        throw new InvalidRequestException("출전 구성이 바뀌었어요. 다시 골라 주세요");
+      }
+      s.fielded.set(s.fielded.indexOf(replaceCode), code);
+    } else if (fielded) {
+      if (s.fielded.contains(code)) return;
+      if (s.fielded.size() >= FIELD_SLOTS) {
+        throw new InvalidRequestException("출전 칸이 꽉 찼다: " + FIELD_SLOTS + "마리까지 출전한다");
+      }
+      s.fielded.add(code);
+    } else {
+      s.fielded.remove(code);
     }
-    if (fielded) s.fielded.add(code);
     s.hitCredits = new double[KINDS];
   }
 
