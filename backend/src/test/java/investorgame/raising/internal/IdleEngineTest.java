@@ -377,12 +377,13 @@ class IdleEngineTest {
     tick(1000, new IdleHit(7, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(8);
     assertThat(state.idle.damage).isZero();
-    // A cleared wall pays 30 game seconds of its own time income (decisions.md 537).
+    // A cleared wall pays REWARD_SECONDS (10) game seconds of its own time income (decisions.md
+    // 537, 552).
     // The wall's price level multiplies it: 10% more per wall (505).
     assertThat(state.capital - paid)
         .isGreaterThanOrEqualTo(
-            Math.floor(20000 * 1.25 * 30 * StrictMath.pow(1.1, 5))
-                + Math.floor(20000 * 1.3 * 30 * StrictMath.pow(1.1, 6)));
+            Math.floor(20000 * 1.25 * IdleEngine.REWARD_SECONDS * StrictMath.pow(1.1, 5))
+                + Math.floor(20000 * 1.3 * IdleEngine.REWARD_SECONDS * StrictMath.pow(1.1, 6)));
   }
 
   @Test
@@ -448,23 +449,23 @@ class IdleEngineTest {
   }
 
   @Test
-  void aWallPaysThirtySecondsOfItsTimeIncomeAndABossWallThreeTimes() {
-    // 537번: 벽 보상은 벽 체력이 아니라 그 벽의 시간 수입을 따른다. 첫 벽 0.6b, 10벽 0.87b × 물가, 보스 벽(50번째)은 그 세 배.
+  void aWallPaysTenSecondsOfItsTimeIncomeAndABossWallThreeTimes() {
+    // 537번: 벽 보상은 벽 체력이 아니라 그 벽의 시간 수입을 따른다. 첫 벽 0.2b(552번), 10벽 0.29b × 물가, 보스 벽(50번째)은 그 세 배.
     start(1);
     state.capital = 0;
     state.idle.damage = IdleEngine.maxHp(1) - 1;
     // 틱 1초(게임 2초)의 시간 수입 40,000이 함께 들어온다.
     tick(1000, new IdleHit(1, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(2);
-    assertThat(state.capital).isBetween(600_000.0, 650_000.0);
+    assertThat(state.capital).isBetween(200_000.0, 250_000.0);
     state.idle.wall = 10;
     state.idle.damage = IdleEngine.maxHp(10) - 1;
     state.capital = 0;
     tick(1000, new IdleHit(10, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(11);
     // The tenth wall is an ordinary wall now (550): no three-fold reward.
-    double tenth = 20000 * 1.45 * 30 * StrictMath.pow(1.1, 9);
-    assertThat(state.capital).isBetween(tenth, tenth * 1.08);
+    double tenth = 20000 * 1.45 * IdleEngine.REWARD_SECONDS * StrictMath.pow(1.1, 9);
+    assertThat(state.capital).isBetween(tenth, tenth * 1.25);
     assertThat(IdleEngine.maxHp(10)).isCloseTo(144.2, offset(1e-9));
     // The boss wall (every 50th) has three times the health and pays three times the reward.
     assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 1088.2, offset(1e-9));
@@ -824,9 +825,9 @@ class IdleEngineTest {
     state.idle.hitCredits = new double[7];
     tick(500, new IdleHit(2001, "bullet", 1, 4.0));
     assertThat(state.idle.wall).isEqualTo(2002);
-    // 벽 보상은 그 벽의 시간 수입 30초 어치다 (537번): 2,001벽의 시간 수입은 20,000 × (1 + 0.05 × 2,000).
+    // 벽 보상은 그 벽의 시간 수입 10초 어치다 (537·552번): 2,001벽의 시간 수입은 20,000 × (1 + 0.05 × 2,000).
     double reward = 20_000 * 101 * IdleEngine.REWARD_SECONDS * level;
-    assertThat(state.capital - income).isBetween(reward * 0.999, reward * 1.1);
+    assertThat(state.capital - income).isBetween(reward * 0.999, reward * 1.2);
     // Buying costs the level's price only, however deep the wall.
     state.capital = 10 * firstPrice;
     int bought = company.mental.buyUpgrade(state, "damage", 5);

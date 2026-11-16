@@ -237,7 +237,8 @@ class IdleEngine {
   private static final double CAT_LEVEL_BONUS = 0.2;
   // A cleared wall pays this many game seconds of its own time income, a boss wall BOSS_REWARD
   // times that (537). It used to pay per point of wall health, which outgrew the time income.
-  static final double REWARD_SECONDS = 30;
+  // 30 → 10 (552번): 사용자가 벽 보상이 여전히 너무 크다고 했다.
+  static final double REWARD_SECONDS = 10;
   private static final double BOSS_REWARD = 3;
   // Capital per active game second at wall 1 (492).
   private static final double INCOME = 20_000;
