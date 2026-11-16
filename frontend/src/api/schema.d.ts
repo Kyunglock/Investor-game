@@ -1374,6 +1374,18 @@ export interface components {
                  * @description 벽을 부수지 않고 자리를 옮긴 횟수(매수벽 붕괴로 돌아감·테스트판 건너뛰기). 바뀌면 화면이 예측을 새로 시작한다 (546번)
                  */
                 epoch?: number;
+                /** @description 마지막으로 받은 보스 클리어 보상. 받은 적이 없으면 null. 화면이 wall이 바뀐 것을 보고 한 번 알려 준다 (549번) */
+                bossReward?: {
+                    /**
+                     * Format: int64
+                     * @description 깬 보스의 벽 번호
+                     */
+                    wall: number;
+                    /** Format: int64 */
+                    diamonds: number;
+                    /** @description 벽 보상과 따로 받은 돈 */
+                    money: number;
+                } | null;
                 /** @description 보스 도전의 벽(50번째 벽마다)이다. 이 벽 앞에 서면 서킷브레이커로 시작한다 (547번) */
                 bossChallenge?: boolean;
                 /** @description 뒤쪽 두 매도벽의 체력. 스플래시 피해를 저장하며 보상은 앞에서부터 지급 */

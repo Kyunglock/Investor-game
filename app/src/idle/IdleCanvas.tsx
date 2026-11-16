@@ -1,4 +1,5 @@
 import type { Company } from '@web/api/client'
+import { money } from '@web/features/game/labels'
 import { retreatIdle, shownIdle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import type { ActiveCode } from '../mental/actives'
@@ -107,6 +108,21 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     battle.current?.applyLoadout(idleLoadout(company))
     battle.current?.setPaused(!connected || document.hidden)
   }, [company, connected])
+  // 보스 클리어 보상 (549번): 서버가 준 보상의 벽 번호가 바뀌면 한 번 알린다. 들어올 때 이미 있던 보상은 알리지 않는다.
+  const bossReward = company.idle?.bossReward
+  const rewarded = useRef({ company: company.companyId, wall: bossReward?.wall ?? 0 })
+  useEffect(() => {
+    const seen = rewarded.current
+    const wall = bossReward?.wall ?? 0
+    rewarded.current = { company: company.companyId, wall }
+    // 다른 회사(테스트판)로 바뀐 것은 새 보상이 아니다.
+    if (!bossReward || seen.company !== company.companyId || wall === seen.wall) return
+    setRaid((old) => ({
+      text: `보스 ${bossReward.wall.toLocaleString()} 클리어! 다이아 +${bossReward.diamonds.toLocaleString()} · +${money(bossReward.money)}`,
+      color: '#d99a1c',
+      id: (old?.id ?? 0) + 1,
+    }))
+  }, [bossReward, company.companyId])
   return (
     <>
       <div ref={host} className="idle-canvas" data-testid="idle-canvas" aria-hidden="true" />

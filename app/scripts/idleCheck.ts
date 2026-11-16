@@ -641,11 +641,25 @@ try {
           ),
         )
         .toBe(true)
+      // The halt starts on an empty field (549): no bullet is left flying.
+      assert.equal(
+        await page.evaluate(
+          () =>
+            (window as unknown as { __mentalMarket: () => { bullets: number } }).__mentalMarket()
+              .bullets,
+        ),
+        0,
+        'no bullet is left when the boss circuit breaker starts',
+      )
       await page.screenshot({ path: '/tmp/idle-boss-circuit.png' })
       company.idle.circuitSeconds = 0
       await expect(page.getByTestId('idle-wall-number')).toHaveText('보스 50', { timeout: 10000 })
       await expect(page.getByTestId('idle-wall-number')).toHaveAttribute('data-state', 'boss')
       await page.screenshot({ path: '/tmp/idle-boss.png' })
+      // Clearing the boss pays its own reward, told once (549).
+      Object.assign(company.idle, { bossReward: { wall: 50, diamonds: 100, money: 123_000_000 } })
+      await expect(page.getByTestId('idle-raid')).toContainText('보스 50 클리어! 다이아 +100')
+      await page.screenshot({ path: '/tmp/idle-boss-reward.png' })
       // The buy wall falls: every enemy is gone and the fight goes ten walls back (546).
       // The long fast fight above may have lost its buy wall and gone back already.
       moves.length = 0

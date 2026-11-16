@@ -515,6 +515,43 @@ class IdleEngineTest {
   }
 
   @Test
+  void clearingABossPaysItsOwnRewardOnce() {
+    start(49);
+    state.battleLevels.put("damage", 1_000_000);
+    assertThat(engine.view(state).bossReward()).isNull();
+    tick(1000, new IdleHit(49, "bullet", 1, IdleEngine.maxHp(49), 0));
+    assertThat(state.idle.wall).isEqualTo(50);
+    for (int i = 0; i < 3; i++) tick(1000);
+    long diamonds = state.diamonds;
+    double before = state.capital;
+    tick(1000, new IdleHit(50, "bullet", 1, IdleEngine.maxHp(50), 0));
+    assertThat(state.idle.wall).isEqualTo(51);
+    // Apart from the wall's reward: diamonds, and five times that reward in money.
+    assertThat(state.diamonds).isEqualTo(diamonds + IdleEngine.BOSS_CLEAR_DIAMONDS);
+    var reward = engine.view(state).bossReward();
+    assertThat(reward.wall()).isEqualTo(50);
+    assertThat(reward.diamonds()).isEqualTo(IdleEngine.BOSS_CLEAR_DIAMONDS);
+    double money = reward.money().doubleValue();
+    assertThat(money).isPositive();
+    // The wall reward, its five-fold boss bonus and a second of time income.
+    assertThat(state.capital - before).isBetween(money * 1.2, money * 1.25);
+    // The same boss broken again (the jump tool) pays its wall reward only.
+    engine.jump(state, 50);
+    diamonds = state.diamonds;
+    before = state.capital;
+    tick(1000, new IdleHit(50, "bullet", 1, IdleEngine.maxHp(50), 0));
+    assertThat(state.idle.wall).isEqualTo(51);
+    assertThat(state.diamonds).isEqualTo(diamonds);
+    assertThat(state.capital - before).isLessThan(money * 0.3);
+    // A tenth wall that is no boss challenge pays no boss reward.
+    engine.jump(state, 60);
+    tick(1000, new IdleHit(60, "bullet", 1, IdleEngine.maxHp(60), 0));
+    assertThat(state.idle.wall).isEqualTo(61);
+    assertThat(state.diamonds).isEqualTo(diamonds);
+    assertThat(engine.view(state).bossReward().wall()).isEqualTo(50);
+  }
+
+  @Test
   void aBrokenBuyWallSendsTheFightTenWallsBack() {
     start(37);
     state.idle.damage = 100;

@@ -48,6 +48,12 @@ class CompanyState {
     /** 벽을 부수지 않고 자리를 옮긴 횟수 (546번): 매수벽 붕괴로 돌아감·테스트판 건너뛰기. */
     long epoch;
 
+    /** 보상을 준 가장 높은 보스 벽 (549번): 같은 보스의 클리어 보상은 한 번만 준다. 없던 저장은 0. */
+    long bossCleared;
+
+    /** 그 보스 클리어 보상으로 준 돈 (549번). 화면이 한 번 알려 준다. */
+    double bossRewardMoney;
+
     long lastBeat;
     String runId;
     String serverId;
