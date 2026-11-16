@@ -315,7 +315,7 @@ try {
     )
     assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw)
     // Today's goods (541): four items; the free one is taken once and the tab's dot goes out.
-    await expect(page.getByTestId('shop-item')).toHaveCount(4)
+    await expect(page.getByTestId('shop-item')).toHaveCount(2)
     const free = page.locator('[data-testid=shop-item][data-code=free]')
     await expect(free).toContainText('다이아 20개')
     await expect(free.getByTestId('shop-buy')).toContainText('무료')
@@ -328,9 +328,7 @@ try {
     await expect(free).toContainText('오늘 0 / 1번 남음')
     await expect(page.getByTestId('shop-dot')).toHaveCount(0)
     assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw + 20)
-    await expect(page.locator('[data-testid=shop-item][data-code=money-small]')).toContainText(
-      '수입 30분어치',
-    )
+    await expect(page.locator('[data-testid=shop-item][data-code^=money-]')).toHaveCount(0)
     await page.screenshot({ path: `/tmp/idle-shop-${width}.png`, fullPage: true })
     await toCats()
     await pickCat('sky')

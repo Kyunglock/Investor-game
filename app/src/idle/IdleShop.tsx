@@ -7,7 +7,7 @@ import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { rewardText } from './attendance'
 import { IdleGacha } from './IdleGacha'
-import { IdleIcon } from './icons'
+import { ShopIcon } from './ShopIcon'
 import { freeLeft, giveText, type ShopItem, shopBlock } from './shop'
 
 /**
@@ -62,7 +62,7 @@ export function IdleShop({
             data-code={item.code}
           >
             <span className="idle-stat-icon" aria-hidden="true">
-              <IdleIcon name={item.giveDiamonds > 0 ? 'diamond' : 'growth'} />
+              <ShopIcon gift={item.code === 'free'} />
             </span>
             <div className="idle-stat-info">
               <b>{item.name}</b>

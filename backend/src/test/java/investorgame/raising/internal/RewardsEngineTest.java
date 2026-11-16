@@ -138,11 +138,11 @@ class RewardsEngineTest {
   @Test
   void 상점은_게임_재화로_사고_하루_횟수가_한국_시간_자정에_다시_찬다() {
     // 상점 (decisions.md 541번): 무료 다이아 20(하루 1번), 돈으로 다이아 20(초당 수입 20분어치, 5번),
-    // 다이아 60으로 수입 30분어치(3번), 다이아 200으로 수입 2시간어치(1번).
+    // 다이아로 돈을 사는 상품은 없다.
     CompanyState c = opened();
     assertThat(rewards.shopView(c).items())
         .extracting(i -> i.code())
-        .containsExactly("free", "diamonds", "money-small", "money-large");
+        .containsExactly("free", "diamonds");
     rewards.buy(c, "free");
     assertThat(c.diamonds).isEqualTo(20);
     assertThat(rewards.shopView(c).lastReceipt().diamonds()).isEqualTo(20);
@@ -163,20 +163,19 @@ class RewardsEngineTest {
     assertThat(rewards.shopView(c).items().get(1).left()).isZero();
     assertThatThrownBy(() -> rewards.buy(c, "diamonds"))
         .isInstanceOf(InvalidRequestException.class);
-    // 다이아로 돈: 60개에 수입 30분어치.
-    rewards.buy(c, "money-small");
-    assertThat(c.diamonds).isEqualTo(60);
-    assertThat(c.capital).isEqualTo(7 + Math.floor(30 * 60 * perSecond));
-    assertThat(rewards.shopView(c).items().get(2).left()).isEqualTo(2);
-    assertThatThrownBy(() -> rewards.buy(c, "money-large"))
-        .as("다이아가 모자라다")
-        .isInstanceOf(InvalidRequestException.class);
+    // 이전 상품 코드로 요청해도 재화와 구매 내역을 바꾸지 않는다.
+    for (String removed : List.of("money-small", "money-large")) {
+      assertThatThrownBy(() -> rewards.buy(c, removed)).isInstanceOf(InvalidRequestException.class);
+      assertThat(c.diamonds).isEqualTo(120);
+      assertThat(c.capital).isEqualTo(7);
+      assertThat(c.shopBought).doesNotContainKey(removed);
+    }
     assertThatThrownBy(() -> rewards.buy(c, "nothing")).isInstanceOf(InvalidRequestException.class);
     // 다음 날(한국 시간)에는 횟수가 다시 찬다.
     clock.now += DAY;
     assertThat(rewards.shopView(c).items()).allMatch(i -> i.left() == i.dailyLimit());
     rewards.buy(c, "free");
-    assertThat(c.diamonds).isEqualTo(80);
+    assertThat(c.diamonds).isEqualTo(140);
     // 저장을 거쳐도 그날 산 횟수가 남는다.
     CompanyState again =
         JsonMapper.builder()
