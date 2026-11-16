@@ -31,3 +31,11 @@ export function shopBlock(company: Company, item: ShopItem): 'sold' | 'short' | 
 export function freeLeft(company: Company): boolean {
   return company.shop.items.some((i) => i.left > 0 && i.priceDiamonds === 0 && !i.priceMoney)
 }
+
+/** 받은 것을 한 줄로: "다이아 50개" · "돈 3.5a". 둘 다면 가운뎃점으로 잇는다. */
+export function rewardText(reward: { diamonds: number; money?: number | null }): string {
+  const parts: string[] = []
+  if (reward.diamonds > 0) parts.push(`다이아 ${diamondText(reward.diamonds)}개`)
+  if ((reward.money ?? 0) > 0) parts.push(`돈 ${money(reward.money ?? 0)}`)
+  return parts.join(' · ')
+}

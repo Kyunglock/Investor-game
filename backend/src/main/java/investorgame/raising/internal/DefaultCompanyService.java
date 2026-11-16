@@ -417,9 +417,6 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView reportStage(UUID sessionId, int stage, boolean cleared, int stars) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.reportStage(row.state(), stage, cleared, stars);
-    if (cleared) {
-      rewards.stageCleared(row.state());
-    }
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -500,11 +497,7 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView reportEx(UUID sessionId, int kills) {
     CompanyRepository.Row row = lockActive(sessionId);
-    boolean first = !idle.today().equals(row.state().exDay);
     engine.mental.reportEx(row.state(), kills, idle.today());
-    if (first) {
-      rewards.exDone(row.state());
-    }
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -513,7 +506,7 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView buyBattleUpgrade(UUID sessionId, String kind, int levels) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.mental.buyUpgrade(row.state(), kind, levels);
+    rewards.upgraded(row.state(), engine.mental.buyUpgrade(row.state(), kind, levels));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -523,6 +516,7 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView drawWeapon(UUID sessionId, int count) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.drawWeapons(row.state(), new HashSeededRandom(row.seed()), count);
+    rewards.drew(row.state(), engine.diamonds().items(count));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -533,6 +527,7 @@ class DefaultCompanyService implements CompanyService {
     CompanyRepository.Row row = lockActive(sessionId);
     idle.requireFreeForMerge(row.state(), kind, grade, engine.mental.mergeCount());
     engine.mental.mergeWeapon(row.state(), kind, grade);
+    rewards.merged(row.state());
     idle.releaseWeapons(row.state());
     companies.update(row.id(), row.state(), false);
     return view(row);
@@ -543,6 +538,7 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView drawCat(UUID sessionId, int count) {
     CompanyRepository.Row row = lockActive(sessionId);
     idle.drawCats(row.state(), new HashSeededRandom(row.seed()), count);
+    rewards.drew(row.state(), engine.diamonds().items(count));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

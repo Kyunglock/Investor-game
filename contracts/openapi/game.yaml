@@ -664,7 +664,7 @@ paths:
   /api/sandbox/pass-exp:
     post:
       operationId: addSandboxPassExp
-      summary: 테스트판에서 시즌패스 경험치를 더한다 (decisions.md 529번)
+      summary: 테스트판에서 시즌패스 포인트를 더한다 (decisions.md 529·568번)
       requestBody:
         required: true
         content:
@@ -873,16 +873,16 @@ components:
             hot: { type: [string, 'null'], description: 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) }
         pass:
           type: object
-          description: 시즌패스 (decisions.md 529번). 4주짜리 시즌 동안 플레이로 패스 경험치를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이다. 시즌이 끝나면 받지 않은 보상은 사라진다
-          required: [season, name, endsAt, secondsLeft, endingSoon, exp, expPerStep, step, claimable, steps, lastRewards]
+          description: 시즌패스 (decisions.md 529·568번). 4주짜리 시즌 동안 미션을 깨서 포인트를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이고 보상에 돈은 없다. 시즌이 끝나면 받지 않은 보상은 사라지고 미션도 처음부터 센다
+          required: [season, name, endsAt, secondsLeft, endingSoon, points, pointsPerStep, step, claimable, steps, missions, lastRewards]
           properties:
             season: { type: integer, description: 시즌 번호 }
             name: { type: string }
             endsAt: { type: integer, format: int64, description: 시즌이 끝나는 때(서버 시각, ms) }
             secondsLeft: { type: integer, format: int64, description: 끝날 때까지 남은 시간(초) }
             endingSoon: { type: boolean, description: 끝나기까지 하루가 안 남았다. 받지 않은 보상이 있으면 알려 준다 }
-            exp: { type: integer, format: int64, description: 이번 시즌에 모은 패스 경험치 }
-            expPerStep: { type: integer, description: 한 단계에 드는 경험치 }
+            points: { type: integer, format: int64, description: 이번 시즌에 모은 포인트 }
+            pointsPerStep: { type: integer, description: 한 단계에 드는 포인트 }
             step: { type: integer, description: 지금 도달한 단계(0부터) }
             claimable: { type: integer, description: 받을 수 있는 보상의 수 }
             steps:
@@ -893,22 +893,34 @@ components:
                 required: [step, diamonds, weapon, cat, reached, claimed]
                 properties:
                   step: { type: integer }
-                  diamonds: { type: integer, format: int64, description: 받는 다이아. 돈 단계면 0 }
-                  money: { type: [number, 'null'], description: 돈 단계면 지금 받으면 들어올 돈(회사의 초당 수입 30분어치). 아니면 null }
+                  diamonds: { type: integer, format: int64, description: 받는 다이아 }
                   weapon: { type: boolean, description: 무기 하나를 더 받는다. 등급은 뽑기처럼 정해진다 }
                   cat: { type: boolean, description: 고양이 한 마리를 더 받는다 }
-                  reached: { type: boolean, description: 경험치가 이 단계에 닿았다 }
+                  reached: { type: boolean, description: 포인트가 이 단계에 닿았다 }
                   claimed: { type: boolean, description: 이미 받았다 }
+            missions:
+              type: array
+              description: 포인트를 주는 미션과 진행도 (568번). 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 받고, 끝없이 되풀이된다
+              items:
+                type: object
+                required: [code, title, count, target, every, points, earned]
+                properties:
+                  code: { type: string, description: wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석) }
+                  title: { type: string, description: 화면에 적는 글. "매도벽 100개 통과"처럼 다음에 닿을 수가 들어 있다 }
+                  count: { type: integer, format: int64, description: 이번 시즌에 센 수 }
+                  target: { type: integer, format: int64, description: 다음에 포인트를 받는 수 }
+                  every: { type: integer, description: 포인트를 받는 간격 }
+                  points: { type: integer, description: target에 닿으면 받는 포인트 }
+                  earned: { type: integer, format: int64, description: 이 미션으로 이번 시즌에 받은 포인트 }
             lastRewards:
               type: array
               description: 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다
               items:
                 type: object
-                required: [step, diamonds, money]
+                required: [step, diamonds]
                 properties:
                   step: { type: integer }
                   diamonds: { type: integer, format: int64 }
-                  money: { type: number }
                   weaponKind: { type: [string, 'null'] }
                   weaponGrade: { type: [string, 'null'] }
                   cat: { type: [string, 'null'], description: 받은 고양이의 코드 }
@@ -946,7 +958,7 @@ components:
                 - type: 'null'
         attendance:
           type: object
-          description: 출석 보상 (decisions.md 528번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다
+          description: 출석 보상 (decisions.md 528·564번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다. 화면은 들어오면 저절로 받는다. 보상은 다이아뿐이라 돈 칸의 값(incomeMinutes·money)은 늘 0·null이다
           required: [today, claimable, board]
           properties:
             today: { type: integer, description: 오늘 받을 칸(1부터). 오늘 이미 받았으면 오늘 받은 칸 }

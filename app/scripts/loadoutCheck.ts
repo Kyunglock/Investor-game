@@ -159,7 +159,21 @@ try {
     }
     await page.getByRole('button', { name: CAT_MENU }).click()
     const tray = page.getByTestId('idle-menu')
-    assert(required(await tray.boundingBox()).y > 200, 'battle remains visible above tray')
+    // The cat tab fills the screen (567): it reaches the top and ends at the bottom menu.
+    const trayBox = required(await tray.boundingBox())
+    assert(trayBox.y < 60 && trayBox.height > 600, 'cat tab fills the screen')
+    // Two rows of five: a cat row and a weapon row, with no names in the slots.
+    await expect(page.locator('.idle-cat-field-row > li')).toHaveCount(5)
+    await expect(page.getByTestId('gun-slot')).toHaveCount(5)
+    await expect(page.locator('.idle-cat-slot-name')).toHaveCount(0)
+    const slotCat = required(await page.locator('[data-testid=cat-slot]').first().boundingBox())
+    const slotGun = required(
+      await page.locator('[data-testid=gun-slot]:not([data-code=boss])').first().boundingBox(),
+    )
+    assert(
+      Math.abs(slotCat.x - slotGun.x) < 2 && slotGun.y > slotCat.y,
+      'weapon sits under its cat',
+    )
     const cat = (code: string) => page.locator(`[data-testid=cat][data-code=${code}]`)
     const target = (code: string) => page.locator(`[data-loadout-target="${code}"]`)
     const drag = async (

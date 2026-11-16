@@ -121,7 +121,7 @@ describe('시즌패스 (529번)', () => {
   const pass = (claimable: number, lastRewards: object[] = []) => ({ claimable, lastRewards })
 
   it('단계를 주면 그 단계만, 없으면 모두 받는다', async () => {
-    const after = { ...before, pass: pass(0, [{ step: 2, diamonds: 0, money: 500 }]) }
+    const after = { ...before, pass: pass(0, [{ step: 2, diamonds: 50 }]) }
     post.mockResolvedValue({ data: after } as never)
     const result = await useRaisingStore.getState().claimPass(2)
     expect(post).toHaveBeenLastCalledWith('/api/company/pass/claim', { body: { step: 2 } })

@@ -201,7 +201,7 @@ export function CatGear({
                 onPointerDown={cell.holder || busy ? undefined : down(cell)}
                 onContextMenu={(e) => e.preventDefault()}
               >
-                <GunSprite kind={w.kind} grade={w.grade} width={46} className="idle-gear-art" />
+                <GunSprite kind={w.kind} grade={w.grade} width={40} className="idle-gear-art" />
                 <i className={`idle-grade idle-gear-grade ${GRADE_BADGE[w.grade]}`}>
                   {w.gradeName}
                 </i>

@@ -236,13 +236,38 @@ try {
       )
       .toBe(true)
     assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)
-    // A안: 편의 메뉴와 하단 탭은 캔버스 밖에 두고, 상단은 첫 매도벽보다 위에 유지한다.
+    // A안: 하단 탭은 캔버스 밖에 두고, 상단은 첫 매도벽보다 위에 유지한다. 전투 공간과 탭 사이의 단추 줄은 없다 (565번).
     const arenaBounds = await page.getByTestId('idle-canvas').boundingBox()
-    const toolbarBounds = await page.getByRole('toolbar', { name: '전투 편의 메뉴' }).boundingBox()
+    const navBounds = await page.getByRole('navigation', { name: '게임 메뉴' }).boundingBox()
     const hudBounds = await page.locator('.idle-hud').boundingBox()
-    assert(arenaBounds && toolbarBounds && hudBounds)
-    assert(arenaBounds.height > 0 && arenaBounds.y + arenaBounds.height <= toolbarBounds.y + 1)
+    assert(arenaBounds && navBounds && hudBounds)
+    assert(arenaBounds.height > 0 && arenaBounds.y + arenaBounds.height <= navBounds.y + 1)
     assert(hudBounds.y + hudBounds.height <= 55)
+    await expect(page.getByRole('toolbar')).toHaveCount(0)
+    // 시즌패스와 설정은 위 줄 안에 있고 (565번), 출석 단추는 없다 (564번).
+    for (const id of ['idle-pass', 'idle-options']) {
+      const box = await page.getByTestId(id).boundingBox()
+      assert(box, `${id} is shown`)
+      assert(box.y >= hudBounds.y && box.y + box.height <= hudBounds.y + hudBounds.height, id)
+      assert(box.x + box.width <= hudBounds.x + hudBounds.width, `${id} stays inside the HUD`)
+    }
+    await expect(page.getByTestId('idle-attendance')).toHaveCount(0)
+    await page.getByTestId('idle-options').click()
+    await expect(page.getByTestId('sound-toggle')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('sound-toggle')).toHaveCount(0)
+    // 시즌패스 (568번): 미션과 진행도가 보이고 보상에 돈이 없다.
+    await page.getByTestId('idle-pass').click()
+    await expect(page.getByTestId('pass-mission')).toHaveCount(6)
+    await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText(
+      '매도벽 100개 통과',
+    )
+    await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('73/100')
+    await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('30P')
+    await expect(page.getByTestId('pass-exp')).toHaveText('120 / 300P')
+    await expect(page.getByTestId('pass').locator('.idle-coin')).toHaveCount(0)
+    await page.getByRole('button', { name: '닫기 ✕' }).click()
+    await expect(page.getByTestId('pass')).toHaveCount(0)
     await page.getByRole('button', { name: '성장' }).click()
     await expect(page.getByTestId('idle-menu')).toBeVisible()
     // 전투력 하나만 보인다 (538번): 화력과 실제 벽 피해는 뺐다.

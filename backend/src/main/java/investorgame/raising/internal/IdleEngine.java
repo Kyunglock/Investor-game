@@ -852,14 +852,15 @@ class IdleEngine {
     // (532): the screen broke it at that hit and kept shooting.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
       earned += reward(c);
-      // 시즌패스 경험치 (529번): 벽 하나에 exp.wall.
-      engine.pass.gain(c, engine.pass.rule().exp().wall(), todayDate());
+      // 시즌패스 미션 (568번): 통과한 벽을 센다.
+      engine.pass.progress(c, "wall", 1, todayDate());
       double left = Math.max(0, s.damage - maxHp(s.wall));
       // 보스 클리어 보상 (549번): 벽 보상과 따로, 그 보스를 처음 깼을 때 한 번.
       if (bossWall(s.wall) && s.wall > s.bossCleared) {
         double money = Math.floor(reward(c) * BOSS_CLEAR_REWARDS);
         s.bossCleared = s.wall;
         s.bossRewardMoney = money;
+        engine.pass.progress(c, "boss", 1, todayDate());
         earned += money;
         c.diamonds += BOSS_CLEAR_DIAMONDS;
       }

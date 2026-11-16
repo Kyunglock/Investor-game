@@ -70,11 +70,12 @@ public record CompanyView(
    * @param endsAt 시즌이 끝나는 때(서버 시각, ms)
    * @param secondsLeft 끝날 때까지 남은 시간(초)
    * @param endingSoon 끝나기까지 하루가 안 남았다: 받지 않은 보상이 있으면 알려 준다
-   * @param exp 이번 시즌에 모은 패스 경험치
-   * @param expPerStep 한 단계에 드는 경험치
+   * @param points 이번 시즌에 모은 포인트 (568번)
+   * @param pointsPerStep 한 단계에 드는 포인트
    * @param step 지금 도달한 단계(0부터)
    * @param claimable 받을 수 있는 보상의 수
    * @param steps 단계마다의 보상, 1단계부터
+   * @param missions 포인트를 주는 미션과 그 진행도 (568번)
    * @param lastRewards 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다
    */
   public record Pass(
@@ -83,41 +84,43 @@ public record CompanyView(
       long endsAt,
       long secondsLeft,
       boolean endingSoon,
-      long exp,
-      int expPerStep,
+      long points,
+      int pointsPerStep,
       int step,
       int claimable,
       List<PassStep> steps,
+      List<PassMission> missions,
       List<PassReward> lastRewards) {}
 
   /**
-   * 시즌패스의 한 단계.
+   * 시즌패스의 미션 (568번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다.
    *
-   * @param diamonds 받는 다이아. 돈 단계면 0
-   * @param money 돈 단계면 지금 받으면 들어올 돈. 아니면 null
+   * @param code wall·boss·upgrade·draw·merge·attend
+   * @param title 화면에 적는 글: "매도벽 100개 통과"처럼 다음에 닿을 수가 들어 있다
+   * @param count 이번 시즌에 센 수
+   * @param target 다음에 포인트를 받는 수
+   * @param every 포인트를 받는 간격
+   * @param points target에 닿으면 받는 포인트
+   * @param earned 이 미션으로 이번 시즌에 받은 포인트
+   */
+  public record PassMission(
+      String code, String title, long count, long target, int every, int points, long earned) {}
+
+  /**
+   * 시즌패스의 한 단계. 돈은 주지 않는다 (568번).
+   *
+   * @param diamonds 받는 다이아
    * @param weapon 무기 하나를 더 받는다(등급은 뽑기처럼 정해진다)
    * @param cat 고양이 한 마리를 더 받는다
-   * @param reached 경험치가 이 단계에 닿았다
+   * @param reached 포인트가 이 단계에 닿았다
    * @param claimed 이미 받았다
    */
   public record PassStep(
-      int step,
-      long diamonds,
-      java.math.BigDecimal money,
-      boolean weapon,
-      boolean cat,
-      boolean reached,
-      boolean claimed) {}
+      int step, long diamonds, boolean weapon, boolean cat, boolean reached, boolean claimed) {}
 
   /** 받은 단계 보상 하나. 무기·고양이는 받은 것의 코드(없으면 null). */
   public record PassReward(
-      int step,
-      long diamonds,
-      java.math.BigDecimal money,
-      String weaponKind,
-      String weaponGrade,
-      String cat,
-      String catName) {}
+      int step, long diamonds, String weaponKind, String weaponGrade, String cat, String catName) {}
 
   /**
    * 상점 (decisions.md 541번): 게임 재화로만 사는 날마다의 상품. 한국 시간 자정에 남은 횟수가 다시 찬다.

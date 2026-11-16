@@ -538,7 +538,7 @@ class CompanyApiTest {
     assertThat(opened.read("$.attendance.claimable", Boolean.class)).isTrue();
     assertThat(opened.read("$.attendance.today", Integer.class)).isEqualTo(1);
     List<Integer> board = opened.read("$.attendance.board[*].diamonds");
-    assertThat(board).containsExactly(50, 0, 100, 0, 100, 100, 300);
+    assertThat(board).containsExactly(50, 50, 100, 50, 100, 100, 300);
     long diamonds = opened.read("$.diamonds.amount", Long.class);
     DocumentContext claimed =
         json(
@@ -582,34 +582,38 @@ class CompanyApiTest {
     assertThat(bought.read("$.shop.items[2].left", Integer.class)).isEqualTo(2);
   }
 
-  /** 시즌패스 (decisions.md 529번): 출석으로 얻은 경험치로 1단계를 받는다. */
+  /** 시즌패스 (decisions.md 529·568번): 미션을 깨면 포인트가 들어오고, 닿지 않은 단계는 받지 못한다. */
   @Test
-  void 시즌패스는_도달한_단계만_한_번_받는다() throws Exception {
+  void 시즌패스는_미션으로_포인트를_모으고_닿은_단계만_받는다() throws Exception {
     DocumentContext opened =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
     assertThat(opened.read("$.pass.step", Integer.class)).isZero();
+    assertThat(opened.read("$.pass.points", Long.class)).isZero();
+    assertThat(opened.read("$.pass.pointsPerStep", Integer.class)).isEqualTo(300);
     assertThat(opened.read("$.pass.steps.length()", Integer.class)).isEqualTo(30);
     assertThat(opened.read("$.pass.secondsLeft", Long.class)).isPositive();
+    List<String> missions = opened.read("$.pass.missions[*].code");
+    assertThat(missions).containsExactly("wall", "boss", "upgrade", "draw", "merge", "attend");
+    assertThat(opened.read("$.pass.missions[0].title", String.class)).isEqualTo("매도벽 50개 통과");
     postJson("/api/company/pass/claim", "{\"step\":1}").andExpect(status().isBadRequest());
     mvc.perform(post("/api/company/pass/claim").cookie(session)).andExpect(status().isBadRequest());
-    // 출석하면 패스 경험치 100: 1단계에 닿는다.
+    // 출석 미션: 하루에 100포인트. 한 단계에는 300이 든다.
     DocumentContext attended =
         json(
             mvc.perform(post("/api/company/attendance").cookie(session))
                 .andExpect(status().isOk()));
-    assertThat(attended.read("$.pass.exp", Long.class)).isEqualTo(100);
-    assertThat(attended.read("$.pass.step", Integer.class)).isEqualTo(1);
-    assertThat(attended.read("$.pass.claimable", Integer.class)).isEqualTo(1);
-    long diamonds = attended.read("$.diamonds.amount", Long.class);
-    DocumentContext claimed =
+    assertThat(attended.read("$.pass.points", Long.class)).isEqualTo(100);
+    assertThat(attended.read("$.pass.missions[5].count", Long.class)).isEqualTo(1);
+    assertThat(attended.read("$.pass.missions[5].earned", Long.class)).isEqualTo(100);
+    assertThat(attended.read("$.pass.step", Integer.class)).isZero();
+    assertThat(attended.read("$.pass.claimable", Integer.class)).isZero();
+    // 강화 미션: 산 단계만큼 센다.
+    DocumentContext upgraded =
         json(
-            mvc.perform(post("/api/company/pass/claim").cookie(session))
+            postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\",\"levels\":1}")
                 .andExpect(status().isOk()));
-    assertThat(claimed.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 50);
-    assertThat(claimed.read("$.pass.steps[0].claimed", Boolean.class)).isTrue();
-    assertThat(claimed.read("$.pass.lastRewards[0].step", Integer.class)).isEqualTo(1);
+    assertThat(upgraded.read("$.pass.missions[2].count", Long.class)).isEqualTo(1);
     postJson("/api/company/pass/claim", "{\"step\":1}").andExpect(status().isBadRequest());
-    postJson("/api/company/pass/claim", "{\"step\":2}").andExpect(status().isBadRequest());
     // 본 게임에서는 경험치를 채우거나 시즌을 넘길 수 없다.
     postJson("/api/sandbox/pass-exp", "{\"exp\":1000}").andExpect(status().isBadRequest());
     mvc.perform(post("/api/sandbox/next-season").cookie(session))

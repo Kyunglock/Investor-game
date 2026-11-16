@@ -1,5 +1,6 @@
 import type { Company } from '@web/api/client'
 import { DiamondIcon } from '@web/features/raising/DiamondIcon'
+import { diamondText } from '@web/features/raising/gachaRules'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 import { Sheet } from '../app/Sheet'
@@ -10,18 +11,15 @@ import {
   focusStep,
   leftText,
   milestone,
+  missionProgress,
   type PassStep,
   rewardsText,
-  stepAmount,
   stepProgress,
   stepState,
 } from './pass'
 
-/** 패스 경험치를 주는 곳 (529번). 얼마씩인지는 서버 설정이라 적지 않는다. */
-const EXP_SOURCES = ['매도벽 돌파', '멘탈 보호 스테이지', 'EX 디펜스', '출석']
-
 /**
- * 시즌패스 (decisions.md 529번). 돌파 화면 위쪽의 패스 단추(받을 보상의 수를 단다)와 시즌패스 시트다. 스스로 뜨지 않는다: 단추로 연다.
+ * 시즌패스 (decisions.md 529·568번). 미션을 깨서 포인트를 모으면 단계 보상을 받는다. 돌파 화면 위쪽의 패스 단추(받을 보상의 수를 단다)와 시즌패스 시트다. 스스로 뜨지 않는다: 단추로 연다.
  */
 export function IdlePass({ company }: { company: Company }) {
   const pass = company.pass
@@ -118,7 +116,7 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
           <i style={{ width: `${(progress.have / progress.need) * 100}%` }} />
         </div>
         <small className="idle-pass-exp" data-testid="pass-exp">
-          {progress.full ? '모두 달성' : `${progress.have} / ${progress.need}`}
+          {progress.full ? '모두 달성' : `${progress.have} / ${progress.need}P`}
         </small>
       </div>
       <ol className="idle-pass-steps" ref={list} data-testid="pass-steps" aria-label="단계 보상">
@@ -147,23 +145,36 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
           모두 받기 <small className="idle-pass-all-count">{pass.claimable}개</small>
         </button>
       )}
-      <p className="idle-pass-hint" data-testid="pass-hint">
-        패스 경험치는 여기서 모아요
-        <br />
-        {EXP_SOURCES.map((source, i) => (
-          <span key={source}>
-            {i > 0 && ' · '}
-            <span className="idle-pass-source">{source}</span>
-          </span>
-        ))}
-      </p>
+      {/* 미션 (568번): 깨면 포인트가 들어온다. 문턱에 닿으면 다음 문턱으로 넘어가며 되풀이된다. */}
+      <h4 className="idle-pass-missions-title">미션 · 깨면 포인트를 받아요</h4>
+      <ul className="idle-pass-missions" data-testid="pass-missions">
+        {pass.missions.map((mission) => {
+          const progress = missionProgress(mission)
+          return (
+            <li key={mission.code} data-testid="pass-mission" data-code={mission.code}>
+              <span className="idle-pass-mission-name">{mission.title}</span>
+              <span className="idle-pass-mission-count">{progress.text}</span>
+              <b className="idle-pass-mission-points">{mission.points}P</b>
+              <div
+                className="idle-pass-bar"
+                role="progressbar"
+                aria-label={`${mission.title} 진행도`}
+                aria-valuemin={0}
+                aria-valuemax={mission.target}
+                aria-valuenow={mission.count}
+              >
+                <i style={{ width: `${progress.ratio * 100}%` }} />
+              </div>
+            </li>
+          )
+        })}
+      </ul>
     </Sheet>
   )
 }
 
 function StepCard({ step, busy, onClaim }: { step: PassStep; busy: boolean; onClaim: () => void }) {
   const state = stepState(step)
-  const amount = stepAmount(step)
   return (
     <li
       className={`is-${state} ${milestone(step) ? 'is-mile' : ''}`}
@@ -173,18 +184,12 @@ function StepCard({ step, busy, onClaim }: { step: PassStep; busy: boolean; onCl
     >
       <small className="idle-pass-no">{step.step}단계</small>
       <span className="idle-pass-rewards">
-        {amount != null && (
+        {step.diamonds > 0 && (
           <span className="idle-pass-reward">
-            {step.diamonds > 0 ? (
-              <DiamondIcon />
-            ) : (
-              <span className="idle-coin" aria-hidden="true">
-                ₩
-              </span>
-            )}
+            <DiamondIcon />
             <b>
-              <span className="sr-only">{step.diamonds > 0 ? '다이아 ' : '돈 '}</span>
-              {amount}
+              <span className="sr-only">다이아 </span>
+              {diamondText(step.diamonds)}
             </b>
           </span>
         )}

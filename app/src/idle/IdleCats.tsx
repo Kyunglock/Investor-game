@@ -25,7 +25,7 @@ const skillLabel = (cat: Cat) =>
 const COLUMNS = 6
 
 /**
- * 고양이 메뉴 (decisions.md 488·491·493·530번): 위의 출전 칸 넷에 세우고, 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그
+ * 고양이 메뉴 (decisions.md 488·491·493·530·567번): 위의 출전 칸 넷에 세우고, 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그
  * 고양이의 등급·고유 스킬 설명과 든 무기가 나온다 (501번). 무기는 같은 패널에서 바꾸고 뽑기는 상점 탭이다(541번). 결과는 서버가 정한다.
  * 무기 탭을 여기에 합쳤다 (560번): 든 무기를 누르면 고양이 목록 자리에 장비 목록이 펴져 들리고 합친다.
  */
@@ -87,26 +87,52 @@ export function IdleCats({
     void place(code, target)
   })
   const canMerge = mergeable(company).length > 0
+  const weaponOf = (c: Cat) => company.weapons?.find((w) => same(w, c.weapon)) ?? DEFAULT_WEAPON
+  /**
+   * 무기 칸 (567번): 바로 위 고양이(code가 null이면 사장냥)가 드는 무기. 장비 목록에서 무기를 끌어 놓으면 그 고양이가 장착하고, 누르면 그
+   * 고양이의 장비 목록이 펴진다. 든 무기가 없으면 기본 권총을 흐리게 보인다.
+   */
+  const gunSlot = (code: CatCode | null, name: string, held: Weapon, bare: boolean) => (
+    <button
+      type="button"
+      className={`idle-gun-slot ${bare ? 'is-bare' : ''} ${gearOpen && picked === code ? 'is-picked' : ''}`}
+      data-testid="gun-slot"
+      data-code={code ?? 'boss'}
+      data-kind={held.kind}
+      data-grade={held.grade}
+      data-loadout-target={`wearer:${code ?? 'boss'}`}
+      aria-label={`${name}의 무기 ${bare ? '기본 권총' : `${held.name} ${held.gradeName}`} · 눌러서 바꾸기`}
+      onClick={() => {
+        pick(code)
+        if (!gearOpen) setGearOpen(true)
+      }}
+    >
+      <GunSprite kind={held.kind} grade={held.grade} width={38} />
+      <i className={`idle-grade idle-gun-slot-grade ${GRADE_BADGE[held.grade]}`}>
+        {bare ? '기본' : held.gradeName}
+      </i>
+    </button>
+  )
   return (
     <>
       <div className="loadout-team">
         <p className="idle-subtitle">
-          출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 사장냥은 늘 함께 싸워요
+          출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 윗줄은 고양이, 아랫줄은 그 고양이의 무기
         </p>
+        {/* 출전 칸 (567번): 다섯 칸 두 줄. 윗줄은 고양이 칸, 아랫줄은 바로 위 고양이가 드는 무기 칸이다. 이름은 적지 않는다. */}
         <ul className="idle-cat-field-row" aria-label="출전 칸">
           <li>
             <button
               type="button"
               className={`idle-cat-boss ${cat ? '' : 'is-picked'}`}
               data-testid="cat-boss"
-              data-loadout-target="wearer:boss"
               aria-label={`${BOSS_NAME} · 늘 출전`}
               aria-pressed={!cat}
               onClick={() => pick(null)}
             >
               <Portrait />
-              <small className="idle-cat-slot-name">{BOSS_NAME}</small>
             </button>
+            {gunSlot(null, BOSS_NAME, hero.weapon, false)}
           </li>
           {Array.from({ length: idle?.fieldSlots ?? 0 }, (_, i) => fielded[i] ?? null).map(
             (c, i) => (
@@ -117,7 +143,7 @@ export function IdleCats({
                     type="button"
                     className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''} ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:${c.code}` ? 'is-drop-over' : ''}`}
                     data-testid="cat-slot"
-                    data-loadout-target={gearOpen ? `wearer:${c.code}` : `slot:${c.code}`}
+                    data-loadout-target={`slot:${c.code}`}
                     data-code={c.code}
                     aria-label={`출전 ${i + 1}번 ${c.name}`}
                     onClick={() => {
@@ -139,7 +165,6 @@ export function IdleCats({
                       </span>
                     )}
                     <em className={`idle-cat-grade idle-cat-grade-tag is-${c.grade}`}>{c.grade}</em>
-                    <small className="idle-cat-slot-name">{c.name}</small>
                   </button>
                 ) : (
                   <button
@@ -155,6 +180,11 @@ export function IdleCats({
                   >
                     ＋
                   </button>
+                )}
+                {c ? (
+                  gunSlot(c.code, c.name, weaponOf(c), !c.weapon)
+                ) : (
+                  <span className="idle-gun-slot is-empty" aria-hidden="true" />
                 )}
               </li>
             ),

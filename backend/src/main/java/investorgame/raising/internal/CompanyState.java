@@ -232,16 +232,17 @@ class CompanyState {
   /** 시즌패스 (529번): 지금 진행 중인 시즌 번호. 시즌이 바뀌면 진행도를 비운다. 없던 저장은 0이라 처음 볼 때 지금 시즌으로 맞춘다. */
   int passSeason;
 
-  /** 이번 시즌에 모은 패스 경험치. */
+  /** 이번 시즌에 모은 시즌패스 포인트 (568번). 저장 이름은 옛 경험치 때의 것을 그대로 쓴다. */
   long passExp;
 
   /** 이번 시즌에 보상을 받은 단계. */
   List<Integer> passClaimed = new ArrayList<>();
 
-  /** 멘탈 보호 스테이지로 패스 경험치를 얻은 날(한국 시간)과 그날 얻은 양: 하루 상한을 센다. */
-  String passStageDay;
+  /** 이번 시즌에 미션마다 센 수 (568번): 미션 코드 → 수. 시즌이 바뀌면 비운다. */
+  Map<String, Long> passMissions = new LinkedHashMap<>();
 
-  int passStageExp;
+  /** 시즌패스 규칙의 판 (568번): 2보다 작으면 단계에 100이 들던 때의 저장이라, 처음 볼 때 포인트를 새 단계 값에 맞춰 늘린다. */
+  int passRules;
 
   /** 테스트판에서 넘긴 시즌 수. */
   int passSeasonOffset;
@@ -254,7 +255,6 @@ class CompanyState {
   static class PassReward {
     int step;
     long diamonds;
-    double money;
     String weaponKind;
     String weaponGrade;
     String cat;

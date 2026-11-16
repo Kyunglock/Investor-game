@@ -5,10 +5,9 @@ import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { rewardText } from './attendance'
 import { IdleGacha } from './IdleGacha'
 import { IdleIcon } from './icons'
-import { freeLeft, giveText, type ShopItem, shopBlock } from './shop'
+import { freeLeft, giveText, rewardText, type ShopItem, shopBlock } from './shop'
 
 /**
  * 상점 탭 (decisions.md 541번): 위에는 고양이·무기 뽑기(전에는 고양이 탭에 있었다), 아래에는 날마다의 상품이다. 실제 돈은 쓰지 않고 다이아와

@@ -55,8 +55,8 @@ class RewardsEngine {
     c.attendCount++;
     c.attendDay = idle.today();
     c.lastAttend = reward;
-    // 출석하면 시즌패스 경험치 (529번).
-    engine.pass.gain(c, rule().passExp(), idle.todayDate());
+    // 출석은 시즌패스 미션이다 (568번).
+    engine.pass.progress(c, "attend", 1, idle.todayDate());
   }
 
   /** 테스트판: 하루가 지난 셈 친다. 오늘 받은 출석을 다시 받고 상점의 산 횟수가 지워진다. */
@@ -165,14 +165,19 @@ class RewardsEngine {
             : new CompanyView.AttendanceReward(r.day, r.diamonds, CompanyView.money(r.money)));
   }
 
-  /** 멘탈 보호 스테이지를 깼다: 패스 경험치 (529번). */
-  void stageCleared(CompanyState c) {
-    engine.pass.stageCleared(c, idle.todayDate());
+  /** 강화를 levels번 했다: 시즌패스 미션 (568번). */
+  void upgraded(CompanyState c, int levels) {
+    engine.pass.progress(c, "upgrade", levels, idle.todayDate());
   }
 
-  /** EX 디펜스를 했다: 패스 경험치 (529번). */
-  void exDone(CompanyState c) {
-    engine.pass.gain(c, engine.pass.rule().exp().ex(), idle.todayDate());
+  /** 고양이나 무기를 count번 뽑았다: 시즌패스 미션 (568번). */
+  void drew(CompanyState c, int count) {
+    engine.pass.progress(c, "draw", count, idle.todayDate());
+  }
+
+  /** 무기를 한 번 합쳤다: 시즌패스 미션 (568번). */
+  void merged(CompanyState c) {
+    engine.pass.progress(c, "merge", 1, idle.todayDate());
   }
 
   /**
@@ -209,10 +214,6 @@ class RewardsEngine {
       r.step = at;
       r.diamonds = reward.diamonds();
       c.diamonds += r.diamonds;
-      if (reward.money()) {
-        r.money = money(c, engine.pass.rule().moneyMinutes());
-        c.capital += r.money;
-      }
       if (reward.weapon()) {
         engine.mental.initWeapons(c);
         CompanyState.Pulled weapon = engine.mental.drawOne(c, random);
@@ -228,7 +229,7 @@ class RewardsEngine {
     c.lastPass = got;
   }
 
-  /** 테스트판: 패스 경험치를 더한다. */
+  /** 테스트판: 시즌패스 포인트를 더한다. */
   void addPassExp(CompanyState c, long exp) {
     engine.pass.gain(c, exp, idle.todayDate());
   }
@@ -257,14 +258,25 @@ class RewardsEngine {
       if (at <= reached && !claimed) claimable++;
       steps.add(
           new CompanyView.PassStep(
-              at,
-              reward.diamonds(),
-              reward.money() ? CompanyView.money(money(c, rule.moneyMinutes())) : null,
-              reward.weapon(),
-              reward.cat(),
-              at <= reached,
-              claimed));
+              at, reward.diamonds(), reward.weapon(), reward.cat(), at <= reached, claimed));
     }
+    // 미션 (568번): 이번 시즌에 센 수와 다음에 닿을 수, 그때 받는 포인트.
+    List<CompanyView.PassMission> missions =
+        rule.missions().stream()
+            .map(
+                m -> {
+                  long count = c.passMissions.getOrDefault(m.code(), 0L);
+                  long target = (count / m.every() + 1) * m.every();
+                  return new CompanyView.PassMission(
+                      m.code(),
+                      m.title().replace("{n}", String.format("%,d", target)),
+                      count,
+                      target,
+                      m.every(),
+                      m.points(),
+                      count / m.every() * m.points());
+                })
+            .toList();
     List<CompanyView.PassReward> last =
         (c.lastPass == null ? List.<CompanyState.PassReward>of() : c.lastPass)
             .stream()
@@ -273,7 +285,6 @@ class RewardsEngine {
                         new CompanyView.PassReward(
                             r.step,
                             r.diamonds,
-                            CompanyView.money(r.money),
                             r.weaponKind,
                             r.weaponGrade,
                             r.cat,
@@ -286,10 +297,11 @@ class RewardsEngine {
         left,
         left <= DAY_SECONDS,
         c.passExp,
-        rule.expPerStep(),
+        rule.pointsPerStep(),
         reached,
         claimable,
         steps,
+        missions,
         last);
   }
 }

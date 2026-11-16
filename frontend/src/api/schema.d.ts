@@ -625,7 +625,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 테스트판에서 시즌패스 경험치를 더한다 (decisions.md 529번) */
+        /** 테스트판에서 시즌패스 포인트를 더한다 (decisions.md 529·568번) */
         post: operations["addSandboxPassExp"];
         delete?: never;
         options?: never;
@@ -855,7 +855,7 @@ export interface components {
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
             };
-            /** @description 시즌패스 (decisions.md 529번). 4주짜리 시즌 동안 플레이로 패스 경험치를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이다. 시즌이 끝나면 받지 않은 보상은 사라진다 */
+            /** @description 시즌패스 (decisions.md 529·568번). 4주짜리 시즌 동안 미션을 깨서 포인트를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이고 보상에 돈은 없다. 시즌이 끝나면 받지 않은 보상은 사라지고 미션도 처음부터 센다 */
             pass: {
                 /** @description 시즌 번호 */
                 season: number;
@@ -874,11 +874,11 @@ export interface components {
                 endingSoon: boolean;
                 /**
                  * Format: int64
-                 * @description 이번 시즌에 모은 패스 경험치
+                 * @description 이번 시즌에 모은 포인트
                  */
-                exp: number;
-                /** @description 한 단계에 드는 경험치 */
-                expPerStep: number;
+                points: number;
+                /** @description 한 단계에 드는 포인트 */
+                pointsPerStep: number;
                 /** @description 지금 도달한 단계(0부터) */
                 step: number;
                 /** @description 받을 수 있는 보상의 수 */
@@ -888,26 +888,49 @@ export interface components {
                     step: number;
                     /**
                      * Format: int64
-                     * @description 받는 다이아. 돈 단계면 0
+                     * @description 받는 다이아
                      */
                     diamonds: number;
-                    /** @description 돈 단계면 지금 받으면 들어올 돈(회사의 초당 수입 30분어치). 아니면 null */
-                    money?: number | null;
                     /** @description 무기 하나를 더 받는다. 등급은 뽑기처럼 정해진다 */
                     weapon: boolean;
                     /** @description 고양이 한 마리를 더 받는다 */
                     cat: boolean;
-                    /** @description 경험치가 이 단계에 닿았다 */
+                    /** @description 포인트가 이 단계에 닿았다 */
                     reached: boolean;
                     /** @description 이미 받았다 */
                     claimed: boolean;
+                }[];
+                /** @description 포인트를 주는 미션과 진행도 (568번). 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 받고, 끝없이 되풀이된다 */
+                missions: {
+                    /** @description wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석) */
+                    code: string;
+                    /** @description 화면에 적는 글. "매도벽 100개 통과"처럼 다음에 닿을 수가 들어 있다 */
+                    title: string;
+                    /**
+                     * Format: int64
+                     * @description 이번 시즌에 센 수
+                     */
+                    count: number;
+                    /**
+                     * Format: int64
+                     * @description 다음에 포인트를 받는 수
+                     */
+                    target: number;
+                    /** @description 포인트를 받는 간격 */
+                    every: number;
+                    /** @description target에 닿으면 받는 포인트 */
+                    points: number;
+                    /**
+                     * Format: int64
+                     * @description 이 미션으로 이번 시즌에 받은 포인트
+                     */
+                    earned: number;
                 }[];
                 /** @description 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다 */
                 lastRewards: {
                     step: number;
                     /** Format: int64 */
                     diamonds: number;
-                    money: number;
                     weaponKind?: string | null;
                     weaponGrade?: string | null;
                     /** @description 받은 고양이의 코드 */
@@ -943,7 +966,7 @@ export interface components {
                     money: number;
                 } | null;
             };
-            /** @description 출석 보상 (decisions.md 528번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다 */
+            /** @description 출석 보상 (decisions.md 528·564번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다. 화면은 들어오면 저절로 받는다. 보상은 다이아뿐이라 돈 칸의 값(incomeMinutes·money)은 늘 0·null이다 */
             attendance: {
                 /** @description 오늘 받을 칸(1부터). 오늘 이미 받았으면 오늘 받은 칸 */
                 today: number;

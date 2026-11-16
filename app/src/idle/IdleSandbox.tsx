@@ -262,7 +262,7 @@ export function IdleSandbox({ company }: { company: Company }) {
                 data-testid="idle-sandbox-pass-exp"
                 onClick={() => void run(() => store().addSandboxPassExp(500))}
               >
-                패스 경험치 +500
+                패스 포인트 +500
               </button>
               <button
                 type="button"

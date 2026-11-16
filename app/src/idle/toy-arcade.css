@@ -1,6 +1,6 @@
 /* 승인 A안: 파란 토이 콘솔, 주황 선택 키, 초록 강화 키. */
 .idle-home {
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   background: #1555bb;
 }
 .idle-home > .idle-canvas {
@@ -58,45 +58,41 @@
     0 2px 0 #bd7100,
     inset 0 0 0 2px #ffd34b;
 }
-.idle-toolbar {
-  grid-row: 2;
-  z-index: 4;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  padding: 3px 8px 5px;
-  background: linear-gradient(#ffedb0, #f8cd73);
-  border-inline: 3px solid #2378df;
-}
-.idle-toolbar .idle-options,
-.idle-toolbar .idle-quick {
-  position: relative;
-  inset: auto;
-  flex-direction: row;
-  gap: 10px;
-}
-.idle-toolbar .idle-options-open,
-.idle-toolbar .idle-quick-button {
-  width: 44px;
-  height: 36px;
-  border: 2px solid #94dfff;
-  border-radius: 11px;
+/* 위 줄 오른쪽 끝의 시즌패스·설정 단추 (565번): 칩과 같은 높이의 작은 파란 키. 누르는 자리는 ::after로 넓힌다. */
+.idle-hud .idle-options-open,
+.idle-hud .idle-quick-button {
+  flex-shrink: 0;
+  width: 32px;
+  height: 30px;
+  border: 1.5px solid #94dfff;
+  border-radius: 9px;
   background: linear-gradient(#50b8ff, #1267dc 60%, #084bad);
   color: #fff3bf;
   box-shadow:
     inset 0 2px 0 #ffffff88,
-    0 3px 0 #064293;
+    0 2px 0 #064293;
+  font-size: 18px;
 }
-.idle-toolbar .idle-options-panel {
+.idle-hud .idle-options-open {
+  position: relative;
+}
+.idle-hud .idle-options-open::after,
+.idle-hud .idle-quick-button::after {
+  content: "";
   position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
+  inset: -7px -2px;
+}
+.idle-hud .idle-options-open svg {
+  width: 18px;
+  height: 18px;
+}
+.idle-hud .idle-options-panel {
   border: 3px solid #287be2;
   background: #fff7df;
   box-shadow: 0 4px 0 #084293;
+  color: #765127;
+  text-shadow: none;
 }
-
 .idle-nav {
   padding: 8px 7px max(10px, env(safe-area-inset-bottom));
   gap: 5px;
@@ -288,7 +284,7 @@
   box-shadow: inset 0 2px 0 #edffc5;
 }
 .idle-home > .idle-nav {
-  grid-row: 3;
+  grid-row: 2;
 }
 .idle-hud .idle-cash-lines small {
   color: #ffe399;
