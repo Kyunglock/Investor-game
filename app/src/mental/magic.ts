@@ -1,4 +1,12 @@
 import type { Spell } from './cards'
+import {
+  type FallSpell,
+  type FlowSpell,
+  isFallSpell,
+  isFlowSpell,
+  ramp,
+  SPELLBOOK,
+} from './spellbook'
 
 /**
  * 물·메테오·번개·땅 마법 (decisions.md 392번, 377번의 "총알에 덤으로 붙는 마법"을 뒤집음. 땅은 433번). 마법은 총알과 따로, 제 주기마다 스스로 나간다. 처음 고르면 Lv.1이고
@@ -217,14 +225,59 @@ export const lightningStats = (level: number) => at(LIGHTNING, level)
 export const earthStats = (level: number) => at(EARTH, level)
 export const iceStats = (level: number) => at(ICE, level)
 export const windStats = (level: number) => at(WIND, level)
-/** 물처럼 날아가는 마법 셋(물·얼음·바람)의 수치. */
-export const flowStats = (spell: 'water' | 'ice' | 'wind', level: number) =>
-  spell === 'ice' ? iceStats(level) : spell === 'wind' ? windStats(level) : waterStats(level)
+/** 물처럼 날아가는 마법: 물·얼음·바람과 spellbook의 flow 마법들 (563번). */
+export type Flow = 'water' | 'ice' | 'wind' | FlowSpell
+/** 메테오처럼 떨어지는 마법: 메테오와 spellbook의 fall 마법들 (563번). */
+export type Fall = 'meteor' | FallSpell
+
+/** 물처럼 날아가는 마법의 수치. spellbook의 마법은 표의 Lv.1·Lv.5 값 사이를 고르게 나눈다. */
+export function flowStats(spell: Flow, level: number): WaterStats {
+  if (spell === 'ice') return iceStats(level)
+  if (spell === 'wind') return windStats(level)
+  if (spell === 'water') return waterStats(level)
+  const b = SPELLBOOK[spell]
+  return {
+    cooldown: ramp(b.cooldown, level),
+    damage: ramp(b.damage, level),
+    half: ramp(b.half, level),
+    speed: b.speed,
+    pierce: b.form !== 'drop',
+    splash: ramp(b.splash, level),
+    slowFactor: b.slowFactor,
+    slowSeconds: b.slowSeconds,
+    stunSeconds: ramp(b.stun, level),
+    pushSeconds: ramp(b.push, level),
+  }
+}
+
+/** 떨어지는 마법의 수치: 메테오의 수치에 느려짐이 더 있다. */
+export interface FallStats extends MeteorStats {
+  slowFactor: number
+  slowSeconds: number
+}
+
+export function fallStats(spell: Fall, level: number): FallStats {
+  if (spell === 'meteor') return { ...meteorStats(level), slowFactor: 1, slowSeconds: 0 }
+  const b = SPELLBOOK[spell]
+  return {
+    cooldown: ramp(b.cooldown, level),
+    damage: ramp(b.damage, level),
+    radius: ramp(b.radius, level),
+    count: b.count[Math.max(1, Math.min(MAGIC_MAX_LEVEL, level)) - 1],
+    warning: 0.5,
+    stunSeconds: ramp(b.stun, level),
+    slowFactor: b.slowFactor,
+    slowSeconds: b.slowSeconds,
+  }
+}
+
+export const isFlow = (spell: Spell): spell is Flow =>
+  spell === 'water' || spell === 'ice' || spell === 'wind' || isFlowSpell(spell)
+export const isFall = (spell: Spell): spell is Fall => spell === 'meteor' || isFallSpell(spell)
 
 export function magicCooldown(magic: Spell, level: number): number {
-  if (magic === 'water' || magic === 'ice' || magic === 'wind')
-    return flowStats(magic, level).cooldown
-  if (magic === 'meteor') return meteorStats(level).cooldown
+  if (isFlow(magic)) return flowStats(magic, level).cooldown
+  if (isFall(magic)) return fallStats(magic, level).cooldown
   if (magic === 'earth') return earthStats(level).cooldown
   return lightningStats(level).cooldown
 }
@@ -237,17 +290,10 @@ export const MAGIC_RETRY_SECONDS = 0.25
  * 제 자리에서 쏜다. 처음 배우거나 레벨이 오르면 곧바로 한 번 나간다.
  */
 export class MagicClock {
-  private readonly next: Record<Spell, number> = {
-    water: 0,
-    meteor: 0,
-    lightning: 0,
-    earth: 0,
-    ice: 0,
-    wind: 0,
-  }
+  private readonly next: Partial<Record<Spell, number>> = {}
 
   due(magic: Spell, level: number, elapsed: number): boolean {
-    return level > 0 && elapsed >= this.next[magic]
+    return level > 0 && elapsed >= (this.next[magic] ?? 0)
   }
 
   cast(magic: Spell, level: number, elapsed: number) {

@@ -48,9 +48,9 @@ class IdleEngine {
     return wall % BOSS_EVERY == 0;
   }
 
-  // Credit buckets: the bullet, the six cat skills, the buy barrage (decisions.md 503), and the
+  // Credit buckets: the bullet, the fifteen cat skills, the buy barrage (decisions.md 503), and the
   // buy wall's own buy orders (514).
-  private static final int SKILLS = 6;
+  private static final int SKILLS = 15;
   private static final int KINDS = SKILLS + 3;
   private static final int BARRAGE = SKILLS + 1;
   private static final int BUY = SKILLS + 2;
@@ -72,12 +72,14 @@ class IdleEngine {
   // the fastest (buyWall.ts shotSeconds - shotJitter).
   private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;
   // Matches the app's mental/assault.ts idleThreat.
-  private static final double THREAT_HP = 760;
+  // Halved with the wall health (562) so the buy side's scale stays what it was.
+  private static final double THREAT_HP = 380;
   // Wall health (518): base + linear x depth + square x depth^2, every 50th wall (the boss, 550) x
   // BOSS_HP.
-  private static final double HP_BASE = 20;
-  private static final double HP_LINEAR = 12;
-  private static final double HP_SQUARE = 0.2;
+  // Halved in 562: 20 + 12 x depth + 0.2 x depth^2 before.
+  private static final double HP_BASE = 10;
+  private static final double HP_LINEAR = 6;
+  private static final double HP_SQUARE = 0.1;
   private static final double BOSS_HP = 3;
 
   /**
@@ -106,13 +108,46 @@ class IdleEngine {
   // bolt and one chain per lightning stroke). The level follows the cat's level.
   private static final int SKILL_MAX_LEVEL = 5;
   private static final int SKILL_CAT_LEVELS = 10;
+
+  /** A stat that changes evenly from its level 1 value to its level 5 value (563). */
+  private static double[] ramp(double from, double to) {
+    double[] values = new double[SKILL_MAX_LEVEL];
+    for (int i = 0; i < values.length; i++) values[i] = from + (to - from) * i / 4;
+    return values;
+  }
+
+  private static double[] hits(double... perLevel) {
+    return perLevel;
+  }
+
+  private static final double[] ONE_HIT = {1, 1, 1, 1, 1};
+  // The first six keep their own tables. The nine after them (563) are the app's
+  // mental/spellbook.ts: cooldown and damage ramp from level 1 to level 5, and a falling spell
+  // (hail, blossom, bomb) lands as many times as it drops.
+  private static final String[] CODES = {
+    "water", "meteor", "bolt", "ram", "ice", "wind", "fire", "poison", "light", "dark", "sand",
+    "star", "hail", "blossom", "bomb"
+  };
+  private static final String[] NAMES = {
+    "물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬", "얼음 스킬", "바람 스킬", "불 스킬", "독 스킬", "빛 스킬", "어둠 스킬", "모래 스킬",
+    "별 스킬", "우박 스킬", "꽃비 스킬", "폭탄 스킬"
+  };
   private static final double[][] COOLDOWNS = {
     {2.4, 2.1, 1.8, 1.6, 1.4},
     {3.6, 3.3, 3, 2.8, 2.6},
     {2.6, 2.3, 2, 1.8, 1.6},
     {3.6, 3.2, 3, 2.8, 2.6},
     {3.2, 2.9, 2.6, 2.4, 2.2},
-    {2.8, 2.5, 2.2, 2, 1.8}
+    {2.8, 2.5, 2.2, 2, 1.8},
+    ramp(3, 2.2),
+    ramp(2.2, 1.4),
+    ramp(3.4, 2.4),
+    ramp(3, 2.2),
+    ramp(2.6, 1.8),
+    ramp(2, 1.3),
+    ramp(3.4, 2.6),
+    ramp(3, 2.2),
+    ramp(5, 3.8)
   };
   private static final double[][] SKILL_DAMAGE = {
     {1.5, 2, 2.6, 3, 3.4},
@@ -120,18 +155,34 @@ class IdleEngine {
     {2.5, 3.5, 4.5, 5.2, 6},
     {1.2 * 3.4, 1.6 * 3.6, 2.1 * 3.8, 2.5 * 4, 2.9 * 4.2},
     {3.2, 4.4, 5.6, 6.6, 7.6},
-    {1.8, 2.4, 3.1, 3.6, 4.1}
+    {1.8, 2.4, 3.1, 3.6, 4.1},
+    ramp(2.4, 5.6),
+    ramp(1.2, 2.8),
+    ramp(3.6, 8.4),
+    ramp(2.2, 5),
+    ramp(1.5, 3.5),
+    ramp(1.4, 3.2),
+    ramp(2, 2.8),
+    ramp(1.6, 2.4),
+    ramp(9, 20)
   };
   private static final double[][] SKILL_HITS = {
-    {1, 1, 1, 1, 1},
+    ONE_HIT,
     {1, 1, 3, 3, 4},
     {2, 2, 2, 3, 3},
-    {1, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1}
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    hits(2, 2, 3, 4, 5),
+    hits(2, 2, 3, 3, 4),
+    ONE_HIT
   };
-  private static final String[] CODES = {"water", "meteor", "bolt", "ram", "ice", "wind"};
-  private static final String[] NAMES = {"물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬", "얼음 스킬", "바람 스킬"};
   // Cats (decisions.md 488, 492, 493): each has a trait for its own gun. Drawn with a ticket.
   private static final List<String> CATS =
       List.of(
@@ -234,17 +285,19 @@ class IdleEngine {
   // grade cat has one and an S grade cat has two.
   private static final Map<String, int[]> SKILLED =
       Map.ofEntries(
+          // A grade: one skill each.
           Map.entry("night", new int[] {1}),
           Map.entry("snow", new int[] {4}),
           Map.entry("panda", new int[] {3}),
           Map.entry("ocean", new int[] {0}),
-          Map.entry("rose", new int[] {2}),
+          Map.entry("rose", new int[] {13}),
           Map.entry("tiger", new int[] {5}),
-          Map.entry("siam", new int[] {1}),
-          Map.entry("star", new int[] {1, 5}),
-          Map.entry("silver", new int[] {3, 2}),
-          Map.entry("wisteria", new int[] {2, 0}),
-          Map.entry("frost", new int[] {4, 0}));
+          Map.entry("siam", new int[] {10}),
+          // S grade: two each. No two cats share a skill (563): fifteen skills, fifteen slots.
+          Map.entry("star", new int[] {11, 8}),
+          Map.entry("silver", new int[] {2, 14}),
+          Map.entry("wisteria", new int[] {7, 9}),
+          Map.entry("frost", new int[] {12, 6}));
   private static final int[] NO_SKILLS = {};
   private static final int[][] CAT_SKILLS =
       CATS.stream().map(code -> SKILLED.getOrDefault(code, NO_SKILLS)).toArray(int[][]::new);
@@ -537,7 +590,7 @@ class IdleEngine {
         total +=
             shooters.getFirst().damage()
                 * SKILL_DAMAGE[skill][level]
-                * (skill == 1 ? SKILL_HITS[skill][level] : 1)
+                * (skill == 1 || skill >= 12 ? SKILL_HITS[skill][level] : 1)
                 / COOLDOWNS[skill][level];
       }
     }

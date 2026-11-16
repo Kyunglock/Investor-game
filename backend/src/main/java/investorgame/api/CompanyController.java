@@ -77,7 +77,8 @@ class CompanyController {
       @Positive long wall,
       @NotNull
           @jakarta.validation.constraints.Pattern(
-              regexp = "bullet|water|meteor|bolt|ram|ice|wind|barrage|buy")
+              regexp =
+                  "bullet|water|meteor|bolt|ram|ice|wind|fire|poison|light|dark|sand|star|hail|blossom|bomb|barrage|buy")
           String kind,
       @Min(1) @Max(1000) int count,
       @PositiveOrZero @jakarta.validation.constraints.DecimalMax("1000000000000") Double damage,

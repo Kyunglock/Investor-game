@@ -39,6 +39,7 @@ import {
   RAM_ART,
   SKILL_MARK,
   skillMarkKey,
+  spellKey,
   WALL_H,
   WALL_LABEL_STYLE,
 } from './art'
@@ -55,6 +56,7 @@ import {
   cellShares,
   climbSpeed,
   IDLE_ORDER_SPEED,
+  IDLE_SELL_POWER,
   idleAssaultSpec,
   MID_BOSS_NAME,
   pickFlow,
@@ -116,14 +118,18 @@ import {
   densest,
   type EarthStats,
   earthStats,
+  type Fall,
+  type Flow,
+  fallStats,
   flowStats,
+  isFall,
+  isFlow,
   type LightningStats,
   lightningPlan,
   lightningStats,
   MagicClock,
   magicTier,
   meteorFalloff,
-  meteorStats,
   nearestTo,
   ramSpeed,
   siegeTarget,
@@ -133,6 +139,7 @@ import {
 import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
+import { EXTRA_SPELLS, type ExtraSpell, type FallSpell, isExtraSpell, SPELLBOOK } from './spellbook'
 import { wallOffset } from './stageArt'
 import {
   IDLE_RAID,
@@ -420,8 +427,8 @@ interface WaterShot {
   depth: number
   travelled: number
   hitList: Enemy[]
-  /** 물처럼 날아가는 마법 셋 (561번): 물, 얼음 창, 돌풍. 수치와 빛깔, 맞은 적에게 하는 일이 다르다. */
-  spell: 'water' | 'ice' | 'wind'
+  /** 물처럼 날아가는 마법 (561·563번): 물, 얼음 창, 돌풍과 spellbook의 flow 마법들. 수치와 그림, 맞은 적에게 하는 일이 다르다. */
+  spell: Flow
 }
 /** 미리 만든 운석·경고 원·크레이터를 돌려 쓴다. */
 interface MeteorShot {
@@ -434,9 +441,13 @@ interface MeteorShot {
   ty: number
   t: number
   delay: number
+  /** 떨어지는 마법 (563번): 메테오와 spellbook의 fall 마법들. */
+  spell: Fall
 }
 /** 공격 판 클리어 연출(clearShow)을 보이는 시간(ms): 끝나면 결과 화면으로 넘어간다. */
 const CLEAR_SHOW_MS = 2300
+/** '#rrggbb' → Phaser의 색 숫자. */
+const hexColor = (hex: string) => Number.parseInt(hex.slice(1), 16)
 /** 돌진하는 바위 충차 (433번): 물처럼 곧게 가며 보통 적은 밀쳐 꿰뚫고, 벽 칸·큰손에 닿으면 들이받고 멈춘다. t는 출발한 뒤 시간(초). */
 interface RamShot {
   img: Phaser.GameObjects.Image
@@ -462,6 +473,11 @@ const RAM_RANGE = 1500
 const SPIKE_GAP = 48
 /** 물이 날아갈 수 있는 거리(px)와, 끝에서 이만큼 남으면 옅어지기 시작한다. */
 const WATER_RANGE = 820
+/** spellbook 마법마다 0 (563번): 피해 숫자와 시전 횟수의 처음 값. */
+const EXTRA_COUNTS = Object.fromEntries(EXTRA_SPELLS.map((spell) => [spell, 0])) as Record<
+  ExtraSpell,
+  number
+>
 /** 돌풍이 적을 밀어내는 빠르기(px/초): 수치의 pushSeconds만큼 밀린다. */
 const WIND_PUSH = 420
 const WATER_FADE = 140
@@ -532,6 +548,11 @@ class BattleScene extends Phaser.Scene {
   private lastSummon = 0
   /** 디펜스 번호 스테이지(509번): 적 체력 배율과, 보스를 이미 불렀나. EX(스테이지 없음)는 배율 1이고 보스가 없다. */
   private hpScale: number
+
+  /** 매도 물량의 수량 배율 (562번): 자동 전투에서는 판의 물량 배율에 매도 물량 세기를 곱한다. */
+  private sellScale(): number {
+    return this.hpScale * (this.opts.idle ? IDLE_SELL_POWER : 1)
+  }
   /** 디펜스 번호 스테이지의 적 수·빠르기·멘탈 피해 배율 (#565). EX 디펜스는 1. */
   private countScale: number
   private speedScale: number
@@ -636,12 +657,13 @@ class BattleScene extends Phaser.Scene {
       chain: 0,
       ice: 0,
       wind: 0,
+      ...EXTRA_COUNTS,
     },
     rams: 0,
     merged: 0,
     killing: 0,
     peak: 0,
-    casts: { water: 0, meteor: 0, lightning: 0, earth: 0, ice: 0, wind: 0 },
+    casts: { water: 0, meteor: 0, lightning: 0, earth: 0, ice: 0, wind: 0, ...EXTRA_COUNTS },
     mateCasts: [0, 0, 0],
     awakenedMates: 0,
     skillMarks: [],
@@ -821,7 +843,7 @@ class BattleScene extends Phaser.Scene {
     this.bakeMateGuns()
     bakeEnemies(this)
     bakeMagic(this)
-    if (this.assault) bakeOrders(this, this.hpScale)
+    if (this.assault) bakeOrders(this, this.sellScale())
 
     // 선명하게(344번): 캔버스는 화면 배율만큼 크고(startBattle), 카메라를 그만큼 당겨 논리 좌표(view)는 CSS px 그대로다.
     let previousWidth = this.view().w
@@ -1776,7 +1798,7 @@ class BattleScene extends Phaser.Scene {
         if (spec.enemyHp !== this.hpScale) {
           // 열 벽마다 물량의 수량이 는다 (498번): 주문서에 적힌 주식 수도 새로 칠한다.
           this.hpScale = spec.enemyHp
-          bakeOrders(this, this.hpScale, true)
+          bakeOrders(this, this.sellScale(), true)
           this.buyWall?.resize(this.buyWallMental())
         }
         // The next wall takes the exact position of the first queued wall.
@@ -2627,7 +2649,7 @@ class BattleScene extends Phaser.Scene {
         ? v.hp * this.staged(this.hpScale)
         : this.assault
           ? quantityOrder(kind) && isOrder(kind)
-            ? orderHp(kind, this.hpScale)
+            ? orderHp(kind, this.sellScale())
             : v.hp * this.hpScale
           : v.hp
     e.maxHp = e.hp
@@ -3059,7 +3081,7 @@ class BattleScene extends Phaser.Scene {
       if (isOrder(e.kind)) {
         // 매도 물량을 잡았다: 수량이 깎이는 숫자 없이 "체결!"만 뜬다 (544번, 전에는 413번). 물량이 줄면 가격이 조금 오른다 (#593).
         if (e.kind !== 'whale')
-          this.fill(e.x, e.y, orderShares(e.kind, this.hpScale), undefined, false)
+          this.fill(e.x, e.y, orderShares(e.kind, this.sellScale()), undefined, false)
       } else {
         sfx.squish()
       }
@@ -3608,6 +3630,7 @@ class BattleScene extends Phaser.Scene {
         ty: 0,
         t: 0,
         delay: 0,
+        spell: 'meteor',
       })
     }
     for (let i = 0; i < 12; i++) this.bolts.push(this.add.graphics().setDepth(8).setVisible(false))
@@ -3753,17 +3776,18 @@ class BattleScene extends Phaser.Scene {
         // 자동 전투의 스킬 레벨은 고양이마다 다르다 (515번): 같은 스킬의 두 마리도 저마다 제 레벨로 쓴다.
         const level =
           (own && caster.mate !== undefined ? this.loadout.mateMagicLevels?.[caster.mate] : null) ??
-          (m === 'ice' || m === 'wind' ? 0 : this.loadout[m])
+          (m === 'water' || m === 'meteor' || m === 'lightning' || m === 'earth'
+            ? this.loadout[m]
+            : 0)
         if (!caster.clock.due(m, level, this.elapsed)) continue
         const from = caster.at()
-        const cast =
-          m === 'water' || m === 'ice' || m === 'wind'
-            ? this.castWater(from, level, m)
-            : m === 'meteor'
-              ? this.castMeteor(from, level)
-              : m === 'earth'
-                ? this.castEarth(from, level)
-                : this.castLightning(from, level)
+        const cast = isFlow(m)
+          ? this.castWater(from, level, m)
+          : isFall(m)
+            ? this.castMeteor(from, level, m)
+            : m === 'earth'
+              ? this.castEarth(from, level)
+              : this.castLightning(from, level)
         if (cast) {
           caster.clock.cast(m, level, this.elapsed)
           this.damageStats.casts[m]++
@@ -3790,6 +3814,7 @@ class BattleScene extends Phaser.Scene {
   private flowForm(spell: WaterShot['spell'], level: number): 'drop' | 'jet' | 'wave' {
     if (spell === 'ice') return 'jet'
     if (spell === 'wind') return 'wave'
+    if (spell !== 'water') return SPELLBOOK[spell].form
     const tier = magicTier(level)
     return tier === 1 ? 'drop' : tier === 2 ? 'jet' : 'wave'
   }
@@ -3821,19 +3846,24 @@ class BattleScene extends Phaser.Scene {
           ? 'magic-ice'
           : spell === 'wind'
             ? 'magic-gust'
-            : form === 'wave'
-              ? 'magic-wave'
-              : 'magic-drop',
+            : spell !== 'water'
+              ? spellKey(spell)
+              : form === 'wave'
+                ? 'magic-wave'
+                : 'magic-drop',
       )
       .setPosition(s.x, s.y)
       .setRotation(a)
       .setAlpha(1)
       .setVisible(true)
-    if (form === 'drop') s.img.setDisplaySize(36, 23)
-    else if (form === 'jet') {
-      // 얼음 창은 레벨이 오를수록 길고 굵다.
-      const k = spell === 'ice' ? 1 + (level - 1) * 0.12 : 1
-      s.img.setDisplaySize(92 * k, (spell === 'ice' ? 30 : 26) * k)
+    if (form === 'drop') {
+      // 물방울은 꼬리가 있고, spellbook의 구슬은 둥글다.
+      if (spell === 'water') s.img.setDisplaySize(36, 23)
+      else s.img.setDisplaySize(30 + level * 3, 30 + level * 3)
+    } else if (form === 'jet') {
+      // 물줄기 말고는 레벨이 오를수록 길고 굵다.
+      const k = spell === 'water' ? 1 : 1 + (level - 1) * 0.12
+      s.img.setDisplaySize(92 * k, (spell === 'water' ? 26 : 30) * k)
     }
     this.moveWater(s, 0)
     this.waterFx.explode(this.fx(3 * tier), from.x, from.y)
@@ -3888,22 +3918,19 @@ class BattleScene extends Phaser.Scene {
   /** 물방울이 처음 맞은 적에서 터진다: 둘레의 적이 모두 젖는다. */
   private waterSplash(s: WaterShot, st: WaterStats, x: number, y: number) {
     this.endWater(s)
-    this.ring(x, y, 0x6cc0ff, st.splash, 260)
-    this.glow(x, y, 0xbfe8ff, st.splash * 0.8, 200, 0.6)
-    this.waterFx.explode(this.fx(10), x, y)
+    // 터지는 빛깔은 마법의 색을 따른다 (563번).
+    const look =
+      s.spell === 'water' || s.spell === 'ice' || s.spell === 'wind' ? null : SPELLBOOK[s.spell]
+    this.ring(x, y, look ? hexColor(look.colors.mid) : 0x6cc0ff, st.splash, 260)
+    this.glow(x, y, look ? hexColor(look.colors.light) : 0xbfe8ff, st.splash * 0.8, 200, 0.6)
+    if (!look) this.waterFx.explode(this.fx(10), x, y)
     const angle = Math.atan2(s.dy, s.dx)
     for (const e of this.magicTargets(true)) {
-      if (this.areaDistance(e, x, y) <= st.splash) this.waterHit(e, st, angle, true)
+      if (this.areaDistance(e, x, y) <= st.splash) this.waterHit(e, st, angle, true, s.spell)
     }
   }
 
-  private waterHit(
-    e: Enemy,
-    st: WaterStats,
-    angle: number,
-    area = false,
-    spell: WaterShot['spell'] = 'water',
-  ) {
+  private waterHit(e: Enemy, st: WaterStats, angle: number, area = false, spell: Flow = 'water') {
     if (st.slowSeconds > 0) this.slow(e, st.slowFactor, st.slowSeconds)
     // 얼음 (561번): 맞은 적이 잠깐 얼어붙는다. 매도벽 칸과 큰손은 얼지 않는다.
     if (st.stunSeconds > 0 && !e.cell && !e.boss) {
@@ -3923,8 +3950,13 @@ class BattleScene extends Phaser.Scene {
 
   // 메테오: 밀집된 적을 예측 조준하고 경고 원 뒤 운석을 수직 낙하시킨다. 화상·지형 피해는 없다.
 
-  private castMeteor(from: { x: number; y: number }, level: number): boolean {
-    const st = meteorStats(level)
+  private castMeteor(
+    from: { x: number; y: number },
+    level: number,
+    spell: Fall = 'meteor',
+  ): boolean {
+    const st = fallStats(spell, level)
+    const look = spell === 'meteor' ? null : SPELLBOOK[spell]
     // 시전자별로 같은 밀집도의 적은 가까운 쪽부터 고른다.
     const candidates = [...this.magicTargets()].sort(
       (a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y),
@@ -3937,6 +3969,7 @@ class BattleScene extends Phaser.Scene {
       const s = free[i]
       s.active = true
       s.level = level
+      s.spell = spell
       s.delay = i * 0.16
       s.t = -s.delay
       s.tx = Phaser.Math.Clamp(
@@ -3951,10 +3984,13 @@ class BattleScene extends Phaser.Scene {
         12,
         this.view().h - 50,
       )
-      s.img.setVisible(false).setTint(0xc98b72).setAlpha(1)
+      // 운석은 돌 그림을 물들이고, spellbook의 마법은 제 그림을 쓴다 (563번).
+      if (look) s.img.setTexture(spellKey(spell as FallSpell)).clearTint()
+      else s.img.setTexture('magic-rock').setTint(0xc98b72)
+      s.img.setVisible(false).setAlpha(1)
       s.warning
         .setPosition(s.tx, s.ty)
-        .setTint(0xff8d76)
+        .setTint(look ? hexColor(look.colors.mid) : 0xff8d76)
         .setDisplaySize(st.radius * 2, st.radius)
         .setAlpha(0.6)
         .setVisible(false)
@@ -3966,17 +4002,20 @@ class BattleScene extends Phaser.Scene {
   private moveMeteor(s: MeteorShot, dt: number) {
     s.t += dt
     if (s.t < 0) return
-    const st = meteorStats(s.level)
+    const st = fallStats(s.spell, s.level)
     const progress = Math.min(1, s.t / st.warning)
     s.warning.setVisible(true).setAlpha(0.3 + progress * 0.45)
     const drop = Math.max(0, (progress - 0.45) / 0.55)
-    const size = (s.level === 1 ? 26 : 40) * this.grow(s.level)
+    const size =
+      (s.spell === 'bomb' ? 46 : s.spell !== 'meteor' ? 24 : s.level === 1 ? 26 : 40) *
+      this.grow(s.level)
     s.img
       .setVisible(drop > 0)
       .setDisplaySize(size, size)
       .setPosition(s.tx, s.ty - 280 * (1 - drop * drop))
       .setRotation(drop * 1.5)
-    if (drop > 0 && !this.reducedMotion) this.fireFx.emitParticleAt(s.img.x, s.img.y - size / 2, 1)
+    if (drop > 0 && !this.reducedMotion && (s.spell === 'meteor' || s.spell === 'bomb'))
+      this.fireFx.emitParticleAt(s.img.x, s.img.y - size / 2, 1)
     if (progress < 1) return
     s.active = false
     s.img.setVisible(false)
@@ -3985,12 +4024,17 @@ class BattleScene extends Phaser.Scene {
   }
 
   private meteorImpact(s: MeteorShot) {
-    const { tx: x, ty: y, level } = s
-    const st = meteorStats(level)
-    this.ring(x, y, 0xff9a78, st.radius, 380)
-    if (!this.reducedMotion) this.glow(x, y, 0xffc49a, st.radius, 240, 0.7)
-    this.rockFx.explode(this.fx(10 + level * 3), x, y)
-    this.dustFx.explode(this.fx(8 + level * 2), x, y)
+    const { tx: x, ty: y, level, spell } = s
+    const st = fallStats(spell, level)
+    const look = spell === 'meteor' ? null : SPELLBOOK[spell]
+    this.ring(x, y, look ? hexColor(look.colors.mid) : 0xff9a78, st.radius, 380)
+    if (!this.reducedMotion)
+      this.glow(x, y, look ? hexColor(look.colors.light) : 0xffc49a, st.radius, 240, 0.7)
+    // 돌 파편과 먼지는 운석과 폭탄만 낸다.
+    if (spell === 'meteor' || spell === 'bomb') {
+      this.rockFx.explode(this.fx(10 + level * 3), x, y)
+      this.dustFx.explode(this.fx(8 + level * 2), x, y)
+    }
     this.tweens.killTweensOf(s.crater)
     s.crater
       .setPosition(x, y)
@@ -4009,12 +4053,13 @@ class BattleScene extends Phaser.Scene {
       const distance = this.areaDistance(e, x, y)
       const factor = meteorFalloff(distance, st.radius)
       if (!factor) continue
-      e.stunUntil = Math.max(e.stunUntil, this.elapsed + st.stunSeconds)
+      if (st.stunSeconds > 0) e.stunUntil = Math.max(e.stunUntil, this.elapsed + st.stunSeconds)
+      if (st.slowSeconds > 0) this.slow(e, st.slowFactor, st.slowSeconds)
       this.hit(
         e,
         st.damage * this.loadout.damage * factor,
         Math.atan2(e.y - y, e.x - x),
-        'meteor',
+        spell,
         true,
       )
     }
@@ -4389,7 +4434,11 @@ class BattleScene extends Phaser.Scene {
     if (!Number.isFinite(damage) || damage <= 0) return
     const code: IdleAttackKind =
       this.reportAs ??
-      (kind === 'water' || kind === 'meteor' || kind === 'ice' || kind === 'wind'
+      (kind === 'water' ||
+      kind === 'meteor' ||
+      kind === 'ice' ||
+      kind === 'wind' ||
+      isExtraSpell(kind)
         ? kind
         : kind === 'lightning' || kind === 'chain'
           ? 'bolt'

@@ -3,6 +3,7 @@ import type { CatCode } from '@web/features/raising/store'
 import { loadoutOf } from '../mental/cards'
 import { NEW_CATS } from '../mental/catRoster'
 import { DEFAULT_WEAPON, heroOf } from '../mental/hero'
+import { EXTRA_SPELLS, type ExtraSpell } from '../mental/spellbook'
 
 /** 고양이마다 전투 그림이 정해져 있다 (mates.ts MATE_LOOKS의 차례, 492번). */
 export const CAT_LOOKS = {
@@ -23,6 +24,10 @@ const SKILL_MAGIC = {
   ram: 'earth',
   ice: 'ice',
   wind: 'wind',
+  // spellbook의 마법들은 서버 코드와 이름이 같다 (563번).
+  ...(Object.fromEntries(EXTRA_SPELLS.map((spell) => [spell, spell])) as {
+    [K in ExtraSpell]: K
+  }),
 } as const
 
 export function idleLoadout(company: Company) {
@@ -37,8 +42,8 @@ export function idleLoadout(company: Company) {
   for (const cat of cats) {
     for (const skill of cat.skills) {
       const magic = SKILL_MAGIC[skill.code]
-      // 얼음·바람은 카드 마법이 아니라 마법 칸이 없다.
-      if (magic !== 'ice' && magic !== 'wind')
+      // 카드 마법 넷만 마법 칸이 있다. 얼음·바람과 spellbook의 마법은 고양이 스킬로만 나간다.
+      if (magic === 'water' || magic === 'meteor' || magic === 'lightning' || magic === 'earth')
         loadout[magic] = Math.max(loadout[magic], cat.skillLevel)
     }
   }

@@ -1,4 +1,5 @@
 import type { Company } from '@web/api/client'
+import { EXTRA_SPELLS, type ExtraSpell, SPELLBOOK } from '../mental/spellbook'
 
 export type SkillCode = NonNullable<Company['idle']>['cats'][number]['skills'][number]['code']
 
@@ -42,6 +43,13 @@ export const SKILLS: Record<
     grows: '레벨이 오르면 돌풍이 넓어지고 더 자주·멀리 밀어내요',
     tiers: ['산들바람', '돌풍', '회오리'],
   },
+  // spellbook의 마법들 (563번): 설명은 표에 있다.
+  ...(Object.fromEntries(
+    EXTRA_SPELLS.map((spell) => {
+      const { does, grows, tiers } = SPELLBOOK[spell]
+      return [spell, { does, grows, tiers }]
+    }),
+  ) as Record<ExtraSpell, { does: string; grows: string; tiers: [string, string, string] }>),
 }
 
 /** 고양이가 가진 스킬 이름들 (561번): "얼음 스킬·물 스킬". 스킬이 없으면(C·B등급) 빈 글자다. */

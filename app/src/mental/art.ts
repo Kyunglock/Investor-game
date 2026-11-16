@@ -8,9 +8,12 @@ import { CAT_SCALE, type CatModel } from './catModels'
 import { drawCatPose } from './catPoseArt'
 import { drawCatRun } from './catRunArt'
 import {
+  drawCrescent,
   drawEmber,
   drawGust,
   drawIceLance,
+  drawLance,
+  drawOrb,
   drawPillar,
   drawWater,
   drawWave,
@@ -21,6 +24,7 @@ import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
+import { EXTRA_SPELLS, type ExtraSpell, ICE_GLYPH, SPELLBOOK, WIND_GLYPH } from './spellbook'
 import { drawBuyWall, drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
 import { BULLET_ART, drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
@@ -203,6 +207,8 @@ export const mateKey = (i: number) => `mate-${i}`
 
 /** 스킬 표식의 한 변 (557번). */
 export const SKILL_MARK = 28
+/** spellbook 마법의 전투 그림 (563번). */
+export const spellKey = (spell: ExtraSpell) => `magic-${spell}`
 export const skillMarkKey = (magic: Spell) => `skill-mark-${magic}`
 /** 스킬마다 고유 색: 메뉴의 스킬 배지(idle/SkillBadge.tsx)와 같다. */
 const SKILL_MARK_COLORS: Record<Spell, { light: string; mid: string; dark: string; line: string }> =
@@ -213,12 +219,12 @@ const SKILL_MARK_COLORS: Record<Spell, { light: string; mid: string; dark: strin
     earth: { light: '#fbe8c2', mid: '#cf9257', dark: '#8a5326', line: '#4a2a10' },
     ice: { light: '#f2fdff', mid: '#8fe3f5', dark: '#2f9fc4', line: '#135a78' },
     wind: { light: '#f1fff5', mid: '#8fe0b0', dark: '#2f9d74', line: '#125a40' },
+    // spellbook의 마법들 (563번).
+    ...(Object.fromEntries(EXTRA_SPELLS.map((spell) => [spell, SPELLBOOK[spell].colors])) as Record<
+      ExtraSpell,
+      { light: string; mid: string; dark: string; line: string }
+    >),
   }
-/** 얼음 결정과 바람 소용돌이 (561번): 스킬 배지(idle/SkillBadge.tsx)의 첫 단계 그림과 같다. */
-export const ICE_GLYPH = 'M24 12.5 28.5 20l7 4-7 4L24 35.5 19.5 28l-7-4 7-4Z'
-export const WIND_GLYPH =
-  'M13 20.5h14.5a4 4 0 1 0-4-4h2.6a1.4 1.4 0 1 1 1.4 1.4H13ZM13 25.5h20a4.5 4.5 0 1 1-4.5 4.5h2.6a1.9 1.9 0 1 0 1.9-1.9H13Z'
-
 /** 스킬 그림 (48×48 칸): 스킬 배지의 첫 단계 그림과 같은 모양. 조각마다 칠할 색을 따로 준다(없으면 밝은 색). */
 const SKILL_MARK_GLYPHS: Record<Spell, { d: string; fill?: string }[]> = {
   water: [{ d: 'M24 13.5c4.2 5 6.6 8.4 6.6 11.6a6.6 6.6 0 0 1-13.2 0c0-3.2 2.4-6.6 6.6-11.6Z' }],
@@ -235,6 +241,9 @@ const SKILL_MARK_GLYPHS: Record<Spell, { d: string; fill?: string }[]> = {
   ],
   ice: [{ d: ICE_GLYPH }],
   wind: [{ d: WIND_GLYPH }],
+  ...(Object.fromEntries(
+    EXTRA_SPELLS.map((spell) => [spell, [{ d: SPELLBOOK[spell].glyph }]]),
+  ) as Record<ExtraSpell, { d: string }[]>),
 }
 
 /**
@@ -454,6 +463,15 @@ export function bakeMagic(scene: Phaser.Scene) {
   // 얼음 창과 돌풍 (561번): 고양이 스킬로만 나간다.
   bake(scene, 'magic-ice', 44, 16, drawIceLance)
   bake(scene, 'magic-gust', 44, 120, drawGust)
+  // spellbook의 마법들 (563번): 모양(창·물결·구슬)과 색만으로 그린다. 떨어지는 마법은 구슬이다.
+  for (const spell of EXTRA_SPELLS) {
+    const book = SPELLBOOK[spell]
+    const form = book.kind === 'fall' ? 'drop' : book.form
+    if (form === 'jet') bake(scene, spellKey(spell), 44, 16, (c) => drawLance(c, book.colors))
+    else if (form === 'wave')
+      bake(scene, spellKey(spell), 44, 120, (c) => drawCrescent(c, book.colors))
+    else bake(scene, spellKey(spell), 32, 32, (c) => drawOrb(c, book.colors, spell === 'bomb'))
+  }
   // 불덩이: 흰 심 → 노랑 → 주황 → 빨강으로 번진다.
   bake(scene, 'magic-ember', 28, 28, drawEmber)
   // 불기둥: 아래가 하얗게 뜨겁고 위로 갈수록 빨갛게 사라지는 일렁이는 기둥. 원점은 아래 가운데.

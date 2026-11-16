@@ -1,6 +1,12 @@
 import { type ReactNode, useId } from 'react'
-import { ICE_GLYPH, WIND_GLYPH } from '../mental/art'
 import { magicTier } from '../mental/magic'
+import {
+  EXTRA_SPELLS,
+  type ExtraSpell,
+  ICE_GLYPH,
+  SPELLBOOK,
+  WIND_GLYPH,
+} from '../mental/spellbook'
 import type { SkillCode } from './skills'
 import './skill-badge.css'
 
@@ -13,6 +19,11 @@ const COLORS: Record<SkillCode, { light: string; mid: string; dark: string; line
   // 얼음 하늘빛, 바람 풀빛 (561번).
   ice: { light: '#f2fdff', mid: '#8fe3f5', dark: '#2f9fc4', line: '#135a78' },
   wind: { light: '#f1fff5', mid: '#8fe0b0', dark: '#2f9d74', line: '#125a40' },
+  // spellbook의 마법들 (563번): 색과 그림은 표에 있다.
+  ...(Object.fromEntries(EXTRA_SPELLS.map((spell) => [spell, SPELLBOOK[spell].colors])) as Record<
+    ExtraSpell,
+    { light: string; mid: string; dark: string; line: string }
+  >),
 }
 /** 못 가진 스킬: 흑백. */
 const GRAY = { light: '#e4dfd5', mid: '#cfc8ba', dark: '#a39b8c', line: '#6f685b' }
@@ -144,6 +155,25 @@ const GLYPHS: Record<SkillCode, Record<1 | 2 | 3, ReactNode>> = {
       </>
     ),
   },
+  // spellbook의 마법들 (563번): 그림 하나가 작게 → 크게 → 반짝임을 더해.
+  ...(Object.fromEntries(
+    EXTRA_SPELLS.map((spell) => {
+      const d = SPELLBOOK[spell].glyph
+      return [
+        spell,
+        {
+          1: <path d={d} transform="translate(4.8 4.8) scale(.8)" />,
+          2: <path d={d} />,
+          3: (
+            <>
+              <path d={d} />
+              <path className="spark" d="M10 13l3 2.4M38 13l-3 2.4M10 35l3-2.4M38 35l-3-2.4" />
+            </>
+          ),
+        },
+      ]
+    }),
+  ) as Record<ExtraSpell, Record<1 | 2 | 3, ReactNode>>),
 }
 
 /** 별 하나 (반지름 r). */

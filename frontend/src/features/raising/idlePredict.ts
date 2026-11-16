@@ -7,7 +7,7 @@
 /** IdleEngine.maxHp: the same curve, or the two sides disagree about when a wall breaks. */
 export function idleMaxHp(wall: number) {
   const depth = wall - 1
-  return (20 + 12 * depth + 0.2 * depth * depth) * (wall % IDLE_BOSS_EVERY === 0 ? 3 : 1)
+  return (10 + 6 * depth + 0.1 * depth * depth) * (wall % IDLE_BOSS_EVERY === 0 ? 3 : 1)
 }
 
 /** Hits the server never answered are forgotten after this long (decisions.md 497). */
@@ -73,6 +73,13 @@ export const idleBossChallenge = (wall: number) => wall % IDLE_BOSS_EVERY === 0
 const circuitWall = (wall: number) => CIRCUIT_ENABLED && idleBossChallenge(wall)
 
 export class IdlePredictor {
+  /** The wall health curve for walls the server has not sent yet: the server's own, unless a test pins one. */
+  private readonly curve: (wall: number) => number
+
+  constructor(curve: (wall: number) => number = idleMaxHp) {
+    this.curve = curve
+  }
+
   private hits: IdleLocalHit[] = []
   private version = 0
   /**
@@ -163,7 +170,7 @@ export class IdlePredictor {
     const maxHp = (wall: number) =>
       wall === server.wall
         ? server.maxHp
-        : (server.upcoming?.find((u) => u.wall === wall)?.maxHp ?? idleMaxHp(wall))
+        : (server.upcoming?.find((u) => u.wall === wall)?.maxHp ?? this.curve(wall))
     const handled = server.sequence ?? -1
     const kept = this.hits.filter(
       (hit) =>

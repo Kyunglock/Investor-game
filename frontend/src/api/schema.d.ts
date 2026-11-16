@@ -212,7 +212,7 @@ export interface paths {
                              * @description barrage는 액티브 스킬 매수세례의 매수 주문 (503번)
                              * @enum {string}
                              */
-                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "barrage" | "buy";
+                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb" | "barrage" | "buy";
                             count: number;
                             /** @description 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 */
                             damage?: number;
@@ -1421,7 +1421,7 @@ export interface components {
                     /** @description 다시 쓸 수 있을 때까지 남은 시간(초). 0이면 쓸 수 있다 */
                     readyIn: number;
                 }[];
-                /** @description 스킬 여섯(물·메테오·번개·충차·얼음·바람, 561번). 스킬은 고양이의 고유 능력이다 (decisions.md 501번) */
+                /** @description 스킬 열다섯(물·메테오·번개·충차·얼음·바람과 불·독·빛·어둠·모래·별·우박·꽃비·폭탄, 561·563번). 스킬은 고양이의 고유 능력이다 (decisions.md 501번) */
                 skills: {
                     code: string;
                     name: string;
@@ -1453,7 +1453,7 @@ export interface components {
                     /** @description 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고(빈 배열) A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다 */
                     skills: {
                         /** @enum {string} */
-                        code: "water" | "meteor" | "bolt" | "ram" | "ice" | "wind";
+                        code: "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb";
                         name: string;
                     }[];
                     /** @description 고유 스킬의 레벨 1~5 (515번). 고양이 Lv.10·20·30·40에 하나씩 오른다 (534번). 스킬이 둘이면 같은 레벨이다 */
