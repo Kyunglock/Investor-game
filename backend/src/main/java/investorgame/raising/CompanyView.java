@@ -239,7 +239,18 @@ public record CompanyView(
       List<CatDraw> lastDraws,
       Income income,
       Offline offline,
-      double power) {}
+      double power,
+      Rebirth rebirth) {}
+
+  /**
+   * 환생 (decisions.md 569번): 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
+   *
+   * @param count 환생한 횟수
+   * @param fish 가진 생선
+   * @param gain 지금 환생하면 받는 생선. 아직 할 수 없으면 0
+   * @param fromWall 이 벽에 서야 환생할 수 있다(첫 보스를 깬 다음 벽)
+   */
+  public record Rebirth(int count, long fish, long gain, long fromWall) {}
 
   /**
    * 고양이 뽑기에서 나온 한 마리 (517번).
@@ -270,6 +281,7 @@ public record CompanyView(
    * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
    * @param skills 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고 A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다
    * @param grade 등급 C·B·A·S (539번). 종마다 정해져 있고, 높을수록 총이 세고 뽑기에서 드물다
+   * @param levelCost 생선으로 레벨을 하나 올리는 값 (569번). 아직 없거나 최고 레벨이면 0
    */
   public record IdleCat(
       String code,
@@ -283,7 +295,8 @@ public record CompanyView(
       List<CatSkill> skills,
       int skillLevel,
       int skillNextLevel,
-      String grade) {}
+      String grade,
+      long levelCost) {}
 
   public record CatWeapon(String kind, String grade) {}
 

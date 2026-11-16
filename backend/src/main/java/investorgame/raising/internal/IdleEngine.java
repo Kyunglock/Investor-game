@@ -973,6 +973,56 @@ class IdleEngine {
 
   static final int MAX_CAT_LEVEL = 1000;
 
+  // 환생 (decisions.md 569번): 첫 보스(50번째 벽)를 깬 뒤부터 할 수 있고, 지금 선 벽이 깊을수록 생선을 많이 준다.
+  static final long REBIRTH_WALL = 51;
+  private static final double REBIRTH_FISH_DIVISOR = 500;
+  // 생선으로 고양이 레벨을 하나 올리는 값: 지금 레벨 × 이만큼.
+  static final long FISH_PER_LEVEL = 5;
+
+  /** 지금 환생하면 받는 생선 (569번): (깬 벽 수)² ÷ 500. 51번째 벽에서 5, 101번째 20, 301번째 180. 아직 못 하면 0. */
+  long rebirthFish(CompanyState c) {
+    long cleared = state(c).wall - 1;
+    return state(c).wall < REBIRTH_WALL
+        ? 0
+        : (long) Math.floor(cleared * cleared / REBIRTH_FISH_DIVISOR);
+  }
+
+  /**
+   * 환생한다 (569번): 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선을 받는다. 고양이·무기·다이아·시즌패스·직원과 이미 받은 보스 보상(같은
+   * 보스의 보상은 다시 주지 않는다)은 그대로다. 첫 보스를 깨기 전이면 400.
+   */
+  void rebirth(CompanyState c) {
+    CompanyState.Idle s = state(c);
+    long fish = rebirthFish(c);
+    if (fish <= 0) {
+      throw new InvalidRequestException("환생은 " + (REBIRTH_WALL - 1) + "번째 벽의 보스를 깬 뒤에 할 수 있어요");
+    }
+    c.fish += fish;
+    c.rebirths++;
+    c.capital = engine.openingCapital();
+    c.battleLevels.clear();
+    move(s, 1);
+    s.earned = 0;
+    s.wallDps = 0;
+  }
+
+  /** 생선으로 고양이의 레벨을 하나 올리는 값 (569번). 없는 고양이거나 최고 레벨이면 0. */
+  long fishCost(int level) {
+    return level < 1 || level >= MAX_CAT_LEVEL ? 0 : level * FISH_PER_LEVEL;
+  }
+
+  /** 생선으로 가진 고양이의 레벨을 하나 올린다 (569번). 가지지 않았거나 최고 레벨이거나 생선이 모자라면 400. */
+  void feedCat(CompanyState c, String code) {
+    CompanyState.Idle s = state(c);
+    int level = s.cats.getOrDefault(code, 0);
+    if (level < 1) throw new InvalidRequestException("가지지 않은 고양이다: " + code);
+    long cost = fishCost(level);
+    if (cost <= 0) throw new InvalidRequestException("더 올릴 수 없는 고양이다: " + code);
+    if (c.fish < cost) throw new InvalidRequestException("생선이 모자라요");
+    c.fish -= cost;
+    s.cats.put(code, level + 1);
+  }
+
   void fieldCat(CompanyState c, String code, boolean fielded) {
     fieldCat(c, code, fielded, null);
   }
@@ -1122,7 +1172,8 @@ class IdleEngine {
                           .toList(),
                       skillLevel(Math.max(1, level)),
                       nextSkillAt(Math.max(1, level)),
-                      CAT_GRADES.get(CAT_GRADE[cat]));
+                      CAT_GRADES.get(CAT_GRADE[cat]),
+                      fishCost(level));
                 })
             .toList();
     return new CompanyView.Idle(
@@ -1183,6 +1234,7 @@ class IdleEngine {
                 Math.round(s.offlineSeconds),
                 CompanyView.money(s.offlineEarned),
                 s.offlineCapped),
-        power(c));
+        power(c),
+        new CompanyView.Rebirth(c.rebirths, c.fish, rebirthFish(c), REBIRTH_WALL));
   }
 }

@@ -474,6 +474,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/rebirth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 환생한다 (decisions.md 569번)
+         * @description 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선(idle.rebirth.gain)을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
+         *     고양이·무기·다이아·시즌패스는 그대로이고, 이미 받은 보스 클리어 보상은 다시 주지 않는다. 첫 보스(50번째 벽)를 깨기 전이면 400.
+         */
+        post: operations["rebirth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/cat/level": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 569번)
+         * @description 값은 그 고양이의 levelCost(지금 레벨 × 5). 가지지 않은 고양이거나 최고 레벨이거나 생선이 모자라면 400.
+         */
+        post: operations["feedCat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/cat/field": {
         parameters: {
             query?: never;
@@ -1457,6 +1498,26 @@ export interface components {
                 fieldSlots: number;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
+                /** @description 환생 (569번). 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다 */
+                rebirth?: {
+                    /** @description 환생한 횟수 */
+                    count: number;
+                    /**
+                     * Format: int64
+                     * @description 가진 생선. 고양이의 레벨을 올리는 데 쓴다
+                     */
+                    fish: number;
+                    /**
+                     * Format: int64
+                     * @description 지금 환생하면 받는 생선. 아직 할 수 없으면 0
+                     */
+                    gain: number;
+                    /**
+                     * Format: int64
+                     * @description 이 벽에 서야 환생할 수 있다(첫 보스를 깬 다음 벽)
+                     */
+                    fromWall: number;
+                };
                 /** @description 전투력 (538번). 성장 탭이 보여 주는 숫자 하나: 모든 총·스킬의 초당 피해(치명타 포함)와 매수 주문, 매수벽 체력 강화를 묶었다. 벽 번호는 보지 않는다 */
                 power: number;
                 /** @description 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다. 스킬은 A등급부터 있다 (561번) */
@@ -1483,6 +1544,11 @@ export interface components {
                     skillLevel: number;
                     /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
                     skillNextLevel: number;
+                    /**
+                     * Format: int64
+                     * @description 생선으로 레벨을 하나 올리는 값 (569번). 아직 없거나 최고 레벨이면 0
+                     */
+                    levelCost?: number;
                     /**
                      * @description 등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.4배 · A 2배 · S 3배) 뽑기에서 드물다
                      * @enum {string}
@@ -2228,6 +2294,59 @@ export interface operations {
         };
         responses: {
             /** @description 뽑은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    rebirth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 환생한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    feedCat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
+                };
+            };
+        };
+        responses: {
+            /** @description 올린 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

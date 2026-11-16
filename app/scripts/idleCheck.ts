@@ -82,6 +82,7 @@ try {
           { code: 'ram', name: '충차 스킬', owned: false, level: 0 },
         ],
         fieldSlots: 4,
+        rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51 },
         wallDps: 0,
         power: 1038,
         // Real-time income (#803): the HUD shows it under the capital. No offline payout yet.
@@ -284,6 +285,10 @@ try {
     await expect(stat('hp')).toContainText('매수벽 체력')
     await expect(stat('buy')).toContainText('매수벽 공격')
     await expect(stat('crit')).toHaveCount(0)
+    // 환생 (569번): 성장 탭 맨 아래. 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
+    await expect(page.getByTestId('rebirth')).toBeVisible()
+    await expect(page.getByTestId('rebirth-open')).toBeDisabled()
+    await expect(page.getByTestId('rebirth-open')).toHaveText('매도벽 51부터 환생할 수 있어요')
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
     // Growth holds the stats only (decisions.md 530): no tab row, no inventory, no skill list.
     await expect(page.getByRole('tab')).toHaveCount(0)

@@ -1907,3 +1907,128 @@
   font-size: 11px;
   color: #957854;
 }
+
+/* 환생 (569번): 성장 탭 맨 아래의 카드. 생선 수와 환생 단추, 한 번 더 묻는 줄. */
+.idle-fish {
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+}
+.idle-fish-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border: 1.5px solid #8cc9e8;
+  border-radius: 999px;
+  background: #e9f6fd;
+  color: #1f5f86;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.idle-team-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.idle-rebirth {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 10px 12px 12px;
+  border: 2px solid #8cc9e8;
+  border-radius: 16px;
+  background: linear-gradient(#f2fbff, #dff1fb);
+}
+.idle-rebirth-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  color: #1f5f86;
+}
+.idle-rebirth-times {
+  font:
+    500 11px "Noto Sans KR",
+    sans-serif;
+  color: #5d8fae;
+}
+.idle-rebirth-title .idle-fish-count {
+  margin-left: auto;
+  background: #fff;
+}
+.idle-rebirth-note {
+  font:
+    500 11px / 1.5 "Noto Sans KR",
+    sans-serif;
+  color: #4d7089;
+  word-break: keep-all;
+}
+.idle-rebirth-got {
+  font-size: 13px;
+  color: #1f7a45;
+}
+.idle-rebirth-button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 2px solid #b78448;
+  border-radius: 12px;
+  background: #fff5d9;
+  color: #553a27;
+  font-size: 14px;
+}
+.idle-rebirth-button.idle-rebirth-go {
+  border-color: #bfe9ff;
+  background: linear-gradient(#58bdf5, #1f86d6);
+  box-shadow: 0 3px 0 #135b99;
+  color: #fff;
+  font-size: 15px;
+}
+.idle-rebirth-button.idle-rebirth-go:disabled {
+  border-color: #d5dde2;
+  background: #dfe6ea;
+  box-shadow: none;
+  color: #7f8f99;
+}
+.idle-rebirth-ask {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+.idle-rebirth-ask > span {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: #b0412d;
+}
+/* 생선으로 레벨업 (569번): 고양이 정보 카드 안의 한 줄 단추. */
+.idle-cat-feed {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  margin-top: 4px;
+  padding: 0 12px;
+  border: 1.5px solid #8cc9e8;
+  border-radius: 12px;
+  background: #e9f6fd;
+  color: #1f5f86;
+  font-size: 14px;
+}
+.idle-cat-feed-level {
+  font:
+    700 11px "Noto Sans KR",
+    sans-serif;
+  color: #5d8fae;
+}
+.idle-cat-feed-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-style: normal;
+}
+.idle-cat-feed:disabled {
+  opacity: 0.5;
+}

@@ -24,6 +24,7 @@ import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
 import { IdlePass } from './IdlePass'
+import { IdleRebirth } from './IdleRebirth'
 import { IdleSandbox } from './IdleSandbox'
 import { IdleShop } from './IdleShop'
 import { IdleIcon } from './icons'
@@ -494,6 +495,7 @@ function IdleStats({ company }: { company: Company }) {
         )
       })}
       {error && <p role="alert">{error}</p>}
+      <IdleRebirth company={company} />
     </>
   )
 }

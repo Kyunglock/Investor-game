@@ -619,4 +619,18 @@ class CompanyApiTest {
     mvc.perform(post("/api/sandbox/next-season").cookie(session))
         .andExpect(status().isBadRequest());
   }
+
+  /** 환생 (decisions.md 569번): 첫 보스를 깨기 전에는 못 하고, 생선이 없으면 고양이 레벨을 올리지 못한다. */
+  @Test
+  void 환생은_첫_보스를_깬_뒤에_하고_생선이_없으면_레벨을_못_올린다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(opened.read("$.idle.rebirth.count", Integer.class)).isZero();
+    assertThat(opened.read("$.idle.rebirth.fish", Long.class)).isZero();
+    assertThat(opened.read("$.idle.rebirth.gain", Long.class)).isZero();
+    assertThat(opened.read("$.idle.rebirth.fromWall", Long.class)).isEqualTo(51);
+    mvc.perform(post("/api/company/rebirth").cookie(session)).andExpect(status().isBadRequest());
+    postJson("/api/company/cat/level", "{\"code\":\"sky\"}").andExpect(status().isBadRequest());
+    postJson("/api/company/cat/level", "{}").andExpect(status().isBadRequest());
+  }
 }
