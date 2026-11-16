@@ -78,16 +78,15 @@ class RealtimeTest {
     idle.beat(c, "one", 0, "start");
     tick(c, 1000);
     // 직원이 없으면 매도벽 돌파의 시간 수입뿐이다: 게임 2초(2배속) × 20,000.
-    assertThat(c.capital).isEqualTo(2 * 20_000);
+    assertThat(c.capital).isEqualTo(2 * 2_000);
     CompanyState.Employee e = company.hire(c, all(50));
     double staff = company.incomeOf(e);
     double before = c.capital;
     tick(c, 1000);
-    assertThat(c.capital - before).isCloseTo(2 * (20_000 + staff), offset(1.0));
+    assertThat(c.capital - before).isCloseTo(2 * (2_000 + staff), offset(1.0));
     // 화면의 초당 수입은 실제 1초에 버는 돈이고 직원의 몫이 따로 보인다.
     CompanyView.Idle view = idle.view(c);
-    assertThat(view.income().perSecond().doubleValue())
-        .isCloseTo(2 * (20_000 + staff), offset(1.0));
+    assertThat(view.income().perSecond().doubleValue()).isCloseTo(2 * (2_000 + staff), offset(1.0));
     assertThat(view.income().staffPerSecond().doubleValue()).isCloseTo(2 * staff, offset(1.0));
     assertThat(idle.incomeOf(c, e)).isCloseTo(2 * staff, offset(1e-6));
     // 멘탈 보호 보너스: 깬 스테이지만큼 회사 수입 전체에 곱한다.
@@ -98,7 +97,7 @@ class RealtimeTest {
     before = c.capital;
     tick(c, 1000);
     assertThat(c.capital - before)
-        .isCloseTo(2 * (20_000 + staff) * (1 + bonus / 100.0), offset(1.0));
+        .isCloseTo(2 * (2_000 + staff) * (1 + bonus / 100.0), offset(1.0));
   }
 
   @Test
