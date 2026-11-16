@@ -282,8 +282,8 @@ export function IdleCats({
                     }
                     onPointerDown={busy || c.level < 1 || c.fielded ? undefined : down(c.code)}
                     onContextMenu={(e) => e.preventDefault()}
-                    onClick={() => {
-                      if (!consumeClick()) pick(c.code)
+                    onClick={(event) => {
+                      if (!consumeClick(event.detail)) pick(c.code)
                     }}
                   >
                     <Portrait code={c.code} locked={c.level < 1} />

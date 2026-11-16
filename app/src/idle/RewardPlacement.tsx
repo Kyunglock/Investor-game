@@ -72,8 +72,8 @@ export function RewardPlacement({
             aria-pressed={picked}
             onPointerDown={busy ? undefined : down(reward)}
             onContextMenu={(e) => e.preventDefault()}
-            onClick={() => {
-              if (!consumeClick()) setPicked(!picked)
+            onClick={(event) => {
+              if (!consumeClick(event.detail)) setPicked(!picked)
             }}
             data-testid="reward-grab"
           >

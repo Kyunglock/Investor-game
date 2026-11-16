@@ -194,8 +194,8 @@ export function CatGear({
                     : `${w.name} ${w.gradeName} ${cell.stack}개 · 눌러서 비교`
                 }
                 disabled={taken || (busy && !held)}
-                onClick={() => {
-                  if (consumeClick()) return
+                onClick={(event) => {
+                  if (consumeClick(event.detail)) return
                   if (!held) setPicked(w)
                 }}
                 onPointerDown={cell.holder || busy ? undefined : down(cell)}

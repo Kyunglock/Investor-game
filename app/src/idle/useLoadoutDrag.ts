@@ -93,10 +93,10 @@ export function useLoadoutDrag<T>(
     }, 280)
     press.current = p
   }
-  const consumeClick = () => {
+  const consumeClick = (detail: number) => {
     const consumed = dragged.current
     dragged.current = false
-    return consumed
+    return detail !== 0 && consumed
   }
   return { drag, down, consumeClick }
 }
