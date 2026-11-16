@@ -5,9 +5,12 @@
  */
 export const IDLE_PIERCE: readonly number[] = [1, 0.5, 0.25]
 
-/** 열 번째 벽마다 서는 대량 매도벽(큰손 벽, 서버 IdleEngine.maxHp의 BOSS_HP). */
+/** 보스(대량 매도벽)가 서는 간격: 50번째 벽마다 (547·550번, 서버 IdleEngine.BOSS_EVERY). */
+export const IDLE_BOSS_EVERY = 50
+
+/** 보스 벽: 대량 매도벽(큰손 벽, 서버 IdleEngine.maxHp의 BOSS_HP). 열 번째 벽마다 서던 것은 없앴다 (550번). */
 export function idleBossWall(wall: number): boolean {
-  return Math.floor(wall) % 10 === 0
+  return Math.floor(wall) % IDLE_BOSS_EVERY === 0
 }
 
 /**

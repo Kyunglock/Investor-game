@@ -232,7 +232,9 @@ describe('매도벽 경험치 (#700)', () => {
     const fourth = idleAssaultSpec(4).walls[0]
     expect(fourth.spawnSeconds).toBeLessThan(first.walls[0].spawnSeconds)
     expect(fourth.rows).toBe(1)
-    expect(idleAssaultSpec(10).walls[0].boss).toBe(true)
+    // 큰손이 지키는 보스 벽은 50번째 벽마다다 (550번): 열 번째 벽은 보통 벽이다.
+    expect(idleAssaultSpec(10).walls[0].boss).toBe(false)
+    expect(idleAssaultSpec(50).walls[0].boss).toBe(true)
     // 열 벽을 넘기면 수·공격이 는다. 벽 체력을 모르면 물량 하나의 수량은 그대로다.
     const next = idleAssaultSpec(11)
     expect(next.walls[0].mix).toEqual(first.walls[0].mix)

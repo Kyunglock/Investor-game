@@ -44,19 +44,22 @@ describe('매도벽 돌파의 총알 관통 (520번)', () => {
     expect(idlePierceHits(7, Number.NaN, walls)).toEqual([])
   })
 
-  it('대량 매도벽(열 번째 벽마다)은 뚫리지 않는다: 맨 앞이면 멈추고, 뒤에 있으면 그 앞까지만 간다', () => {
-    expect(idleBossWall(10)).toBe(true)
-    expect(idleBossWall(11)).toBe(false)
-    expect(idlePierceReach(7)).toBe(2)
-    expect(idlePierceReach(8)).toBe(1)
-    expect(idlePierceReach(9)).toBe(0)
-    expect(idlePierceReach(10)).toBe(0)
+  it('대량 매도벽(보스, 50번째 벽마다)은 뚫리지 않는다: 맨 앞이면 멈추고, 뒤에 있으면 그 앞까지만 간다', () => {
+    expect(idleBossWall(50)).toBe(true)
+    expect(idleBossWall(51)).toBe(false)
+    // 열 번째 벽은 이제 보통 벽이다 (550번).
+    expect(idleBossWall(10)).toBe(false)
+    expect(idlePierceReach(8)).toBe(2)
+    expect(idlePierceReach(47)).toBe(2)
+    expect(idlePierceReach(48)).toBe(1)
+    expect(idlePierceReach(49)).toBe(0)
+    expect(idlePierceReach(50)).toBe(0)
     const near = [
-      { wall: 9, hp: 100 },
-      { wall: 10, hp: 100 },
+      { wall: 49, hp: 100 },
+      { wall: 50, hp: 100 },
     ]
-    expect(idlePierceHits(8, 40, near)).toEqual([{ wall: 9, behind: 1, damage: 20 }])
-    expect(idlePierceHits(9, 40, [{ wall: 10, hp: 100 }])).toEqual([])
-    expect(idlePierceHits(10, 40, [{ wall: 11, hp: 100 }])).toEqual([])
+    expect(idlePierceHits(48, 40, near)).toEqual([{ wall: 49, behind: 1, damage: 20 }])
+    expect(idlePierceHits(49, 40, [{ wall: 50, hp: 100 }])).toEqual([])
+    expect(idlePierceHits(50, 40, [{ wall: 51, hp: 100 }])).toEqual([])
   })
 })

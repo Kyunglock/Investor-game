@@ -1,4 +1,5 @@
 import { type EnemyKind, isOrder, type OrderKind } from './enemies'
+import { idleBossWall } from './idlePierce'
 import { SHARES_PER_HP } from './shares'
 
 /**
@@ -298,7 +299,7 @@ export const IDLE_BOSS_HP = 3
 /** wall번째 벽(체력 maxHp) 앞 물량의 배율. 주문서의 주식 수가 깔끔하게 유효 숫자 둘로 끊는다. */
 export function idleThreat(wall: number, maxHp: number): number {
   if (!Number.isFinite(maxHp) || maxHp <= 0) return 1
-  const hp = Math.floor(wall) % 10 === 0 ? maxHp / IDLE_BOSS_HP : maxHp
+  const hp = idleBossWall(wall) ? maxHp / IDLE_BOSS_HP : maxHp
   return Number((1 + hp / IDLE_THREAT_HP).toPrecision(2))
 }
 
@@ -328,7 +329,7 @@ export function idleAssaultSpec(wall: number, maxHp = 0): AssaultSpec {
         mix: ordersOnly(template.mix),
         rows: 1,
         mid: false,
-        boss: Math.floor(wall) % 10 === 0,
+        boss: idleBossWall(wall),
       },
     ],
   }
