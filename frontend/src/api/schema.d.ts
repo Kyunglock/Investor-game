@@ -271,8 +271,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 매수벽이 무너져 열 벽 앞으로 돌아간다 (decisions.md 546번)
-         * @description 화면의 매수벽이 무너지면 보낸다. 열 벽 앞(1번 벽 아래로는 가지 않고, 보스 도전의 벽이면 그다음 벽)에 새 벽으로 서고 쌓인 피해와 거래 정지는 지운다.
+         * 매수벽이 무너져 열 벽 앞으로 돌아간다 (decisions.md 546·548번)
+         * @description 화면의 매수벽이 무너지면 보낸다. 열 벽 앞에 선다. 다만 이미 깬 보스(50번째 벽마다)의 다음 벽보다 앞으로는 가지 않는다(51~100번째 벽에서는 51번째 벽까지, 548번). 그 벽은 새 벽으로 서고 쌓인 피해와 거래 정지는 지운다.
          */
         post: operations["retreatIdle"];
         delete?: never;

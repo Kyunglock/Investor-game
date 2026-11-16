@@ -156,12 +156,12 @@ try {
       // Cat gacha, fielding and equipment (decisions.md 488): the mock keeps the server's shape.
       const path = new URL(route.request().url()).pathname
       const sent = route.request().postDataJSON()
-      // The retreat after the buy wall fell (decisions.md 546): ten walls back, never onto a boss
-      // challenge wall (every 50th, 547).
+      // The retreat after the buy wall fell (decisions.md 546): ten walls back, never behind
+      // the last cleared boss (every 50th wall, 547 and 548).
       if (path.endsWith('/idle/retreat')) {
         moves.push('retreat')
-        const back = Math.max(1, company.idle.wall - 10)
-        company.idle.wall = back % 50 === 0 ? back + 1 : back
+        const wall = company.idle.wall
+        company.idle.wall = Math.max(Math.floor((wall - 1) / 50) * 50 + 1, wall - 10)
         company.idle.boss = company.idle.wall % 10 === 0
         company.idle.hp = company.idle.maxHp = 1200
         company.idle.circuitSeconds = 0

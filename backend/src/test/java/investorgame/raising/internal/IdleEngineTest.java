@@ -525,8 +525,15 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isZero();
     assertThat(state.idle.nextDamage).isZero();
     assertThat(state.idle.epoch).isEqualTo(epoch + 1);
-    // Never onto a boss challenge wall, never below the first wall.
+    // Never behind the last cleared boss (548): the wall after it is where the fight starts again.
+    assertThat(IdleEngine.retreatWall(51)).isEqualTo(51);
+    assertThat(IdleEngine.retreatWall(55)).isEqualTo(51);
     assertThat(IdleEngine.retreatWall(60)).isEqualTo(51);
+    assertThat(IdleEngine.retreatWall(61)).isEqualTo(51);
+    assertThat(IdleEngine.retreatWall(67)).isEqualTo(57);
+    assertThat(IdleEngine.retreatWall(100)).isEqualTo(90);
+    assertThat(IdleEngine.retreatWall(104)).isEqualTo(101);
+    // The boss itself is not cleared yet: losing to it goes ten walls back. Never below wall 1.
     assertThat(IdleEngine.retreatWall(50)).isEqualTo(40);
     assertThat(IdleEngine.retreatWall(30)).isEqualTo(20);
     assertThat(IdleEngine.retreatWall(10)).isEqualTo(1);
