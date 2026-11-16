@@ -15,8 +15,8 @@ const faceRects = JSON.parse(
 
 // The shop tab carries a dot ("무료 상품 있음") while a free item is left (decisions.md 541).
 const SHOP_MENU = /^상점( 무료 상품 있음)?$/
-// The weapons tab carries a dot while weapons can be merged (540).
-const WEAPON_MENU = /^무기( 합칠 수 있는 무기 있음)?$/
+// Cats and weapons share one tab (560); it carries a dot while weapons can be merged.
+const CAT_MENU = /^고양이·무기( 합칠 수 있는 무기 있음)?$/
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -259,7 +259,7 @@ try {
     await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     // Cats are drawn with diamonds (decisions.md 526), fielded in four slots, and shown in a scrolling six-column roster (488, 493, 495).
-    await page.getByRole('button', { name: '고양이', exact: true }).click()
+    await page.getByRole('button', { name: CAT_MENU }).click()
     await expect(page.locator('.idle-cat-grid > li')).toHaveCount(42)
     await expect(page.getByTestId('cat')).toHaveCount(39)
     await expect(page.getByTestId('cat-slot')).toHaveCount(4)
@@ -272,7 +272,7 @@ try {
     // The draws moved to the shop tab (541); the cats tab keeps the roster only.
     await expect(page.getByTestId('cat-gacha')).toHaveCount(0)
     const toShop = () => page.getByRole('button', { name: SHOP_MENU }).last().click()
-    const toCats = () => page.getByRole('button', { name: '고양이', exact: true }).last().click()
+    const toCats = () => page.getByRole('button', { name: CAT_MENU }).last().click()
     const pickCat = (code: string) => page.locator(`[data-testid=cat][data-code=${code}]`).click()
     await toShop()
     const diamonds = company.diamonds.amount
@@ -418,23 +418,16 @@ try {
     await page.locator('[data-testid=cat][data-code=sky]').click()
     await detail.getByTestId('cat-field').click()
     await page.screenshot({ path: `/tmp/idle-cats-${width}.png`, fullPage: true })
-    // Equipment opens inside the cat tray; switching to weapons keeps the same wearer.
+    // Equipment opens inside the cat tray (560: there is no separate weapons tab) and keeps the
+    // wearer; picking the boss cat there keeps the equipment list open.
     await detail.getByTestId('cat-gun').click()
     await expect(detail).toHaveAttribute('data-code', 'sky')
     await expect(page.getByTestId('cat-gear')).toBeVisible()
-    await page.getByRole('button', { name: WEAPON_MENU }).last().click()
-    await expect(page.getByTestId('weapon-now')).toContainText('하늘냥의 무기')
-    await expect(page.locator('[data-testid=gear-wearer][data-code=sky]')).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
     await expect(page.getByTestId('cat-weapon').first()).toBeVisible()
-    await page.locator('[data-testid=gear-wearer][data-code=boss]').click()
-    await expect(page.getByTestId('weapon-now')).toContainText('의 무기')
-    await expect(page.locator('[data-testid=gear-wearer][data-code=boss]')).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    await page.getByTestId('cat-boss').click()
+    await expect(detail).toHaveAttribute('data-code', 'boss')
+    await expect(page.getByTestId('cat-boss')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByTestId('cat-gear')).toBeVisible()
     await page.screenshot({ path: `/tmp/idle-weapons-${width}.png`, fullPage: true })
     // The weapon draw is in the shop: the link opens it on the weapon draw.
     await page.getByTestId('weapon-to-shop').click()
@@ -706,12 +699,13 @@ try {
     await expect(page.getByRole('button', { name: /^회사/ })).toHaveCount(0)
     await expect(page.getByRole('button', { name: '회사 메뉴' })).toHaveCount(0)
     const nav = page.getByRole('navigation', { name: '게임 메뉴' }).last()
-    await expect(nav.getByRole('button')).toHaveCount(5)
+    await expect(nav.getByRole('button')).toHaveCount(4)
+    await expect(nav.getByRole('button', { name: /^무기/ })).toHaveCount(0)
     await expect(nav.getByRole('button', { name: '돌파', exact: true })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    for (const name of [/^성장/, WEAPON_MENU, '고양이', SHOP_MENU]) {
+    for (const name of [/^성장/, CAT_MENU, SHOP_MENU]) {
       const tab = page
         .getByRole('navigation', { name: '게임 메뉴' })
         .last()
@@ -753,7 +747,7 @@ try {
     await page.close()
   }
   console.log(
-    'PASS: main view, heartbeat, background stop/resume, skill gating, five tabs, 320/390/1024px',
+    'PASS: main view, heartbeat, background stop/resume, skill gating, four tabs, 320/390/1024px',
   )
 } finally {
   await browser.close()

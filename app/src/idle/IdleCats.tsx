@@ -1,6 +1,5 @@
 import type { Company } from '@web/api/client'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
-import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
@@ -24,21 +23,29 @@ const COLUMNS = 6
 /**
  * 고양이 메뉴 (decisions.md 488·491·493·530번): 위의 출전 칸 넷에 세우고, 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그
  * 고양이의 등급·고유 스킬 설명과 든 무기가 나온다 (501번). 무기는 같은 패널에서 바꾸고 뽑기는 상점 탭이다(541번). 결과는 서버가 정한다.
+ * 무기 탭을 여기에 합쳤다 (560번): 든 무기를 누르면 고양이 목록 자리에 장비 목록이 펴져 들리고 합친다.
  */
 export function IdleCats({
   company,
   picked,
   onPick,
+  gear: gearOpen,
+  onGear: setGearOpen,
+  onDraw,
 }: {
   company: Company
   /** 메뉴를 오가도 선택한 고양이를 유지한다. null은 사장냥이다. */
   picked: CatCode | null
   onPick: (code: CatCode | null) => void
+  /** 고양이 목록 대신 장비 목록을 펴고 있는가 (560번). */
+  gear: boolean
+  onGear: (open: boolean) => void
+  /** 무기 뽑기(상점 탭)로 간다. */
+  onDraw: () => void
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   // 고른 고양이. null이면 사장냥이다.
-  const [gearOpen, setGearOpen] = useState(false)
   const setPicked = onPick
   const idle = company.idle
   const hero = heroOf(company)
@@ -250,7 +257,17 @@ export function IdleCats({
         </button>
       </article>
       {gearOpen ? (
-        <CatGear company={company} wearer={cat} onSelect={onPick} />
+        <>
+          <CatGear company={company} wearer={cat} onSelect={onPick} />
+          <button
+            type="button"
+            className="idle-weapon-draw"
+            data-testid="weapon-to-shop"
+            onClick={onDraw}
+          >
+            무기 뽑기는 상점에서 ▸
+          </button>
+        </>
       ) : (
         <>
           <p className="loadout-hint" aria-live="polite">

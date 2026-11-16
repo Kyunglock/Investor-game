@@ -1888,12 +1888,6 @@
 }
 
 /* 무기 탭 (540번): 누가 들지 고르는 줄, 지금 든 무기, 장비 목록. */
-.idle-wearers {
-  flex-wrap: wrap;
-}
-.idle-weapon-held {
-  cursor: default;
-}
 .idle-weapon-draw {
   display: block;
   width: 100%;
