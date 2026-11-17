@@ -42,7 +42,7 @@ class RewardsEngineTest {
         .containsExactly(50, 50, 100, 50, 100, 100, 300);
     assertThat(days.stream().mapToLong(CompanyProperties.AttendanceDay::diamonds).sum())
         .isEqualTo(750);
-    // 돈 칸은 뺐다 (564번).
+    // 돈 칸은 뺐다 (565번).
     assertThat(days).allMatch(day -> day.incomeMinutes() == 0);
   }
 

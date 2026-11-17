@@ -12,7 +12,7 @@ import {
   stepState,
 } from './pass'
 
-/** 서버의 보상표 (529·568번): 보통 단계 다이아 50, 5의 배수는 200, 10·20은 300 + 무기, 30은 500 + 고양이. 한 단계에 300포인트. */
+/** 서버의 보상표 (529·570번): 보통 단계 다이아 50, 5의 배수는 200, 10·20은 300 + 무기, 30은 500 + 고양이. 한 단계에 300포인트. */
 function pass(points: number, claimed: number[] = [], over: Partial<Pass> = {}): Pass {
   const step = Math.min(30, Math.floor(points / 300))
   const steps = Array.from({ length: 30 }, (_, i) => {
@@ -61,7 +61,7 @@ const mission = (count: number, every: number): PassMission => ({
   earned: Math.floor(count / every) * 30,
 })
 
-describe('시즌패스 (529·568번)', () => {
+describe('시즌패스 (529·570번)', () => {
   it('남은 시간을 큰 단위 둘로 적는다', () => {
     expect(leftText(86400 * 12 + 3600 * 5 + 59)).toBe('12일 5시간 남음')
     expect(leftText(86400 * 3)).toBe('3일 남음')

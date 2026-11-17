@@ -70,12 +70,12 @@ public record CompanyView(
    * @param endsAt 시즌이 끝나는 때(서버 시각, ms)
    * @param secondsLeft 끝날 때까지 남은 시간(초)
    * @param endingSoon 끝나기까지 하루가 안 남았다: 받지 않은 보상이 있으면 알려 준다
-   * @param points 이번 시즌에 모은 포인트 (568번)
+   * @param points 이번 시즌에 모은 포인트 (569번)
    * @param pointsPerStep 한 단계에 드는 포인트
    * @param step 지금 도달한 단계(0부터)
    * @param claimable 받을 수 있는 보상의 수
    * @param steps 단계마다의 보상, 1단계부터
-   * @param missions 포인트를 주는 미션과 그 진행도 (568번)
+   * @param missions 포인트를 주는 미션과 그 진행도 (569번)
    * @param lastRewards 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다
    */
   public record Pass(
@@ -93,7 +93,7 @@ public record CompanyView(
       List<PassReward> lastRewards) {}
 
   /**
-   * 시즌패스의 미션 (568번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다.
+   * 시즌패스의 미션 (569번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다.
    *
    * @param code wall·boss·upgrade·draw·merge·attend
    * @param title 화면에 적는 글: "매도벽 100개 통과"처럼 다음에 닿을 수가 들어 있다
@@ -107,7 +107,7 @@ public record CompanyView(
       String code, String title, long count, long target, int every, int points, long earned) {}
 
   /**
-   * 시즌패스의 한 단계. 돈은 주지 않는다 (568번).
+   * 시즌패스의 한 단계. 돈은 주지 않는다 (569번).
    *
    * @param diamonds 받는 다이아
    * @param weapon 무기 하나를 더 받는다(등급은 뽑기처럼 정해진다)
@@ -243,7 +243,7 @@ public record CompanyView(
       Rebirth rebirth) {}
 
   /**
-   * 환생 (decisions.md 569번): 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
+   * 환생 (decisions.md 570번): 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
    *
    * @param count 환생한 횟수
    * @param fish 가진 생선
@@ -281,7 +281,7 @@ public record CompanyView(
    * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
    * @param skills 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고 A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다
    * @param grade 등급 C·B·A·S (539번). 종마다 정해져 있고, 높을수록 총이 세고 뽑기에서 드물다
-   * @param levelCost 생선으로 레벨을 하나 올리는 값 (569번). 아직 없거나 최고 레벨이면 0
+   * @param levelCost 생선으로 레벨을 하나 올리는 값 (570번). 아직 없거나 최고 레벨이면 0
    */
   public record IdleCat(
       String code,

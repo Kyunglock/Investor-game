@@ -1,7 +1,7 @@
 import type { Company } from '@web/api/client'
 import { diamondText } from '@web/features/raising/gachaRules'
 
-/** 시즌패스 (decisions.md 529·568번): 서버가 주는 시즌·포인트·미션·단계 보상. */
+/** 시즌패스 (decisions.md 529·570번): 서버가 주는 시즌·포인트·미션·단계 보상. */
 export type Pass = Company['pass']
 export type PassStep = Pass['steps'][number]
 export type PassReward = Pass['lastRewards'][number]
@@ -46,7 +46,7 @@ export function focusStep(pass: Pass): number {
 }
 
 /**
- * 미션의 진행도 (568번): 다음 문턱까지 "73/100". 문턱이 되풀이되므로 센 수는 그대로 적고, 막대는 지난 문턱부터 다음 문턱까지의 비율이다.
+ * 미션의 진행도 (569번): 다음 문턱까지 "73/100". 문턱이 되풀이되므로 센 수는 그대로 적고, 막대는 지난 문턱부터 다음 문턱까지의 비율이다.
  */
 export function missionProgress(mission: PassMission): { text: string; ratio: number } {
   const every = Math.max(1, mission.every)
@@ -65,7 +65,7 @@ function weaponName(reward: PassReward, weapons: Weapons): string {
 
 /**
  * 방금 받은 것을 한 줄로: "다이아 +250 · 무기 리볼버 S · 고양이 하늘냥". 다이아는 더하고, 무기·고양이는 이름을 적는다. 무기가 셋을 넘으면
- * "무기 4개"로 줄인다. 받은 것이 없으면 빈 글이다. 돈은 주지 않는다 (568번).
+ * "무기 4개"로 줄인다. 받은 것이 없으면 빈 글이다. 돈은 주지 않는다 (569번).
  */
 export function rewardsText(rewards: PassReward[], weapons: Weapons = []): string {
   const diamonds = rewards.reduce((sum, r) => sum + r.diamonds, 0)

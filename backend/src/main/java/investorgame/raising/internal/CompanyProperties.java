@@ -93,7 +93,7 @@ public record CompanyProperties(
       int dailyLimit) {}
 
   /**
-   * 시즌패스 (decisions.md 529·568번): 무료 줄 하나. 시즌은 epoch(한국 시간 자정)부터 days일마다 이어진다. 포인트는 미션을 깨면 들어온다.
+   * 시즌패스 (decisions.md 529·570번): 무료 줄 하나. 시즌은 epoch(한국 시간 자정)부터 days일마다 이어진다. 포인트는 미션을 깨면 들어온다.
    *
    * @param epoch 첫 시즌이 시작하는 날(yyyy-MM-dd, 한국 시간)
    * @param days 한 시즌의 길이(일)
@@ -109,12 +109,12 @@ public record CompanyProperties(
       PassRewards rewards,
       List<PassMission> missions) {}
 
-  /** 단계의 다이아: 보통 단계·5의 배수·10의 배수(무기 하나 더)·마지막 단계(고양이 한 마리 더). 돈은 주지 않는다 (568번). */
+  /** 단계의 다이아: 보통 단계·5의 배수·10의 배수(무기 하나 더)·마지막 단계(고양이 한 마리 더). 돈은 주지 않는다 (569번). */
   public record PassRewards(
       long normalDiamonds, long fiveDiamonds, long tenDiamonds, long lastDiamonds) {}
 
   /**
-   * 시즌패스의 미션 (568번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다. 끝없이 되풀이된다.
+   * 시즌패스의 미션 (569번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다. 끝없이 되풀이된다.
    *
    * @param code wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)
    * @param title 화면에 적는 글. {n}은 다음에 닿을 수다

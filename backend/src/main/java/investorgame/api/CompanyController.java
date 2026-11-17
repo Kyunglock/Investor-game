@@ -372,7 +372,7 @@ class CompanyController {
     return companies.retreatIdle(cookies.requirePlayer(token));
   }
 
-  /** 환생한다 (decisions.md 569번): 매도벽 1로 돌아가고 생선을 받는다. */
+  /** 환생한다 (decisions.md 570번): 매도벽 1로 돌아가고 생선을 받는다. */
   @PostMapping("/rebirth")
   CompanyView rebirth(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
     UUID sessionId = cookies.requirePlayer(token);
@@ -387,7 +387,7 @@ class CompanyController {
     return company;
   }
 
-  /** 생선으로 고양이의 레벨을 하나 올린다 (569번). */
+  /** 생선으로 고양이의 레벨을 하나 올린다 (570번). */
   @PostMapping("/cat/level")
   CompanyView feedCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,

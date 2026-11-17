@@ -98,7 +98,7 @@ interface RaisingState {
   skipSandboxSeason: () => Promise<void>
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   fieldCat: (code: CatCode, fielded: boolean, replaceCode?: CatCode) => Promise<void>
-  /** 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 569번). */
+  /** 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 570번). */
   feedCat: (code: CatCode) => Promise<void>
   /** 고양이에게 가진 무기 하나를 들린다. weapon이 null이면 뺀다 (488번). */
   equipCat: (

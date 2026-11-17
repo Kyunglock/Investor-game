@@ -19,7 +19,7 @@ import {
 } from './pass'
 
 /**
- * 시즌패스 (decisions.md 529·568번). 미션을 깨서 포인트를 모으면 단계 보상을 받는다. 돌파 화면 위쪽의 패스 단추(받을 보상의 수를 단다)와 시즌패스 시트다. 스스로 뜨지 않는다: 단추로 연다.
+ * 시즌패스 (decisions.md 529·570번). 미션을 깨서 포인트를 모으면 단계 보상을 받는다. 돌파 화면 위쪽의 패스 단추(받을 보상의 수를 단다)와 시즌패스 시트다. 스스로 뜨지 않는다: 단추로 연다.
  */
 export function IdlePass({ company }: { company: Company }) {
   const pass = company.pass
@@ -145,7 +145,7 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
           모두 받기 <small className="idle-pass-all-count">{pass.claimable}개</small>
         </button>
       )}
-      {/* 미션 (568번): 깨면 포인트가 들어온다. 문턱에 닿으면 다음 문턱으로 넘어가며 되풀이된다. */}
+      {/* 미션 (569번): 깨면 포인트가 들어온다. 문턱에 닿으면 다음 문턱으로 넘어가며 되풀이된다. */}
       <h4 className="idle-pass-missions-title">미션 · 깨면 포인트를 받아요</h4>
       <ul className="idle-pass-missions" data-testid="pass-missions">
         {pass.missions.map((mission) => {

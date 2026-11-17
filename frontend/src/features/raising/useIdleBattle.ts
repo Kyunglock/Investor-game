@@ -63,7 +63,7 @@ export async function retreatIdle(): Promise<boolean> {
 }
 
 /**
- * 환생 (decisions.md 569번): 매도벽 1로 돌아가고 생선을 받는다. 후퇴처럼 접속 신호와 차례를 지켜 보내고, 아직 보내지 않은 명중은 떠나는 벽과 함께
+ * 환생 (decisions.md 570번): 매도벽 1로 돌아가고 생선을 받는다. 후퇴처럼 접속 신호와 차례를 지켜 보내고, 아직 보내지 않은 명중은 떠나는 벽과 함께
  * 버린다. 환생했으면 true. 거절되면(첫 보스를 깨기 전) 그 까닭이 store의 error에 남는다.
  */
 export async function rebirthIdle(): Promise<boolean> {

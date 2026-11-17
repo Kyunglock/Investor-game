@@ -25,7 +25,7 @@
   border-radius: 8px;
   background: #fff9e9;
 }
-/* 고양이·무기 탭은 화면을 가득 채운다 (567번). 출전 칸은 스크롤해도 위에 붙어 있다. */
+/* 고양이·무기 탭은 화면을 가득 채운다 (568번). 출전 칸은 스크롤해도 위에 붙어 있다. */
 .idle-sheet.loadout-sheet > button:first-child {
   flex: 0 0 max(4px, env(safe-area-inset-top));
 }
@@ -45,7 +45,7 @@
   padding: 4px 0 7px;
   border-bottom: 2px solid #d8ba7c;
 }
-/* 출전 칸 (567번): 다섯 칸 두 줄. 세로줄 하나가 고양이 칸과 그 고양이의 무기 칸 한 짝이다. */
+/* 출전 칸 (568번): 다섯 칸 두 줄. 세로줄 하나가 고양이 칸과 그 고양이의 무기 칸 한 짝이다. */
 .loadout-sheet .idle-cat-field-row {
   margin: 5px 0 0;
   gap: 5px;

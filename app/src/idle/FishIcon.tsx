@@ -1,4 +1,4 @@
-/** 생선 (decisions.md 569번): 환생하면 얻고 고양이의 레벨을 올리는 재료. 글씨 크기를 따라간다. */
+/** 생선 (decisions.md 570번): 환생하면 얻고 고양이의 레벨을 올리는 재료. 글씨 크기를 따라간다. */
 export function FishIcon() {
   return (
     <svg className="idle-fish" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true">

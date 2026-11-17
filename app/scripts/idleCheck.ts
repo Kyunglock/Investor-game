@@ -237,7 +237,7 @@ try {
       )
       .toBe(true)
     assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)
-    // A안: 하단 탭은 캔버스 밖에 두고, 상단은 첫 매도벽보다 위에 유지한다. 전투 공간과 탭 사이의 단추 줄은 없다 (565번).
+    // A안: 하단 탭은 캔버스 밖에 두고, 상단은 첫 매도벽보다 위에 유지한다. 전투 공간과 탭 사이의 단추 줄은 없다 (566번).
     const arenaBounds = await page.getByTestId('idle-canvas').boundingBox()
     const navBounds = await page.getByRole('navigation', { name: '게임 메뉴' }).boundingBox()
     const hudBounds = await page.locator('.idle-hud').boundingBox()
@@ -245,7 +245,7 @@ try {
     assert(arenaBounds.height > 0 && arenaBounds.y + arenaBounds.height <= navBounds.y + 1)
     assert(hudBounds.y + hudBounds.height <= 55)
     await expect(page.getByRole('toolbar')).toHaveCount(0)
-    // 시즌패스와 설정은 위 줄 안에 있고 (565번), 출석 단추는 없다 (564번).
+    // 시즌패스와 설정은 위 줄 안에 있고 (566번), 출석 단추는 없다 (565번).
     for (const id of ['idle-pass', 'idle-options']) {
       const box = await page.getByTestId(id).boundingBox()
       assert(box, `${id} is shown`)
@@ -257,7 +257,7 @@ try {
     await expect(page.getByTestId('sound-toggle')).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('sound-toggle')).toHaveCount(0)
-    // 시즌패스 (568번): 미션과 진행도가 보이고 보상에 돈이 없다.
+    // 시즌패스 (569번): 미션과 진행도가 보이고 보상에 돈이 없다.
     await page.getByTestId('idle-pass').click()
     await expect(page.getByTestId('pass-mission')).toHaveCount(6)
     await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText(
@@ -285,7 +285,7 @@ try {
     await expect(stat('hp')).toContainText('매수벽 체력')
     await expect(stat('buy')).toContainText('매수벽 공격')
     await expect(stat('crit')).toHaveCount(0)
-    // 환생 (569번): 성장 탭 맨 아래. 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
+    // 환생 (570번): 성장 탭 맨 아래. 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
     await expect(page.getByTestId('rebirth')).toBeVisible()
     await expect(page.getByTestId('rebirth-open')).toBeDisabled()
     await expect(page.getByTestId('rebirth-open')).toHaveText('매도벽 51부터 환생할 수 있어요')

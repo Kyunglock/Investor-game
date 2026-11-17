@@ -55,7 +55,7 @@ class RewardsEngine {
     c.attendCount++;
     c.attendDay = idle.today();
     c.lastAttend = reward;
-    // 출석은 시즌패스 미션이다 (568번).
+    // 출석은 시즌패스 미션이다 (569번).
     engine.pass.progress(c, "attend", 1, idle.todayDate());
   }
 
@@ -165,17 +165,17 @@ class RewardsEngine {
             : new CompanyView.AttendanceReward(r.day, r.diamonds, CompanyView.money(r.money)));
   }
 
-  /** 강화를 levels번 했다: 시즌패스 미션 (568번). */
+  /** 강화를 levels번 했다: 시즌패스 미션 (569번). */
   void upgraded(CompanyState c, int levels) {
     engine.pass.progress(c, "upgrade", levels, idle.todayDate());
   }
 
-  /** 고양이나 무기를 count번 뽑았다: 시즌패스 미션 (568번). */
+  /** 고양이나 무기를 count번 뽑았다: 시즌패스 미션 (569번). */
   void drew(CompanyState c, int count) {
     engine.pass.progress(c, "draw", count, idle.todayDate());
   }
 
-  /** 무기를 한 번 합쳤다: 시즌패스 미션 (568번). */
+  /** 무기를 한 번 합쳤다: 시즌패스 미션 (569번). */
   void merged(CompanyState c) {
     engine.pass.progress(c, "merge", 1, idle.todayDate());
   }
@@ -260,7 +260,7 @@ class RewardsEngine {
           new CompanyView.PassStep(
               at, reward.diamonds(), reward.weapon(), reward.cat(), at <= reached, claimed));
     }
-    // 미션 (568번): 이번 시즌에 센 수와 다음에 닿을 수, 그때 받는 포인트.
+    // 미션 (569번): 이번 시즌에 센 수와 다음에 닿을 수, 그때 받는 포인트.
     List<CompanyView.PassMission> missions =
         rule.missions().stream()
             .map(

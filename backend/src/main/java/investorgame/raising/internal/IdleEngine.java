@@ -852,7 +852,7 @@ class IdleEngine {
     // (532): the screen broke it at that hit and kept shooting.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
       earned += reward(c);
-      // 시즌패스 미션 (568번): 통과한 벽을 센다.
+      // 시즌패스 미션 (569번): 통과한 벽을 센다.
       engine.pass.progress(c, "wall", 1, todayDate());
       double left = Math.max(0, s.damage - maxHp(s.wall));
       // 보스 클리어 보상 (549번): 벽 보상과 따로, 그 보스를 처음 깼을 때 한 번.
@@ -973,13 +973,13 @@ class IdleEngine {
 
   static final int MAX_CAT_LEVEL = 1000;
 
-  // 환생 (decisions.md 569번): 첫 보스(50번째 벽)를 깬 뒤부터 할 수 있고, 지금 선 벽이 깊을수록 생선을 많이 준다.
+  // 환생 (decisions.md 570번): 첫 보스(50번째 벽)를 깬 뒤부터 할 수 있고, 지금 선 벽이 깊을수록 생선을 많이 준다.
   static final long REBIRTH_WALL = 51;
   private static final double REBIRTH_FISH_DIVISOR = 500;
   // 생선으로 고양이 레벨을 하나 올리는 값: 지금 레벨 × 이만큼.
   static final long FISH_PER_LEVEL = 5;
 
-  /** 지금 환생하면 받는 생선 (569번): (깬 벽 수)² ÷ 500. 51번째 벽에서 5, 101번째 20, 301번째 180. 아직 못 하면 0. */
+  /** 지금 환생하면 받는 생선 (570번): (깬 벽 수)² ÷ 500. 51번째 벽에서 5, 101번째 20, 301번째 180. 아직 못 하면 0. */
   long rebirthFish(CompanyState c) {
     long cleared = state(c).wall - 1;
     return state(c).wall < REBIRTH_WALL
@@ -988,7 +988,7 @@ class IdleEngine {
   }
 
   /**
-   * 환생한다 (569번): 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선을 받는다. 고양이·무기·다이아·시즌패스·직원과 이미 받은 보스 보상(같은
+   * 환생한다 (570번): 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선을 받는다. 고양이·무기·다이아·시즌패스·직원과 이미 받은 보스 보상(같은
    * 보스의 보상은 다시 주지 않는다)은 그대로다. 첫 보스를 깨기 전이면 400.
    */
   void rebirth(CompanyState c) {
@@ -1006,12 +1006,12 @@ class IdleEngine {
     s.wallDps = 0;
   }
 
-  /** 생선으로 고양이의 레벨을 하나 올리는 값 (569번). 없는 고양이거나 최고 레벨이면 0. */
+  /** 생선으로 고양이의 레벨을 하나 올리는 값 (570번). 없는 고양이거나 최고 레벨이면 0. */
   long fishCost(int level) {
     return level < 1 || level >= MAX_CAT_LEVEL ? 0 : level * FISH_PER_LEVEL;
   }
 
-  /** 생선으로 가진 고양이의 레벨을 하나 올린다 (569번). 가지지 않았거나 최고 레벨이거나 생선이 모자라면 400. */
+  /** 생선으로 가진 고양이의 레벨을 하나 올린다 (570번). 가지지 않았거나 최고 레벨이거나 생선이 모자라면 400. */
   void feedCat(CompanyState c, String code) {
     CompanyState.Idle s = state(c);
     int level = s.cats.getOrDefault(code, 0);

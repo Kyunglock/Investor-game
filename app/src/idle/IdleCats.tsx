@@ -26,7 +26,7 @@ const skillLabel = (cat: Cat) =>
 const COLUMNS = 6
 
 /**
- * 고양이 메뉴 (decisions.md 488·491·493·530·567번): 위의 출전 칸 넷에 세우고, 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그
+ * 고양이 메뉴 (decisions.md 488·491·493·530·569번): 위의 출전 칸 넷에 세우고, 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그
  * 고양이의 등급·고유 스킬 설명과 든 무기가 나온다 (501번). 무기는 같은 패널에서 바꾸고 뽑기는 상점 탭이다(541번). 결과는 서버가 정한다.
  * 무기 탭을 여기에 합쳤다 (560번): 든 무기를 누르면 고양이 목록 자리에 장비 목록이 펴져 들리고 합친다.
  */
@@ -91,7 +91,7 @@ export function IdleCats({
   const canMerge = mergeable(company).length > 0
   const weaponOf = (c: Cat) => company.weapons?.find((w) => same(w, c.weapon)) ?? DEFAULT_WEAPON
   /**
-   * 무기 칸 (567번): 바로 위 고양이(code가 null이면 사장냥)가 드는 무기. 장비 목록에서 무기를 끌어 놓으면 그 고양이가 장착하고, 누르면 그
+   * 무기 칸 (568번): 바로 위 고양이(code가 null이면 사장냥)가 드는 무기. 장비 목록에서 무기를 끌어 놓으면 그 고양이가 장착하고, 누르면 그
    * 고양이의 장비 목록이 펴진다. 든 무기가 없으면 기본 권총을 흐리게 보인다.
    */
   const gunSlot = (code: CatCode | null, name: string, held: Weapon, bare: boolean) => (
@@ -123,7 +123,7 @@ export function IdleCats({
             출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 윗줄은 고양이, 아랫줄은 그 고양이의
             무기
           </span>
-          {/* 생선 (569번): 환생하면 얻고 고양이의 레벨을 올린다. */}
+          {/* 생선 (570번): 환생하면 얻고 고양이의 레벨을 올린다. */}
           <b
             className="idle-fish-count"
             data-testid="fish-count"
@@ -134,7 +134,7 @@ export function IdleCats({
             {fish.toLocaleString()}
           </b>
         </p>
-        {/* 출전 칸 (567번): 다섯 칸 두 줄. 윗줄은 고양이 칸, 아랫줄은 바로 위 고양이가 드는 무기 칸이다. 이름은 적지 않는다. */}
+        {/* 출전 칸 (568번): 다섯 칸 두 줄. 윗줄은 고양이 칸, 아랫줄은 바로 위 고양이가 드는 무기 칸이다. 이름은 적지 않는다. */}
         <ul className="idle-cat-field-row" aria-label="출전 칸">
           <li>
             <button
@@ -245,7 +245,7 @@ export function IdleCats({
         ) : (
           <span className="idle-cat-field idle-cat-always">늘 출전</span>
         )}
-        {/* 생선으로 레벨업 (569번): 값은 서버가 준다(지금 레벨 × 5). */}
+        {/* 생선으로 레벨업 (570번): 값은 서버가 준다(지금 레벨 × 5). */}
         {cat && (cat.levelCost ?? 0) > 0 && (
           <button
             type="button"

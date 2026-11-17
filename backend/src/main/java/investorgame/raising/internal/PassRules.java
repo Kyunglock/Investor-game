@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 /**
- * 시즌패스의 규칙 (decisions.md 529·568번): 시즌은 epoch부터 days일마다 이어지고, 단계마다 포인트 points-per-step이 든다. 포인트는
+ * 시즌패스의 규칙 (decisions.md 529·570번): 시즌은 epoch부터 days일마다 이어지고, 단계마다 포인트 points-per-step이 든다. 포인트는
  * 미션을 깨면 들어온다. 무료 줄 하나뿐이다. 오늘 날짜(한국 시간)는 부르는 쪽이 준다.
  */
 class PassRules {
@@ -47,7 +47,7 @@ class PassRules {
       c.passMissions = new LinkedHashMap<>();
     }
     if (c.passRules < RULES) {
-      // 568번 전의 저장: 모은 경험치를 포인트로 넘긴다. 단계에 드는 값이 는 만큼 늘려 닿은 단계를 지킨다.
+      // 569번 전의 저장: 모은 경험치를 포인트로 넘긴다. 단계에 드는 값이 는 만큼 늘려 닿은 단계를 지킨다.
       c.passExp = Math.min(cap(), c.passExp * rule().pointsPerStep() / OLD_STEP);
       c.passRules = RULES;
     }
@@ -73,7 +73,7 @@ class PassRules {
   }
 
   /**
-   * 미션을 amount만큼 했다 (568번): 이번 시즌에 센 수가 every의 배수를 넘을 때마다 points를 얻는다. 한꺼번에 여러 배수를 넘으면 그만큼 얻는다. 없는
+   * 미션을 amount만큼 했다 (569번): 이번 시즌에 센 수가 every의 배수를 넘을 때마다 points를 얻는다. 한꺼번에 여러 배수를 넘으면 그만큼 얻는다. 없는
    * 미션이면 아무 일도 없다.
    */
   void progress(CompanyState c, String code, long amount, LocalDate today) {
@@ -94,7 +94,7 @@ class PassRules {
     return (int) Math.min(rule().steps(), c.passExp / rule().pointsPerStep());
   }
 
-  /** 단계의 보상. 돈은 주지 않는다 (568번). */
+  /** 단계의 보상. 돈은 주지 않는다 (569번). */
   record Reward(long diamonds, boolean weapon, boolean cat) {}
 
   Reward reward(int step) {
