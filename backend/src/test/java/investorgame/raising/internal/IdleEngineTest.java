@@ -879,13 +879,13 @@ class IdleEngineTest {
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
     assertThatThrownBy(() -> engine.useActive(state, "nope"))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
-    // Forty buy orders, each at most three times a buy order: 1.5, whatever the wall (514, 573).
+    // Forty buy orders, each at most one buy order (601): 1.5, whatever the wall (514, 573).
     // Neither the weapon nor the wall's order scale is in it.
     double order = 1.5;
     tick(1000, new IdleHit(100, "barrage", 50, 50 * 1000.0));
-    assertThat(state.idle.damage).isCloseTo(40 * 3 * order, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(40 * order, offset(1e-9));
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
-    assertThat(state.idle.damage).as("the press is spent").isCloseTo(40 * 3 * order, offset(1e-9));
+    assertThat(state.idle.damage).as("the press is spent").isCloseTo(40 * order, offset(1e-9));
 
     // The cooldown runs only while the battle runs: 40 real seconds at the fight's 1.5x (580).
     for (int i = 0; i < 37; i++) tick(1000);
@@ -1082,11 +1082,11 @@ class IdleEngineTest {
     for (int i = 0; i < 182; i++) tick(1000);
     engine.useActive(state, "boostBuy", true);
     assertThat(accepted("buy")).isCloseTo(3 * buys, offset(1e-9));
-    // The barrage's orders are buy orders too: three times three.
+    // The barrage's orders are buy orders too: 매수공격 3배 triples them.
     engine.useActive(state, "barrage");
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "barrage", 40, 1e9));
-    assertThat(state.idle.damage).isCloseTo(40 * 3 * 3 * 1.5, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(40 * 3 * 1.5, offset(1e-9));
 
     // 공격속도 3배 triples the bullet budget, and the rally is not stacked on it.
     for (int i = 0; i < 182; i++) tick(1000);
@@ -1501,15 +1501,15 @@ class IdleEngineTest {
     engine.buyFishUpgrade(c, "damage");
     assertThat(c.fish).isEqualTo(27);
     assertThat(fishUpgrade(c, "damage").level()).isEqualTo(2);
-    assertThat(fishUpgrade(c, "damage").bonus()).isEqualTo(20);
-    assertThat(fishUpgrade(c, "damage").nextBonus()).isEqualTo(30);
+    assertThat(fishUpgrade(c, "damage").bonus()).isEqualTo(2);
+    assertThat(fishUpgrade(c, "damage").nextBonus()).isEqualTo(3);
     assertThat(fishUpgrade(c, "damage").cost()).isEqualTo(3);
-    assertThat(upgrade(c, "damage").bonusPercent()).as("전투 강화의 효과에 더한다").isEqualTo(20);
+    assertThat(upgrade(c, "damage").bonusPercent()).as("전투 강화의 효과에 더한다").isEqualTo(2);
     assertThat(upgrade(c, "damage").level()).as("전투 강화의 단계는 그대로다").isZero();
     engine.buyFishUpgrade(c, "hp");
     engine.buyFishUpgrade(c, "buy");
-    assertThat(upgrade(c, "hp").bonusPercent()).isEqualTo(10);
-    assertThat(upgrade(c, "buy").bonusShares()).isEqualTo(100);
+    assertThat(upgrade(c, "hp").bonusPercent()).isEqualTo(1);
+    assertThat(upgrade(c, "buy").bonusShares()).isEqualTo(10);
     assertThat(upgrade(c, "fire").bonusPercent()).as("공격 속도는 영구 강화가 없다").isZero();
     assertThat(c.fish).isEqualTo(25);
     assertThat(c.idle.cats.get("sky")).isEqualTo(3);
@@ -1517,7 +1517,7 @@ class IdleEngineTest {
     c.idle.wall = 51;
     engine.rebirth(c);
     assertThat(c.fishLevels).containsEntry("damage", 2).containsEntry("hp", 1);
-    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(20);
+    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(2);
     // 없는 강화와 생선이 모자랄 때는 400.
     assertThatThrownBy(() -> engine.buyFishUpgrade(c, "fire"))
         .isInstanceOf(InvalidRequestException.class);

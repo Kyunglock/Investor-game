@@ -186,16 +186,6 @@ export function ActiveBadge({ code }: { code: ActiveCode }) {
           {values[code]}
         </text>
       )}
-      {code === 'barrage' && (
-        <g transform="translate(22 71)">
-          <g transform="translate(0 -3) scale(.23)">
-            <Sword />
-          </g>
-          <text x="23" y="15" className="active-badge-power">
-            ×{ACTIVES.barrage.power}
-          </text>
-        </g>
-      )}
       <g
         transform="translate(-16 12)"
         stroke={ad ? '#9d6123' : '#81509d'}

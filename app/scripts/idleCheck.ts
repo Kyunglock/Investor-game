@@ -97,7 +97,7 @@ try {
             level: 0,
             cost: 1,
             bonus: 0,
-            nextBonus: kind === 'buy' ? 100 : 10,
+            nextBonus: kind === 'buy' ? 10 : 1,
           })),
         },
         // 고유 스킬 여섯(587·591번, 앞의 셋을 장착)과 광고 스킬 셋(588번). 시간은 실제 초다.
@@ -236,7 +236,7 @@ try {
           u.level++
           u.cost = u.level + 1
           u.bonus = u.nextBonus
-          u.nextBonus += u.kind === 'buy' ? 100 : 10
+          u.nextBonus += u.kind === 'buy' ? 10 : 1
         }
       }
       const cat = company.idle.cats.find((c) => c.code === sent?.code)
@@ -409,8 +409,8 @@ try {
     const forever = (kind: string) => page.locator(`[data-testid=fish-upgrade][data-kind=${kind}]`)
     await expect(page.getByTestId('fish-upgrade')).toHaveCount(3)
     await expect(forever('damage')).toContainText('공격력 Lv.0')
-    await expect(forever('damage')).toContainText('+0% → +10%')
-    await expect(forever('buy')).toContainText('+0주 → +100주')
+    await expect(forever('damage')).toContainText('+0% → +1%')
+    await expect(forever('buy')).toContainText('+0주 → +10주')
     await expect(forever('damage').getByRole('button')).toBeDisabled()
     await expect(page.getByTestId('rebirth')).toBeVisible()
     await expect(page.getByTestId('rebirth-open')).toBeDisabled()
@@ -433,7 +433,7 @@ try {
     // 받은 생선으로 영구 강화를 올린다 (600번).
     await forever('damage').getByRole('button').click()
     await expect(forever('damage')).toContainText('공격력 Lv.1')
-    await expect(forever('damage')).toContainText('+10% → +20%')
+    await expect(forever('damage')).toContainText('+1% → +2%')
     await expect(page.getByTestId('rebirth-fish')).toContainText('59')
     await expect(page.getByTestId('growth-tab-forever')).toContainText('59')
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })

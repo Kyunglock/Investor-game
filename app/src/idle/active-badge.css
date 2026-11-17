@@ -4,8 +4,7 @@
   height: auto;
   overflow: visible;
 }
-.active-badge-value,
-.active-badge-power {
+.active-badge-value {
   fill: #4b291d;
   stroke: #fff7e5;
   stroke-width: 4px;
@@ -16,10 +15,6 @@
 }
 .active-badge-value.is-wide {
   font-size: 24px;
-}
-.active-badge-power {
-  stroke-width: 3px;
-  font-size: 16px;
 }
 .active-time {
   display: inline-flex;

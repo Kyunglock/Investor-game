@@ -288,8 +288,9 @@ class MentalEngine {
    */
   static final List<String> FISH_UPGRADES = List.of("damage", "hp", "buy");
 
-  static final int FISH_STEP_PERCENT = 10;
-  static final int FISH_STEP_SHARES = 100;
+  // 처음의 10분의 1로 낮췄다 (602번): 10%·100주는 너무 셌다.
+  static final int FISH_STEP_PERCENT = 1;
+  static final int FISH_STEP_SHARES = 10;
 
   /** 영구 강화를 level에서 한 단계 올리는 값: 다음 단계의 번호만큼의 생선(1, 2, 3 …). */
   static long fishUpgradeCost(int level) {
