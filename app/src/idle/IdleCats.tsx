@@ -13,6 +13,7 @@ import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { sortCats } from './catGrade'
 import { FishIcon } from './FishIcon'
 import { SkillBadge } from './SkillBadge'
+import { fieldSeats } from './seats'
 import { SKILLS, skillNames } from './skills'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
@@ -59,6 +60,8 @@ export function IdleCats({
   const fish = idle?.rebirth?.fish ?? 0
   const same = (w: Weapon, held: Cat['weapon']) => w.kind === held?.kind && w.grade === held.grade
   const fielded = (idle?.cats ?? []).filter((cat) => cat.fielded)
+  // 출전 칸 (599번): 고양이는 놓은 칸에 그대로 선다. 사이에 빈 칸이 있을 수 있다.
+  const seats = fieldSeats(idle?.cats ?? [], idle?.fieldSlots ?? 0)
   // 인벤토리: 가진 고양이를 등급순으로 먼저, 없는 고양이를 등급순으로 뒤에.
   const sorted = sortCats(idle?.cats ?? [])
   const cat = (idle?.cats ?? []).find((c) => c.code === picked && c.level > 0) ?? null
@@ -72,13 +75,18 @@ export function IdleCats({
   const place = async (code: CatCode, target: string) => {
     const store = useRaisingStore.getState()
     if (store.busy) return
-    const c = store.company?.idle?.cats.find((c) => c.code === code)
-    if (!c || c.fielded) return
-    await store.fieldCat(
-      code,
-      true,
-      target.startsWith('slot:empty') ? undefined : (target.slice(5) as CatCode),
-    )
+    const cats = store.company?.idle?.cats ?? []
+    const c = cats.find((c) => c.code === code)
+    if (!c || target === `slot:${code}`) return
+    const now = fieldSeats(cats, store.company?.idle?.fieldSlots ?? 0)
+    // 놓은 칸의 번호 (599번): 빈 칸은 이름에 번호가 있고, 찬 칸은 그 고양이가 선 칸이다.
+    const at = target.startsWith('slot:empty')
+      ? Number(target.slice(10))
+      : now.findIndex((seat) => seat?.code === target.slice(5))
+    if (at < 0) return
+    // 쉬던 고양이를 찬 칸에 놓으면 그 고양이와 교체하고, 그 밖에는(빈 칸, 출전 중인 고양이 옮기기·맞바꾸기) 칸 번호로 세운다.
+    if (!c.fielded && now[at]) await store.fieldCat(code, true, now[at].code as CatCode)
+    else await store.fieldCat(code, true, undefined, at)
     if (!useRaisingStore.getState().error) {
       onPick(code)
       haptic.light()
@@ -86,7 +94,7 @@ export function IdleCats({
     }
   }
   const accepts = (code: CatCode, target: string) =>
-    !busy && target.startsWith('slot:') && !(idle?.cats ?? []).find((c) => c.code === code)?.fielded
+    !busy && target.startsWith('slot:') && target !== `slot:${code}`
   const { drag, down, consumeClick } = useLoadoutDrag<CatCode>(accepts, (code, target) => {
     void place(code, target)
   })
@@ -175,61 +183,63 @@ export function IdleCats({
             </button>
             {gunSlot(null, BOSS_NAME, hero.weapon, bossBare)}
           </li>
-          {Array.from({ length: idle?.fieldSlots ?? 0 }, (_, i) => fielded[i] ?? null).map(
-            (c, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: 출전 칸은 자리 번호가 곧 열쇠다.
-              <li key={i}>
-                {c ? (
-                  <button
-                    type="button"
-                    className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''} ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:${c.code}` ? 'is-drop-over' : ''}`}
-                    data-testid="cat-slot"
-                    data-loadout-target={`slot:${c.code}`}
-                    data-code={c.code}
-                    aria-label={`출전 ${i + 1}번 ${c.name}`}
-                    onClick={() => {
-                      if (!gearOpen && cat && !cat.fielded) void place(cat.code, `slot:${c.code}`)
-                      else pick(c.code)
-                    }}
-                  >
-                    <Portrait code={c.code} />
-                    {c.skills.length > 0 && (
-                      <span className="idle-cat-badge">
-                        {c.skills.map((skill) => (
-                          <SkillBadge
-                            key={skill.code}
-                            skill={skill.code}
-                            level={c.skillLevel}
-                            size={c.skills.length > 1 ? 18 : 22}
-                          />
-                        ))}
-                      </span>
-                    )}
-                    <em className={`idle-cat-grade idle-cat-grade-tag is-${c.grade}`}>{c.grade}</em>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className={`idle-cat-empty ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:empty${i}` ? 'is-drop-over' : ''}`}
-                    data-loadout-target={`slot:empty${i}`}
-                    disabled={busy}
-                    onClick={() => {
-                      if (cat && !cat.fielded) void place(cat.code, `slot:empty${i}`)
-                    }}
-                    data-testid="cat-slot"
-                    aria-label="빈 출전 칸에 선택한 고양이 출전"
-                  >
-                    ＋
-                  </button>
-                )}
-                {c ? (
-                  gunSlot(c.code, c.name, weaponOf(c), !c.weapon)
-                ) : (
-                  <span className="idle-gun-slot is-empty" aria-hidden="true" />
-                )}
-              </li>
-            ),
-          )}
+          {seats.map((c, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: 출전 칸은 자리 번호가 곧 열쇠다.
+            <li key={i}>
+              {c ? (
+                <button
+                  type="button"
+                  className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''} ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:${c.code}` ? 'is-drop-over' : ''}`}
+                  data-testid="cat-slot"
+                  data-loadout-target={`slot:${c.code}`}
+                  data-code={c.code}
+                  aria-label={`출전 ${i + 1}번 ${c.name} · 끌어서 자리 옮기기`}
+                  // 출전 중인 고양이도 집어 다른 칸에 놓아 자리를 옮긴다 (599번).
+                  onPointerDown={busy ? undefined : down(c.code)}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onClick={(event) => {
+                    if (consumeClick(event.detail)) return
+                    if (!gearOpen && cat && !cat.fielded) void place(cat.code, `slot:${c.code}`)
+                    else pick(c.code)
+                  }}
+                >
+                  <Portrait code={c.code} />
+                  {c.skills.length > 0 && (
+                    <span className="idle-cat-badge">
+                      {c.skills.map((skill) => (
+                        <SkillBadge
+                          key={skill.code}
+                          skill={skill.code}
+                          level={c.skillLevel}
+                          size={c.skills.length > 1 ? 18 : 22}
+                        />
+                      ))}
+                    </span>
+                  )}
+                  <em className={`idle-cat-grade idle-cat-grade-tag is-${c.grade}`}>{c.grade}</em>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={`idle-cat-empty ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:empty${i}` ? 'is-drop-over' : ''}`}
+                  data-loadout-target={`slot:empty${i}`}
+                  disabled={busy}
+                  onClick={() => {
+                    if (cat) void place(cat.code, `slot:empty${i}`)
+                  }}
+                  data-testid="cat-slot"
+                  aria-label="빈 출전 칸에 선택한 고양이 세우기"
+                >
+                  ＋
+                </button>
+              )}
+              {c ? (
+                gunSlot(c.code, c.name, weaponOf(c), !c.weapon)
+              ) : (
+                <span className="idle-gun-slot is-empty" aria-hidden="true" />
+              )}
+            </li>
+          ))}
         </ul>
       </div>
       {/* 무기를 집어 이 아래 어디에든 내려놓으면 뺀다 (575번). 틀만 두르고 배치는 바꾸지 않는다(display: contents). */}
@@ -410,7 +420,9 @@ export function IdleCats({
           <>
             <p className="loadout-hint" aria-live="polite">
               {drag?.over
-                ? '놓으면 출전 고양이를 교체해요'
+                ? drag.over.startsWith('slot:empty')
+                  ? '놓으면 이 칸에 서요'
+                  : '놓으면 이 칸의 고양이와 바꿔요'
                 : '집어서 끌어 출전 칸에 놓기 · 또는 고양이 선택 후 출전 칸 누르기'}
             </p>
             <ul

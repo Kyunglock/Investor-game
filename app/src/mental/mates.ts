@@ -25,10 +25,12 @@ export const MATE_MARGIN = 22
  * 멘탈벽 뒤 한 줄로 늘어선 자리(가운데에서 x 차이, px). 0번이 사장냥, 1번부터 들어온 차례의 고양이다. 줄 전체가 가운데에 오고, 사장냥은 가운데(짝수면
  * 가운데 왼쪽)에 선다. 고양이는 오른쪽 옆, 왼쪽 옆, 그다음 오른쪽 끝 순으로 붙는다. 간격은 화면 폭에 맞춰 좁아진다(320px에 넷이면 69px).
  */
-export function mateFormation(count: number, width: number): number[] {
+export function mateFormation(count: number, width: number, ordered = false): number[] {
   const n = Math.max(1, count)
   const gap = Math.min(MATE_GAP, Math.max(0, width - MATE_MARGIN * 2) / n)
   const slot = (k: number) => (k - (n - 1) / 2) * gap
+  // 자동 전투 (599번): 출전 칸에 놓은 차례 그대로 왼쪽부터 선다. 사장냥이 맨 왼쪽이다.
+  if (ordered) return Array.from({ length: n }, (_, k) => slot(k))
   const hero = Math.floor((n - 1) / 2)
   // 사장냥 자리에서 오른쪽·왼쪽으로 번갈아 넓혀 간다.
   const order: number[] = []

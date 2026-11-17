@@ -427,6 +427,7 @@ class IdleEngine {
       }
       c.idle.catSkills = true;
     }
+    seat(c.idle);
     return c.idle;
   }
 
@@ -1161,13 +1162,66 @@ class IdleEngine {
   }
 
   void fieldCat(CompanyState c, String code, boolean fielded) {
-    fieldCat(c, code, fielded, null);
+    fieldCat(c, code, fielded, null, null);
+  }
+
+  void fieldCat(CompanyState c, String code, boolean fielded, String replaceCode) {
+    fieldCat(c, code, fielded, replaceCode, null);
+  }
+
+  /**
+   * 출전 칸을 맞춘다 (599번): 출전한 고양이마다 칸 하나, 칸 번호순으로 줄을 선다. 칸이 없는 고양이(없던 저장, 뽑아서 저절로 출전)는 빈 칸 가운데 가장 앞에
+   * 선다.
+   */
+  private static void seat(CompanyState.Idle s) {
+    if (s.seats == null) s.seats = new LinkedHashMap<>();
+    s.seats.keySet().retainAll(s.fielded);
+    java.util.Set<Integer> taken = new java.util.HashSet<>();
+    for (String code : s.fielded) {
+      Integer at = s.seats.get(code);
+      if (at == null || at < 0 || at >= FIELD_SLOTS || !taken.add(at)) s.seats.remove(code);
+    }
+    for (String code : s.fielded) {
+      if (s.seats.containsKey(code)) continue;
+      int free = 0;
+      while (taken.contains(free)) free++;
+      taken.add(free);
+      s.seats.put(code, free);
+    }
+    s.fielded.sort(java.util.Comparator.comparing(s.seats::get));
   }
 
   /** Validate the whole swap before changing the team; a stale target must not remove anyone. */
-  void fieldCat(CompanyState c, String code, boolean fielded, String replaceCode) {
+  /**
+   * slot(0부터)을 주면 그 출전 칸에 세운다 (599번): 빈 칸이면 거기에, 다른 고양이가 있으면 쉬던 고양이는 그 고양이와 교체하고 출전 중인 고양이는 자리를
+   * 맞바꾼다. slot이 없으면 빈 칸 가운데 가장 앞에 선다.
+   */
+  void fieldCat(CompanyState c, String code, boolean fielded, String replaceCode, Integer slot) {
     CompanyState.Idle s = state(c);
     if (!s.cats.containsKey(code)) throw new InvalidRequestException("가지지 않은 고양이다: " + code);
+    if (slot != null && replaceCode == null && fielded) {
+      if (slot < 0 || slot >= FIELD_SLOTS) throw new InvalidRequestException("없는 출전 칸이다: " + slot);
+      String there =
+          s.fielded.stream().filter(k -> s.seats.get(k).equals(slot)).findFirst().orElse(null);
+      if (code.equals(there)) return;
+      if (s.fielded.contains(code)) {
+        // 출전 중인 고양이를 옮긴다: 그 칸에 있던 고양이는 비운 자리로 간다.
+        if (there != null) s.seats.put(there, s.seats.get(code));
+        s.seats.put(code, slot);
+      } else {
+        if (there != null) {
+          s.fielded.remove(there);
+          s.seats.remove(there);
+          // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번).
+          s.catWeapons.remove(there);
+        }
+        s.fielded.add(code);
+        s.seats.put(code, slot);
+      }
+      seat(s);
+      s.hitCredits = new double[KINDS];
+      return;
+    }
     if (replaceCode != null) {
       if (!fielded
           || code.equals(replaceCode)
@@ -1176,6 +1230,8 @@ class IdleEngine {
         throw new InvalidRequestException("출전 구성이 바뀌었어요. 다시 골라 주세요");
       }
       s.fielded.set(s.fielded.indexOf(replaceCode), code);
+      // 교체한 고양이는 그 칸을 물려받는다 (599번).
+      s.seats.put(code, s.seats.remove(replaceCode));
       // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번).
       s.catWeapons.remove(replaceCode);
     } else if (fielded) {
@@ -1188,6 +1244,7 @@ class IdleEngine {
       // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번): 그 무기는 다른 고양이가 바로 들 수 있다.
       s.catWeapons.remove(code);
     }
+    seat(s);
     s.hitCredits = new double[KINDS];
   }
 
@@ -1306,6 +1363,7 @@ class IdleEngine {
                       (int) Math.round(100 * CAT_FIRE[cat]),
                       (int) Math.round(100 * CAT_CRITICAL[cat]),
                       s.fielded.contains(code),
+                      s.seats.get(code),
                       weapon == null ? null : new CompanyView.CatWeapon(weapon.kind, weapon.grade),
                       java.util.Arrays.stream(CAT_SKILLS[cat])
                           .mapToObj(skill -> new CompanyView.CatSkill(CODES[skill], NAMES[skill]))

@@ -300,6 +300,7 @@ public record CompanyView(
    * @param damagePercent 이 고양이 총의 공격력(%): 든 무기 공격력의 이만큼으로 쏜다. 레벨과 특성이 들어 있다 (492번)
    * @param firePercent 이 고양이 총의 쏘는 빠르기(%). 특성이 없으면 100
    * @param criticalPercent 이 고양이 총의 치명타 배율(%). 특성이 없으면 100
+   * @param slot 선 출전 칸의 번호(0부터, 599번). 출전하지 않았으면 null. 전투에서도 이 차례로 줄을 선다
    * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
    * @param skills 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고 A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다
    * @param grade 등급 C·B·A·S (539번). 종마다 정해져 있고, 높을수록 총이 세고 뽑기에서 드물다
@@ -313,6 +314,7 @@ public record CompanyView(
       int firePercent,
       int criticalPercent,
       boolean fielded,
+      Integer slot,
       CatWeapon weapon,
       List<CatSkill> skills,
       int skillLevel,

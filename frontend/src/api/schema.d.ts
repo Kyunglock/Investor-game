@@ -1580,6 +1580,8 @@ export interface components {
                     /** @description 이 고양이 총의 치명타 배율(%). 특성이 없으면 100 */
                     criticalPercent: number;
                     fielded: boolean;
+                    /** @description 선 출전 칸의 번호(0부터 */
+                    slot?: number | null;
                     /** @description 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고(빈 배열) A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다 */
                     skills: {
                         /** @enum {string} */
@@ -2472,8 +2474,10 @@ export interface operations {
                     /** @enum {string} */
                     code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
                     fielded: boolean;
-                    /** @description 출전 중인 이 고양이를 한 번에 교체 */
+                    /** @description 출전 중인 이 고양이를 한 번에 교체. 그 칸을 물려받는다 */
                     replaceCode?: string;
+                    /** @description 세울 출전 칸의 번호(0부터 */
+                    slot?: number;
                 };
             };
         };

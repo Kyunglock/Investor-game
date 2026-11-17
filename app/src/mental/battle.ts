@@ -1186,7 +1186,7 @@ class BattleScene extends Phaser.Scene {
    */
   private standX(i: number) {
     const { w } = this.view()
-    const line = mateFormation(this.mates.length + 1, w)
+    const line = mateFormation(this.mates.length + 1, w, Boolean(this.opts.idle))
     const off = line[i] ?? 0
     if (this.assault) {
       // 공격 판 (413번): 사장냥도 붙박이라, 사장냥을 화면 가운데에 두고 줄을 붙이면 넷일 때 줄이 반 칸 오른쪽으로 밀리고 끝 고양이가 가장자리에
@@ -2654,6 +2654,11 @@ class BattleScene extends Phaser.Scene {
       running: Boolean(this.opts.idle && !this.circuit && !this.paused),
       runRush: this.runRush,
       catTextures: [this.player.texture.key, ...this.mates.map((mate) => mate.body.texture.key)],
+      /** 늘어선 자리 (599번): 사장냥과 고양이의 x, 그리고 고양이마다의 생김새 번호. */
+      stand: {
+        xs: [this.player.x, ...this.mates.map((mate) => mate.body.x)],
+        looks: this.mates.map((_, i) => this.mateLook(i)),
+      },
       mental: this.mental,
       maxMental: this.loadout.maxMental,
       physicsPaused: this.physics.world.isPaused,

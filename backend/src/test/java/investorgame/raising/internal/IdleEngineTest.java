@@ -1313,6 +1313,56 @@ class IdleEngineTest {
   }
 
   @Test
+  void 고양이는_놓은_출전_칸에_그대로_선다() {
+    start(16);
+    for (String code : List.of("sky", "mint", "lilac", "night")) state.idle.cats.put(code, 1);
+    state.idle.fielded = new java.util.ArrayList<>();
+    state.idle.seats.clear();
+    // 빈 칸 어디에든 놓은 자리에 선다 (599번): 사이에 빈 칸이 남아도 된다.
+    engine.fieldCat(state, "night", true, null, 3);
+    engine.fieldCat(state, "sky", true, null, 1);
+    assertThat(state.idle.fielded).as("칸 번호순으로 줄을 선다").containsExactly("sky", "night");
+    assertThat(slot("night")).isEqualTo(3);
+    assertThat(slot("sky")).isEqualTo(1);
+    assertThat(slot("mint")).as("쉬는 고양이는 칸이 없다").isNull();
+    // 칸을 정하지 않으면 빈 칸 가운데 가장 앞에 선다.
+    engine.fieldCat(state, "mint", true);
+    assertThat(slot("mint")).isZero();
+    assertThat(state.idle.fielded).containsExactly("mint", "sky", "night");
+    // 출전 중인 고양이를 다른 고양이의 칸에 놓으면 자리를 맞바꾼다. 무기는 그대로 든다.
+    state.idle.catWeapons.put("mint", new CompanyState.Weapon("rifle", "S"));
+    engine.fieldCat(state, "mint", true, null, 3);
+    assertThat(slot("mint")).isEqualTo(3);
+    assertThat(slot("night")).isZero();
+    assertThat(state.idle.catWeapons).containsKey("mint");
+    // 빈 칸으로 옮긴다.
+    engine.fieldCat(state, "night", true, null, 2);
+    assertThat(state.idle.fielded).containsExactly("sky", "night", "mint");
+    // 쉬던 고양이를 찬 칸에 놓으면 그 고양이와 교체한다: 빠진 고양이는 무기를 내려놓는다.
+    engine.fieldCat(state, "lilac", true, null, 3);
+    assertThat(slot("lilac")).isEqualTo(3);
+    assertThat(slot("mint")).isNull();
+    assertThat(state.idle.catWeapons).doesNotContainKey("mint");
+    // 교체(replaceCode)는 그 칸을 물려받는다.
+    engine.fieldCat(state, "mint", true, "sky");
+    assertThat(slot("mint")).isEqualTo(1);
+    // 빼면 그 칸만 비고 나머지는 제자리다.
+    engine.fieldCat(state, "night", false);
+    assertThat(slot("lilac")).isEqualTo(3);
+    assertThat(slot("mint")).isEqualTo(1);
+    assertThatThrownBy(() -> engine.fieldCat(state, "sky", true, null, 4))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  private Integer slot(String code) {
+    return engine.view(state).cats().stream()
+        .filter(cat -> cat.code().equals(code))
+        .findFirst()
+        .orElseThrow()
+        .slot();
+  }
+
+  @Test
   void 출전에서_빠진_고양이는_무기를_내려놓는다() {
     start(16);
     for (String code : List.of("sky", "mint", "night")) state.idle.cats.put(code, 1);

@@ -588,7 +588,8 @@ paths:
               properties:
                 code: { type: string, enum: [sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat] }
                 fielded: { type: boolean }
-                replaceCode: { type: string, description: 출전 중인 이 고양이를 한 번에 교체 }
+                replaceCode: { type: string, description: 출전 중인 이 고양이를 한 번에 교체. 그 칸을 물려받는다 }
+                slot: { type: integer, description: 세울 출전 칸의 번호(0부터, 599번). 빈 칸이면 거기에 서고, 다른 고양이가 있으면 쉬던 고양이는 교체하고 출전 중인 고양이는 자리를 맞바꾼다. 없으면 빈 칸 가운데 가장 앞 }
       responses:
         '200':
           description: 바꾼 뒤의 회사
@@ -1515,6 +1516,7 @@ components:
                   firePercent: { type: integer, description: 이 고양이 총의 쏘는 빠르기(%). 특성이 없으면 100 }
                   criticalPercent: { type: integer, description: 이 고양이 총의 치명타 배율(%). 특성이 없으면 100 }
                   fielded: { type: boolean }
+                  slot: { type: [integer, 'null'], description: 선 출전 칸의 번호(0부터, 599번). 출전하지 않았으면 null. 전투에서도 이 차례로 줄을 선다 }
                   skills:
                     type: array
                     description: 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고(빈 배열) A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다

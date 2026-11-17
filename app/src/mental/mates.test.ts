@@ -10,6 +10,10 @@ describe('함께 싸우는 고양이 (decisions.md 393번)', () => {
 
   it('혼자면 사장냥은 가운데에 선다', () => {
     expect(mateFormation(1, 390)).toEqual([0])
+    // 자동 전투 (599번): 놓은 차례 그대로 왼쪽부터, 사장냥이 맨 왼쪽.
+    const ordered = mateFormation(4, 390, true)
+    expect(ordered).toEqual([...ordered].sort((a, b) => a - b))
+    expect(ordered[0]).toBeLessThan(0)
   })
 
   it('줄 전체가 가운데에 오고, 사장냥은 가운데(짝수면 가운데 왼쪽), 고양이는 오른쪽·왼쪽·오른쪽 끝 순으로 붙는다', () => {
