@@ -210,10 +210,10 @@ export interface paths {
                             /** Format: int64 */
                             wall: number;
                             /**
-                             * @description barrage는 액티브 스킬 매수세례의 매수 주문 (503번)
+                             * @description stoploss는 고유 스킬 손절의 한 방(590번). barrage는 액티브 스킬 매수세례의 매수 주문 (503번)
                              * @enum {string}
                              */
-                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb" | "barrage" | "buy";
+                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb" | "barrage" | "buy" | "stoploss";
                             count: number;
                             /** @description 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 */
                             damage?: number;
@@ -252,7 +252,7 @@ export interface paths {
         put?: never;
         /**
          * 액티브 스킬을 쓴다 (decisions.md 503·587·588번)
-         * @description 고유 스킬은 매수세례(barrage)·불장(rally)·방어선 구축(fortify)이다 (587번): 장착한 것만 쓸 수 있다. 쓰면 재사용 대기 시간이 돈다. 대기 시간은
+         * @description 고유 스킬은 매수세례(barrage)·불장(rally)·방어선 구축(fortify)과 상한가(limitUp)·손절(stopLoss)·물타기(averaging, 590번)다 (587번): 장착한 것만 쓸 수 있다. 쓰면 재사용 대기 시간이 돈다. 대기 시간은
          *     전투가 돌아가는 동안만 흐른다. 없는 스킬이거나 장착하지 않았거나 대기 중이거나 거래 정지 중이면 400.
          *     광고 스킬은 공격속도 3배(boostFire)·공격력 3배(boostDamage)·매수공격 3배(boostBuy)다 (588번): 장착하지 않고, 광고를 본 뒤(ad가 참)에만 쓴다.
          *     ad 없이 광고 스킬을 쓰면 400. 아직 광고를 붙이지 않아 서버는 ad를 그대로 믿는다.
@@ -275,7 +275,7 @@ export interface paths {
         put?: never;
         /**
          * 고유 스킬을 장착하거나 뺀다 (decisions.md 587번)
-         * @description 고유 스킬(barrage·rally·fortify)은 idle.activeSlots개(셋)까지 장착하고, 장착한 것만 전투에서 쓴다. 이미 그 상태면 그대로 둔다.
+         * @description 고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 idle.activeSlots개(셋)까지 장착하고, 장착한 것만 전투에서 쓴다. 이미 그 상태면 그대로 둔다.
          *     재사용 대기 시간은 뺐다 끼워도 그대로 흐른다. 광고 스킬이거나 없는 스킬이거나 장착 칸이 꽉 찼으면 400.
          */
         post: operations["equipIdleActive"];
@@ -1506,10 +1506,10 @@ export interface components {
                     /** @description 처음 얻은 고양이 */
                     isNew: boolean;
                 }[];
-                /** @description 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다. 앞의 셋은 고유 스킬(587번), 뒤의 셋은 광고 스킬(588번)이다 */
+                /** @description 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다. 앞의 여섯은 고유 스킬(587·590번), 뒤의 셋은 광고 스킬(588번)이다 */
                 actives?: {
                     /** @enum {string} */
-                    code: "barrage" | "rally" | "fortify" | "boostFire" | "boostDamage" | "boostBuy";
+                    code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "boostFire" | "boostDamage" | "boostBuy";
                     name: string;
                     /** @description 한 번 쓰고 다시 쓸 때까지(초) */
                     cooldown: number;
@@ -2053,7 +2053,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "barrage" | "rally" | "fortify" | "boostFire" | "boostDamage" | "boostBuy";
+                    code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "boostFire" | "boostDamage" | "boostBuy";
                     /** @description 광고를 끝까지 봤다 (588번). 광고 스킬에만 쓴다 */
                     ad?: boolean;
                 };
@@ -2085,7 +2085,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "barrage" | "rally" | "fortify";
+                    code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging";
                     /** @description 참이면 장착하고 거짓이면 뺀다 */
                     equipped: boolean;
                 };

@@ -115,13 +115,17 @@ class CompanyApiTest {
     mvc.perform(post("/api/company").cookie(session))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.idle.activeSlots").value(3))
-        .andExpect(jsonPath("$.idle.actives.length()").value(6))
+        .andExpect(jsonPath("$.idle.actives.length()").value(9))
         .andExpect(jsonPath("$.idle.actives[1].code").value("rally"))
         .andExpect(jsonPath("$.idle.actives[1].equipped").value(true))
         .andExpect(jsonPath("$.idle.actives[1].ad").value(false))
-        .andExpect(jsonPath("$.idle.actives[3].code").value("boostFire"))
-        .andExpect(jsonPath("$.idle.actives[3].equipped").value(false))
-        .andExpect(jsonPath("$.idle.actives[3].ad").value(true));
+        // 상한가·손절·물타기 (590번)는 장착하지 않은 채로 시작한다.
+        .andExpect(jsonPath("$.idle.actives[4].code").value("stopLoss"))
+        .andExpect(jsonPath("$.idle.actives[4].equipped").value(false))
+        .andExpect(jsonPath("$.idle.actives[4].ad").value(false))
+        .andExpect(jsonPath("$.idle.actives[6].code").value("boostFire"))
+        .andExpect(jsonPath("$.idle.actives[6].equipped").value(false))
+        .andExpect(jsonPath("$.idle.actives[6].ad").value(true));
     // 뺀 고유 스킬은 쓸 수 없다. 광고 스킬은 장착할 수 없다.
     postJson("/api/company/idle/active/equip", "{\"code\":\"rally\",\"equipped\":false}")
         .andExpect(status().isOk())
@@ -135,13 +139,22 @@ class CompanyApiTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.idle.actives[1].equipped").value(true));
     postJson("/api/company/idle/active", "{\"code\":\"rally\"}").andExpect(status().isOk());
+    // 새 고유 스킬은 칸이 꽉 차면 장착하지 못하고, 하나를 빼고 장착하면 쓴다 (590번).
+    postJson("/api/company/idle/active/equip", "{\"code\":\"stopLoss\",\"equipped\":true}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/idle/active/equip", "{\"code\":\"fortify\",\"equipped\":false}")
+        .andExpect(status().isOk());
+    postJson("/api/company/idle/active/equip", "{\"code\":\"stopLoss\",\"equipped\":true}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.idle.actives[4].equipped").value(true));
+    postJson("/api/company/idle/active", "{\"code\":\"stopLoss\"}").andExpect(status().isOk());
     // 광고 스킬은 ad가 참이어야 한다: 60초 동안 이어지고 180초 뒤에 다시 쓴다.
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\"}")
         .andExpect(status().isBadRequest());
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.idle.actives[3].left").value(60.0))
-        .andExpect(jsonPath("$.idle.actives[3].readyIn").value(180.0));
+        .andExpect(jsonPath("$.idle.actives[6].left").value(60.0))
+        .andExpect(jsonPath("$.idle.actives[6].readyIn").value(180.0));
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
         .andExpect(status().isBadRequest());
   }

@@ -2,7 +2,15 @@ import type { IdleAttackKind } from '@web/features/raising/idleContacts'
 import Phaser from 'phaser'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { ACTIVE_BANNERS, ACTIVES, type ActiveCode, BOOST, type BoostCode } from './actives'
+import {
+  ACTIVE_BANNERS,
+  ACTIVES,
+  type ActiveCode,
+  averagingMult,
+  BOOST,
+  type BoostCode,
+  stopLossDamage,
+} from './actives'
 import {
   type BattleMode,
   BOSS,
@@ -747,6 +755,10 @@ class BattleScene extends Phaser.Scene {
   private rallyUntil = 0
   /** 광고 스킬 (588번): 배수가 끝나는 전투 초. */
   private boostUntil: Record<BoostCode, number> = { boostFire: 0, boostDamage: 0, boostBuy: 0 }
+  /** 상한가·물타기 (590번)가 끝나는 전투 초, 그리고 눌러 놓고 아직 치지 못한 손절. */
+  private limitUpUntil = 0
+  private averagingUntil = 0
+  private stopLossPending = false
   private reportAs: IdleAttackKind | null = null
   private calledRaid: IdleRaidKind | null = null
   private panicRushClock = 0
@@ -963,7 +975,9 @@ class BattleScene extends Phaser.Scene {
         bullet.disableBody(true, true)
       }
       const kind = bullet.kind
-      const shot = weaponDamage(kind, bullet.damage, Math.random(), bullet.critical - 1)
+      // 상한가 (590번): 도는 동안에는 모든 총알이 치명타다.
+      const roll = this.elapsed < this.limitUpUntil ? 0 : Math.random()
+      const shot = weaponDamage(kind, bullet.damage, roll, bullet.critical - 1)
       if (kind === 'smg') {
         this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }
@@ -2313,6 +2327,7 @@ class BattleScene extends Phaser.Scene {
         )
       }
     }
+    if (this.stopLossPending) this.stopLoss()
     this.buyWallFx?.step(dt, (x, fromY, toY, damage, barrage) => {
       // 매수 주문이 벽에 닿으면 서버에 제 종류로 알린다: 탄의 횟수 예산을 쓰지 않는다 (매수세례 503번, 보통 매수 주문 514번).
       this.reportAs = barrage ? 'barrage' : 'buy'
@@ -2404,8 +2419,42 @@ class BattleScene extends Phaser.Scene {
    */
   private buyOrderDamage() {
     return this.opts.idle
-      ? idleBuyOrderDamage(this.loadout.buyBonus) * this.boost('boostBuy')
+      ? idleBuyOrderDamage(this.loadout.buyBonus) * this.boost('boostBuy') * this.averaging
       : this.loadout.damage * (BUY_WALL.orderDamage + this.loadout.buyBonus)
+  }
+
+  /** 물타기 (590번): 도는 동안 매수 주문이 매수벽이 깎인 만큼 세진다. */
+  private get averaging() {
+    return this.buyWall && this.elapsed < this.averagingUntil
+      ? averagingMult(this.buyWall.hp, this.buyWall.maxHp)
+      : 1
+  }
+
+  /**
+   * 손절 (590번): 매수벽의 남은 체력 절반을 버리고 그만큼 매도벽을 한 번 친다. 매수벽이 무너져 있거나 칠 벽이 아직 없으면(벽 사이를 달리는 중)
+   * 기다렸다가 친다. 물타기는 붙지 않고 매수공격 3배(588번)는 붙는다(서버도 같다).
+   */
+  private stopLoss() {
+    const wall = this.buyWall
+    if (!wall?.active || this.idleTransition || this.circuit) return
+    const target = this.magicTargets().find(this.isSiege)
+    if (!target) return
+    this.stopLossPending = false
+    const lost = wall.sacrifice(ACTIVES.stopLoss.ratio)
+    const order = idleBuyOrderDamage(this.loadout.buyBonus) * this.boost('boostBuy')
+    const damage = stopLossDamage(order, lost, wall.maxHp)
+    const x = this.view().w / 2
+    this.buyWallFx?.impact(x, false)
+    this.pop(x, this.buyWallY() - 55, `손절 -${shareLabel(lost)}`, '#8fc4ff', 22)
+    this.drawBuyWall()
+    if (damage <= 0) return
+    const y = target.y + target.displayHeight / 2
+    this.glow(x, y, 0x8fc4ff, 90, 320)
+    this.reportAs = 'stoploss'
+    this.hit(target, damage, -Math.PI / 2, 'crit')
+    this.reportAs = null
+    sfx.crumble()
+    haptic.medium()
   }
 
   private launchBuyOrders(count: number) {
@@ -2542,6 +2591,13 @@ class BattleScene extends Phaser.Scene {
       pushedEnemies: (this.enemies.getChildren() as Enemy[])
         .filter((e) => e.active && !e.dying && e.wallPushUntil > this.elapsed)
         .map((e) => ({ y: e.y, velocityY: e.body?.velocity.y })),
+      actives: {
+        limitUp: Math.max(0, this.limitUpUntil - this.elapsed),
+        averaging: Math.max(0, this.averagingUntil - this.elapsed),
+        stopLossPending: this.stopLossPending,
+      },
+      /** 지금 매수 주문 한 장의 피해 (물타기·매수공격 3배 포함). */
+      buyOrder: this.buyOrderDamage(),
       buyWall: this.buyWall
         ? {
             hp: this.buyWall.hp,
@@ -3415,6 +3471,13 @@ class BattleScene extends Phaser.Scene {
       this.buyWall?.fortify(ACTIVES.fortify.seconds)
       this.buyWallFx?.fortify()
       this.drawBuyWall()
+    } else if (code === 'limitUp') {
+      this.limitUpUntil = this.elapsed + (left ?? ACTIVES.limitUp.seconds)
+    } else if (code === 'stopLoss') {
+      if (left != null) return
+      this.stopLossPending = true
+    } else if (code === 'averaging') {
+      this.averagingUntil = this.elapsed + (left ?? ACTIVES.averaging.seconds)
     } else {
       this.boostUntil[code] = this.elapsed + (left ?? ACTIVES[code].seconds)
     }

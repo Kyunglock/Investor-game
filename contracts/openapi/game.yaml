@@ -220,7 +220,7 @@ paths:
                     required: [wall, kind, count]
                     properties:
                       wall: { type: integer, format: int64, minimum: 1 }
-                      kind: { type: string, enum: [bullet, water, meteor, bolt, ram, ice, wind, fire, poison, light, dark, sand, star, hail, blossom, bomb, barrage, buy], description: barrage는 액티브 스킬 매수세례의 매수 주문 (503번), buy는 매수벽의 보통 매수 주문 (514번) }
+                      kind: { type: string, enum: [bullet, water, meteor, bolt, ram, ice, wind, fire, poison, light, dark, sand, star, hail, blossom, bomb, barrage, buy, stoploss], description: stoploss는 고유 스킬 손절의 한 방(590번). barrage는 액티브 스킬 매수세례의 매수 주문 (503번), buy는 매수벽의 보통 매수 주문 (514번) }
                       count: { type: integer, minimum: 1, maximum: 1000 }
                       damage: { type: number, minimum: 0, maximum: 1000000000000, description: 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 }
                       depth: { type: integer, minimum: 0, maximum: 2, description: "총알이 이 벽에 닿기 전에 뚫고 온 벽의 수. 0은 화면이 치고 있던 맨 앞 벽(직접 명중)이다. 화면이 서버보다 먼저 벽을 부수므로(532번) 직접 명중은 서버의 맨 앞 벽부터 차례로 깎고 넘친 것은 다음 벽으로 넘어간다. 뚫고 간 명중(1, 2)은 wall에 적힌 벽에 쌓인다. 없으면 옛 화면: 서버의 맨 앞 벽에서 떨어진 거리로 본다" }
@@ -235,7 +235,7 @@ paths:
       operationId: useIdleActive
       summary: 액티브 스킬을 쓴다 (decisions.md 503·587·588번)
       description: |
-        고유 스킬은 매수세례(barrage)·불장(rally)·방어선 구축(fortify)이다 (587번): 장착한 것만 쓸 수 있다. 쓰면 재사용 대기 시간이 돈다. 대기 시간은
+        고유 스킬은 매수세례(barrage)·불장(rally)·방어선 구축(fortify)과 상한가(limitUp)·손절(stopLoss)·물타기(averaging, 590번)다 (587번): 장착한 것만 쓸 수 있다. 쓰면 재사용 대기 시간이 돈다. 대기 시간은
         전투가 돌아가는 동안만 흐른다. 없는 스킬이거나 장착하지 않았거나 대기 중이거나 거래 정지 중이면 400.
         광고 스킬은 공격속도 3배(boostFire)·공격력 3배(boostDamage)·매수공격 3배(boostBuy)다 (588번): 장착하지 않고, 광고를 본 뒤(ad가 참)에만 쓴다.
         ad 없이 광고 스킬을 쓰면 400. 아직 광고를 붙이지 않아 서버는 ad를 그대로 믿는다.
@@ -247,7 +247,7 @@ paths:
               type: object
               required: [code]
               properties:
-                code: { type: string, enum: [barrage, rally, fortify, boostFire, boostDamage, boostBuy] }
+                code: { type: string, enum: [barrage, rally, fortify, limitUp, stopLoss, averaging, boostFire, boostDamage, boostBuy] }
                 ad: { type: boolean, description: 광고를 끝까지 봤다 (588번). 광고 스킬에만 쓴다 }
       responses:
         '200':
@@ -263,7 +263,7 @@ paths:
       operationId: equipIdleActive
       summary: 고유 스킬을 장착하거나 뺀다 (decisions.md 587번)
       description: |
-        고유 스킬(barrage·rally·fortify)은 idle.activeSlots개(셋)까지 장착하고, 장착한 것만 전투에서 쓴다. 이미 그 상태면 그대로 둔다.
+        고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 idle.activeSlots개(셋)까지 장착하고, 장착한 것만 전투에서 쓴다. 이미 그 상태면 그대로 둔다.
         재사용 대기 시간은 뺐다 끼워도 그대로 흐른다. 광고 스킬이거나 없는 스킬이거나 장착 칸이 꽉 찼으면 400.
       requestBody:
         required: true
@@ -273,7 +273,7 @@ paths:
               type: object
               required: [code, equipped]
               properties:
-                code: { type: string, enum: [barrage, rally, fortify] }
+                code: { type: string, enum: [barrage, rally, fortify, limitUp, stopLoss, averaging] }
                 equipped: { type: boolean, description: 참이면 장착하고 거짓이면 뺀다 }
       responses:
         '200':
@@ -1463,17 +1463,17 @@ components:
                   isNew: { type: boolean, description: 처음 얻은 고양이 }
             actives:
               type: array
-              description: 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다. 앞의 셋은 고유 스킬(587번), 뒤의 셋은 광고 스킬(588번)이다
+              description: 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다. 앞의 여섯은 고유 스킬(587·590번), 뒤의 셋은 광고 스킬(588번)이다
               items:
                 type: object
                 required: [code, name, cooldown, seconds, readyIn, left, equipped, ad]
                 properties:
-                  code: { type: string, enum: [barrage, rally, fortify, boostFire, boostDamage, boostBuy] }
+                  code: { type: string, enum: [barrage, rally, fortify, limitUp, stopLoss, averaging, boostFire, boostDamage, boostBuy] }
                   name: { type: string }
                   cooldown: { type: number, description: 한 번 쓰고 다시 쓸 때까지(초) }
                   seconds: { type: number, description: 효과가 이어지는 시간(초) }
                   readyIn: { type: number, description: 다시 쓸 수 있을 때까지 남은 시간(초). 0이면 쓸 수 있다 }
-                  left: { type: number, description: 효과가 남은 시간(초, 588번). 불장과 광고 스킬만 값이 있고 나머지는 0 }
+                  left: { type: number, description: 효과가 남은 시간(초, 588번). 불장·상한가·물타기와 광고 스킬만 값이 있고 나머지는 0 }
                   equipped: { type: boolean, description: 장착한 고유 스킬이다 (587번). 장착한 것만 쓸 수 있다. 광고 스킬은 늘 거짓 }
                   ad: { type: boolean, description: 광고를 보면 쓰는 스킬이다 (588번). 장착하지 않는다 }
             activeSlots: { type: integer, description: 고유 스킬 장착 칸 수 (587번, 셋) }

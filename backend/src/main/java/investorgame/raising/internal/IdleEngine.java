@@ -53,25 +53,49 @@ class IdleEngine {
   // Credit buckets: the bullet, the fifteen cat skills, the buy barrage (decisions.md 503), and the
   // buy wall's own buy orders (514).
   private static final int SKILLS = 15;
-  private static final int KINDS = SKILLS + 3;
+  private static final int KINDS = SKILLS + 4;
   private static final int BARRAGE = SKILLS + 1;
   private static final int BUY = SKILLS + 2;
+  // 손절 (590): one hit per press.
+  private static final int STOP_LOSS = SKILLS + 3;
   // Active skills (503): the player presses them. Seconds are game seconds (SPEED times real time).
   // barrage: the buy wall pours buy orders; rally: every gun fires twice as fast; fortify: the buy
   // wall is rebuilt and cannot be hurt (the wall is the screen's, so the server only keeps time).
-  // Those three are the boss cat's 고유 스킬 (587): only the equipped ones can be used.
+  // Three more came in 590. limitUp (상한가): every bullet is a critical hit; a critical hit is
+  // already the most one bullet may do here, so the server only keeps time. stopLoss (손절): the
+  // screen gives up half of the buy wall for one big hit on the sell wall. averaging (물타기): the
+  // buy orders hit harder the more the buy wall has lost.
+  // Those six are the boss cat's 고유 스킬 (587): only the equipped ones can be used.
   // The three after them are the 광고 스킬 (588), used after watching an ad: for a while the guns
   // fire, the guns and skills hit, or the buy orders hit BOOST times as much.
   private static final List<String> ACTIVES =
-      List.of("barrage", "rally", "fortify", "boostFire", "boostDamage", "boostBuy");
+      List.of(
+          "barrage",
+          "rally",
+          "fortify",
+          "limitUp",
+          "stopLoss",
+          "averaging",
+          "boostFire",
+          "boostDamage",
+          "boostBuy");
   private static final String[] ACTIVE_NAMES = {
-    "매수세례", "불장", "방어선 구축", "공격속도 3배", "공격력 3배", "매수공격 3배"
+    "매수세례", "불장", "방어선 구축", "상한가", "손절", "물타기", "공격속도 3배", "공격력 3배", "매수공격 3배"
   };
-  private static final double[] ACTIVE_COOLDOWN = {60, 90, 90, 270, 270, 270};
-  private static final double[] ACTIVE_SECONDS = {6, 10, 6, 90, 90, 90};
+  private static final double[] ACTIVE_COOLDOWN = {60, 90, 90, 90, 90, 90, 270, 270, 270};
+  private static final double[] ACTIVE_SECONDS = {6, 10, 6, 12, 0, 15, 90, 90, 90};
 
   /** The first UNIQUE actives are 고유 스킬, the rest are 광고 스킬. */
-  private static final int UNIQUE = 3;
+  private static final int UNIQUE = 6;
+
+  /** The 고유 스킬 a company starts with equipped (587): the first three. */
+  private static final int STARTING = 3;
+
+  /** 손절 (590번): 매수벽을 가득 찬 채로 절반 버렸을 때의 한 방이 매수 주문 이만큼이다. Matches the app's mental/actives.ts. */
+  static final double STOP_LOSS_ORDERS = 240;
+
+  /** 물타기 (590번): 매수 주문이 가장 세질 때의 배수. Matches the app's mental/actives.ts. */
+  static final double AVERAGING_MAX = 3;
 
   /** 고유 스킬 장착 칸 (587번). */
   static final int ACTIVE_SLOTS = 3;
@@ -730,12 +754,17 @@ class IdleEngine {
     if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
     if (at == 0) s.hitCredits[BARRAGE] = BARRAGE_SHOTS;
     if (at == 1) s.rallyUntil = s.activeSeconds + ACTIVE_SECONDS[at];
-    if (at >= UNIQUE) s.activeUntil.put(code, s.activeSeconds + ACTIVE_SECONDS[at]);
+    if ("stopLoss".equals(code)) s.hitCredits[STOP_LOSS] = 1;
+    // The timed ones after the first three keep their end in activeUntil: the screen picks the
+    // effect up again from it when it is reopened.
+    if (at >= STARTING && ACTIVE_SECONDS[at] > 0) {
+      s.activeUntil.put(code, s.activeSeconds + ACTIVE_SECONDS[at]);
+    }
   }
 
   /** 장착한 고유 스킬 (587번). 장착이 생기기 전의 저장은 셋을 모두 장착한 것으로 본다. */
   private static List<String> equipped(CompanyState.Idle s) {
-    if (s.activeSlots == null) s.activeSlots = new ArrayList<>(ACTIVES.subList(0, UNIQUE));
+    if (s.activeSlots == null) s.activeSlots = new ArrayList<>(ACTIVES.subList(0, STARTING));
     return s.activeSlots;
   }
 
@@ -760,8 +789,13 @@ class IdleEngine {
 
   /** Whether an ad skill's boost counts for a beat that starts at this active time (588). */
   private static double boost(CompanyState.Idle s, String code, double start) {
+    return running(s, code, start) ? BOOST : 1;
+  }
+
+  /** Whether a timed skill counts for a beat that starts at this active time. */
+  private static boolean running(CompanyState.Idle s, String code, double start) {
     Double until = s.activeUntil.get(code);
-    return until != null && start < until + BOOST_GRACE ? BOOST : 1;
+    return until != null && start < until + BOOST_GRACE;
   }
 
   /** Seconds of effect left, in game seconds: the rally and the ad skills. Zero for the others. */
@@ -794,6 +828,8 @@ class IdleEngine {
             boost(s, "boostFire", s.activeSeconds));
     double damageBoost = boost(s, "boostDamage", s.activeSeconds);
     double buyBoost = boost(s, "boostBuy", s.activeSeconds);
+    // 물타기 (590): the screen knows how much of the buy wall is gone; here its most counts.
+    double averaging = running(s, "averaging", s.activeSeconds) ? AVERAGING_MAX : 1;
     s.activeSeconds += active;
     // 물가 (505번): 시간 수입과 벽 보상은 그 벽의 물가만큼 크다.
     // 직원의 초당 수입과 멘탈 보호 보너스도 같은 틱에 들어온다 (523번).
@@ -903,7 +939,7 @@ class IdleEngine {
       }
     }
     // 매수세례 (503): its buy orders that reach the front wall. Credits come from the press, not time.
-    double barrageMax = buyBoost * buyOrder(c) * BARRAGE_POWER;
+    double barrageMax = averaging * buyBoost * buyOrder(c) * BARRAGE_POWER;
     for (IdleHit hit : hits) {
       if (active <= 0 || hit == null || !"barrage".equals(hit.kind()) || hit.count() <= 0) continue;
       if (Math.abs(hit.wall() - front) > AHEAD) continue;
@@ -915,6 +951,20 @@ class IdleEngine {
       s.damage += amount;
       dealt += amount;
     }
+    // 손절 (590): the one big hit the press paid for. It is a buy-side hit, so 매수공격 3배 counts;
+    // 물타기 does not.
+    double stopLossMax = buyBoost * buyOrder(c) * STOP_LOSS_ORDERS;
+    for (IdleHit hit : hits) {
+      if (active <= 0 || hit == null || !"stoploss".equals(hit.kind()) || hit.count() <= 0)
+        continue;
+      if (Math.abs(hit.wall() - front) > AHEAD || s.hitCredits[STOP_LOSS] < 1) continue;
+      double reported = hit.damage() == null ? stopLossMax : hit.damage();
+      if (!Double.isFinite(reported) || reported <= 0) continue;
+      s.hitCredits[STOP_LOSS] = 0;
+      double amount = Math.min(reported, stopLossMax);
+      s.damage += amount;
+      dealt += amount;
+    }
     // The buy wall's own buy orders that got past the sell orders to the front wall (514). They
     // have their own budget and their own damage: they no longer spend the bullets' budget.
     if (active > 0) {
@@ -922,7 +972,7 @@ class IdleEngine {
           Math.min(
               SPEED * GRACE_MS / 1000 * BUY_ORDERS_PER_SECOND,
               s.hitCredits[BUY] + active * BUY_ORDERS_PER_SECOND);
-      double buyMax = buyBoost * buyOrder(c);
+      double buyMax = averaging * buyBoost * buyOrder(c);
       for (IdleHit hit : hits) {
         if (hit == null || !"buy".equals(hit.kind()) || hit.count() <= 0) continue;
         if (Math.abs(hit.wall() - front) > AHEAD) continue;
