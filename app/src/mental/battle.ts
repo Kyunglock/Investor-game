@@ -64,10 +64,14 @@ import {
   assaultTarget,
   cellShares,
   climbSpeed,
+  IDLE_MOMENTUM_FADE,
+  IDLE_MOMENTUM_RUN,
+  IDLE_MOMENTUM_SCROLL,
   IDLE_ORDER_SPEED,
   IDLE_SELL_POWER,
   idleAssaultSpec,
   idleBreakPace,
+  idleMomentum,
   MID_BOSS_NAME,
   pickFlow,
   rowHps,
@@ -609,6 +613,11 @@ class BattleScene extends Phaser.Scene {
   private idleTransition = false
   /** 자동 전투에서 다음 벽으로 넘어가는 빠르기 (606번): 앞의 벽을 빨리 부술수록 작다(idleBreakPace). 그리고 지금 벽이 벽 앞에 선 전투 초. */
   private idlePace = 1
+  /** 질주의 기세 (608번, 0~1): 벽을 빨리 부술수록 차고 금세 빠진다. 그리고 달리는 그림의 시계. */
+  private momentum = 0
+  /** 지금 배경이 흐르는 빠르기(px/초): 확인 스크립트가 본다. */
+  private groundV = 0
+  private runClock = 0
   private wallStoodAt = 0
   private runRush = 0
   private wallsBroken = 0
@@ -1856,6 +1865,8 @@ class BattleScene extends Phaser.Scene {
       // 벽 앞에 서기도 전에 부쉈으면 가장 빠르다.
       this.idlePace = moved ? 1 : idleBreakPace(wall.arrived ? this.elapsed - this.wallStoodAt : 0)
       const pace = this.idlePace
+      // 빨리 부술수록 고양이들이 더 빨리 달려 나간다 (608번).
+      if (!moved) this.momentum = idleMomentum(pace, this.momentum)
       this.time.delayedCall((this.reducedMotion ? 450 : 160) * pace, () => {
         for (const old of this.walls) {
           old.price.destroy()
@@ -2402,11 +2413,18 @@ class BattleScene extends Phaser.Scene {
     this.reportAs = null
     this.drawBuyWall()
     // 벽 앞에서는 멈춰 서서 쏘고, 벽을 부수면 다음 벽까지 걸어간다 (493번): 배경도 그때만 흐른다.
-    const scroll =
+    // 질주의 기세 (608번): 벽을 연달아 빨리 부수면 벽 앞에 멈춘 틈에도 배경이 빠르게 흘러 달리는 느낌이 끊기지 않는다.
+    this.momentum = Math.max(0, this.momentum - dt / IDLE_MOMENTUM_FADE)
+    const dash = this.reducedMotion ? 0 : this.momentum
+    this.runClock += dt * (1 + dash * (IDLE_MOMENTUM_RUN - 1))
+    const scroll = Math.max(
       this.idleAdvancing && !this.reducedMotion
         ? Math.max(move, dt * (this.runRush > 0 ? 620 : 95))
-        : move
+        : move,
+      dt * dash * IDLE_MOMENTUM_SCROLL,
+    )
     this.climbV = dt > 0 ? scroll / dt : 0
+    this.groundV = this.climbV
     this.climbed += scroll
     if (scroll !== 0) {
       for (const bg of [this.bg, this.bg2]) {
@@ -2639,6 +2657,9 @@ class BattleScene extends Phaser.Scene {
       fpsLimit: this.game.loop.fpsLimit,
       /** 다음 벽으로 넘어가는 빠르기 (606번): 1이면 보통, 작을수록 빠르다. */
       idlePace: this.idlePace,
+      /** 질주의 기세 (608번)와 지금 배경이 흐르는 빠르기(px/초). */
+      momentum: this.momentum,
+      groundV: this.groundV,
       climbed: this.climbed,
       nextWallIn: this.nextWallIn,
       /** 날아가는 총알 수. */
@@ -3616,8 +3637,12 @@ class BattleScene extends Phaser.Scene {
       : this.opts.hero.weapon.grade
     const gun = mate?.gun ?? this.heroGun
     const pose = catGunPose(model, body.x, body.y, aim, this.reducedMotion ? 0 : kick)
-    const running = this.opts.idle && this.idleAdvancing && !this.reducedMotion
-    const runFrame = running ? catRunFrame(this.elapsed, index + 1, this.runRush > 0) : undefined
+    // 기세가 남아 있으면 벽 앞에서도 달리며 쏜다 (608번). 달리는 그림은 기세만큼 빨라진다.
+    const dashing = this.momentum > 0.15
+    const running = this.opts.idle && (this.idleAdvancing || dashing) && !this.reducedMotion
+    const runFrame = running
+      ? catRunFrame(this.runClock, index + 1, this.runRush > 0 || dashing)
+      : undefined
     body.setTexture(
       bakeCatBody(this, pose.index, look, runFrame, !mate && this.time.now < this.hurtUntil),
     )

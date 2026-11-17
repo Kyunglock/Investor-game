@@ -128,6 +128,7 @@ jobs:
           APP_URL=http://localhost:5182/app/ node ../app/scripts/seatOrderCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/soundCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/powerSaveCheck.mjs
+          APP_URL=http://localhost:5182/app/ node ../app/scripts/dashCheck.mjs
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
