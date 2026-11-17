@@ -86,6 +86,34 @@ try {
         ],
         fieldSlots: 4,
         rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51, adGain: 0 },
+        // 고유 스킬 셋(587번)과 광고 스킬 셋(588번). 시간은 실제 초다.
+        activeSlots: 3,
+        actives: [
+          ['barrage', '매수세례', 40, 4, false],
+          ['rally', '불장', 60, 6.7, false],
+          ['fortify', '방어선 구축', 60, 4, false],
+          ['boostFire', '공격속도 3배', 180, 60, true],
+          ['boostDamage', '공격력 3배', 180, 60, true],
+          ['boostBuy', '매수공격 3배', 180, 60, true],
+        ].map(([code, name, cooldown, seconds, ad]) => ({
+          code,
+          name,
+          cooldown,
+          seconds,
+          readyIn: 0,
+          left: 0,
+          equipped: !ad,
+          ad,
+        })) as {
+          code: string
+          name: string
+          cooldown: number
+          seconds: number
+          readyIn: number
+          left: number
+          equipped: boolean
+          ad: boolean
+        }[],
         wallDps: 0,
         power: 1038,
         // Real-time income (#803): the HUD shows it under the capital. No offline payout yet.
@@ -134,6 +162,8 @@ try {
     // Calls to the retired retreat address (584): a fallen buy wall no longer moves the fight.
     const moves: string[] = []
     const rebirths: { ad?: boolean }[] = []
+    const usedActives: { code: string; ad?: boolean }[] = []
+    const equips: { code: string; equipped: boolean }[] = []
     let catDraws = 0
     const hires: number[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -158,6 +188,20 @@ try {
       const path = new URL(route.request().url()).pathname
       const sent = route.request().postDataJSON()
       if (path.endsWith('/idle/retreat')) moves.push('retreat')
+      // Active skills (503, 587, 588): a use starts the cooldown, and an ad skill's effect too.
+      if (path.endsWith('/idle/active')) {
+        usedActives.push(sent)
+        const active = company.idle.actives.find((a) => a.code === sent.code)
+        if (active) {
+          active.readyIn = active.cooldown
+          if (active.ad) active.left = active.seconds
+        }
+      }
+      if (path.endsWith('/idle/active/equip')) {
+        equips.push(sent)
+        const active = company.idle.actives.find((a) => a.code === sent.code)
+        if (active) active.equipped = sent.equipped
+      }
       // Rebirth (571, 586): the fish it paid, three times as many after an ad.
       if (path.endsWith('/company/rebirth')) {
         const rebirth = company.idle.rebirth
@@ -827,13 +871,78 @@ try {
     await expect(page.getByRole('button', { name: /^회사/ })).toHaveCount(0)
     await expect(page.getByRole('button', { name: '회사 메뉴' })).toHaveCount(0)
     const nav = page.getByRole('navigation', { name: '게임 메뉴' }).last()
-    await expect(nav.getByRole('button')).toHaveCount(4)
+    // 다섯 칸 (587번): 돌파·성장·고양이·무기·스킬·상점. 좁은 화면에서도 글자가 칸을 넘지 않는다.
+    await expect(nav.getByRole('button')).toHaveCount(5)
+    assert.deepEqual(
+      await nav
+        .getByRole('button')
+        .evaluateAll((buttons) =>
+          buttons.filter((b) => b.scrollWidth > b.clientWidth).map((b) => b.textContent),
+        ),
+      [],
+      'menu labels fit their tabs',
+    )
+    // 글자가 두 줄로 꺾이지 않는다: 다섯 칸의 글자 높이가 모두 같다.
+    assert.equal(
+      new Set(
+        await nav
+          .locator('button > span')
+          .evaluateAll((labels) => labels.map((l) => Math.round(l.getBoundingClientRect().height))),
+      ).size,
+      1,
+      'menu labels stay on one line',
+    )
+    // 고유 스킬 (587번): 장착한 셋이 전투 화면 오른쪽에 선다. 광고 스킬 (588번)은 왼쪽에 늘 셋이다.
+    await expect(page.getByTestId('idle-active')).toHaveCount(3)
+    await expect(page.getByTestId('idle-ad-active')).toHaveCount(3)
+    {
+      const left = await page.getByTestId('idle-ad-actives').boundingBox()
+      const right = await page.getByTestId('idle-actives').boundingBox()
+      assert(left && right && left.x + left.width < right.x, 'ad skills left, unique skills right')
+      assert(left.x >= 0 && right.x + right.width <= width, 'skill buttons stay on screen')
+    }
+    // 광고 스킬은 아직 광고 없이 바로 눌린다 (586·588번): 광고를 본 것으로 쓰고, 남은 시간이 단추에 뜬다.
+    const boost = page.locator('[data-testid=idle-ad-active][data-code=boostDamage]')
+    await expect(boost).toBeEnabled()
+    await expect(boost).toContainText('광고')
+    await expect(boost).toContainText('공격력 3배')
+    await boost.click()
+    await expect(page.getByTestId('idle-raid')).toContainText('공격력 3배!!')
+    assert.deepEqual(usedActives, [{ code: 'boostDamage', ad: true }])
+    await expect(boost).toContainText('60초 남음')
+    await expect(boost).toBeDisabled()
+    await expect(page.locator('[data-testid=idle-ad-active][data-code=boostFire]')).toBeEnabled()
+    await page.screenshot({ path: `/tmp/idle-actives-${width}.png` })
+    // 스킬 탭 (587번): 장착 칸 셋과 스킬 목록. 빼면 전투 화면의 단추가 사라지고, 다시 장착하면 돌아온다.
+    await nav.getByRole('button', { name: '스킬', exact: true }).click()
+    await expect(page.getByTestId('skills')).toBeVisible()
+    await expect(page.getByTestId('skill-slot')).toHaveCount(3)
+    await expect(page.getByTestId('unique-skill')).toHaveCount(3)
+    await expect(page.getByTestId('ad-skill')).toHaveCount(3)
+    const rally = page.locator('[data-testid=unique-skill][data-code=rally]')
+    await expect(rally).toContainText('불장')
+    await expect(rally).toContainText('지속 7초 · 재사용 대기 60초')
+    await page.screenshot({ path: `/tmp/idle-skills-${width}.png` })
+    await rally.getByTestId('skill-equip').click()
+    await expect(rally).toHaveAttribute('data-equipped', 'false')
+    assert.deepEqual(equips, [{ code: 'rally', equipped: false }])
+    await expect(page.locator('[data-testid=skill-slot][data-code]')).toHaveCount(2)
+    await expect(page.locator('[data-testid=skill-slot]:not([data-code])')).toHaveText('빈 칸')
+    await expect(page.getByTestId('idle-active')).toHaveCount(2)
+    await expect(page.locator('[data-testid=idle-active][data-code=rally]')).toHaveCount(0)
+    await expect(page.getByTestId('idle-ad-active')).toHaveCount(3)
+    await rally.getByTestId('skill-equip').click()
+    await expect(rally).toHaveAttribute('data-equipped', 'true')
+    assert.deepEqual(equips.at(-1), { code: 'rally', equipped: true })
+    await expect(page.getByTestId('idle-active')).toHaveCount(3)
+    await page.getByRole('button', { name: '닫기 ✕' }).click()
+    await expect(page.getByTestId('idle-menu')).toHaveCount(0)
     await expect(nav.getByRole('button', { name: /^무기/ })).toHaveCount(0)
     await expect(nav.getByRole('button', { name: '돌파', exact: true })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    for (const name of [/^성장/, CAT_MENU, SHOP_MENU]) {
+    for (const name of [/^성장/, CAT_MENU, '스킬', SHOP_MENU]) {
       const tab = page
         .getByRole('navigation', { name: '게임 메뉴' })
         .last()
@@ -875,7 +984,7 @@ try {
     await page.close()
   }
   console.log(
-    'PASS: main view, heartbeat, background stop/resume, skill gating, four tabs, 320/390/1024px',
+    'PASS: main view, heartbeat, background stop/resume, skill gating, five tabs, 320/390/1024px',
   )
 } finally {
   await browser.close()

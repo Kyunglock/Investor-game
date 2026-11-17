@@ -26,6 +26,7 @@ import { IdlePass } from './IdlePass'
 import { IdleRebirth } from './IdleRebirth'
 import { IdleSandbox } from './IdleSandbox'
 import { IdleShop } from './IdleShop'
+import { IdleSkills } from './IdleSkills'
 import { IdleIcon } from './icons'
 import { MenuIcon } from './MenuIcon'
 import { OfflineIncome } from './OfflineIncome'
@@ -36,7 +37,7 @@ import './loadout-tray.css'
 import './upgrade-feedback.css'
 import './toy-shop.css'
 
-type Menu = 'battle' | 'growth' | 'cats' | 'shop' | 'company'
+type Menu = 'battle' | 'growth' | 'cats' | 'skills' | 'shop' | 'company'
 /**
  * 회사 탭은 꺼 두었다 (decisions.md 540번): 아래 메뉴의 회사 탭과 위의 회사 메뉴 단추(☰)가 나오지 않는다. 회사 화면의 코드는 그대로라 이 값을
  * 켜면 돌아온다.
@@ -48,6 +49,8 @@ const menus: { key: Menu; label: string }[] = (
     { key: 'growth', label: '성장' },
     // 무기 탭은 고양이 탭에 합쳤다 (560번): 고양이를 고르고 그 자리에서 무기를 바꾸고 합친다.
     { key: 'cats', label: '고양이·무기' },
+    // 스킬 탭 (587번): 사장냥의 고유 스킬을 보고 장착한다.
+    { key: 'skills', label: '스킬' },
     { key: 'shop', label: '상점' },
     { key: 'company', label: '회사' },
   ] as const
@@ -302,6 +305,7 @@ export function IdleHome({
               }}
             />
           )}
+          {menu === 'skills' && <IdleSkills company={company} />}
           {menu === 'shop' && (
             <IdleShop
               key={shopKind}

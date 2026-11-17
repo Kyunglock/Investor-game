@@ -855,7 +855,10 @@ class IdleEngineTest {
     state.idle.wall = 100;
     tick(1000);
     var actives = engine.view(state).actives();
-    assertThat(actives).extracting(a -> a.code()).containsExactly("barrage", "rally", "fortify");
+    // The boss cat's three 고유 스킬 (587), then the three 광고 스킬 (588).
+    assertThat(actives)
+        .extracting(a -> a.code())
+        .containsExactly("barrage", "rally", "fortify", "boostFire", "boostDamage", "boostBuy");
     assertThat(actives).allMatch(a -> a.readyIn() == 0);
     // Without the press, barrage hits are worth nothing.
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
@@ -903,6 +906,99 @@ class IdleEngineTest {
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage).isCloseTo(plain, org.assertj.core.data.Offset.offset(1e-9));
+  }
+
+  @Test
+  void onlyEquippedUniqueSkillsCanBeUsedAndThreeFitTheSlots() {
+    // 587: a save from before equipping has all three equipped.
+    start(1);
+    tick(1000);
+    var view = engine.view(state);
+    assertThat(view.activeSlots()).isEqualTo(3);
+    assertThat(view.actives()).filteredOn(a -> !a.ad()).allMatch(a -> a.equipped());
+    assertThat(view.actives()).filteredOn(a -> a.ad()).noneMatch(a -> a.equipped());
+
+    engine.equipActive(state, "rally", false);
+    assertThat(engine.view(state).actives().get(1).equipped()).isFalse();
+    assertThatThrownBy(() -> engine.useActive(state, "rally"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("장착하지 않은");
+    engine.useActive(state, "barrage");
+    // Taking a skill off and putting it back does not skip its cooldown.
+    engine.equipActive(state, "barrage", false);
+    engine.equipActive(state, "barrage", true);
+    assertThatThrownBy(() -> engine.useActive(state, "barrage"))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(state.idle.activeSlots).containsExactly("fortify", "barrage");
+
+    engine.equipActive(state, "rally", true);
+    engine.equipActive(state, "rally", true);
+    assertThat(state.idle.activeSlots).containsExactly("fortify", "barrage", "rally");
+    engine.useActive(state, "rally");
+    // Ad skills and unknown codes cannot be equipped, and a fourth skill has no slot.
+    assertThatThrownBy(() -> engine.equipActive(state, "boostFire", true))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.equipActive(state, "nope", true))
+        .isInstanceOf(InvalidRequestException.class);
+    state.idle.activeSlots.set(2, "other");
+    assertThatThrownBy(() -> engine.equipActive(state, "rally", true))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("꽉 찼다");
+  }
+
+  /** What one beat of far too many hits of a kind is accepted for, with fresh credits. */
+  private double accepted(String kind) {
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[18];
+    tick(1000, new IdleHit(100, kind, 1000, 1e9));
+    return state.idle.damage;
+  }
+
+  @Test
+  void adSkillsTripleTheirPartForAMinuteAfterAnAd() {
+    // 588: 공격속도·공격력·매수공격 3배. They need the ad, are never equipped, and last 60 real
+    // seconds (90 game seconds at 1.5x) with a 180 second cooldown.
+    start(1);
+    state.idle.wall = 100;
+    for (int i = 0; i < 3; i++) tick(1000);
+    double bullets = accepted("bullet");
+    double buys = accepted("buy");
+    assertThat(bullets).isPositive();
+    assertThat(buys).isPositive();
+
+    assertThatThrownBy(() -> engine.useActive(state, "boostDamage"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("광고");
+    engine.useActive(state, "boostDamage", true);
+    var boost = engine.view(state).actives().get(4);
+    assertThat(boost.ad()).isTrue();
+    assertThat(boost.seconds()).isEqualTo(60);
+    assertThat(boost.left()).isEqualTo(60);
+    assertThat(boost.readyIn()).isEqualTo(180);
+    assertThat(accepted("bullet")).isCloseTo(3 * bullets, offset(1e-9));
+    assertThat(accepted("buy")).as("only the guns and skills").isCloseTo(buys, offset(1e-9));
+    assertThatThrownBy(() -> engine.useActive(state, "boostDamage", true))
+        .isInstanceOf(InvalidRequestException.class);
+
+    engine.useActive(state, "boostBuy", true);
+    assertThat(accepted("buy")).isCloseTo(3 * buys, offset(1e-9));
+    // The barrage's orders are buy orders too: three times three.
+    engine.useActive(state, "barrage");
+    state.idle.damage = 0;
+    tick(1000, new IdleHit(100, "barrage", 40, 1e9));
+    assertThat(state.idle.damage).isCloseTo(40 * 3 * 3 * 0.75, offset(1e-9));
+
+    // 공격속도 3배 triples the bullet budget, and the rally is not stacked on it.
+    engine.useActive(state, "boostFire", true);
+    assertThat(accepted("bullet")).isCloseTo(9 * bullets, offset(1e-6));
+    engine.useActive(state, "rally");
+    assertThat(accepted("bullet")).isCloseTo(9 * bullets, offset(1e-6));
+
+    // A minute after the last press everything is back to plain.
+    for (int i = 0; i < 62; i++) tick(1000);
+    assertThat(engine.view(state).actives().get(3).left()).isZero();
+    assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
+    assertThat(accepted("buy")).isCloseTo(buys, offset(1e-9));
   }
 
   @Test

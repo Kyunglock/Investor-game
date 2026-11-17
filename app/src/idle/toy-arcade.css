@@ -302,9 +302,16 @@
   .idle-sheet > section {
     padding-inline: 8px;
   }
+  /* 다섯 칸 (587번): 가장 긴 "고양이·무기"가 한 줄에 들어가게 글자를 줄이고 자간을 좁힌다. */
+  .idle-nav {
+    padding-inline: 5px;
+    gap: 4px;
+  }
   .idle-nav button,
   .idle-nav button:has(.idle-menu-icon) {
-    font-size: 12px;
+    font-size: 11px;
+    letter-spacing: -0.6px;
+    white-space: nowrap;
   }
   .idle-stat {
     gap: 6px;

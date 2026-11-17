@@ -381,15 +381,26 @@ class CompanyController {
   }
 
   /** 가진 고양이를 출전시키거나 쉬게 한다 (decisions.md 488번). */
-  /** 액티브 스킬을 쓴다 (decisions.md 503번). */
+  /** 액티브 스킬을 쓴다 (decisions.md 503번). 광고 스킬은 ad가 참이어야 한다 (588번). */
   @PostMapping("/idle/active")
   CompanyView useActive(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody ActiveRequest request) {
-    return companies.useActive(cookies.requirePlayer(token), request.code());
+    return companies.useActive(
+        cookies.requirePlayer(token), request.code(), Boolean.TRUE.equals(request.ad()));
   }
 
-  record ActiveRequest(@NotBlank String code) {}
+  record ActiveRequest(@NotBlank String code, Boolean ad) {}
+
+  /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). */
+  @PostMapping("/idle/active/equip")
+  CompanyView equipActive(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody ActiveEquipRequest request) {
+    return companies.equipActive(cookies.requirePlayer(token), request.code(), request.equipped());
+  }
+
+  record ActiveEquipRequest(@NotBlank String code, @NotNull Boolean equipped) {}
 
   /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가고 생선을 받는다. */
   @PostMapping("/rebirth")

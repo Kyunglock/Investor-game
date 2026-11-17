@@ -122,8 +122,14 @@ public interface CompanyService {
    */
   CompanyView drawCat(UUID sessionId, int count);
 
-  /** 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 재사용 대기 중이면 400. */
-  CompanyView useActive(UUID sessionId, String code);
+  /**
+   * 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 재사용 대기 중이면 400. 고유 스킬은 장착한 것만 쓰고 (587번), 광고 스킬은 광고를 본
+   * 뒤(ad)에만 쓴다 (588번).
+   */
+  CompanyView useActive(UUID sessionId, String code, boolean ad);
+
+  /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). 세 개까지. 광고 스킬이거나 칸이 꽉 찼으면 400. */
+  CompanyView equipActive(UUID sessionId, String code, boolean equipped);
 
   /**
    * 환생한다 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈이 처음으로 돌아가고 생선을 받는다. 첫 보스를 깨기 전이면 400. ad가 참이면 광고를

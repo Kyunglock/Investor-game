@@ -2,7 +2,7 @@ import type { IdleAttackKind } from '@web/features/raising/idleContacts'
 import Phaser from 'phaser'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { ACTIVE_BANNERS, ACTIVES, type ActiveCode } from './actives'
+import { ACTIVE_BANNERS, ACTIVES, type ActiveCode, BOOST, type BoostCode } from './actives'
 import {
   type BattleMode,
   BOSS,
@@ -277,7 +277,8 @@ export interface BattleHandle {
   /** 테스트판: 그 종류의 몬스터 습격을 바로 부른다. */
   callIdleRaid: (kind: IdleRaidKind) => void
   /** 자동 전투: 액티브 스킬의 연출과 효과를 낸다 (503번). */
-  castActive: (code: ActiveCode) => void
+  /** left(전투 초)를 주면 이미 돌고 있던 효과를 남은 시간만큼 이어 받는다 (588번). */
+  castActive: (code: ActiveCode, left?: number) => void
   stop: () => void
 }
 
@@ -744,6 +745,8 @@ class BattleScene extends Phaser.Scene {
   private barrageLeft = 0
   private barrageClock = 0
   private rallyUntil = 0
+  /** 광고 스킬 (588번): 배수가 끝나는 전투 초. */
+  private boostUntil: Record<BoostCode, number> = { boostFire: 0, boostDamage: 0, boostBuy: 0 }
   private reportAs: IdleAttackKind | null = null
   private calledRaid: IdleRaidKind | null = null
   private panicRushClock = 0
@@ -2401,7 +2404,7 @@ class BattleScene extends Phaser.Scene {
    */
   private buyOrderDamage() {
     return this.opts.idle
-      ? idleBuyOrderDamage(this.loadout.buyBonus)
+      ? idleBuyOrderDamage(this.loadout.buyBonus) * this.boost('boostBuy')
       : this.loadout.damage * (BUY_WALL.orderDamage + this.loadout.buyBonus)
   }
 
@@ -3377,24 +3380,45 @@ class BattleScene extends Phaser.Scene {
     return (this.loadout.fireMs * 1.25 * SHOT_WEIGHT) / this.rallyFire
   }
 
-  /** 불장 (503번): 타는 동안 모든 총이 두 배 빨리 나간다. */
+  /** 불장 (503번): 타는 동안 모든 총이 두 배 빨리 나간다. 공격속도 3배(588번)와 겹치면 더 큰 쪽만 센다(서버도 같다). */
   private get rallyFire() {
-    return this.elapsed < this.rallyUntil ? ACTIVES.rally.fire : 1
+    return Math.max(
+      this.elapsed < this.rallyUntil ? ACTIVES.rally.fire : 1,
+      this.boost('boostFire'),
+    )
   }
 
-  /** 액티브 스킬을 쓴다 (503번): 서버가 받아 준 뒤에 부른다. */
-  castActive(code: ActiveCode) {
+  /** 광고 스킬 (588번): 그 스킬이 도는 동안의 배수. */
+  private boost(code: BoostCode) {
+    return this.elapsed < this.boostUntil[code] ? BOOST : 1
+  }
+
+  /** 총알과 스킬 피해의 바탕: 공격력 3배(588번)가 도는 동안 세 배다. */
+  private get attackDamage() {
+    return this.loadout.damage * this.boost('boostDamage')
+  }
+
+  /**
+   * 액티브 스킬을 쓴다 (503번): 서버가 받아 준 뒤에 부른다. left(전투 초)를 주면 이미 돌고 있던 효과를 이어 받는 것이라(화면을 다시 열었을 때)
+   * 남은 시간만큼만 켜고 알림을 띄우지 않는다.
+   */
+  castActive(code: ActiveCode, left?: number) {
     if (!this.opts.idle || this.over) return
     if (code === 'barrage') {
+      if (left != null) return
       this.barrageLeft = ACTIVES.barrage.shots
       this.barrageClock = 0
     } else if (code === 'rally') {
-      this.rallyUntil = this.elapsed + ACTIVES.rally.seconds
-    } else {
+      this.rallyUntil = this.elapsed + (left ?? ACTIVES.rally.seconds)
+    } else if (code === 'fortify') {
+      if (left != null) return
       this.buyWall?.fortify(ACTIVES.fortify.seconds)
       this.buyWallFx?.fortify()
       this.drawBuyWall()
+    } else {
+      this.boostUntil[code] = this.elapsed + (left ?? ACTIVES[code].seconds)
     }
+    if (left != null) return
     const [text, color] = ACTIVE_BANNERS[code]
     this.opts.onIdleRaid?.(text, color)
     sfx.levelUp()
@@ -3547,7 +3571,7 @@ class BattleScene extends Phaser.Scene {
     b.critical = gun?.critical ?? 1
     b.look = 0
     b.trailMs = Math.max(90, style.trailMs)
-    b.damage = stats.damage * SHOT_WEIGHT
+    b.damage = stats.damage * SHOT_WEIGHT * this.boost('boostDamage')
     b.power = stats.power
     b.splashRadius = stats.splashRadius
     b.splashDamage = stats.splashDamage * SHOT_WEIGHT
@@ -3965,7 +3989,7 @@ class BattleScene extends Phaser.Scene {
     if (st.pushSeconds > 0 && !e.cell && !e.boss) {
       e.setY(Math.max(-20, e.y - st.pushSeconds * WIND_PUSH))
     }
-    this.hit(e, st.damage * this.loadout.damage, angle, spell, area)
+    this.hit(e, st.damage * this.attackDamage, angle, spell, area)
   }
 
   private endWater(s: WaterShot) {
@@ -4080,13 +4104,7 @@ class BattleScene extends Phaser.Scene {
       if (!factor) continue
       if (st.stunSeconds > 0) e.stunUntil = Math.max(e.stunUntil, this.elapsed + st.stunSeconds)
       if (st.slowSeconds > 0) this.slow(e, st.slowFactor, st.slowSeconds)
-      this.hit(
-        e,
-        st.damage * this.loadout.damage * factor,
-        Math.atan2(e.y - y, e.x - x),
-        spell,
-        true,
-      )
+      this.hit(e, st.damage * this.attackDamage * factor, Math.atan2(e.y - y, e.x - x), spell, true)
     }
   }
 
@@ -4225,7 +4243,7 @@ class BattleScene extends Phaser.Scene {
     haptic.medium()
     this.damageStats.rams++
     const angle = Math.atan2(s.dy, s.dx)
-    const dmg = st.damage * this.loadout.damage
+    const dmg = st.damage * this.attackDamage
     this.hit(e, dmg * st.siege, angle, 'siege')
     if (st.quake > 0) {
       // 충격파와 돌기둥은 시각 효과만 낸다. 주변 적에게 피해나 밀림을 주지 않는다.
@@ -4354,7 +4372,7 @@ class BattleScene extends Phaser.Scene {
       ease: 'Quad.easeIn',
       onComplete: () => g.setVisible(false),
     })
-    const dmg = st.damage * this.loadout.damage
+    const dmg = st.damage * this.attackDamage
     this.hit(target, dmg, Math.PI / 2, 'lightning')
     prev = target
     for (const o of chain) {
@@ -5103,7 +5121,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     setPaused: (paused) => scene.setPaused(paused),
     setSpeed: (speed) => scene.setGameSpeed(speed),
     callIdleRaid: (kind) => scene.callIdleRaid(kind),
-    castActive: (code) => scene.castActive(code),
+    castActive: (code, left) => scene.castActive(code, left),
     stop: () => {
       ro.disconnect()
       game.destroy(true)

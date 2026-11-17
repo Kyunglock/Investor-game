@@ -135,6 +135,11 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
             window.clearTimeout(stall)
             retries.current = 0
             setReady(true)
+            // 이미 돌고 있던 효과(불장, 광고 스킬 588번)는 화면을 다시 열어도 남은 시간만큼 이어진다. 서버의 초는 실제 시간이라 전투 초로 바꾼다.
+            for (const active of latest.current.company.idle?.actives ?? []) {
+              if (active.left > 0)
+                battle.current?.castActive(active.code, active.left * IDLE_GAME_SPEED)
+            }
           },
           onError: (message) => {
             opened = true
