@@ -9,6 +9,12 @@ spring:
     # 에이전트들이 병렬로 추가한 마이그레이션의 병합 순서가 번호 순서와 어긋날 수 있다. 운영은 끈다 (db.md 6절).
     out-of-order: true
 
+server:
+  # 응답을 gzip으로 줄인다 (decisions.md 582번). 방치 화면의 접속 신호는 매초 회사 전체(약 22KB)를 돌려주는데 압축하면 약 4.5KB다.
+  # 기본값으로 JSON·HTML·CSS·JS 중 2KB가 넘는 응답만, 요청이 Accept-Encoding: gzip을 보낼 때만 압축한다.
+  compression:
+    enabled: true
+
 management:
   endpoints:
     web:

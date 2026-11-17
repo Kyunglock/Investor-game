@@ -77,9 +77,9 @@ pnpm check && pnpm exec tsc -b && pnpm test && pnpm build
 |---|---|
 | 변수 `APP_SERVER_URL` | 앱이 띄울 주소를 운영 웹이 아닌 곳으로 바꿀 때 |
 | 변수 `APP_API_BASE` | 화면 담기일 때 API 주소 |
-| 시크릿 `ANDROID_KEYSTORE_BASE64` `ANDROID_KEYSTORE_PASSWORD` `ANDROID_KEY_ALIAS` `ANDROID_KEY_PASSWORD` | 있으면 서명한 배포용 APK도 만든다. 없으면 디버그 APK만 |
+| 시크릿 `ANDROID_KEYSTORE_BASE64` `ANDROID_KEYSTORE_PASSWORD` `ANDROID_KEY_ALIAS` `ANDROID_KEY_PASSWORD` | 있으면 서명한 배포용 APK와 Play 스토어용 AAB도 만든다. 없으면 디버그 APK만 |
 
-결과는 실행 결과의 Artifacts에서 `app-debug`(폰에 바로 설치), `app-release`(서명 키가 있을 때)를 받는다. 디버그 APK는 Play 프로텍트가 "잠재적으로 유해한 앱"이라 경고한다: 모르는 출처의 앱이라 그런 것이고 "무시하고 설치"·"닫기"로 지나간다. 경고를 줄이려면 고정 서명 키를, 없애려면 Play 콘솔 내부 테스트 트랙을 쓴다.
+결과는 실행 결과의 Artifacts에서 `app-debug`(폰에 바로 설치), `app-release`(서명 키가 있을 때), `app-release-aab`(서명 키가 있을 때, Play 콘솔에 올리는 파일)를 받는다. 배포용의 `versionCode`는 워크플로 실행 번호라 올릴 때마다 커진다(581번). 디버그 APK는 Play 프로텍트가 "잠재적으로 유해한 앱"이라 경고한다: 모르는 출처의 앱이라 그런 것이고 "무시하고 설치"·"닫기"로 지나간다. 경고를 줄이려면 고정 서명 키를, 없애려면 Play 콘솔 내부 테스트 트랙을 쓴다.
 
 ### 내 컴퓨터
 
@@ -105,8 +105,8 @@ cd app && pnpm assets     # scripts/appAssets.ts가 assets/*.png를 그리고, @
 
 ## 5. 스토어에 올리려면 (아직 하지 않았다)
 
-- 서명 키를 만들고 시크릿을 넣는다. `versionCode`·`versionName`은 `app/android/app/build.gradle`에서 올린다.
-- Play 스토어는 APK가 아니라 **AAB**를 받는다: 워크플로의 `assembleRelease`를 `bundleRelease`로 바꾸면 `app/build/outputs/bundle/release/app-release.aab`가 나온다.
+- 서명 키를 만들고 시크릿을 넣는다. `versionName`은 `app/android/app/build.gradle`에서 올린다. `versionCode`는 CI가 워크플로 실행 번호로 넣는다(`APP_VERSION_CODE`, 581번).
+- Play 스토어는 APK가 아니라 **AAB**를 받는다: 서명 키가 있으면 워크플로가 `app-release-aab`(`app-release.aab`)를 함께 만든다(581번). 이 서명 키는 Play 앱 서명의 업로드 키가 된다.
 - 개인정보처리방침 주소(웹의 `/privacy`)를 스토어 등록 정보에 적는다.
 - 시즌·친구·라이벌처럼 앱에서만 붙일 것은 증권사 육성 설계 10절에 있다. 아직 정하지 않았다.
 - **종목 회의 뒤 전투** (decisions.md 413·414번): 회의 결과 화면에서 틀린 쪽에 걸었으면 디펜스로 손실을 줄이고, 맞힌 쪽이면 공격 판(큰 덩어리 매도벽을 부수고 오르기, 좌우로만 이동, 416번)으로 수익을 키운다. 별에 따라 회의 손익이 바뀌고(`POST /api/company/invest/battle`), 끝나면 회의 창으로 돌아와 전·후 손익을 보이고 분기를 넘긴다. 건너뛰면 손익 그대로다.
