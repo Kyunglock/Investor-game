@@ -99,6 +99,16 @@ export function IdleHome({
   // 전투에서 "무기 바꾸기"로 오면(Windows) 고양이·무기 탭이 사장냥의 장비 목록으로 열린다 (530·560번). 닫거나 다른 데로 가면 그 요청을 지운다.
   const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
   const menu = weaponsAsked ? 'cats' : ownMenu
+  const rebirthButton = useRef<HTMLButtonElement>(null)
+  const previousMenu = useRef(menu)
+  useEffect(() => {
+    const restore = previousMenu.current === 'rebirth' && menu === 'battle'
+    previousMenu.current = menu
+    if (!restore) return
+    // 시트의 닫힘·포커스 정리가 끝난 다음 바로가기 버튼으로 돌아온다.
+    const frame = requestAnimationFrame(() => rebirthButton.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [menu])
   // 고양이·무기 탭에서 고른 고양이. null이면 사장냥이다. 메뉴를 오가도 유지한다.
   const [ownWearer, setWearer] = useState<CatCode | null>(null)
   const wearer = weaponsAsked ? null : ownWearer
@@ -257,6 +267,7 @@ export function IdleHome({
             <button
               type="button"
               className="idle-rebirth-shortcut"
+              ref={rebirthButton}
               aria-label="환생"
               title="환생"
               data-testid="rebirth-shortcut"
