@@ -510,7 +510,7 @@ export interface paths {
         put?: never;
         /**
          * 환생한다 (decisions.md 571번)
-         * @description 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선(idle.rebirth.gain)을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
+         * @description 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선(idle.rebirth.gain)을 받는다. 생선은 영구 강화에 쓴다 (600번).
          *     고양이·무기·다이아·시즌패스는 그대로이고, 이미 받은 보스 클리어 보상은 다시 주지 않는다. 첫 보스(50번째 벽)를 깨기 전이면 400.
          *     ad가 참이면 광고를 보고 환생한 것이다 (decisions.md 586번): 생선을 3배(idle.rebirth.adGain)로 받는다. 횟수 한도는 없다. 아직 광고를 붙이지 않아 서버는 이 값을 그대로 믿는다.
          */
@@ -521,7 +521,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/cat/level": {
+    "/api/company/rebirth/upgrade": {
         parameters: {
             query?: never;
             header?: never;
@@ -531,10 +531,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 571번)
-         * @description 값은 그 고양이의 levelCost(지금 레벨 × 5). 가지지 않은 고양이거나 최고 레벨이거나 생선이 모자라면 400.
+         * 생선으로 영구 강화를 한 단계 올린다 (decisions.md 600번)
+         * @description 값은 idle.rebirth.upgrades의 cost(다음 단계의 번호만큼의 생선). 환생해도 남는다. 없는 강화이거나 생선이 모자라면 400.
          */
-        post: operations["feedCat"];
+        post: operations["buyFishUpgrade"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1545,7 +1545,7 @@ export interface components {
                     count: number;
                     /**
                      * Format: int64
-                     * @description 가진 생선. 고양이의 레벨을 올리는 데 쓴다
+                     * @description 가진 생선. 영구 강화에 쓴다 (600번)
                      */
                     fish: number;
                     /**
@@ -1563,6 +1563,21 @@ export interface components {
                      * @description 광고를 보고 환생하면 받는 생선 (586번). gain의 3배
                      */
                     adGain: number;
+                    /** @description 생선으로 올리는 영구 강화 (600번). 환생해도 남는다. 효과는 같은 종류의 battleUpgrades 효과에 이미 더해져 있다 */
+                    upgrades: {
+                        /** @enum {string} */
+                        kind: "damage" | "hp" | "buy";
+                        level: number;
+                        /**
+                         * Format: int64
+                         * @description 다음 단계의 값(생선)
+                         */
+                        cost: number;
+                        /** @description 지금 더해 주는 양. buy는 주 */
+                        bonus: number;
+                        /** @description 한 단계 올리면 더해 주는 양 */
+                        nextBonus: number;
+                    }[];
                 };
                 /** @description 전투력 (538번). 성장 탭이 보여 주는 숫자 하나: 모든 총·스킬의 초당 피해(치명타 포함)와 매수 주문, 매수벽 체력 강화를 묶었다. 벽 번호는 보지 않는다 */
                 power: number;
@@ -1592,11 +1607,6 @@ export interface components {
                     skillLevel: number;
                     /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
                     skillNextLevel: number;
-                    /**
-                     * Format: int64
-                     * @description 생선으로 레벨을 하나 올리는 값 (571번). 아직 없거나 최고 레벨이면 0
-                     */
-                    levelCost?: number;
                     /**
                      * @description 등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.4배 · A 2배 · S 3배) 뽑기에서 드물다
                      * @enum {string}
@@ -2431,7 +2441,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    feedCat: {
+    buyFishUpgrade: {
         parameters: {
             query?: never;
             header?: never;
@@ -2442,7 +2452,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
+                    kind: "damage" | "hp" | "buy";
                 };
             };
         };

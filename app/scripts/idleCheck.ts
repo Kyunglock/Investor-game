@@ -85,7 +85,21 @@ try {
           { code: 'ram', name: '충차 스킬', owned: false, level: 0 },
         ],
         fieldSlots: 4,
-        rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51, adGain: 0 },
+        rebirth: {
+          count: 0,
+          fish: 0,
+          gain: 0,
+          fromWall: 51,
+          adGain: 0,
+          // 영구 강화 (600번).
+          upgrades: ['damage', 'hp', 'buy'].map((kind) => ({
+            kind,
+            level: 0,
+            cost: 1,
+            bonus: 0,
+            nextBonus: kind === 'buy' ? 100 : 10,
+          })),
+        },
         // 고유 스킬 여섯(587·591번, 앞의 셋을 장착)과 광고 스킬 셋(588번). 시간은 실제 초다.
         activeSlots: 3,
         actives: [
@@ -212,6 +226,18 @@ try {
         rebirth.fish += sent?.ad ? rebirth.adGain : rebirth.gain
         rebirth.count++
         rebirth.gain = rebirth.adGain = 0
+      }
+      // 영구 강화 (600번): 생선을 쓰고 한 단계 오른다.
+      if (path.endsWith('/rebirth/upgrade')) {
+        const rebirth = company.idle.rebirth
+        const u = rebirth.upgrades.find((u) => u.kind === sent.kind)
+        if (u) {
+          rebirth.fish -= u.cost
+          u.level++
+          u.cost = u.level + 1
+          u.bonus = u.nextBonus
+          u.nextBonus += u.kind === 'buy' ? 100 : 10
+        }
       }
       const cat = company.idle.cats.find((c) => c.code === sent?.code)
       if (path.endsWith('/draws')) hires.push(sent.count)
@@ -375,7 +401,17 @@ try {
     await expect(stat('buy')).toContainText('매수 주문 한 장 345주')
     await expect(stat('buy')).not.toContainText('%')
     await expect(stat('crit')).toHaveCount(0)
-    // 환생 (571번): 성장 탭 맨 아래. 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
+    // 성장 탭은 강화와 영구 강화로 나뉜다 (600번). 환생 (571번)은 영구 강화 아래에 있고, 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
+    await expect(page.getByRole('tab')).toHaveText(['강화', /^영구 강화/])
+    await expect(page.getByTestId('rebirth')).toHaveCount(0)
+    await page.getByTestId('growth-tab-forever').click()
+    await expect(page.locator('[data-testid=idle-stat]')).toHaveCount(0)
+    const forever = (kind: string) => page.locator(`[data-testid=fish-upgrade][data-kind=${kind}]`)
+    await expect(page.getByTestId('fish-upgrade')).toHaveCount(3)
+    await expect(forever('damage')).toContainText('공격력 Lv.0')
+    await expect(forever('damage')).toContainText('+0% → +10%')
+    await expect(forever('buy')).toContainText('+0주 → +100주')
+    await expect(forever('damage').getByRole('button')).toBeDisabled()
     await expect(page.getByTestId('rebirth')).toBeVisible()
     await expect(page.getByTestId('rebirth-open')).toBeDisabled()
     await expect(page.getByTestId('rebirth-open')).toHaveText('매도벽 51부터 환생할 수 있어요')
@@ -394,9 +430,15 @@ try {
     assert.deepEqual(rebirths, [{ ad: true }])
     await expect(page.getByTestId('rebirth-fish')).toContainText('60')
     await expect(page.getByTestId('rebirth-open')).toBeDisabled()
+    // 받은 생선으로 영구 강화를 올린다 (600번).
+    await forever('damage').getByRole('button').click()
+    await expect(forever('damage')).toContainText('공격력 Lv.1')
+    await expect(forever('damage')).toContainText('+10% → +20%')
+    await expect(page.getByTestId('rebirth-fish')).toContainText('59')
+    await expect(page.getByTestId('growth-tab-forever')).toContainText('59')
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
-    // Growth holds the stats only (decisions.md 530): no tab row, no inventory, no skill list.
-    await expect(page.getByRole('tab')).toHaveCount(0)
+    // Growth holds the stats only (decisions.md 530): no inventory, no skill list. Its two tabs are 강화 and 영구 강화 (600).
+    await expect(page.getByRole('tab')).toHaveCount(2)
     await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     // Cats are drawn with diamonds (decisions.md 526), fielded in four slots, and shown in a scrolling six-column roster (488, 493, 495).

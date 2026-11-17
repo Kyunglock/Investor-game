@@ -10,7 +10,6 @@
   touch-action: manipulation;
 }
 .idle-stat .idle-buy:active:not(:disabled) {
-  transform: translateY(3px) scale(0.95);
   filter: brightness(1.15);
   box-shadow: inset 0 2px 3px #24570055;
 }
@@ -115,25 +114,12 @@
     animation: none;
   }
 }
+/* 강화될 때 아이콘이 커졌다 돌아오며 흔들리던 연출은 없앴다 (600번): 화면이 떨리는 것처럼 보였다. */
 @media (prefers-reduced-motion: no-preference) {
-  .idle-stat[data-upgraded] .idle-stat-icon {
-    animation: upgrade-icon 360ms ease-out;
-  }
   .idle-stat[data-upgraded] .idle-stat-info b small {
     display: inline-block;
     animation: upgrade-gain 300ms ease-out;
     color: #267600;
     font-weight: 800;
-  }
-}
-@keyframes upgrade-icon {
-  0% {
-    transform: scale(0.85) rotate(-8deg);
-  }
-  45% {
-    transform: scale(1.22) rotate(5deg);
-  }
-  100% {
-    transform: scale(1) rotate(0);
   }
 }

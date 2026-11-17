@@ -282,7 +282,40 @@ class MentalEngine {
     return Math.min(c.battleLevels.getOrDefault(kind, 0), maxLevel(kind));
   }
 
-  /** 전투 강화의 화면 값 (367·394번): 강화마다 지금 단계·다음 값·효과. */
+  /**
+   * 영구 강화 (decisions.md 600번): 환생해서 얻은 생선으로 올리고 환생해도 남는다. 전투 강화의 효과에 그대로 더한다: 공격력·매수벽 체력은 한 단계에
+   * FISH_STEP_PERCENT%, 매수벽 공격은 한 단계에 FISH_STEP_SHARES주.
+   */
+  static final List<String> FISH_UPGRADES = List.of("damage", "hp", "buy");
+
+  static final int FISH_STEP_PERCENT = 10;
+  static final int FISH_STEP_SHARES = 100;
+
+  /** 영구 강화를 level에서 한 단계 올리는 값: 다음 단계의 번호만큼의 생선(1, 2, 3 …). */
+  static long fishUpgradeCost(int level) {
+    return level + 1L;
+  }
+
+  /** 영구 강화가 전투 강화에 더하는 양: buy는 주, 나머지는 %. 영구 강화가 없는 종류는 0. */
+  private static int fishBonus(CompanyState c, String kind) {
+    if (!FISH_UPGRADES.contains(kind)) return 0;
+    return c.fishLevels.getOrDefault(kind, 0)
+        * ("buy".equals(kind) ? FISH_STEP_SHARES : FISH_STEP_PERCENT);
+  }
+
+  List<CompanyView.FishUpgrade> fishUpgradeViews(CompanyState c) {
+    return FISH_UPGRADES.stream()
+        .map(
+            kind -> {
+              int level = c.fishLevels.getOrDefault(kind, 0);
+              int step = "buy".equals(kind) ? FISH_STEP_SHARES : FISH_STEP_PERCENT;
+              return new CompanyView.FishUpgrade(
+                  kind, level, fishUpgradeCost(level), level * step, (level + 1) * step);
+            })
+        .toList();
+  }
+
+  /** 전투 강화의 화면 값 (367·394번): 강화마다 지금 단계·다음 값·효과. 효과에는 영구 강화(600번)가 더한 양이 들어 있다. */
   List<CompanyView.BattleUpgrade> upgradeViews(CompanyState c) {
     CompanyProperties.Upgrades rule = properties.mental().upgrades();
     return UPGRADES.stream()
@@ -293,15 +326,17 @@ class MentalEngine {
               int max = maxLevel(kind);
               // 매수벽 공격은 %가 아니라 수량(주)으로 오른다 (579번).
               int shares = "buy".equals(kind) ? rule.buyStepShares() : 0;
+              int fishPercent = "buy".equals(kind) ? 0 : fishBonus(c, kind);
+              int fishShares = "buy".equals(kind) ? fishBonus(c, kind) : 0;
               return new CompanyView.BattleUpgrade(
                   kind,
                   level,
                   CompanyView.money(upgradePrice(level)),
                   rule.priceGrowthPercent(),
-                  level * step,
-                  Math.min(level + 1, max) * step,
-                  level * shares,
-                  (level + 1) * shares,
+                  level * step + fishPercent,
+                  Math.min(level + 1, max) * step + fishPercent,
+                  level * shares + fishShares,
+                  (level + 1) * shares + fishShares,
                   max == Integer.MAX_VALUE ? 0 : max);
             })
         .toList();

@@ -701,7 +701,7 @@ class CompanyApiTest {
         .andExpect(status().isBadRequest());
   }
 
-  /** 환생 (decisions.md 571번): 첫 보스를 깨기 전에는 못 하고, 생선이 없으면 고양이 레벨을 올리지 못한다. */
+  /** 환생 (decisions.md 571번): 첫 보스를 깨기 전에는 못 하고, 생선이 없으면 영구 강화를 올리지 못한다 (600번). */
   @Test
   void 환생은_첫_보스를_깬_뒤에_하고_생선이_없으면_레벨을_못_올린다() throws Exception {
     DocumentContext opened =
@@ -714,7 +714,12 @@ class CompanyApiTest {
     mvc.perform(post("/api/company/rebirth").cookie(session)).andExpect(status().isBadRequest());
     // 광고를 봐도 첫 보스를 깨기 전에는 못 한다 (586번).
     postJson("/api/company/rebirth", "{\"ad\":true}").andExpect(status().isBadRequest());
-    postJson("/api/company/cat/level", "{\"code\":\"sky\"}").andExpect(status().isBadRequest());
-    postJson("/api/company/cat/level", "{}").andExpect(status().isBadRequest());
+    // 영구 강화 (600번): 셋이 0단계로 보이고, 생선이 없으면 올리지 못한다.
+    assertThat(opened.read("$.idle.rebirth.upgrades[0].kind", String.class)).isEqualTo("damage");
+    assertThat(opened.read("$.idle.rebirth.upgrades[2].kind", String.class)).isEqualTo("buy");
+    assertThat(opened.read("$.idle.rebirth.upgrades[0].cost", Long.class)).isEqualTo(1);
+    postJson("/api/company/rebirth/upgrade", "{\"kind\":\"damage\"}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/rebirth/upgrade", "{}").andExpect(status().isBadRequest());
   }
 }

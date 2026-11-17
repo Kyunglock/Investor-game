@@ -9,7 +9,7 @@ import { FishIcon } from './FishIcon'
 import { rebirthBlock } from './rebirth'
 
 /**
- * 환생 (decisions.md 571번). 성장 탭의 맨 아래에 있다. 매도벽 1로 돌아가고 강화와 돈이 처음으로 돌아가는 대신 생선을 받는다. 되돌릴 수 없어서 한 번 더
+ * 환생 (decisions.md 571번). 성장 탭의 영구 강화 아래에 있다 (600번). 매도벽 1로 돌아가고 강화와 돈이 처음으로 돌아가는 대신 생선을 받는다. 되돌릴 수 없어서 한 번 더
  * 묻는다. 물을 때 "광고 보고 3배 받기"를 고르면 생선을 3배로 받는다 (586번): 횟수 한도는 없다.
  */
 export function IdleRebirth({ company }: { company: Company }) {
@@ -59,12 +59,12 @@ export function IdleRebirth({ company }: { company: Company }) {
         </span>
       </b>
       <p className="idle-rebirth-note">
-        매도벽 1로 돌아가고 강화와 돈이 처음으로 돌아가요. 대신 고양이 레벨을 올리는 생선을 받아요.
-        고양이·무기·다이아는 그대로예요.
+        매도벽 1로 돌아가고 강화와 돈이 처음으로 돌아가요. 대신 영구 강화에 쓰는 생선을 받아요. 영구
+        강화와 고양이·무기·다이아는 그대로예요.
       </p>
       {got != null && (
         <p className="idle-rebirth-got" role="status" data-testid="rebirth-got">
-          환생했어요! 생선 {got.toLocaleString()}마리를 받았어요 · 고양이 탭에서 레벨을 올려요
+          환생했어요! 생선 {got.toLocaleString()}마리를 받았어요 · 위의 영구 강화에 써요
         </p>
       )}
       {error && <p role="alert">{error}</p>}

@@ -271,6 +271,9 @@ class CompanyState {
   /** 생선 (571번): 환생하면 얻고, 고양이의 레벨을 올리는 데 쓴다. */
   long fish;
 
+  /** 생선으로 올린 영구 강화의 단계 (600번): 종류(damage·hp·buy) → 단계. 환생해도 남는다. */
+  Map<String, Integer> fishLevels = new LinkedHashMap<>();
+
   /** 환생한 횟수 (571번). */
   int rebirths;
 

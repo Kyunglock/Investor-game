@@ -11,7 +11,6 @@ import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { sortCats } from './catGrade'
-import { FishIcon } from './FishIcon'
 import { SkillBadge } from './SkillBadge'
 import { fieldSeats } from './seats'
 import { SKILLS, skillNames } from './skills'
@@ -57,7 +56,6 @@ export function IdleCats({
   const hero = heroOf(company)
   // 사장냥이 무기를 뺐다 (585번): 든 무기가 없어 기본 권총을 쏜다.
   const bossBare = !(company.weapons ?? []).some((w) => w.equipped)
-  const fish = idle?.rebirth?.fish ?? 0
   const same = (w: Weapon, held: Cat['weapon']) => w.kind === held?.kind && w.grade === held.grade
   const fielded = (idle?.cats ?? []).filter((cat) => cat.fielded)
   // 출전 칸 (599번): 고양이는 놓은 칸에 그대로 선다. 사이에 빈 칸이 있을 수 있다.
@@ -157,16 +155,6 @@ export function IdleCats({
             출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 윗줄은 고양이, 아랫줄은 그 고양이의
             무기
           </span>
-          {/* 생선 (571번): 환생하면 얻고 고양이의 레벨을 올린다. */}
-          <b
-            className="idle-fish-count"
-            data-testid="fish-count"
-            role="status"
-            aria-label={`생선 ${fish.toLocaleString()}마리`}
-          >
-            <FishIcon />
-            {fish.toLocaleString()}
-          </b>
         </p>
         {/* 출전 칸 (569번): 다섯 칸 두 줄. 윗줄은 고양이 칸, 아랫줄은 바로 위 고양이가 드는 무기 칸이다. 이름은 적지 않는다. */}
         <ul className="idle-cat-field-row" aria-label="출전 칸">
@@ -295,31 +283,6 @@ export function IdleCats({
             </button>
           ) : (
             <span className="idle-cat-field idle-cat-always">늘 출전</span>
-          )}
-          {/* 생선으로 레벨업 (571번): 값은 서버가 준다(지금 레벨 × 5). */}
-          {cat && (cat.levelCost ?? 0) > 0 && (
-            <button
-              type="button"
-              className="idle-cat-feed"
-              data-testid="cat-feed"
-              disabled={busy || fish < (cat.levelCost ?? 0)}
-              onClick={() => {
-                sfx.levelUp()
-                haptic.light()
-                void useRaisingStore.getState().feedCat(cat.code)
-              }}
-            >
-              <span>
-                생선으로 레벨업{' '}
-                <small>
-                  Lv.{cat.level} → Lv.{cat.level + 1}
-                </small>
-              </span>
-              <em className="idle-cat-feed-cost">
-                <FishIcon />
-                {(cat.levelCost ?? 0).toLocaleString()}
-              </em>
-            </button>
           )}
           {/* 스킬 설명 (530번): 하는 일, 레벨이 오르면 달라지는 점, 다음 스킬 레벨까지 필요한 고양이 레벨. 스킬은 A등급부터 있고 S등급은 둘이다 (561번). */}
           {cat && cat.skills.length === 0 && (

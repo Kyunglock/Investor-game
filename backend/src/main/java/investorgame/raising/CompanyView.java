@@ -254,15 +254,28 @@ public record CompanyView(
       Rebirth rebirth) {}
 
   /**
-   * 환생 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
+   * 환생 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다. 생선은 영구 강화에 쓴다 (600번).
    *
    * @param count 환생한 횟수
    * @param fish 가진 생선
    * @param gain 지금 환생하면 받는 생선. 아직 할 수 없으면 0
    * @param fromWall 이 벽에 서야 환생할 수 있다(첫 보스를 깬 다음 벽)
    * @param adGain 광고를 보고 환생하면 받는 생선 (586번): gain의 3배
+   * @param upgrades 생선으로 올리는 영구 강화 (600번). 환생해도 남는다
    */
-  public record Rebirth(int count, long fish, long gain, long fromWall, long adGain) {}
+  public record Rebirth(
+      int count, long fish, long gain, long fromWall, long adGain, List<FishUpgrade> upgrades) {}
+
+  /**
+   * 영구 강화 하나 (decisions.md 600번): 생선으로 올리고 환생해도 남는다. 효과는 같은 종류의 전투 강화(battleUpgrades)의 효과에 이미 더해져
+   * 있다.
+   *
+   * @param kind damage(공격력)·hp(매수벽 체력)·buy(매수벽 공격)
+   * @param cost 다음 단계의 값(생선)
+   * @param bonus 지금 더해 주는 양. buy는 주, 나머지는 %
+   * @param nextBonus 한 단계 올리면 더해 주는 양
+   */
+  public record FishUpgrade(String kind, int level, long cost, int bonus, int nextBonus) {}
 
   /**
    * 고양이 뽑기에서 나온 한 마리 (517번).
@@ -304,7 +317,6 @@ public record CompanyView(
    * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
    * @param skills 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고 A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다
    * @param grade 등급 C·B·A·S (539번). 종마다 정해져 있고, 높을수록 총이 세고 뽑기에서 드물다
-   * @param levelCost 생선으로 레벨을 하나 올리는 값 (571번). 아직 없거나 최고 레벨이면 0
    */
   public record IdleCat(
       String code,
@@ -319,8 +331,7 @@ public record CompanyView(
       List<CatSkill> skills,
       int skillLevel,
       int skillNextLevel,
-      String grade,
-      long levelCost) {}
+      String grade) {}
 
   public record CatWeapon(String kind, String grade) {}
 

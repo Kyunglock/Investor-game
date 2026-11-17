@@ -530,7 +530,7 @@ paths:
       operationId: rebirth
       summary: 환생한다 (decisions.md 571번)
       description: |
-        매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선(idle.rebirth.gain)을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
+        매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선(idle.rebirth.gain)을 받는다. 생선은 영구 강화에 쓴다 (600번).
         고양이·무기·다이아·시즌패스는 그대로이고, 이미 받은 보스 클리어 보상은 다시 주지 않는다. 첫 보스(50번째 벽)를 깨기 전이면 400.
         ad가 참이면 광고를 보고 환생한 것이다 (decisions.md 586번): 생선을 3배(idle.rebirth.adGain)로 받는다. 횟수 한도는 없다. 아직 광고를 붙이지 않아 서버는 이 값을 그대로 믿는다.
       requestBody:
@@ -550,20 +550,20 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /api/company/cat/level:
+  /api/company/rebirth/upgrade:
     post:
-      operationId: feedCat
-      summary: 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 571번)
-      description: 값은 그 고양이의 levelCost(지금 레벨 × 5). 가지지 않은 고양이거나 최고 레벨이거나 생선이 모자라면 400.
+      operationId: buyFishUpgrade
+      summary: 생선으로 영구 강화를 한 단계 올린다 (decisions.md 600번)
+      description: 값은 idle.rebirth.upgrades의 cost(다음 단계의 번호만큼의 생선). 환생해도 남는다. 없는 강화이거나 생선이 모자라면 400.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [code]
+              required: [kind]
               properties:
-                code: { type: string, enum: [sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat] }
+                kind: { type: string, enum: [damage, hp, buy] }
       responses:
         '200':
           description: 올린 뒤의 회사
@@ -1494,13 +1494,25 @@ components:
             rebirth:
               type: object
               description: 환생 (571번). 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다
-              required: [count, fish, gain, fromWall, adGain]
+              required: [count, fish, gain, fromWall, adGain, upgrades]
               properties:
                 count: { type: integer, description: 환생한 횟수 }
-                fish: { type: integer, format: int64, description: 가진 생선. 고양이의 레벨을 올리는 데 쓴다 }
+                fish: { type: integer, format: int64, description: 가진 생선. 영구 강화에 쓴다 (600번) }
                 gain: { type: integer, format: int64, description: 지금 환생하면 받는 생선. 아직 할 수 없으면 0 }
                 fromWall: { type: integer, format: int64, description: 이 벽에 서야 환생할 수 있다(첫 보스를 깬 다음 벽) }
                 adGain: { type: integer, format: int64, description: 광고를 보고 환생하면 받는 생선 (586번). gain의 3배 }
+                upgrades:
+                  type: array
+                  description: 생선으로 올리는 영구 강화 (600번). 환생해도 남는다. 효과는 같은 종류의 battleUpgrades 효과에 이미 더해져 있다
+                  items:
+                    type: object
+                    required: [kind, level, cost, bonus, nextBonus]
+                    properties:
+                      kind: { type: string, enum: [damage, hp, buy] }
+                      level: { type: integer }
+                      cost: { type: integer, format: int64, description: 다음 단계의 값(생선) }
+                      bonus: { type: integer, description: 지금 더해 주는 양. buy는 주, 나머지는 % }
+                      nextBonus: { type: integer, description: 한 단계 올리면 더해 주는 양 }
             power: { type: number, description: "전투력 (538번). 성장 탭이 보여 주는 숫자 하나: 모든 총·스킬의 초당 피해(치명타 포함)와 매수 주문, 매수벽 체력 강화를 묶었다. 벽 번호는 보지 않는다" }
             cats:
               type: array
@@ -1528,7 +1540,6 @@ components:
                         name: { type: string }
                   skillLevel: { type: integer, description: 고유 스킬의 레벨 1~5 (515번). 고양이 Lv.10·20·30·40에 하나씩 오른다 (534번). 스킬이 둘이면 같은 레벨이다 }
                   skillNextLevel: { type: integer, description: 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 }
-                  levelCost: { type: integer, format: int64, description: 생선으로 레벨을 하나 올리는 값 (571번). 아직 없거나 최고 레벨이면 0 }
                   grade: { type: string, enum: [C, B, A, S], description: "등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.4배 · A 2배 · S 3배) 뽑기에서 드물다" }
                   weapon:
                     description: 든 무기. 없으면 null(기본 권총을 쏜다)
