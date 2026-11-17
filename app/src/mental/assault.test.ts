@@ -237,6 +237,8 @@ describe('매도벽 경험치 (#700)', () => {
     // 큰손이 지키는 보스 벽은 50번째 벽마다다 (550번): 열 번째 벽은 보통 벽이다.
     expect(idleAssaultSpec(10).walls[0].boss).toBe(false)
     expect(idleAssaultSpec(50).walls[0].boss).toBe(true)
+    // 자동 전투의 큰손은 미션의 큰손보다 체력이 다섯 배다 (593번).
+    expect(idleAssaultSpec(50).bossHp).toBeCloseTo(assaultSpec(5).bossHp * 5)
     // 열 벽을 넘기면 수·공격이 는다. 벽 체력을 모르면 물량 하나의 수량은 그대로다.
     const next = idleAssaultSpec(11)
     expect(next.walls[0].mix).toEqual(first.walls[0].mix)
