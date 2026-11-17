@@ -32,10 +32,7 @@ export class CircuitBreakerFx {
       .setDepth(35)
     // 캔버스에서 처음 쓰는 한글 서브셋도 로드한 뒤 다시 그린다.
     void document.fonts
-      .load(
-        '23px "Jua"',
-        '서킷브레이커 거래 정지 매수 매도 대기 재개 멘탈 회복 충전 완료 0123456789',
-      )
+      .load('23px "Jua"', '서킷브레이커 거래 정지 멘탈 회복 충전 완료 0123456789')
       .then(() => {
         if (this.root.active)
           for (const label of [this.title, this.orders, this.recovery]) label.updateText()
@@ -51,13 +48,17 @@ export class CircuitBreakerFx {
     playerX: number,
     playerY: number,
     reduced: boolean,
-    barrier: BarrierLane & { buys: number; sells: number },
+    barrier: BarrierLane,
   ) {
     const g = this.ink.clear()
     const cx = barrier.left + barrier.width / 2
     const y = Math.round(barrier.y)
     const enter = Math.min(1, c.elapsed / 0.24)
-    const opening = Math.max(0, (c.elapsed - (CIRCUIT_BREAKER.seconds - 0.3)) / 0.3)
+    const opening = Math.max(
+      0,
+      (c.elapsed - (CIRCUIT_BREAKER.seconds - CIRCUIT_BREAKER.openSeconds)) /
+        CIRCUIT_BREAKER.openSeconds,
+    )
     const slide = reduced ? 0 : ((1 - enter) ** 3 + opening ** 2) * (barrier.width / 2 + 20)
     g.fillStyle(0x142230, 0.08 * (1 - opening)).fillRect(0, 0, w, h)
     for (const side of [-1, 1]) {
@@ -93,7 +94,7 @@ export class CircuitBreakerFx {
     this.orders
       .setPosition(Math.round(cx), y + 11)
       .setAlpha(alpha)
-      .setText(`거래 정지 · 매도 ${barrier.sells} / 매수 ${barrier.buys} 대기`)
+      .setText('거래 정지')
     for (const [label, size] of [
       [this.title, 23],
       [this.orders, 13],

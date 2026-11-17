@@ -819,6 +819,16 @@ try {
         0,
         'no bullet is left when the boss circuit breaker starts',
       )
+      // 서버가 정지를 끝내기 전에는 차단벽이 열리지 않는다 (595번): 화면의 시계가 먼저 다 가도 열리기 직전(3.7초)에서 기다린다.
+      await page.waitForTimeout(3000)
+      const halted = await page.evaluate(
+        () =>
+          (
+            window as unknown as { __mentalMarket: () => { circuit: { elapsed: number } | null } }
+          ).__mentalMarket().circuit,
+      )
+      assert.ok(halted, 'the halt lasts while the server says so')
+      assert.ok(halted.elapsed <= 3.7 + 1e-6, `the barrier stays closed: ${halted.elapsed}`)
       await page.screenshot({ path: '/tmp/idle-boss-circuit.png' })
       company.idle.circuitSeconds = 0
       await expect(page.getByTestId('idle-wall-number')).toHaveText('보스 50', { timeout: 10000 })
