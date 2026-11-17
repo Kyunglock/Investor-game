@@ -20,7 +20,7 @@ import { CatPortrait as Portrait } from './CatPortrait'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
 /**
- * 장비 목록 (decisions.md 530번): 고양이 탭에서 고른 고양이(또는 사장냥)가 들 무기를 고른다. 짧게 누르면 비교하고, 길게 눌러 끌어 같은 무기
+ * 장비 목록 (decisions.md 530번): 고양이 탭에서 고른 고양이(또는 사장냥)가 들 무기를 고른다. 짧게 누르면 비교하고, 집어서 끌어 같은 무기
  * 위에 놓으면 합쳐진다. 출전 칸에 놓으면 장착한다. 남이 든 것은 `장착 중`과 든 이만 보이고 고를 수 없다. 서버도 같은 규칙이다(IdleEngine.equipCat·requireFreeForMerge).
  */
 export function CatGear({
@@ -145,8 +145,8 @@ export function CatGear({
           ? `아무도 안 든 같은 무기가 ${need}개 있어야 합쳐져요`
           : `같은 무기 위에 놓으면 ${nextGrade(drag.item.weapon.grade)} 등급이 돼요`
     : need > 0
-      ? `눌러 비교 · 길게 집어 고양이에 장착 · 같은 무기에 합성 (${need}개)`
-      : '눌러 비교 · 길게 집어 고양이에게 장착'
+      ? `눌러 비교 · 집어서 끌어 고양이에 장착 · 같은 무기에 합성 (${need}개)`
+      : '눌러 비교 · 집어서 끌어 고양이에게 장착'
   const merges = mergeable(company)
   return (
     <div

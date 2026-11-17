@@ -1,7 +1,13 @@
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
 
-/** 터치는 길게 집기 전까지 스크롤이다. 손을 떼거나 화면을 떠나면 예약도 함께 취소한다. */
+/** 터치로 이만큼 머물면 집는다. 길게 누르지 않아도 되게 짧다: 목록을 넘기는 손짓은 이보다 먼저 움직인다. */
+const HOLD_MS = 130
+
+/**
+ * 터치는 잠깐 머물거나 옆으로 끌면 바로 집는다. 머물지 않고 위아래로 움직이면 목록을 넘기는 스크롤이다.
+ * 손을 떼거나 화면을 떠나면 예약도 함께 취소한다.
+ */
 export function useLoadoutDrag<T>(
   accepts: (item: T, target: string) => boolean,
   drop: (item: T, target: string) => void,
@@ -36,7 +42,9 @@ export function useLoadoutDrag<T>(
       if (!p || e.pointerId !== p.id) return
       if (!p.active) {
         if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 8) return
-        if (e.pointerType !== 'mouse') return cancel()
+        // 터치로 위아래는 목록 넘기기다(touch-action: pan-y). 옆으로 끄는 것은 스크롤이 아니므로 바로 집는다.
+        if (e.pointerType !== 'mouse' && Math.abs(e.clientX - p.x) <= Math.abs(e.clientY - p.y))
+          return cancel()
         clearTimeout(p.timer)
         p.active = true
         haptic.light()
@@ -90,7 +98,7 @@ export function useLoadoutDrag<T>(
       dragged.current = true
       haptic.light()
       setDrag({ item, x: p.x, y: p.y, over: null })
-    }, 280)
+    }, HOLD_MS)
     press.current = p
   }
   const consumeClick = (detail: number) => {

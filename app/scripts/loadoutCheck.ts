@@ -210,6 +210,29 @@ try {
     await expect(page.getByTestId('cat-detail')).toHaveAttribute('data-code', 'night')
     assert.deepEqual(mutations[0].body, { code: 'night', fielded: true, replaceCode: 'sky' })
     assert.equal(company.idle.cats.filter((c) => c.fielded).length, 4)
+    // Touch picks a cat up at once when it moves sideways: no long press. Up and down is the
+    // list's scroll, so that does not pick it up.
+    {
+      await cat('snow').scrollIntoViewIfNeeded()
+      const s = required(await cat('snow').boundingBox())
+      const [x, y] = [Math.round(s.x + s.width / 2), Math.round(s.y + s.height / 2)]
+      const cdp = await page.context().newCDPSession(page)
+      const touch = (type: 'touchStart' | 'touchMove', tx: number, ty: number) =>
+        cdp.send('Input.dispatchTouchEvent', { type, touchPoints: [{ x: tx, y: ty }] })
+      const end = () => cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await touch('touchStart', x, y)
+      await touch('touchMove', x + 30, y)
+      await expect(page.locator('.idle-gear-ghost')).toBeVisible({ timeout: 100 })
+      await end()
+      await expect(page.locator('.idle-gear-ghost')).toHaveCount(0)
+      await touch('touchStart', x, y)
+      await touch('touchMove', x, y - 30)
+      await page.waitForTimeout(300)
+      await expect(page.locator('.idle-gear-ghost')).toHaveCount(0)
+      await end()
+      await cdp.detach()
+      assert.equal(mutations.length, 1)
+    }
     // Cancellation outside all targets makes no request.
     await cat('snow').scrollIntoViewIfNeeded()
     const f = required(await cat('snow').boundingBox())
