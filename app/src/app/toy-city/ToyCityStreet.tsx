@@ -666,7 +666,7 @@ export function ToyCityStreet({
             fontWeight="800"
             fill="#fff9df"
           >
-            흔들리지 않는 고양이
+            매도벽 돌파냥
           </text>
           {g.positions.map((p, i) => {
             const employee = employees[i]

@@ -81,9 +81,9 @@ export function LoadingScreen({
     >
       <div className="loading-screen-body">
         <h1 className="loading-screen-title">
-          흔들리지 않는
+          매도벽
           <br />
-          <b>고양이</b>
+          <b>돌파냥</b>
         </h1>
         <div className="loading-screen-hero" aria-hidden="true">
           <img src={loadingSquad} alt="" draggable={false} fetchPriority="high" />
