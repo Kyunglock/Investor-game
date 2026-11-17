@@ -54,9 +54,9 @@ try {
   await page.screenshot({ path: '/tmp/fortify-wall-390.png' })
   for (const speed of [1, 2]) {
     await page.evaluate((speed) => window.__mentalSpeed(speed), speed)
+    const start = Date.now()
     await cast()
     await expect.poll(async () => (await inspect()).fortified).toBe(true)
-    const start = Date.now()
     assert.match((await inspect()).label, /^매수벽 /)
     await page.waitForTimeout(4000)
     assert.equal((await inspect()).fortified, true)
