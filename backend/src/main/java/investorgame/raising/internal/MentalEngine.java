@@ -288,7 +288,7 @@ class MentalEngine {
               int level = upgradeLevel(c, kind);
               int step = rule.stepPercent().getOrDefault(kind, 0);
               int max = maxLevel(kind);
-              // 매수벽 공격은 %가 아니라 수량(주)으로 오른다 (577번).
+              // 매수벽 공격은 %가 아니라 수량(주)으로 오른다 (579번).
               int shares = "buy".equals(kind) ? rule.buyStepShares() : 0;
               return new CompanyView.BattleUpgrade(
                   kind,

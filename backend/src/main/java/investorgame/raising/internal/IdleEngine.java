@@ -18,11 +18,11 @@ class IdleEngine {
   private final Clock clock;
   private final CompanyEngine engine;
   private final String serverId = UUID.randomUUID().toString();
-  // The fight's speed on screen (578): matches the app's IdleCanvas speed. Hit budgets, skill
+  // The fight's speed on screen (580): matches the app's IdleCanvas speed. Hit budgets, skill
   // cooldowns and the wall's progress follow it.
   private static final double SPEED = 1.5;
   // The income and the 전투력 number were set when the fight ran at 2. They keep that scale so that
-  // slowing the fight (578) does not cut what a company earns or shrink the number it is shown.
+  // slowing the fight (580) does not cut what a company earns or shrink the number it is shown.
   private static final double INCOME_SPEED = 2;
 
   /**
@@ -672,7 +672,7 @@ class IdleEngine {
   static final double SHARES_PER_HP = 150;
 
   /**
-   * One buy order's damage (514, 573, 577). Neither the weapon nor the wall's depth is in it: only
+   * One buy order's damage (514, 573, 579). Neither the weapon nor the wall's depth is in it: only
    * the buy wall attack upgrade raises it, by a fixed number of shares a level and not by a
    * percentage.
    */
@@ -727,7 +727,7 @@ class IdleEngine {
     s.activeSeconds += active;
     // 물가 (505번): 시간 수입과 벽 보상은 그 벽의 물가만큼 크다.
     // 직원의 초당 수입과 멘탈 보호 보너스도 같은 틱에 들어온다 (523번).
-    // The income keeps its old pace per real second, whatever the fight's speed (578).
+    // The income keeps its old pace per real second, whatever the fight's speed (580).
     double income = s.incomeRemainder + active * (INCOME_SPEED / SPEED) * incomeRate(c);
     double earned = Math.floor(income);
     s.incomeRemainder = income - earned;

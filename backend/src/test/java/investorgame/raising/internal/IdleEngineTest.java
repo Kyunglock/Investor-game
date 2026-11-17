@@ -46,7 +46,7 @@ class IdleEngineTest {
     }
   }
 
-  /** The fight's speed on screen (578): IdleEngine.SPEED. */
+  /** The fight's speed on screen (580): IdleEngine.SPEED. */
   private static final double SPEED = 1.5;
 
   private void start(long wall) {
@@ -82,7 +82,7 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isZero();
     assertThat(state.idle.nextDamage).isZero();
     assertThat(state.idle.afterNextDamage).isZero();
-    assertThat(state.idle.activeSeconds).isEqualTo(30); // Foreground time runs at 1.5x (578).
+    assertThat(state.idle.activeSeconds).isEqualTo(30); // Foreground time runs at 1.5x (580).
     // Time income is the first wall's times the wall's price level: 4% more per wall, the same
     // rate as the upgrade prices (decisions.md 553).
     assertThat(state.capital).isEqualTo(Math.floor(40 * 1000 * StrictMath.pow(1.04, 50)));
@@ -892,7 +892,7 @@ class IdleEngineTest {
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
     assertThat(state.idle.damage).as("the press is spent").isCloseTo(40 * 3 * order, offset(1e-9));
 
-    // The cooldown runs only while the battle runs: 40 real seconds at the fight's 1.5x (578).
+    // The cooldown runs only while the battle runs: 40 real seconds at the fight's 1.5x (580).
     for (int i = 0; i < 37; i++) tick(1000);
     assertThatThrownBy(() -> engine.useActive(state, "barrage"))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
@@ -914,7 +914,7 @@ class IdleEngineTest {
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * plain, org.assertj.core.data.Offset.offset(1e-9));
-    // Seven real seconds later it is over: its ten game seconds at 1.5x (578).
+    // Seven real seconds later it is over: its ten game seconds at 1.5x (580).
     for (int i = 0; i < 7; i++) tick(1000);
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
@@ -928,7 +928,7 @@ class IdleEngineTest {
     state.idle.wall = 100;
     state.idle.cats.put("night", 1);
     state.idle.fielded.add("night");
-    // 2.4 s at the fight's 1.5x (578) is one 3.6 s cooldown: a second reported meteor is not
+    // 2.4 s at the fight's 1.5x (580) is one 3.6 s cooldown: a second reported meteor is not
     // credited. No two cats share a skill (563), so one cat is all a skill ever has.
     tick(2400, new IdleHit(100, "meteor", 2));
     assertThat(state.idle.damage)
@@ -1037,7 +1037,7 @@ class IdleEngineTest {
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
-    // Only the buy upgrade raises it, by a fixed ten shares a level and not by a percentage (577):
+    // Only the buy upgrade raises it, by a fixed ten shares a level and not by a percentage (579):
     // ten levels add a hundred shares to the 112.5 of one order.
     assertThat(buyBonus()).isZero();
     company.mental.buyUpgrade(state, "buy", 10);
@@ -1087,7 +1087,7 @@ class IdleEngineTest {
     var cat = engine.view(state).cats().stream().filter(c -> "ocean".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(1);
     assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(10);
-    // Level 1 water: 1.5 times the gun, once per 2.4 s. 1.6 s at 1.5x (578) is one cooldown.
+    // Level 1 water: 1.5 times the gun, once per 2.4 s. 1.6 s at 1.5x (580) is one cooldown.
     tick(1600, new IdleHit(100, "water", 3, 3 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(1.5, offset(1e-9));
     // Cat level 20 is skill level 3: 2.6 times the gun, once per 1.8 s.
@@ -1125,7 +1125,7 @@ class IdleEngineTest {
         .filteredOn(skill -> skill.owned())
         .extracting(skill -> skill.code())
         .containsExactly("fire", "hail");
-    // 2.3 s at 1.5x (578) is 3.45 game seconds: one 3.4 s hail cooldown (two stones at level 1)
+    // 2.3 s at 1.5x (580) is 3.45 game seconds: one 3.4 s hail cooldown (two stones at level 1)
     // and one 3 s fire cooldown.
     tick(
         2300,

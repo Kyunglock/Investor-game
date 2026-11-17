@@ -411,7 +411,7 @@ class MentalEngineTest {
         .containsEntry("hp", 3)
         .doesNotContainKey("buy")
         .doesNotContainKey("crit");
-    assertThat(rule.buyStepShares()).as("매수벽 공격은 %가 아니라 한 단계에 10주 (577번)").isEqualTo(10);
+    assertThat(rule.buyStepShares()).as("매수벽 공격은 %가 아니라 한 단계에 10주 (579번)").isEqualTo(10);
     assertThat(rule.maxPercent()).as("연사만 100%에서 멈춘다 (487번)").containsOnly(Map.entry("fire", 100));
     long before = (long) c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "damage", 1)).isEqualTo(1);

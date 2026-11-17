@@ -439,7 +439,7 @@ function IdleStats({ company }: { company: Company }) {
                     {receipt.kind === 'buy' ? '주' : '%'}
                   </span>
                 ) : u.kind === 'buy' ? (
-                  // 매수벽 공격은 %가 아니라 수량으로 오른다 (577번).
+                  // 매수벽 공격은 %가 아니라 수량으로 오른다 (579번).
                   `+${(u.bonusShares ?? 0).toLocaleString()}주 → +${((u.bonusShares ?? 0) + ((u.nextBonusShares ?? 0) - (u.bonusShares ?? 0)) * levels).toLocaleString()}주`
                 ) : full ? (
                   `+${u.bonusPercent}% · 최대`

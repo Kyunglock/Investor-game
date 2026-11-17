@@ -56,7 +56,7 @@ try {
           maxLevel: 0,
         },
         {
-          // 매수벽 공격은 %가 아니라 수량으로 오른다 (577번): 한 단계에 10주.
+          // 매수벽 공격은 %가 아니라 수량으로 오른다 (579번): 한 단계에 10주.
           kind: 'buy',
           level: 12,
           price: 1000000,
@@ -315,7 +315,7 @@ try {
     await expect(stat('fire').getByRole('button')).toHaveText('MAX')
     await expect(stat('hp')).toContainText('매수벽 체력')
     await expect(stat('buy')).toContainText('매수벽 공격')
-    // %가 아니라 수량으로 적는다 (577번): 바탕 한 장 113주에 120주를 얹었다.
+    // %가 아니라 수량으로 적는다 (579번): 바탕 한 장 113주에 120주를 얹었다.
     await expect(stat('buy')).toContainText('+120주 → +130주')
     await expect(stat('buy')).toContainText('매수 주문 한 장 233주')
     await expect(stat('buy')).not.toContainText('%')
@@ -375,8 +375,8 @@ try {
       'C 등급 하늘냥 합류! 고유 스킬 메테오 스킬',
     )
     assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw)
-    // Today's goods (541): four items; the free one is taken once and the tab's dot goes out.
-    await expect(page.getByTestId('shop-item')).toHaveCount(4)
+    // Today's goods (541): one free item; the free one is taken once and the tab's dot goes out.
+    await expect(page.getByTestId('shop-item')).toHaveCount(1)
     const free = page.locator('[data-testid=shop-item][data-code=free]')
     await expect(free).toContainText('다이아 20개')
     await expect(free.getByTestId('shop-buy')).toContainText('무료')
@@ -389,9 +389,8 @@ try {
     await expect(free).toContainText('오늘 0 / 1번 남음')
     await expect(page.getByTestId('shop-dot')).toHaveCount(0)
     assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw + 20)
-    await expect(page.locator('[data-testid=shop-item][data-code=money-small]')).toContainText(
-      '수입 30분어치',
-    )
+    await expect(page.locator('[data-testid=shop-item]:not([data-code=free])')).toHaveCount(0)
+    await expect(page.locator('.idle-shop-item .shop-art-icon')).toHaveCount(1)
     await page.screenshot({ path: `/tmp/idle-shop-${width}.png`, fullPage: true })
     await toCats()
     await pickCat('sky')
@@ -576,7 +575,7 @@ try {
           }
         ).__mentalMarket(),
       )
-    // The fight runs at 1.5x (decisions.md 578): simScale(1.5) = 0.75.
+    // The fight runs at 1.5x (decisions.md 580): simScale(1.5) = 0.75.
     assert.equal((await market()).simSpeed, 0.75)
     // 서킷브레이커는 꺼 두었다(IdleEngine.CIRCUIT_ENABLED): 여기서는 켜서 보지 않는다.
     // 앱이 뒤로 가면 서버에 멈춤을 알리고 전투 시계가 선다. 돌아오면 다시 흐른다.
@@ -764,15 +763,24 @@ try {
       await page.waitForTimeout(1500)
       moves.length = 0
       retreating = true
-      const flowsLeft = await page.evaluate(() => {
-        const dev = window as unknown as {
-          __mentalBuyWallHit: (n: number) => void
-          __mentalMarket: () => { flows: number }
-        }
-        dev.__mentalBuyWallHit(1e12)
-        return dev.__mentalMarket().flows
-      })
-      assert.equal(flowsLeft, 0, 'no sell order or monster is left when the buy wall falls')
+      // A just-rebuilt wall may still be protected. Only inspect cleanup after a hit actually
+      // breaks it, in the same browser task so the next frame cannot spawn another enemy.
+      await expect
+        .poll(
+          () =>
+            page.evaluate(() => {
+              const dev = window as unknown as {
+                __mentalBuyWallHit: (n: number) => void
+                __mentalMarket: () => { flows: number; buyWall: { breaks: number } }
+              }
+              const before = dev.__mentalMarket().buyWall.breaks
+              dev.__mentalBuyWallHit(1e12)
+              const after = dev.__mentalMarket()
+              return after.buyWall.breaks > before ? after.flows : null
+            }),
+          { timeout: 10000, intervals: [100] },
+        )
+        .toBe(0)
       await expect(page.getByTestId('idle-raid')).toContainText('매수벽 붕괴')
       await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 40')
       assert.deepEqual(moves, ['retreat'])

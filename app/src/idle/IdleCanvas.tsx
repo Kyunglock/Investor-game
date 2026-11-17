@@ -99,7 +99,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
         const spec = idleAssaultSpec(first.wall, first.maxHp)
         battle.current = startBattle(host.current, {
           mode: 'assault',
-          // 전투의 빠르기 (578번): 2배속이 너무 빨라 1.5배속으로 줄였다. 서버 IdleEngine.SPEED와 같아야 한다.
+          // 전투의 빠르기 (580번): 2배속이 너무 빨라 1.5배속으로 줄였다. 서버 IdleEngine.SPEED와 같아야 한다.
           speed: IDLE_GAME_SPEED,
           assault: spec,
           genre: 'DEFENSE',

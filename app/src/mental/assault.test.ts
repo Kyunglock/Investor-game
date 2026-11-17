@@ -245,7 +245,7 @@ describe('매도벽 경험치 (#700)', () => {
     expect(next.enemyHp).toBe(1)
     // 매도 물량은 미션의 0.6배 빠르기로 내려온다 (558번).
     expect(first.enemySpeed).toBe(assaultSpec(1).enemySpeed * IDLE_ORDER_SPEED)
-    // 배속을 2 → 1.5로 줄여도 티켓의 화면 빠르기는 그대로다 (578번).
+    // 배속을 2 → 1.5로 줄여도 티켓의 화면 빠르기는 그대로다 (580번).
     expect(IDLE_ORDER_SPEED * IDLE_GAME_SPEED).toBeCloseTo(0.6 * 2)
   })
   it('자동 전투의 물량은 매도벽 체력을 따라 커진다 (498번)', () => {
