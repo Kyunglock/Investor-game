@@ -12,6 +12,7 @@ import { Sheet } from '../app/Sheet'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 import { stageBadge, useAppUi } from '../app/ui'
 import { useCountUp } from '../app/useCountUp'
+import rebirthIcon from '../assets/rebirth.png'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
@@ -39,13 +40,13 @@ import './loadout-tray.css'
 import './upgrade-feedback.css'
 import './toy-shop.css'
 
-type Menu = 'battle' | 'growth' | 'cats' | 'skills' | 'shop' | 'company'
+type Menu = 'rebirth' | 'battle' | 'growth' | 'cats' | 'skills' | 'shop' | 'company'
 /**
  * 회사 탭은 꺼 두었다 (decisions.md 540번): 아래 메뉴의 회사 탭과 위의 회사 메뉴 단추(☰)가 나오지 않는다. 회사 화면의 코드는 그대로라 이 값을
  * 켜면 돌아온다.
  */
 export const COMPANY_ENABLED = false
-const menus: { key: Menu; label: string }[] = (
+const menus: { key: Exclude<Menu, 'rebirth'>; label: string }[] = (
   [
     { key: 'battle', label: '돌파' },
     { key: 'growth', label: '성장' },
@@ -98,6 +99,16 @@ export function IdleHome({
   // 전투에서 "무기 바꾸기"로 오면(Windows) 고양이·무기 탭이 사장냥의 장비 목록으로 열린다 (530·560번). 닫거나 다른 데로 가면 그 요청을 지운다.
   const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
   const menu = weaponsAsked ? 'cats' : ownMenu
+  const rebirthButton = useRef<HTMLButtonElement>(null)
+  const previousMenu = useRef(menu)
+  useEffect(() => {
+    const restore = previousMenu.current === 'rebirth' && menu === 'battle'
+    previousMenu.current = menu
+    if (!restore) return
+    // 시트의 닫힘·포커스 정리가 끝난 다음 바로가기 버튼으로 돌아온다.
+    const frame = requestAnimationFrame(() => rebirthButton.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [menu])
   // 고양이·무기 탭에서 고른 고양이. null이면 사장냥이다. 메뉴를 오가도 유지한다.
   const [ownWearer, setWearer] = useState<CatCode | null>(null)
   const wearer = weaponsAsked ? null : ownWearer
@@ -252,6 +263,23 @@ export function IdleHome({
               </button>
             )}
           </header>
+          {idle?.rebirth && (
+            <button
+              type="button"
+              className="idle-rebirth-shortcut"
+              ref={rebirthButton}
+              aria-label="환생"
+              title="환생"
+              data-testid="rebirth-shortcut"
+              onClick={(event) => {
+                // 터치 환경에서도 시트를 닫으면 이 버튼으로 포커스를 돌린다.
+                event.currentTarget.focus()
+                go('rebirth')
+              }}
+            >
+              <img src={rebirthIcon} alt="" width={48} height={48} />
+            </button>
+          )}
           {/* 출석 보상은 들어오면 저절로 받는다 (566번): 단추가 없다. */}
           <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
           <IdleSandbox company={company} />
@@ -270,12 +298,13 @@ export function IdleHome({
       <OfflineIncome company={company} seen={offlineSeen} onSeen={setOfflineSeen} />
       {menu !== 'battle' && menu !== 'company' && (
         <Sheet
-          title={menus.find((m) => m.key === menu)?.label}
+          title={menu === 'rebirth' ? '환생' : menus.find((m) => m.key === menu)?.label}
           onClose={() => go('battle')}
           testId="idle-menu"
           className={`idle-sheet ${menu === 'cats' ? 'loadout-sheet' : ''}`}
           footer={nav}
         >
+          {menu === 'rebirth' && <IdleRebirth company={company} />}
           {menu === 'growth' && <IdleGrowth company={company} />}
           {menu === 'cats' && (
             <IdleCats
