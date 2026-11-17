@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.offset;
 
 import investorgame.behavior.internal.TestBehavior;
+import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
 import investorgame.raising.CompanyService.IdleHit;
@@ -1172,5 +1173,58 @@ class IdleEngineTest {
         .findFirst()
         .orElseThrow()
         .weapon();
+  }
+
+  @Test
+  void 환생하면_처음으로_돌아가고_생선을_받아_고양이_레벨을_올린다() {
+    CompanyState c = company.open(new HashSeededRandom(3), company.openingCapital());
+    engine.beat(c, "one", 0, "start");
+    // 첫 보스를 깨기 전에는 못 한다.
+    c.idle.wall = 50;
+    assertThat(engine.rebirthFish(c)).isZero();
+    assertThatThrownBy(() -> engine.rebirth(c)).isInstanceOf(InvalidRequestException.class);
+    // 깊을수록 많이 받는다: (깬 벽 수)² ÷ 500.
+    c.idle.wall = 51;
+    assertThat(engine.rebirthFish(c)).isEqualTo(5);
+    c.idle.wall = 101;
+    assertThat(engine.rebirthFish(c)).isEqualTo(20);
+    c.idle.wall = 301;
+    assertThat(engine.rebirthFish(c)).isEqualTo(180);
+    assertThat(engine.view(c).rebirth().gain()).isEqualTo(180);
+    assertThat(engine.view(c).rebirth().fromWall()).isEqualTo(51);
+    // 환생: 벽 1, 강화와 돈은 처음으로. 고양이·무기·다이아·받은 보스 보상은 그대로다.
+    c.idle.cats.put("sky", 3);
+    c.idle.bossCleared = 300;
+    c.idle.damage = 12;
+    c.capital = 9e15;
+    c.diamonds = 777;
+    c.battleLevels.put("damage", 40);
+    long epoch = c.idle.epoch;
+    engine.rebirth(c);
+    assertThat(c.idle.wall).isEqualTo(1);
+    assertThat(c.idle.damage).isZero();
+    assertThat(c.idle.epoch).as("화면이 새 벽으로 안다").isEqualTo(epoch + 1);
+    assertThat(c.capital).isEqualTo((double) company.openingCapital());
+    assertThat(c.battleLevels).isEmpty();
+    assertThat(c.fish).isEqualTo(180);
+    assertThat(c.rebirths).isEqualTo(1);
+    assertThat(c.diamonds).isEqualTo(777);
+    assertThat(c.idle.cats.get("sky")).isEqualTo(3);
+    assertThat(c.idle.bossCleared).isEqualTo(300);
+    assertThat(engine.view(c).rebirth().count()).isEqualTo(1);
+    assertThat(engine.view(c).rebirth().gain()).isZero();
+    // 생선으로 레벨을 올린다: 지금 레벨 × 5.
+    var sky = engine.view(c).cats().stream().filter(cat -> cat.code().equals("sky")).findFirst();
+    assertThat(sky.orElseThrow().levelCost()).isEqualTo(15);
+    engine.feedCat(c, "sky");
+    assertThat(c.idle.cats.get("sky")).isEqualTo(4);
+    assertThat(c.fish).isEqualTo(165);
+    // 가지지 않은 고양이와 생선이 모자랄 때는 400.
+    c.idle.cats.remove("mint");
+    assertThatThrownBy(() -> engine.feedCat(c, "mint")).isInstanceOf(InvalidRequestException.class);
+    c.fish = 19;
+    assertThatThrownBy(() -> engine.feedCat(c, "sky")).isInstanceOf(InvalidRequestException.class);
+    assertThat(c.idle.cats.get("sky")).isEqualTo(4);
+    assertThat(c.fish).isEqualTo(19);
   }
 }

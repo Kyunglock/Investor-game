@@ -1,11 +1,11 @@
 import type { Company } from '@web/api/client'
-import { money } from '@web/features/game/labels'
 import { diamondText } from '@web/features/raising/gachaRules'
 
-/** 시즌패스 (decisions.md 529번): 서버가 주는 시즌·경험치·단계 보상. */
+/** 시즌패스 (decisions.md 529·571번): 서버가 주는 시즌·포인트·미션·단계 보상. */
 export type Pass = Company['pass']
 export type PassStep = Pass['steps'][number]
 export type PassReward = Pass['lastRewards'][number]
+export type PassMission = Pass['missions'][number]
 type Weapons = NonNullable<Company['weapons']>
 
 /** 남은 시간: "12일 5시간 남음" · "5시간 20분 남음" · "20분 남음". 1분이 안 되면 "곧 끝나요". */
@@ -19,11 +19,11 @@ export function leftText(secondsLeft: number): string {
   return m > 0 ? `${m}분 남음` : '곧 끝나요'
 }
 
-/** 다음 단계까지의 경험치: 이번 단계에서 모은 것과 한 단계에 드는 것. 마지막 단계에 닿았으면 full이다. */
+/** 다음 단계까지의 포인트: 이번 단계에서 모은 것과 한 단계에 드는 것. 마지막 단계에 닿았으면 full이다. */
 export function stepProgress(pass: Pass): { have: number; need: number; full: boolean } {
-  const need = Math.max(1, pass.expPerStep)
+  const need = Math.max(1, pass.pointsPerStep)
   if (pass.step >= pass.steps.length) return { have: need, need, full: true }
-  const have = Math.max(0, Math.min(need, pass.exp - pass.step * need))
+  const have = Math.max(0, Math.min(need, pass.points - pass.step * need))
   return { have, need, full: false }
 }
 
@@ -45,10 +45,16 @@ export function focusStep(pass: Pass): number {
   return Math.max(1, Math.min(pass.steps.length, pass.step + 1))
 }
 
-/** 단계 칸에 적는 돈·다이아의 양. 둘 다 없으면(무기·고양이만) null. */
-export function stepAmount(step: PassStep): string | null {
-  if (step.diamonds > 0) return diamondText(step.diamonds)
-  return step.money != null ? money(step.money) : null
+/**
+ * 미션의 진행도 (570번): 다음 문턱까지 "73/100". 문턱이 되풀이되므로 센 수는 그대로 적고, 막대는 지난 문턱부터 다음 문턱까지의 비율이다.
+ */
+export function missionProgress(mission: PassMission): { text: string; ratio: number } {
+  const every = Math.max(1, mission.every)
+  const from = mission.target - every
+  return {
+    text: `${mission.count.toLocaleString()}/${mission.target.toLocaleString()}`,
+    ratio: Math.max(0, Math.min(1, (mission.count - from) / every)),
+  }
 }
 
 /** 받은 무기의 이름: 가진 무기 목록에서 찾고, 없으면 등급만 적는다. */
@@ -58,17 +64,15 @@ function weaponName(reward: PassReward, weapons: Weapons): string {
 }
 
 /**
- * 방금 받은 것을 한 줄로: "다이아 +250 · 돈 +3.5b · 무기 리볼버 S · 고양이 하늘냥". 다이아와 돈은 더하고, 무기·고양이는 이름을 적는다. 무기가 셋을
- * 넘으면 "무기 4개"로 줄인다. 받은 것이 없으면 빈 글이다.
+ * 방금 받은 것을 한 줄로: "다이아 +250 · 무기 리볼버 S · 고양이 하늘냥". 다이아는 더하고, 무기·고양이는 이름을 적는다. 무기가 셋을 넘으면
+ * "무기 4개"로 줄인다. 받은 것이 없으면 빈 글이다. 돈은 주지 않는다 (570번).
  */
 export function rewardsText(rewards: PassReward[], weapons: Weapons = []): string {
   const diamonds = rewards.reduce((sum, r) => sum + r.diamonds, 0)
-  const cash = rewards.reduce((sum, r) => sum + r.money, 0)
   const guns = rewards.filter((r) => r.weaponKind)
   const cats = rewards.filter((r) => r.cat)
   const parts: string[] = []
   if (diamonds > 0) parts.push(`다이아 +${diamondText(diamonds)}`)
-  if (cash > 0) parts.push(`돈 +${money(cash)}`)
   if (guns.length > 3) parts.push(`무기 ${guns.length}개`)
   else if (guns.length > 0) parts.push(`무기 ${guns.map((r) => weaponName(r, weapons)).join(', ')}`)
   if (cats.length > 0) parts.push(`고양이 ${cats.map((r) => r.catName ?? '한 마리').join(', ')}`)

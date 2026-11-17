@@ -474,6 +474,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/rebirth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 환생한다 (decisions.md 571번)
+         * @description 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선(idle.rebirth.gain)을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
+         *     고양이·무기·다이아·시즌패스는 그대로이고, 이미 받은 보스 클리어 보상은 다시 주지 않는다. 첫 보스(50번째 벽)를 깨기 전이면 400.
+         */
+        post: operations["rebirth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/cat/level": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 571번)
+         * @description 값은 그 고양이의 levelCost(지금 레벨 × 5). 가지지 않은 고양이거나 최고 레벨이거나 생선이 모자라면 400.
+         */
+        post: operations["feedCat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/cat/field": {
         parameters: {
             query?: never;
@@ -625,7 +666,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 테스트판에서 시즌패스 경험치를 더한다 (decisions.md 529번) */
+        /** 테스트판에서 시즌패스 포인트를 더한다 (decisions.md 529·571번) */
         post: operations["addSandboxPassExp"];
         delete?: never;
         options?: never;
@@ -855,7 +896,7 @@ export interface components {
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
             };
-            /** @description 시즌패스 (decisions.md 529번). 4주짜리 시즌 동안 플레이로 패스 경험치를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이다. 시즌이 끝나면 받지 않은 보상은 사라진다 */
+            /** @description 시즌패스 (decisions.md 529·571번). 4주짜리 시즌 동안 미션을 깨서 포인트를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이고 보상에 돈은 없다. 시즌이 끝나면 받지 않은 보상은 사라지고 미션도 처음부터 센다 */
             pass: {
                 /** @description 시즌 번호 */
                 season: number;
@@ -874,11 +915,11 @@ export interface components {
                 endingSoon: boolean;
                 /**
                  * Format: int64
-                 * @description 이번 시즌에 모은 패스 경험치
+                 * @description 이번 시즌에 모은 포인트
                  */
-                exp: number;
-                /** @description 한 단계에 드는 경험치 */
-                expPerStep: number;
+                points: number;
+                /** @description 한 단계에 드는 포인트 */
+                pointsPerStep: number;
                 /** @description 지금 도달한 단계(0부터) */
                 step: number;
                 /** @description 받을 수 있는 보상의 수 */
@@ -888,26 +929,49 @@ export interface components {
                     step: number;
                     /**
                      * Format: int64
-                     * @description 받는 다이아. 돈 단계면 0
+                     * @description 받는 다이아
                      */
                     diamonds: number;
-                    /** @description 돈 단계면 지금 받으면 들어올 돈(회사의 초당 수입 30분어치). 아니면 null */
-                    money?: number | null;
                     /** @description 무기 하나를 더 받는다. 등급은 뽑기처럼 정해진다 */
                     weapon: boolean;
                     /** @description 고양이 한 마리를 더 받는다 */
                     cat: boolean;
-                    /** @description 경험치가 이 단계에 닿았다 */
+                    /** @description 포인트가 이 단계에 닿았다 */
                     reached: boolean;
                     /** @description 이미 받았다 */
                     claimed: boolean;
+                }[];
+                /** @description 포인트를 주는 미션과 진행도 (570번). 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 받고, 끝없이 되풀이된다 */
+                missions: {
+                    /** @description wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석) */
+                    code: string;
+                    /** @description 화면에 적는 글. "매도벽 100개 통과"처럼 다음에 닿을 수가 들어 있다 */
+                    title: string;
+                    /**
+                     * Format: int64
+                     * @description 이번 시즌에 센 수
+                     */
+                    count: number;
+                    /**
+                     * Format: int64
+                     * @description 다음에 포인트를 받는 수
+                     */
+                    target: number;
+                    /** @description 포인트를 받는 간격 */
+                    every: number;
+                    /** @description target에 닿으면 받는 포인트 */
+                    points: number;
+                    /**
+                     * Format: int64
+                     * @description 이 미션으로 이번 시즌에 받은 포인트
+                     */
+                    earned: number;
                 }[];
                 /** @description 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다 */
                 lastRewards: {
                     step: number;
                     /** Format: int64 */
                     diamonds: number;
-                    money: number;
                     weaponKind?: string | null;
                     weaponGrade?: string | null;
                     /** @description 받은 고양이의 코드 */
@@ -943,7 +1007,7 @@ export interface components {
                     money: number;
                 } | null;
             };
-            /** @description 출석 보상 (decisions.md 528번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다 */
+            /** @description 출석 보상 (decisions.md 528·568번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다. 화면은 들어오면 저절로 받는다. 보상은 다이아뿐이라 돈 칸의 값(incomeMinutes·money)은 늘 0·null이다 */
             attendance: {
                 /** @description 오늘 받을 칸(1부터). 오늘 이미 받았으면 오늘 받은 칸 */
                 today: number;
@@ -1434,6 +1498,26 @@ export interface components {
                 fieldSlots: number;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
+                /** @description 환생 (571번). 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다 */
+                rebirth?: {
+                    /** @description 환생한 횟수 */
+                    count: number;
+                    /**
+                     * Format: int64
+                     * @description 가진 생선. 고양이의 레벨을 올리는 데 쓴다
+                     */
+                    fish: number;
+                    /**
+                     * Format: int64
+                     * @description 지금 환생하면 받는 생선. 아직 할 수 없으면 0
+                     */
+                    gain: number;
+                    /**
+                     * Format: int64
+                     * @description 이 벽에 서야 환생할 수 있다(첫 보스를 깬 다음 벽)
+                     */
+                    fromWall: number;
+                };
                 /** @description 전투력 (538번). 성장 탭이 보여 주는 숫자 하나: 모든 총·스킬의 초당 피해(치명타 포함)와 매수 주문, 매수벽 체력 강화를 묶었다. 벽 번호는 보지 않는다 */
                 power: number;
                 /** @description 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다. 스킬은 A등급부터 있다 (561번) */
@@ -1460,6 +1544,11 @@ export interface components {
                     skillLevel: number;
                     /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
                     skillNextLevel: number;
+                    /**
+                     * Format: int64
+                     * @description 생선으로 레벨을 하나 올리는 값 (571번). 아직 없거나 최고 레벨이면 0
+                     */
+                    levelCost?: number;
                     /**
                      * @description 등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.4배 · A 2배 · S 3배) 뽑기에서 드물다
                      * @enum {string}
@@ -2205,6 +2294,59 @@ export interface operations {
         };
         responses: {
             /** @description 뽑은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    rebirth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 환생한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    feedCat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
+                };
+            };
+        };
+        responses: {
+            /** @description 올린 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

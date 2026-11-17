@@ -237,40 +237,52 @@ export const company = {
   attendance: {
     today: 3,
     claimable: false,
-    board: [50, 0, 100, 0, 100, 100, 300].map((diamonds, i) => ({
+    board: [50, 50, 100, 50, 100, 100, 300].map((diamonds, i) => ({
       day: i + 1,
       diamonds,
-      incomeMinutes: diamonds === 0 ? 30 : 0,
-      money: diamonds === 0 ? 87_300_000 : null,
+      incomeMinutes: 0,
+      money: null,
       claimed: i < 3,
     })),
     lastReward: { day: 3, diamonds: 100, money: 0 },
   },
-  // 시즌패스 (529번): 3단계까지 올라 모두 받은 채다. 다이아 50과 돈이 번갈아, 5의 배수는 큰 보상.
+  // 시즌패스 (529·571번): 3단계까지 올라 모두 받은 채다. 보통 단계는 다이아 50, 5의 배수는 큰 보상. 돈은 없다.
   pass: {
     season: 1,
     name: '시즌 1',
     endsAt: 1_795_000_000_000,
     secondsLeft: 12 * 86_400 + 5 * 3600,
     endingSoon: false,
-    exp: 340,
-    expPerStep: 100,
+    points: 1020,
+    pointsPerStep: 300,
     step: 3,
     claimable: 0,
     steps: Array.from({ length: 30 }, (_, i) => {
       const step = i + 1
-      const diamonds =
-        step === 30 ? 500 : step % 10 === 0 ? 300 : step % 5 === 0 ? 200 : step % 2 === 1 ? 50 : 0
       return {
         step,
-        diamonds,
-        money: diamonds === 0 ? 87_300_000 : null,
+        diamonds: step === 30 ? 500 : step % 10 === 0 ? 300 : step % 5 === 0 ? 200 : 50,
         weapon: step === 10 || step === 20,
         cat: step === 30,
         reached: step <= 3,
         claimed: step <= 3,
       }
     }),
+    missions: [
+      { code: 'wall', title: '매도벽 100개 통과', count: 73, target: 100, every: 50, points: 30 },
+      { code: 'boss', title: '보스 2번 처치', count: 1, target: 2, every: 1, points: 30 },
+      { code: 'upgrade', title: '강화 150번', count: 120, target: 150, every: 50, points: 30 },
+      {
+        code: 'draw',
+        title: '고양이·무기 뽑기 20번',
+        count: 11,
+        target: 20,
+        every: 10,
+        points: 30,
+      },
+      { code: 'merge', title: '무기 합성 5번', count: 2, target: 5, every: 5, points: 30 },
+      { code: 'attend', title: '출석 9일', count: 8, target: 9, every: 1, points: 100 },
+    ].map((m) => ({ ...m, earned: Math.floor(m.count / m.every) * m.points })),
     lastRewards: [],
   },
   gacha: {

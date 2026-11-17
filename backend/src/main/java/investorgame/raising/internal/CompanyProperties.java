@@ -93,44 +93,42 @@ public record CompanyProperties(
       int dailyLimit) {}
 
   /**
-   * 시즌패스 (decisions.md 529번): 무료 줄 하나. 시즌은 epoch(한국 시간 자정)부터 days일마다 이어진다.
+   * 시즌패스 (decisions.md 529·571번): 무료 줄 하나. 시즌은 epoch(한국 시간 자정)부터 days일마다 이어진다. 포인트는 미션을 깨면 들어온다.
    *
    * @param epoch 첫 시즌이 시작하는 날(yyyy-MM-dd, 한국 시간)
    * @param days 한 시즌의 길이(일)
    * @param steps 단계 수
-   * @param expPerStep 한 단계에 드는 패스 경험치
-   * @param moneyMinutes 돈 보상 = 받을 때 회사의 초당 수입 × 이만큼(분)
+   * @param pointsPerStep 한 단계에 드는 포인트
+   * @param missions 포인트를 주는 미션
    */
   public record Pass(
       String epoch,
       int days,
       int steps,
-      int expPerStep,
-      int moneyMinutes,
+      int pointsPerStep,
       PassRewards rewards,
-      PassExp exp) {}
+      List<PassMission> missions) {}
 
-  /** 단계의 다이아: 보통 단계(돈과 번갈아)·5의 배수·10의 배수(무기 하나 더)·마지막 단계(고양이 한 마리 더). */
+  /** 단계의 다이아: 보통 단계·5의 배수·10의 배수(무기 하나 더)·마지막 단계(고양이 한 마리 더). 돈은 주지 않는다 (570번). */
   public record PassRewards(
       long normalDiamonds, long fiveDiamonds, long tenDiamonds, long lastDiamonds) {}
 
   /**
-   * 패스 경험치를 얻는 곳.
+   * 시즌패스의 미션 (570번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다. 끝없이 되풀이된다.
    *
-   * @param wall 매도벽 하나를 돌파할 때
-   * @param stage 멘탈 보호 스테이지를 깰 때(별과 상관없이)
-   * @param stageDailyMax 스테이지로 하루에 얻는 상한
-   * @param ex EX 디펜스
+   * @param code wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)
+   * @param title 화면에 적는 글. {n}은 다음에 닿을 수다
+   * @param every 포인트를 받는 간격
+   * @param points 한 번에 받는 포인트
    */
-  public record PassExp(int wall, int stage, int stageDailyMax, int ex) {}
+  public record PassMission(String code, String title, int every, int points) {}
 
   /**
    * 출석 보상 (decisions.md 528번): 출석판의 칸을 차례로 받고 끝 칸 다음은 다시 첫 칸이다.
    *
    * @param days 출석판의 칸, 1일 차부터
-   * @param passExp 출석하면 받는 시즌패스 경험치 (#798)
    */
-  public record Attendance(List<AttendanceDay> days, int passExp) {}
+  public record Attendance(List<AttendanceDay> days) {}
 
   /**
    * 출석판의 한 칸.

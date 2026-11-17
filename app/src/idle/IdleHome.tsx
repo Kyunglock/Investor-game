@@ -24,6 +24,7 @@ import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
 import { IdlePass } from './IdlePass'
+import { IdleRebirth } from './IdleRebirth'
 import { IdleSandbox } from './IdleSandbox'
 import { IdleShop } from './IdleShop'
 import { IdleIcon } from './icons'
@@ -116,7 +117,7 @@ export function IdleHome({
   const capital = useCountUp(company.capital)
   // 종목회의를 열거나 이어 갈 수 있으면 회사 메뉴에 점을 단다 (#803).
   const meeting = meetingReady(company)
-  // 자리를 비운 동안의 수입 알림이 떠 있거나 전투·종목회의 창이 열려 있으면 출석판은 그 뒤에 뜬다 (528번).
+  // 자리를 비운 동안의 수입 알림이 떠 있거나 전투·종목회의 창이 열려 있으면 출석 보상은 그 뒤에 받는다 (528·568번).
   const [offlineSeen, setOfflineSeen] = useState(readOfflineSeen)
   const offlineShowing = shouldShowOffline(idle?.offline, offlineSeen)
   const elsewhere = useAppUi((s) => s.battle != null || s.investOpen)
@@ -237,19 +238,17 @@ export function IdleHome({
               <IdleIcon name="diamond" />
               {company.sandboxInfinite ? '∞' : diamondText(company.diamonds.amount)}
             </div>
+            {/* 시즌패스와 설정은 위 줄의 오른쪽 끝에 둔다 (567번): 전투 공간과 아래 메뉴 사이의 단추 줄을 없앴다. */}
+            <IdlePass company={company} />
+            <IdleOptions />
             {COMPANY_ENABLED && (
               <button type="button" aria-label="회사 메뉴" onClick={onManage}>
                 ☰
               </button>
             )}
           </header>
-          <div className="idle-toolbar" role="toolbar" aria-label="전투 편의 메뉴">
-            <IdleOptions />
-            <div className="idle-quick">
-              <IdlePass company={company} />
-              <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
-            </div>
-          </div>
+          {/* 출석 보상은 들어오면 저절로 받는다 (566번): 단추가 없다. */}
+          <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
           <IdleSandbox company={company} />
           <IdleActives company={company} connected={connected} />
           {blocked && (
@@ -497,6 +496,7 @@ function IdleStats({ company }: { company: Company }) {
         )
       })}
       {error && <p role="alert">{error}</p>}
+      <IdleRebirth company={company} />
     </>
   )
 }

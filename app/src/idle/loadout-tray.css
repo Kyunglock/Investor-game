@@ -25,13 +25,17 @@
   border-radius: 8px;
   background: #fff9e9;
 }
-/* 전투 화면 크기를 유지한 채 겹쳐 여는 트레이. 출전 칸은 스크롤해도 유지한다. */
+/* 고양이·무기 탭은 화면을 가득 채운다 (569번). 출전 칸은 스크롤해도 위에 붙어 있다. */
+.idle-sheet.loadout-sheet > button:first-child {
+  flex: 0 0 max(4px, env(safe-area-inset-top));
+}
 .idle-sheet.loadout-sheet > section {
-  height: min(62dvh, 560px);
-  max-height: calc(100dvh - 160px);
+  flex: 1 1 auto;
+  height: auto;
+  max-height: none;
   min-height: 0;
   padding: 6px 10px 10px;
-  scroll-padding-top: 135px;
+  scroll-padding-top: 190px;
 }
 .loadout-team {
   position: sticky;
@@ -41,26 +45,59 @@
   padding: 4px 0 7px;
   border-bottom: 2px solid #d8ba7c;
 }
+/* 출전 칸 (569번): 다섯 칸 두 줄. 세로줄 하나가 고양이 칸과 그 고양이의 무기 칸 한 짝이다. */
 .loadout-sheet .idle-cat-field-row {
   margin: 5px 0 0;
   gap: 5px;
-  display: flex;
-  overflow-x: auto;
   padding: 3px;
 }
 .loadout-sheet .idle-cat-field-row > li {
-  flex: 0 0 58px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 .loadout-sheet .idle-cat-field-row button {
   width: 100%;
-  min-height: 60px;
+  min-height: 0;
+  height: 58px;
+  padding: 3px 1px;
 }
 .loadout-sheet .idle-cat-field-row .idle-cat-portrait {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
+  max-width: 100%;
 }
-.loadout-sheet .idle-cat-slot-name {
-  font-size: 10px;
+.loadout-sheet .idle-cat-field-row .idle-gun-slot {
+  position: relative;
+  height: 44px;
+  border: 1.5px solid #9fb9d6;
+  border-radius: 12px;
+  background: #eef5fb;
+}
+.idle-gun-slot canvas {
+  max-width: 100%;
+  pointer-events: none;
+}
+.idle-gun-slot-grade {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  padding: 0 3px;
+  font-size: 8.5px;
+  line-height: 12px;
+}
+/* 든 무기가 없으면 기본 권총을 흐리게 보인다. */
+.idle-gun-slot.is-bare {
+  border-style: dashed;
+  background: #f3efe6;
+}
+.idle-gun-slot.is-bare canvas {
+  opacity: 0.45;
+}
+.loadout-sheet .idle-cat-field-row span.idle-gun-slot.is-empty {
+  border: 1.5px dashed #d9cdb6;
+  background: #eee5d5;
+  opacity: 0.6;
 }
 .loadout-sheet .idle-cat.owned {
   padding: 8px;

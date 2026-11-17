@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
-import { freeLeft, giveText, minutesText, type ShopItem, shopBlock } from './shop'
+import { freeLeft, giveText, minutesText, rewardText, type ShopItem, shopBlock } from './shop'
 
 const item = (over: Partial<ShopItem>): ShopItem => ({
   code: 'x',
@@ -56,5 +56,11 @@ describe('상점 (541번)', () => {
     expect(freeLeft(company({ items: [{ ...free, left: 0 }, item({ priceDiamonds: 60 })] }))).toBe(
       false,
     )
+  })
+
+  it('받은 것을 한 줄로 적는다', () => {
+    expect(rewardText({ diamonds: 50, money: 0 })).toBe('다이아 50개')
+    expect(rewardText({ diamonds: 0, money: 3_500_000 })).toBe('돈 3.5b')
+    expect(rewardText({ diamonds: 300, money: 1200 })).toBe('다이아 300개 · 돈 1.2a')
   })
 })

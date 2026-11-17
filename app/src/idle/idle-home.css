@@ -102,7 +102,7 @@
   color: #ad7226;
   font-size: 13px;
 }
-.idle-hud button {
+.idle-hud > button {
   pointer-events: auto;
   background: #fff8e3e8;
   border: 1.5px solid #c69b59;
@@ -112,14 +112,9 @@
   font-size: 18px;
 }
 .idle-options {
-  position: absolute;
-  top: calc(max(12px, env(safe-area-inset-top)) + 46px);
-  right: 12px;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  position: relative;
+  flex-shrink: 0;
+  pointer-events: auto;
   color: #765127;
 }
 .idle-options-open {
@@ -133,6 +128,10 @@
   color: inherit;
 }
 .idle-options-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 3;
   display: grid;
   gap: 6px;
   padding: 8px;
@@ -1012,16 +1011,7 @@
   background: linear-gradient(#ffc98a, #ff9f43);
 }
 
-/* 설정 왼쪽의 빠른 단추 줄 (528번): 출석. 설정 창이 아래로 열려도 가리지 않게 옆으로 늘어놓는다. */
-.idle-quick {
-  position: absolute;
-  top: calc(max(12px, env(safe-area-inset-top)) + 46px);
-  right: 56px;
-  z-index: 2;
-  display: flex;
-  gap: 6px;
-  color: #765127;
-}
+/* 위 줄의 빠른 단추 (528·569번): 시즌패스. 설정 단추와 나란히 위 줄의 오른쪽 끝에 있다. */
 .idle-quick-button {
   position: relative;
   display: grid;
@@ -1047,121 +1037,39 @@
   height: 11px;
   border-width: 1.5px;
 }
-/* 출석판 (528번): 수입 알림과 같은 종이 카드에 일곱 칸. 넷씩 두 줄이고 마지막 7일 차는 두 칸을 차지한다. */
-.idle-attendance {
-  position: relative;
-  width: min(100%, 320px);
-}
-.idle-attendance h2 {
-  font-size: 19px;
-  color: #744322;
-}
-.idle-offline .idle-attendance-close {
+/* 출석 보상 알림 (566번): 들어오면 저절로 받고, 받은 것을 위 줄 아래에 한 줄로 잠깐 알린다. */
+.idle-attend-toast {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 44px;
-  min-height: 44px;
-  margin: 0;
-  border: 0;
-  background: none;
-  box-shadow: none;
-  color: #957854;
-  font-size: 15px;
-}
-.idle-attendance-board {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 12px;
-}
-.idle-attendance-board li {
-  position: relative;
-  display: grid;
-  gap: 3px;
-  justify-items: center;
-  align-content: center;
-  min-height: 62px;
-  padding: 6px 2px;
-  border: 1.5px solid #d9bb86;
-  border-radius: 11px;
-  background: #fffaf0;
-}
-.idle-attendance-day {
-  font-size: 11px;
-  color: #957854;
-}
-.idle-attendance-reward {
+  top: calc(max(4px, env(safe-area-inset-top)) + 50px);
+  left: 50%;
+  z-index: 3;
   display: flex;
   align-items: center;
-  gap: 3px;
-  min-width: 0;
-  font-size: 15px;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: 7px 14px;
+  border: 2px solid #8cddff;
+  border-radius: 999px;
+  background: #0b4fb4ee;
+  box-shadow: 0 3px 0 #073d8f;
+  color: #fff;
+  font-size: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: idle-attend-in 0.25s ease-out;
 }
-.idle-attendance-reward .idle-coin {
-  width: 17px;
-  height: 17px;
-  font-size: 10px;
+@keyframes idle-attend-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
 }
-.idle-attendance-board .is-last {
-  grid-column: span 2;
-  border-color: #c48637;
-  background: linear-gradient(#fff1c4, #ffe09a);
-}
-.is-last > .idle-attendance-reward {
-  font-size: 19px;
-}
-.idle-attendance-board .is-today {
-  border: 2px solid #e0703a;
-  background: #fff;
-  box-shadow: 0 2px 0 #e0703a55;
-}
-.is-today > .idle-attendance-day {
-  color: #d05a25;
-}
-.is-done > .idle-attendance-day,
-.is-done > .idle-attendance-reward {
-  opacity: 0.35;
-}
-.idle-attendance-stamp {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-}
-.idle-attendance-stamp svg {
-  width: 34px;
-  height: 34px;
-  padding: 5px;
-  border: 2px solid #3d9a5b;
-  border-radius: 50%;
-  background: #ffffffb0;
-  fill: none;
-  stroke: #3d9a5b;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transform: rotate(-8deg);
-}
-.idle-attendance-result {
-  margin-top: 12px;
-  font-size: 15px;
-}
-.idle-attendance-result b {
-  color: #c0672a;
-}
-.idle-attendance-result.is-quiet {
-  font:
-    12px "Noto Sans KR",
-    sans-serif;
-  color: #937b53;
-}
-.idle-attendance-error {
-  margin-top: 8px;
-  font:
-    12px "Noto Sans KR",
-    sans-serif;
-  color: #c0392b;
+@media (prefers-reduced-motion: reduce) {
+  .idle-attend-toast {
+    animation: none;
+  }
 }
 .idle-offline button:disabled {
   opacity: 0.5;
@@ -1394,17 +1302,50 @@
 .idle-pass-steps button:disabled {
   opacity: 0.5;
 }
-.idle-pass-hint {
-  margin-top: 12px;
+/* 미션 목록 (570번): 한 줄에 이름·진행도·받을 포인트, 그 아래에 다음 문턱까지의 막대. */
+.idle-pass-missions-title {
+  margin: 14px 0 6px;
+  font-size: 14px;
+  color: #744322;
+}
+.idle-pass-missions {
+  display: grid;
+  gap: 6px;
+}
+.idle-pass-missions li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 7px 10px 8px;
+  border: 1.5px solid #e0c592;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+.idle-pass-mission-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+.idle-pass-mission-count {
   font:
-    500 11px "Noto Sans KR",
+    700 11px "Noto Sans KR",
     sans-serif;
   color: #947247;
-  text-align: center;
-  line-height: 1.6;
 }
-.idle-pass-source {
-  white-space: nowrap;
+.idle-pass-mission-points {
+  min-width: 38px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: #ffe2a8;
+  color: #8a4a00;
+  font-size: 12px;
+  text-align: center;
+}
+.idle-pass-missions .idle-pass-bar {
+  grid-column: 1 / -1;
+  height: 6px;
 }
 
 /* 뽑기 (530번): 위에서 고양이·무기를 고르고, 아래에서 한 번·10연차를 뽑는다. */
@@ -1465,12 +1406,6 @@
 .idle-cat-boss {
   border-color: #d9a85a;
   background: #fff3c9;
-}
-.idle-cat-slot-name {
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: 10px;
 }
 /* 스킬 설명 (530번): 고양이를 누르면 그 고양이의 고유 스킬이 하는 일과 다음 레벨이 나온다. */
 .idle-cat-skill {
@@ -1577,10 +1512,11 @@
   color: #8f7448;
   word-break: keep-all;
 }
+/* 한 줄에 여섯 칸 (568번): 고양이 목록과 줄을 맞춘다. */
 .idle-gear-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
 }
 .idle-gear-cell {
   position: relative;
@@ -1590,10 +1526,11 @@
   justify-content: flex-end;
   gap: 1px;
   width: 100%;
-  min-height: 80px;
-  padding: 16px 2px 4px;
+  min-height: 70px;
+  padding: 15px 1px 3px;
   border: 1px solid #dcc59c;
-  border-radius: 12px;
+  border-radius: 9px;
+  overflow: hidden;
   background: #fff;
   font-size: 11px;
   /* 길게 눌러 끌 때 글자가 골라지거나 메뉴가 뜨지 않게 한다. 위아래로 넘기는 것은 그대로다. */
@@ -1606,19 +1543,23 @@
     opacity 0.12s;
 }
 .idle-gear-art {
+  max-width: 100%;
   pointer-events: none;
 }
 .idle-gear-grade {
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: 2px;
+  left: 2px;
+  padding: 0 3px;
+  font-size: 9px;
+  line-height: 13px;
 }
 .idle-gear-count {
   position: absolute;
-  top: 3px;
-  right: 4px;
+  top: 2px;
+  right: 3px;
   font:
-    800 10px "Noto Sans KR",
+    800 9px / 13px "Noto Sans KR",
     sans-serif;
   font-style: normal;
   color: #8a5a20;
@@ -1630,7 +1571,7 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   font:
-    500 9.5px / 1.25 "Noto Sans KR",
+    500 8.5px / 1.25 "Noto Sans KR",
     sans-serif;
   color: #8f7448;
 }
@@ -1641,10 +1582,10 @@
 }
 .idle-gear-holder {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 22px;
-  height: 22px;
+  top: 1px;
+  right: 1px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   overflow: hidden;
   border: 1px solid #dec08a;
@@ -1965,4 +1906,129 @@
   margin: 0;
   font-size: 11px;
   color: #957854;
+}
+
+/* 환생 (571번): 성장 탭 맨 아래의 카드. 생선 수와 환생 단추, 한 번 더 묻는 줄. */
+.idle-fish {
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+}
+.idle-fish-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border: 1.5px solid #8cc9e8;
+  border-radius: 999px;
+  background: #e9f6fd;
+  color: #1f5f86;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.idle-team-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.idle-rebirth {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 10px 12px 12px;
+  border: 2px solid #8cc9e8;
+  border-radius: 16px;
+  background: linear-gradient(#f2fbff, #dff1fb);
+}
+.idle-rebirth-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  color: #1f5f86;
+}
+.idle-rebirth-times {
+  font:
+    500 11px "Noto Sans KR",
+    sans-serif;
+  color: #5d8fae;
+}
+.idle-rebirth-title .idle-fish-count {
+  margin-left: auto;
+  background: #fff;
+}
+.idle-rebirth-note {
+  font:
+    500 11px / 1.5 "Noto Sans KR",
+    sans-serif;
+  color: #4d7089;
+  word-break: keep-all;
+}
+.idle-rebirth-got {
+  font-size: 13px;
+  color: #1f7a45;
+}
+.idle-rebirth-button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 2px solid #b78448;
+  border-radius: 12px;
+  background: #fff5d9;
+  color: #553a27;
+  font-size: 14px;
+}
+.idle-rebirth-button.idle-rebirth-go {
+  border-color: #bfe9ff;
+  background: linear-gradient(#58bdf5, #1f86d6);
+  box-shadow: 0 3px 0 #135b99;
+  color: #fff;
+  font-size: 15px;
+}
+.idle-rebirth-button.idle-rebirth-go:disabled {
+  border-color: #d5dde2;
+  background: #dfe6ea;
+  box-shadow: none;
+  color: #7f8f99;
+}
+.idle-rebirth-ask {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+.idle-rebirth-ask > span {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: #b0412d;
+}
+/* 생선으로 레벨업 (571번): 고양이 정보 카드 안의 한 줄 단추. */
+.idle-cat-feed {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  margin-top: 4px;
+  padding: 0 12px;
+  border: 1.5px solid #8cc9e8;
+  border-radius: 12px;
+  background: #e9f6fd;
+  color: #1f5f86;
+  font-size: 14px;
+}
+.idle-cat-feed-level {
+  font:
+    700 11px "Noto Sans KR",
+    sans-serif;
+  color: #5d8fae;
+}
+.idle-cat-feed-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-style: normal;
+}
+.idle-cat-feed:disabled {
+  opacity: 0.5;
 }

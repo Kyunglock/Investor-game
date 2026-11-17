@@ -82,6 +82,7 @@ try {
           { code: 'ram', name: '충차 스킬', owned: false, level: 0 },
         ],
         fieldSlots: 4,
+        rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51 },
         wallDps: 0,
         power: 1038,
         // Real-time income (#803): the HUD shows it under the capital. No offline payout yet.
@@ -128,6 +129,10 @@ try {
     const actions: string[] = []
     const reportedHits: { wall: number; kind: string; count: number; damage: number }[] = []
     const moves: string[] = []
+    // The buy wall also falls by itself during this long check (the sell orders are twice as strong
+    // since 562), and a retreat then would take the wall the check has just set back to wall 1.
+    // The mock server moves the fight only while the check is testing the retreat itself.
+    let retreating = false
     let catDraws = 0
     const hires: number[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -153,7 +158,7 @@ try {
       const sent = route.request().postDataJSON()
       // The retreat after the buy wall fell (decisions.md 546): ten walls back, never behind
       // the last cleared boss (every 50th wall, 547 and 548).
-      if (path.endsWith('/idle/retreat')) {
+      if (path.endsWith('/idle/retreat') && retreating) {
         moves.push('retreat')
         const wall = company.idle.wall
         company.idle.wall = Math.max(Math.floor((wall - 1) / 50) * 50 + 1, wall - 10)
@@ -214,7 +219,14 @@ try {
     // No status line (decisions.md 493): the HUD shows only the wall number while fighting.
     await expect(page.getByTestId('idle-wall-number')).toHaveAttribute('data-state', 'auto')
     await expect(page.locator('.idle-stage')).toHaveCount(0)
-    await expect(page.locator('[data-testid=idle-canvas] canvas')).toBeVisible({ timeout: 30000 })
+    await expect(page.locator('[data-testid=idle-canvas] canvas'))
+      .toBeVisible({ timeout: 30000 })
+      .catch(async (e) => {
+        // Why the battle did not open: the page logs the cause to the console (#836).
+        console.log({ width, errors, loadingErrors })
+        await page.screenshot({ path: `/tmp/idle-failure-${width}.png` }).catch(() => {})
+        throw e
+      })
     await page.evaluate(() => {
       ;(window as unknown as { idleCanvas: Element | null }).idleCanvas = document.querySelector(
         '[data-testid=idle-canvas] canvas',
@@ -236,13 +248,38 @@ try {
       )
       .toBe(true)
     assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)
-    // A안: 편의 메뉴와 하단 탭은 캔버스 밖에 두고, 상단은 첫 매도벽보다 위에 유지한다.
+    // A안: 하단 탭은 캔버스 밖에 두고, 상단은 첫 매도벽보다 위에 유지한다. 전투 공간과 탭 사이의 단추 줄은 없다 (567번).
     const arenaBounds = await page.getByTestId('idle-canvas').boundingBox()
-    const toolbarBounds = await page.getByRole('toolbar', { name: '전투 편의 메뉴' }).boundingBox()
+    const navBounds = await page.getByRole('navigation', { name: '게임 메뉴' }).boundingBox()
     const hudBounds = await page.locator('.idle-hud').boundingBox()
-    assert(arenaBounds && toolbarBounds && hudBounds)
-    assert(arenaBounds.height > 0 && arenaBounds.y + arenaBounds.height <= toolbarBounds.y + 1)
+    assert(arenaBounds && navBounds && hudBounds)
+    assert(arenaBounds.height > 0 && arenaBounds.y + arenaBounds.height <= navBounds.y + 1)
     assert(hudBounds.y + hudBounds.height <= 55)
+    await expect(page.getByRole('toolbar')).toHaveCount(0)
+    // 시즌패스와 설정은 위 줄 안에 있고 (567번), 출석 단추는 없다 (566번).
+    for (const id of ['idle-pass', 'idle-options']) {
+      const box = await page.getByTestId(id).boundingBox()
+      assert(box, `${id} is shown`)
+      assert(box.y >= hudBounds.y && box.y + box.height <= hudBounds.y + hudBounds.height, id)
+      assert(box.x + box.width <= hudBounds.x + hudBounds.width, `${id} stays inside the HUD`)
+    }
+    await expect(page.getByTestId('idle-attendance')).toHaveCount(0)
+    await page.getByTestId('idle-options').click()
+    await expect(page.getByTestId('sound-toggle')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('sound-toggle')).toHaveCount(0)
+    // 시즌패스 (570번): 미션과 진행도가 보이고 보상에 돈이 없다.
+    await page.getByTestId('idle-pass').click()
+    await expect(page.getByTestId('pass-mission')).toHaveCount(6)
+    await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText(
+      '매도벽 100개 통과',
+    )
+    await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('73/100')
+    await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('30P')
+    await expect(page.getByTestId('pass-exp')).toHaveText('120 / 300P')
+    await expect(page.getByTestId('pass').locator('.idle-coin')).toHaveCount(0)
+    await page.getByRole('button', { name: '닫기 ✕' }).click()
+    await expect(page.getByTestId('pass')).toHaveCount(0)
     await page.getByRole('button', { name: '성장' }).click()
     await expect(page.getByTestId('idle-menu')).toBeVisible()
     // 전투력 하나만 보인다 (538번): 화력과 실제 벽 피해는 뺐다.
@@ -259,6 +296,10 @@ try {
     await expect(stat('hp')).toContainText('매수벽 체력')
     await expect(stat('buy')).toContainText('매수벽 공격')
     await expect(stat('crit')).toHaveCount(0)
+    // 환생 (571번): 성장 탭 맨 아래. 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
+    await expect(page.getByTestId('rebirth')).toBeVisible()
+    await expect(page.getByTestId('rebirth-open')).toBeDisabled()
+    await expect(page.getByTestId('rebirth-open')).toHaveText('매도벽 51부터 환생할 수 있어요')
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
     // Growth holds the stats only (decisions.md 530): no tab row, no inventory, no skill list.
     await expect(page.getByRole('tab')).toHaveCount(0)
@@ -694,9 +735,10 @@ try {
       await expect(page.getByTestId('idle-raid')).toContainText('보스 50 클리어! 다이아 +100')
       await page.screenshot({ path: '/tmp/idle-boss-reward.png' })
       // The buy wall falls: every enemy is gone and the fight goes ten walls back (546).
-      // The long fast fight above may have lost its buy wall and gone back already.
-      moves.length = 0
+      // The long fast fight above may have lost its buy wall already: those retreats moved nothing.
       await page.waitForTimeout(1500)
+      moves.length = 0
+      retreating = true
       const flowsLeft = await page.evaluate(() => {
         const dev = window as unknown as {
           __mentalBuyWallHit: (n: number) => void
@@ -709,6 +751,7 @@ try {
       await expect(page.getByTestId('idle-raid')).toContainText('매수벽 붕괴')
       await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 40')
       assert.deepEqual(moves, ['retreat'])
+      retreating = false
       await page.screenshot({ path: '/tmp/idle-retreat.png' })
       company.idle.wall = 11
       company.idle.boss = false

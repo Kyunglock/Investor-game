@@ -35,16 +35,15 @@ class RewardsEngineTest {
   }
 
   @Test
-  void 출석판은_7일이고_한_주기에_다이아_650이다() {
+  void 출석판은_7일이고_한_주기에_다이아_750이며_돈은_없다() {
     List<CompanyProperties.AttendanceDay> days = PROPERTIES.attendance().days();
     assertThat(days).hasSize(7);
     assertThat(days.stream().mapToLong(CompanyProperties.AttendanceDay::diamonds).toArray())
-        .containsExactly(50, 0, 100, 0, 100, 100, 300);
+        .containsExactly(50, 50, 100, 50, 100, 100, 300);
     assertThat(days.stream().mapToLong(CompanyProperties.AttendanceDay::diamonds).sum())
-        .isEqualTo(650);
-    assertThat(days.get(1).incomeMinutes()).isEqualTo(30);
-    assertThat(days.get(3).incomeMinutes()).isEqualTo(30);
-    assertThat(PROPERTIES.attendance().passExp()).isEqualTo(100);
+        .isEqualTo(750);
+    // 돈 칸은 뺐다 (566번).
+    assertThat(days).allMatch(day -> day.incomeMinutes() == 0);
   }
 
   @Test
@@ -72,30 +71,26 @@ class RewardsEngineTest {
   }
 
   @Test
-  void 돈_칸은_그때_회사의_초당_수입_30분어치다() {
+  void 출석_보상은_돈을_주지_않는다() {
     CompanyState c = opened();
     engine.hire(
         c,
         java.util.Map.of(
             "insight", 50, "patience", 50, "courage", 50, "conviction", 50, "luck", 50));
-    rewards.attend(c);
-    clock.now += DAY;
-    double perSecond = idle.view(c).income().perSecond().doubleValue();
-    assertThat(rewards.view(c).board().get(1).money().doubleValue())
-        .as("출석판이 지금 받으면 들어올 돈을 미리 보인다")
-        .isEqualTo(Math.floor(30 * 60 * idle.perSecond(c)));
+    assertThat(rewards.view(c).board()).allMatch(day -> day.money() == null);
     double before = c.capital;
-    rewards.attend(c);
-    assertThat(c.capital - before)
-        .isCloseTo(1800 * perSecond, org.assertj.core.data.Offset.offset(1800.0));
-    assertThat(c.diamonds).as("돈 칸은 다이아를 주지 않는다").isEqualTo(50);
-    assertThat(rewards.view(c).lastReward().money().doubleValue()).isEqualTo(c.capital - before);
+    for (int day = 0; day < 7; day++) {
+      rewards.attend(c);
+      assertThat(rewards.view(c).lastReward().money().doubleValue()).isZero();
+      clock.now += DAY;
+    }
+    assertThat(c.capital).isEqualTo(before);
   }
 
   @Test
   void 빠진_날이_있어도_이어서_가고_7일_차_다음은_다시_1일_차다() {
     CompanyState c = opened();
-    long[] expected = {50, 0, 100, 0, 100, 100, 300};
+    long[] expected = {50, 50, 100, 50, 100, 100, 300};
     for (int day = 0; day < 7; day++) {
       assertThat(rewards.view(c).today()).isEqualTo(day + 1);
       long before = c.diamonds;
@@ -108,13 +103,13 @@ class RewardsEngineTest {
       // 사흘을 빠져도 처음으로 돌아가지 않는다.
       clock.now += (day == 2 ? 4 : 1) * DAY;
     }
-    assertThat(c.diamonds).as("한 주기").isEqualTo(650);
+    assertThat(c.diamonds).as("한 주기").isEqualTo(750);
     // 다음 날은 새 주기의 1일 차다: 받은 칸이 없다.
     assertThat(rewards.view(c).claimable()).isTrue();
     assertThat(rewards.view(c).today()).isEqualTo(1);
     assertThat(rewards.view(c).board()).noneMatch(d -> d.claimed());
     rewards.attend(c);
-    assertThat(c.diamonds).isEqualTo(700);
+    assertThat(c.diamonds).isEqualTo(800);
   }
 
   @Test

@@ -323,12 +323,13 @@ test('출석 보상은 하루에 한 번 받는다 (#799)', async ({ page }) => 
   const api = page.request
   expect((await api.post('/api/sessions')).ok()).toBe(true)
   const opened = await companyOf(await api.post('/api/company'))
-  // 새 회사는 1일 차를 받을 수 있다. 출석판은 일곱 칸이고 2·4일 차는 돈 칸이다.
+  // 새 회사는 1일 차를 받을 수 있다. 출석판은 일곱 칸이고 모두 다이아다 (566번).
   expect(opened.attendance.claimable).toBe(true)
   expect(opened.attendance.today).toBe(1)
   expect(opened.attendance.board.map((cell) => cell.diamonds)).toEqual([
-    50, 0, 100, 0, 100, 100, 300,
+    50, 50, 100, 50, 100, 100, 300,
   ])
+  expect(opened.attendance.board.every((cell) => cell.money == null)).toBe(true)
   expect(opened.attendance.board.every((cell) => !cell.claimed)).toBe(true)
 
   const claimed = await companyOf(await api.post('/api/company/attendance'))
@@ -348,44 +349,57 @@ test('출석 보상은 하루에 한 번 받는다 (#799)', async ({ page }) => 
   expect(after.attendance.claimable).toBe(false)
 })
 
-test('시즌패스는 닿은 단계만 한 번 받는다 (#798)', async ({ page }) => {
+test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받는다 (#798, #862)', async ({ page }) => {
   const api = page.request
   expect((await api.post('/api/sessions')).ok()).toBe(true)
   const opened = await companyOf(await api.post('/api/company'))
-  // 새 회사의 패스: 서른 단계, 아직 0단계라 받을 것이 없다.
+  // 새 회사의 패스: 서른 단계, 아직 0단계라 받을 것이 없다. 한 단계에 300포인트다.
   expect(opened.pass.step).toBe(0)
-  expect(opened.pass.exp).toBe(0)
+  expect(opened.pass.points).toBe(0)
+  expect(opened.pass.pointsPerStep).toBe(300)
   expect(opened.pass.claimable).toBe(0)
   expect(opened.pass.steps).toHaveLength(30)
   expect(opened.pass.steps.every((step) => !step.reached && !step.claimed)).toBe(true)
   expect(opened.pass.secondsLeft).toBeGreaterThan(0)
   expect(opened.pass.name).toBe(`시즌 ${opened.pass.season}`)
-  // 큰 보상: 10·20단계에 무기, 30단계에 고양이.
+  // 큰 보상: 10·20단계에 무기, 30단계에 고양이. 모든 단계가 다이아를 주고 돈은 없다.
   expect(opened.pass.steps.filter((step) => step.weapon).map((step) => step.step)).toEqual([10, 20])
   expect(opened.pass.steps.filter((step) => step.cat).map((step) => step.step)).toEqual([30])
+  expect(opened.pass.steps.every((step) => step.diamonds > 0 && !('money' in step))).toBe(true)
+  // 미션: 벽·보스·강화·뽑기·합성·출석. 아직 센 것이 없다.
+  expect(opened.pass.missions.map((mission) => mission.code)).toEqual([
+    'wall',
+    'boss',
+    'upgrade',
+    'draw',
+    'merge',
+    'attend',
+  ])
+  expect(opened.pass.missions.every((mission) => mission.count === 0)).toBe(true)
+  expect(opened.pass.missions[0]).toMatchObject({
+    title: '매도벽 50개 통과',
+    target: 50,
+    points: 30,
+  })
   // 닿지 않은 단계와 받을 것 없는 모두 받기는 400.
   expect((await api.post('/api/company/pass/claim', { data: { step: 1 } })).status()).toBe(400)
   expect((await api.post('/api/company/pass/claim', { data: {} })).status()).toBe(400)
 
-  // 출석하면 패스 경험치 100: 1단계에 닿는다.
+  // 출석 미션: 하루에 100포인트. 아직 1단계(300)에는 못 닿는다.
   const attended = await companyOf(await api.post('/api/company/attendance'))
-  expect(attended.pass.exp).toBe(100)
-  expect(attended.pass.step).toBe(1)
-  expect(attended.pass.claimable).toBe(1)
-  expect(attended.pass.steps[0]).toMatchObject({ reached: true, claimed: false, diamonds: 50 })
-
-  const claimed = await companyOf(await api.post('/api/company/pass/claim', { data: {} }))
-  expect(claimed.diamonds.amount).toBe(attended.diamonds.amount + 50)
-  expect(claimed.pass.claimable).toBe(0)
-  expect(claimed.pass.steps[0].claimed).toBe(true)
-  expect(claimed.pass.lastRewards).toHaveLength(1)
-  expect(claimed.pass.lastRewards[0]).toMatchObject({ step: 1, diamonds: 50 })
-
-  // 받은 단계와 아직 못 닿은 단계는 400이고, 본 게임에서는 경험치를 채우거나 시즌을 넘길 수 없다.
+  expect(attended.pass.points).toBe(100)
+  expect(attended.pass.step).toBe(0)
+  expect(attended.pass.claimable).toBe(0)
+  expect(attended.pass.missions.find((mission) => mission.code === 'attend')).toMatchObject({
+    count: 1,
+    target: 2,
+    earned: 100,
+  })
+  // 못 닿은 단계는 400이고, 본 게임에서는 포인트를 채우거나 시즌을 넘길 수 없다.
   expect((await api.post('/api/company/pass/claim', { data: { step: 1 } })).status()).toBe(400)
   expect((await api.post('/api/company/pass/claim', { data: { step: 2 } })).status()).toBe(400)
   expect((await api.post('/api/sandbox/pass-exp', { data: { exp: 1000 } })).status()).toBe(400)
   expect((await api.post('/api/sandbox/next-season')).status()).toBe(400)
   const after = await companyOf(await api.get('/api/company'))
-  expect(after.diamonds.amount).toBe(claimed.diamonds.amount)
+  expect(after.diamonds.amount).toBe(attended.diamonds.amount)
 })
