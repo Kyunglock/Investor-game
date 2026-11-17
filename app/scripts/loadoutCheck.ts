@@ -269,7 +269,8 @@ try {
     await drag(target('slot:mint'), target('slot:lilac'))
     await expect.poll(slotOrder).toEqual(['night', 'lilac', 'mint', 'sunset'])
     assert.deepEqual(mutations[1].body, { code: 'mint', fielded: true, slot: 2 })
-    await drag(target('slot:mint'), target('slot:lilac'))
+    // 터치로는 꾹 눌러 집은 뒤 끌어 놓는다 (604번): 누르고만 있어도 집힌다.
+    await drag(target('slot:mint'), target('slot:lilac'), true)
     await expect.poll(slotOrder).toEqual(['night', 'mint', 'lilac', 'sunset'])
     assert.deepEqual(mutations[2].body, { code: 'mint', fielded: true, slot: 1 })
     mutations.splice(1)

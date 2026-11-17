@@ -140,6 +140,8 @@ describe('방치형 전투 획득 상태', () => {
         bulletSpeed: 900,
         critical: 1,
         look: 1,
+        // 전투에서 밑에 적는 이름표 (605번).
+        tag: expect.objectContaining({ code: 'mint' }),
       },
       {
         kind: 'pistol',
@@ -150,6 +152,7 @@ describe('방치형 전투 획득 상태', () => {
         bulletSpeed: 720,
         critical: 1,
         look: 0,
+        tag: expect.objectContaining({ code: 'sky' }),
       },
     ])
   })

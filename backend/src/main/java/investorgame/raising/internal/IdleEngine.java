@@ -1114,10 +1114,18 @@ class IdleEngine {
   /** 환생할 때 광고를 보면 생선을 이 배수로 받는다 (586번). 볼 수 있는 횟수에는 한도가 없다. */
   static final long REBIRTH_AD_MULTIPLIER = 3;
 
-  /** 지금 환생하면 받는 생선 (571·600번): 깬 벽 수 ÷ 10. 51번째 벽에서 5, 101번째 10, 301번째 30. 아직 못 하면 0. */
+  /**
+   * 지금 환생하면 받는 생선 (571·600번): 깬 벽 수 ÷ 10. 51번째 벽에서 5, 101번째 10, 301번째 30. 아직 못 하면 0. 첫 보스를 깨야 하는 것은
+   * 첫 환생뿐이다 (603번): 한 번 환생한 뒤에는 어느 벽에서든 깬 벽만큼 받는다.
+   */
   long rebirthFish(CompanyState c) {
     long cleared = state(c).wall - 1;
-    return state(c).wall < REBIRTH_WALL ? 0 : cleared / REBIRTH_WALLS_PER_FISH;
+    return state(c).wall < rebirthWall(c) ? 0 : cleared / REBIRTH_WALLS_PER_FISH;
+  }
+
+  /** 이 벽에 서야 환생할 수 있다: 첫 환생은 첫 보스를 깬 다음 벽, 그 뒤로는 생선 한 마리가 나오는 벽 (603번). */
+  long rebirthWall(CompanyState c) {
+    return c.rebirths > 0 ? REBIRTH_WALLS_PER_FISH + 1 : REBIRTH_WALL;
   }
 
   void rebirth(CompanyState c) {
@@ -1132,7 +1140,10 @@ class IdleEngine {
     CompanyState.Idle s = state(c);
     long fish = rebirthFish(c) * (ad ? REBIRTH_AD_MULTIPLIER : 1);
     if (fish <= 0) {
-      throw new InvalidRequestException("환생은 " + (REBIRTH_WALL - 1) + "번째 벽의 보스를 깬 뒤에 할 수 있어요");
+      throw new InvalidRequestException(
+          c.rebirths > 0
+              ? "환생은 매도벽 " + rebirthWall(c) + "부터 할 수 있어요"
+              : "환생은 " + (REBIRTH_WALL - 1) + "번째 벽의 보스를 깬 뒤에 할 수 있어요");
     }
     c.fish += fish;
     c.rebirths++;
@@ -1437,7 +1448,7 @@ class IdleEngine {
             c.rebirths,
             c.fish,
             rebirthFish(c),
-            REBIRTH_WALL,
+            rebirthWall(c),
             rebirthFish(c) * REBIRTH_AD_MULTIPLIER,
             engine.mental.fishUpgradeViews(c)));
   }

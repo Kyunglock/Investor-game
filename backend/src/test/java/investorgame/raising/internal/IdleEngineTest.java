@@ -1494,6 +1494,18 @@ class IdleEngineTest {
     assertThat(c.idle.bossCleared).isEqualTo(300);
     assertThat(engine.view(c).rebirth().count()).isEqualTo(1);
     assertThat(engine.view(c).rebirth().gain()).isZero();
+    // 한 번 환생한 뒤에는 첫 보스를 다시 깨지 않아도 깬 벽만큼 받는다 (603번): 벽 열 개를 깨면 한 마리.
+    assertThat(engine.view(c).rebirth().fromWall()).isEqualTo(11);
+    c.idle.wall = 10;
+    assertThat(engine.rebirthFish(c)).isZero();
+    assertThatThrownBy(() -> engine.rebirth(c)).isInstanceOf(InvalidRequestException.class);
+    c.idle.wall = 31;
+    assertThat(engine.rebirthFish(c)).isEqualTo(3);
+    engine.rebirth(c);
+    assertThat(c.fish).isEqualTo(33);
+    assertThat(c.rebirths).isEqualTo(2);
+    c.fish = 30;
+    c.rebirths = 1;
     // 생선으로 영구 강화를 올린다 (600번): 값은 다음 단계의 번호만큼(1, 2, 3 …)이고, 고양이 레벨은 생선으로 올리지 않는다.
     assertThat(fishUpgrade(c, "damage").cost()).isEqualTo(1);
     assertThat(upgrade(c, "damage").bonusPercent()).isZero();

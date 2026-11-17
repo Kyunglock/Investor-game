@@ -2354,9 +2354,10 @@
 /* 환생 바로가기: 상단 재화 아래, 전투 화면 왼쪽 위. */
 .idle-rebirth-shortcut {
   position: absolute;
-  z-index: 1;
-  top: calc(max(12px, env(safe-area-inset-top)) + 46px);
-  left: 12px;
+  z-index: 2;
+  /* 광고 스킬 줄(.idle-actives-ad: top 44%, left 6px) 바로 위 (605번): 단추 48px에 그 줄의 간격 8px만큼 띄운다. */
+  top: calc(44% - 56px);
+  left: 6px;
   width: 48px;
   height: 48px;
   padding: 0;
@@ -2373,4 +2374,17 @@
 .idle-rebirth-shortcut:focus-visible {
   outline: 3px solid #714bb7;
   outline-offset: 2px;
+}
+
+/* 출전 칸의 고양이를 꾹 눌러 집어 다른 칸으로 옮긴다 (599·604번). 출전 칸은 스크롤하지 않으므로 손짓을 통째로 받는다: 누르는 동안 화면이 밀리거나
+   글자가 골라지거나 길게 누르기 메뉴가 뜨지 않게 한다. */
+.idle-cat-slot {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.idle-cat-slot.is-lifted {
+  opacity: 0.45;
+  transform: scale(0.94);
 }

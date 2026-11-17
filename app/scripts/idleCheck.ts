@@ -964,6 +964,12 @@ try {
       const right = await page.getByTestId('idle-actives').boundingBox()
       assert(left && right && left.x + left.width < right.x, 'ad skills left, unique skills right')
       assert(left.x >= 0 && right.x + right.width <= width, 'skill buttons stay on screen')
+      // 환생 단추는 광고 스킬 바로 위에 선다 (605번): 같은 줄에 맞추고 겹치지 않는다.
+      const rebirth = await rebirthShortcut.boundingBox()
+      assert(rebirth, 'rebirth shortcut is on screen')
+      assert(Math.abs(rebirth.x - left.x) < 2, 'rebirth sits in the ad skill column')
+      const gap = left.y - (rebirth.y + rebirth.height)
+      assert(gap >= 0 && gap <= 12, `rebirth is right above the ad skills: ${gap}`)
     }
     // 광고 스킬은 아직 광고 없이 바로 눌린다 (586·588번): 광고를 본 것으로 쓰고, 남은 시간은 숫자 없이 원형 음영으로 보인다.
     const boost = page.locator('[data-testid=idle-ad-active][data-code=boostDamage]')

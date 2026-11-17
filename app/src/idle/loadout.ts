@@ -65,6 +65,7 @@ export function idleLoadout(company: Company) {
       bulletSpeed: gun.bulletSpeed,
       critical: cat.criticalPercent / 100,
       look: CAT_LOOKS[cat.code],
+      tag: { code: cat.code, name: cat.name, grade: cat.grade },
     }
   })
   return loadout
