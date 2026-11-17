@@ -205,7 +205,7 @@ export class BuyWallFx {
         )
       }
       this.title
-        .setText(`${this.fortifyLeft > 0 ? '강화 매수벽' : '매수벽'} ${shareLabel(wall.hp)}`)
+        .setText(`매수벽 ${shareLabel(wall.hp)}`)
         .setPosition(left + width / 2, top + height * 0.58)
     } else {
       this.surface.setVisible(false)

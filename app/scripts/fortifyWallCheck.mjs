@@ -57,7 +57,7 @@ try {
     await cast()
     await expect.poll(async () => (await inspect()).fortified).toBe(true)
     const start = Date.now()
-    assert.match((await inspect()).label, /^강화 매수벽 /)
+    assert.match((await inspect()).label, /^매수벽 /)
     await page.waitForTimeout(4000)
     assert.equal((await inspect()).fortified, true)
     await expect
