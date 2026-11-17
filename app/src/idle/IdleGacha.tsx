@@ -120,6 +120,7 @@ export function IdleGacha({
               power: plan.power,
               sound: plan.sound,
               shiny: shinyCat(d.grade),
+              jackpot: d.grade === 'S',
             }
           }),
         })
@@ -177,6 +178,7 @@ export function IdleGacha({
                     power: plan.power,
                     sound: d.grade,
                     shiny: shinyWeapon(d.grade),
+                    jackpot: shinyWeapon(d.grade) && d.grade !== 'A',
                   }
                 }),
               }

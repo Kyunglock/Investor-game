@@ -1,4 +1,5 @@
 // 10연차 뽑기 연출 (decisions.md 574번): 상자가 열리면 받은 장을 한 장씩 보여 주고, 마지막에 모두 모아 보여 준다. A등급 이상은 빛난다.
+// 장은 뒷면으로 나와 뜸을 들인 뒤 열린다 (576번).
 // 실행: pnpm dev 를 띄운 뒤 node scripts/tenRevealCheck.ts
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
@@ -55,13 +56,16 @@ try {
   for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion })
     const errors: string[] = []
+    let draws = 0
     page.on('pageerror', (e) => errors.push(e.message))
     await page.route(/\/api\/(company|sessions)(\/|$|\?)/, async (route) => {
       const path = new URL(route.request().url()).pathname
       if (path.endsWith('/idle')) company.idle.sequence = route.request().postDataJSON().sequence
       if (path.endsWith('/cat/draw')) {
+        // 두 번째 뽑기는 S등급이 첫 장이다: 뜸이 1초라 뒷면일 때 누르는 것을 볼 수 있다.
+        const order = ++draws > 1 ? [...GRADES].reverse().sort((a) => (a === 'S' ? -1 : 0)) : GRADES
         Object.assign(company.idle, {
-          lastDraws: GRADES.map((grade, i) => ({
+          lastDraws: order.map((grade, i) => ({
             code: company.idle.cats[i % company.idle.cats.length].code,
             grade,
             level: i + 1,
@@ -79,9 +83,24 @@ try {
     if (reducedMotion === 'no-preference') await page.getByTestId('cat-ten-skip').click()
     for (const [i, grade] of GRADES.entries()) {
       await expect(page.getByTestId('cat-ten-count')).toHaveText(`${i + 1} / ${GRADES.length}`)
+      const shiny = grade === 'A' || grade === 'S'
+      await expect(single).toHaveAttribute('data-shiny', String(shiny))
+      if (reducedMotion === 'no-preference') {
+        // 뒷면으로 나와 뜸을 들인 뒤 열린다 (576번): 보통 장은 금방, A등급 0.5초, S등급 1초.
+        const shownAt = Date.now()
+        await expect(single).toHaveAttribute('data-open', 'false')
+        if (process.env.OUT && grade === 'S') {
+          await page.waitForTimeout(600)
+          await page.screenshot({ path: `${process.env.OUT}/ten-S-back.png` })
+        }
+        await expect(single).toHaveAttribute('data-open', 'true', { timeout: 3000 })
+        const waited = Date.now() - shownAt
+        const least = grade === 'S' ? 900 : grade === 'A' ? 400 : 0
+        assert(waited >= least, `${grade} opened after ${waited}ms, expected at least ${least}ms`)
+        if (!shiny) assert(waited < 900, `${grade} opened after ${waited}ms: too slow`)
+      }
+      await expect(single).toHaveAttribute('data-open', 'true')
       await expect(single).toContainText(`${grade} 등급`)
-      // A등급부터 빛난다.
-      await expect(single).toHaveAttribute('data-shiny', String(grade === 'A' || grade === 'S'))
       await expect(page.getByTestId('cat-ten-card')).toHaveCount(0)
       if (process.env.OUT && reducedMotion === 'no-preference' && (i === 0 || grade === 'S')) {
         await page.waitForTimeout(700)
@@ -101,6 +120,14 @@ try {
     await page.getByTestId('cat-ten-again').click()
     if (reducedMotion === 'no-preference') await page.getByTestId('cat-ten-skip').click()
     await expect(page.getByTestId('cat-ten-count')).toHaveText(`1 / ${GRADES.length}`)
+    // 뒷면일 때 누르면 다음 장으로 가지 않고 바로 열린다.
+    if (reducedMotion === 'no-preference') {
+      await expect(single).toHaveAttribute('data-jackpot', 'true')
+      await expect(single).toHaveAttribute('data-open', 'false')
+      await single.dispatchEvent('click')
+      await expect(single).toHaveAttribute('data-open', 'true', { timeout: 300 })
+      await expect(page.getByTestId('cat-ten-count')).toHaveText(`1 / ${GRADES.length}`)
+    }
     await page.getByTestId('cat-ten-all').click()
     await expect(page.getByTestId('cat-ten-card')).toHaveCount(GRADES.length)
     await page.getByTestId('cat-ten-close').click()
