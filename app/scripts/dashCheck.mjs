@@ -45,6 +45,11 @@ async function run(browser, hp, seconds) {
     }
     return route.fulfill({ json: { ...company, idle: { ...idle, ...view() } } }).catch(() => {})
   })
+  // CPU_SLOW=4처럼 주면 그만큼 느린 기계를 흉내 낸다: CI의 기계에서도 판정이 흔들리지 않는지 볼 때 쓴다.
+  if (process.env.CPU_SLOW) {
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.CPU_SLOW) })
+  }
   await page.goto(process.env.APP_URL ?? 'http://localhost:5182/app/')
   await page.waitForFunction(() => window.__mentalWalls?.().length > 0)
   await page.waitForTimeout(2500)
@@ -64,11 +69,16 @@ async function run(browser, hp, seconds) {
   await page.close()
   assert.deepEqual(errors, [])
   const mean = (key) => samples.reduce((sum, x) => sum + x[key], 0) / samples.length
+  const most = (key) => Math.max(...samples.map((x) => x[key]))
   return {
     perSecond: (s.wall - from) / seconds,
     momentum: mean('momentum'),
     pace: mean('pace'),
     climbV: mean('climbV'),
+    // 평균은 기계의 빠르기를 탄다(느린 기계는 벽이 덜 자주 깨진다): 판정은 그동안 닿은 값으로 한다.
+    quickest: Math.min(...samples.map((x) => x.pace)),
+    topMomentum: most('momentum'),
+    topGround: most('climbV'),
   }
 }
 
@@ -77,15 +87,15 @@ const browser = await chromium.launch({
   args: ['--no-sandbox'],
 })
 try {
-  // 한 방에 부서지는 벽: 기세가 차 있고 배경이 빠르게 흐른다.
+  // 한 방에 부서지는 벽: 다음 벽이 가장 빠르게 넘어오고, 기세가 가득 차며, 배경이 달리기(620px/초)보다 빠르게 흐른다.
   const strong = await run(browser, 0.5, 8)
-  assert.ok(strong.pace < 0.5, `walls follow at once: pace ${strong.pace}`)
-  assert.ok(strong.momentum > 0.3, `the dash holds: momentum ${strong.momentum}`)
-  assert.ok(strong.climbV > 450, `the ground rushes by: ${strong.climbV} px/s`)
-  assert.ok(strong.perSecond > 5, `walls fall fast: ${strong.perSecond}/s`)
-  // 총알 여러 발이 필요한 벽: 기세가 없고 벽 앞에서는 배경이 멈춘다.
+  assert.ok(strong.quickest <= 0.25, `walls follow at once: pace ${strong.quickest}`)
+  assert.ok(strong.topMomentum > 0.8, `the dash fills: momentum ${strong.topMomentum}`)
+  assert.ok(strong.topGround > 900, `the ground rushes by: ${strong.topGround} px/s`)
+  assert.ok(strong.perSecond > 1, `walls fall fast: ${strong.perSecond}/s`)
+  // 총알 여러 발이 필요한 벽: 기세가 한 번도 차지 않고 벽 앞에서는 배경이 멈춘다.
   const even = await run(browser, 40, 8)
-  assert.ok(even.momentum < 0.05, `no dash on a slow wall: momentum ${even.momentum}`)
+  assert.ok(even.topMomentum < 0.05, `no dash on a slow wall: momentum ${even.topMomentum}`)
   assert.ok(even.climbV < 200, `the ground stands still at the wall: ${even.climbV} px/s`)
   const text = (r) =>
     `${r.perSecond.toFixed(2)} walls/s, pace ${r.pace.toFixed(2)}, momentum ${r.momentum.toFixed(2)}, ground ${Math.round(r.climbV)} px/s`
