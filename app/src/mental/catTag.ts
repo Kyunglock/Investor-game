@@ -9,100 +9,91 @@ export interface CatTag {
   grade?: 'C' | 'B' | 'A' | 'S'
 }
 
-/**
- * 색 판 위에 적어 밝은 바닥에서도 읽힌다. 등급이 높을수록 화려하다: C는 수수한 갈색 판, B는 초록, A는 마름모를 단 파랑에 빛이 번지고, S는 별을 단
- * 금빛 판에 빛이 번지며 숨 쉬듯 커졌다 작아진다. 사장냥은 왕관을 단 주황이다.
- */
-export const TAG_STYLES = {
-  C: {
-    color: '#fff8ea',
-    plate: '#5c4a3acc',
-    stroke: '#3d3026',
-    size: 11,
-    mark: '',
-    glow: null,
-    pulse: false,
-  },
-  B: {
-    color: '#f2ffe8',
-    plate: '#2f7d32e6',
-    stroke: '#1d4d20',
-    size: 11,
-    mark: '',
-    glow: null,
-    pulse: false,
-  },
-  A: {
-    color: '#f0f8ff',
-    plate: '#1f66c7f0',
-    stroke: '#123f82',
-    size: 12,
-    mark: '◆ ',
-    glow: '#7fc0ff',
-    pulse: false,
-  },
-  S: {
-    color: '#5a2d00',
-    plate: '#ffd23df5',
-    stroke: '#fff6c9',
-    size: 13,
-    mark: '★ ',
-    glow: '#ffb300',
-    pulse: true,
-  },
-  boss: {
-    color: '#fff3e0',
-    plate: '#c8501ef0',
-    stroke: '#7c2c0c',
-    size: 12,
-    mark: '♛ ',
-    glow: null,
-    pulse: false,
-  },
+/** 크림색 이름판과 등급별 파스텔 배지. 글자 외곽선 대신 판의 대비로 읽힌다. */
+const TAG_STYLES = {
+  C: { fill: 0xe4d4bb, edge: 0x9b8061 },
+  B: { fill: 0xa8dcc3, edge: 0x4c9277 },
+  A: { fill: 0xbccbf3, edge: 0x7287bd },
+  S: { fill: 0xffd680, edge: 0xb98535 },
+  boss: { fill: 0xffbda5, edge: 0xb97659 },
 } as const
 
-export function tagStyle(tag: CatTag) {
-  return TAG_STYLES[tag.grade ?? 'boss']
-}
-
-/** 이름표에 적는 글: "★ S 눈꽃냥", "C 하늘냥", "♛ 사장냥". */
+/** 검증과 정보 조회에 쓰는 이름. 화면에서는 등급을 별도 배지로 그린다. */
 export function tagText(tag: CatTag): string {
-  const style = tagStyle(tag)
-  return `${style.mark}${tag.grade ? `${tag.grade} ` : ''}${tag.name}`
+  return tag.grade ? `${tag.grade} · ${tag.name}` : tag.name
 }
 
-/** 이름표 글자를 만든다. 내용과 꾸밈은 dressTag가 입힌다. */
-export function makeTag(scene: Phaser.Scene): Phaser.GameObjects.Text {
-  return scene.add
+export type CatNameplate = ReturnType<typeof makeTag>
+
+export function makeTag(scene: Phaser.Scene) {
+  const plate = scene.add.graphics()
+  const label = scene.add
     .text(0, 0, '', {
-      fontFamily: '"Jua", "Gowun Dodum", "Noto Sans KR", sans-serif',
-      fontSize: '12px',
-      color: '#ffffff',
-      align: 'center',
+      fontFamily: '"Jua", "Noto Sans KR", sans-serif',
+      fontSize: '11px',
+      color: '#594638',
       resolution: DPR,
-      padding: { x: 5, y: 2 },
+      padding: { x: 1, y: 2 },
     })
-    .setOrigin(0.5, 0)
-    .setDepth(7)
-    .setVisible(false)
+    .setOrigin(0.5)
+  const badge = scene.add
+    .text(0, 0, '', {
+      fontFamily: '"Jua", sans-serif',
+      fontSize: '10px',
+      color: '#594638',
+      resolution: DPR,
+      padding: { x: 1, y: 2 },
+    })
+    .setOrigin(0.5)
+  return Object.assign(
+    scene.add.container(0, 0, [plate, label, badge]).setDepth(7).setVisible(false),
+    { plate, label, badge, text: '' },
+  )
 }
 
-/** 이름표에 그 고양이의 등급과 이름을 입힌다. 없으면 숨긴다. */
-export function dressTag(text: Phaser.GameObjects.Text, tag: CatTag | undefined) {
+/** 긴 이름도 배지와 판을 포함해 이웃 이름표 사이에 들어가게 한다. */
+export function dressTag(view: CatNameplate, tag: CatTag | undefined, room = 999) {
   if (!tag) {
-    text.setVisible(false)
+    view.setVisible(false)
     return
   }
-  const style = tagStyle(tag)
-  text
-    .setText(tagText(tag))
-    .setFontSize(style.size)
-    .setColor(style.color)
-    .setBackgroundColor(style.plate)
-    .setStroke(style.stroke, 2)
+  const style = TAG_STYLES[tag.grade ?? 'boss']
+  view.text = tagText(tag)
+  view.label.setText(tag.name).setFontSize(11)
+  for (let size = 11; view.label.width + 25 > room && size > 9; size--)
+    view.label.setFontSize(size - 1)
+  const width = Math.max(51, view.label.width + 25)
+  const left = -width / 2
+  const badgeX = left + 10
+  view.label.setPosition(10, 10)
+  view.badge.setText(tag.grade ?? '').setPosition(badgeX, 9)
+  view.plate
+    .clear()
+    .fillStyle(0x60432c, 0.18)
+    .fillRoundedRect(left, 2, width, 20, 10)
+    .fillStyle(0xfff7e8)
+    .fillRoundedRect(left, 0, width, 20, 10)
+    .lineStyle(1.5, style.edge)
+    .strokeRoundedRect(left, 0, width, 20, 10)
+    .fillStyle(style.fill)
+    .fillCircle(badgeX, 9, 8)
+    .lineStyle(1, style.edge)
+    .strokeCircle(badgeX, 9, 8)
+    .lineStyle(1, 0xffffff, 0.75)
+    .lineBetween(left + 21, 3, width / 2 - 10, 3)
+  if (!tag.grade) {
+    // 사장냥의 작은 발바닥: 글꼴에 따라 달라지는 이모지 대신 직접 그린다.
+    view.plate
+      .fillStyle(0x83543e)
+      .fillEllipse(badgeX, 11, 7, 5)
+      .fillCircle(badgeX - 4, 7, 1.5)
+      .fillCircle(badgeX, 5.5, 1.6)
+      .fillCircle(badgeX + 4, 7, 1.5)
+  }
+  view
+    .setSize(width, 22)
+    .setScale(Math.min(1, room / width))
     .setVisible(true)
-  if (style.glow) text.setShadow(0, 0, style.glow, 8, true, true)
-  else text.setShadow(0, 0, '#000000', 0, false, false)
 }
 
 /** 꾹 누른 자리에서 가장 가까운 고양이의 차례(0은 사장냥). reach 안에 없으면 -1. */

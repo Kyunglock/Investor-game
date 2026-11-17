@@ -13,7 +13,6 @@ try {
   const names = ['하늘냥', '민트냥', '라일락냥', '노을냥', '밤냥']
   const codes = ['sky', 'mint', 'lilac', 'sunset', 'night']
   const grades = { sky: 'S', mint: 'A', lilac: 'B' }
-  const marks = { S: '★ ', A: '◆ ', B: '', C: '' }
   const cats = codes.map((code, i) => ({
     code,
     name: names[i],
@@ -23,7 +22,13 @@ try {
     criticalPercent: 100,
     fielded: code in seats,
     slot: seats[code] ?? null,
-    skills: [],
+    skills:
+      code === 'sky'
+        ? [
+            { code: 'ice', name: '얼음 스킬' },
+            { code: 'water', name: '물 스킬' },
+          ]
+        : [],
     skillLevel: 1,
     skillNextLevel: 20,
     // 등급마다 이름표가 다르다 (605번).
@@ -76,18 +81,24 @@ try {
   assert.deepEqual(stand.looks, looks, 'cats stand in slot order')
   // 고양이 밑의 이름표 (605번): 사장냥과, 칸 번호순으로 등급과 이름.
   assert.deepEqual(stand.tags, [
-    '♛ 사장냥',
+    '사장냥',
     ...expected.map((code) => {
       const grade = grades[code] ?? 'C'
-      return `${marks[grade]}${grade} ${names[codes.indexOf(code)]}`
+      return `${grade} · ${names[codes.indexOf(code)]}`
     }),
   ])
   await page.screenshot({ path: '/tmp/seat-order.png' })
-  // 꾹 누르면 그 고양이의 정보가 뜬다 (605번): 짧게 누르면 뜨지 않는다.
+  // 짧게 누르거나 꾹 누르면 정보를 열고, 드래그는 열지 않는다.
   const canvas = await page.locator('[data-testid=idle-canvas] canvas').boundingBox()
   const at = (i) => [canvas.x + stand.xs[i], canvas.y + stand.y - 10]
   await page.mouse.click(...at(2))
-  await page.waitForTimeout(600)
+  await expect(page.getByTestId('cat-info')).toHaveAttribute('data-code', expected[1])
+  await expect(page.getByTestId('cat-info')).toContainText('고유 스킬은 A등급 고양이부터')
+  await page.getByTestId('cat-info-close').click()
+  await page.mouse.move(...at(2))
+  await page.mouse.down()
+  await page.mouse.move(at(2)[0], at(2)[1] - 70)
+  await page.mouse.up()
   await expect(page.getByTestId('cat-info')).toHaveCount(0)
   await page.mouse.move(...at(2))
   await page.mouse.down()
@@ -97,6 +108,16 @@ try {
   await expect(page.getByTestId('cat-info')).toContainText(names[codes.indexOf(expected[1])])
   await page.screenshot({ path: '/tmp/cat-info.png' })
   await page.getByTestId('cat-info-close').click()
+  await expect(page.getByTestId('cat-info')).toHaveCount(0)
+  // S등급은 두 스킬의 아이콘·설명·성장 정보를 모두 보여 준다.
+  await page.mouse.click(...at(4))
+  await expect(page.getByTestId('cat-info')).toHaveAttribute('data-code', 'sky')
+  await expect(page.getByTestId('cat-info-skill')).toHaveCount(2)
+  await expect(page.getByTestId('cat-info')).toContainText('물을 쏴 맞은 적을 느리게 해요')
+  await expect(page.getByTestId('cat-info')).toContainText('고양이 Lv.20에 스킬 Lv.2')
+  await expect(page.getByTestId('cat-info').locator('.idle-cat-face')).toBeVisible()
+  await page.screenshot({ path: '/tmp/cat-info-skills.png' })
+  await page.keyboard.press('Escape')
   await expect(page.getByTestId('cat-info')).toHaveCount(0)
   // 사장냥도 같다.
   await page.mouse.move(...at(0))
