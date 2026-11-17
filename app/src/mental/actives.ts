@@ -28,11 +28,11 @@ export const ACTIVES = {
    */
   averaging: { seconds: 15, min: 1.5, max: 3 },
   /** 공격속도 3배: 이 시간 동안 모든 총이 BOOST배 빨리 나간다. 불장과 겹치면 더 큰 쪽(3배)만 센다. */
-  boostFire: { seconds: 90 },
+  boostFire: { seconds: 270 },
   /** 공격력 3배: 이 시간 동안 총알과 고양이 스킬의 피해가 BOOST배다. */
-  boostDamage: { seconds: 90 },
+  boostDamage: { seconds: 270 },
   /** 매수공격 3배: 이 시간 동안 매수 주문(매수세례 포함)의 피해가 BOOST배다. */
-  boostBuy: { seconds: 90 },
+  boostBuy: { seconds: 270 },
 } as const
 
 export type ActiveCode = keyof typeof ACTIVES

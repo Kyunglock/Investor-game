@@ -95,9 +95,9 @@ try {
           ['limitUp', '상한가', 60, 8, false],
           ['stopLoss', '손절', 60, 0, false],
           ['averaging', '물타기', 60, 10, false],
-          ['boostFire', '공격속도 3배', 180, 60, true],
-          ['boostDamage', '공격력 3배', 180, 60, true],
-          ['boostBuy', '매수공격 3배', 180, 60, true],
+          ['boostFire', '공격속도 3배', 180, 180, true],
+          ['boostDamage', '공격력 3배', 180, 180, true],
+          ['boostBuy', '매수공격 3배', 180, 180, true],
         ].map(([code, name, cooldown, seconds, ad], index) => ({
           code,
           name,
@@ -917,20 +917,21 @@ try {
     // 광고 스킬은 아직 광고 없이 바로 눌린다 (586·588번): 광고를 본 것으로 쓰고, 남은 시간은 숫자 없이 원형 음영으로 보인다.
     const boost = page.locator('[data-testid=idle-ad-active][data-code=boostDamage]')
     await expect(boost).toBeEnabled()
-    await expect(boost).toHaveAccessibleName(/공격력 3배.*광고 보고 쓰기/)
+    await expect(boost).toHaveAccessibleName(/공격력 3배.*광고 보고 3분 사용/)
     await expect(boost).toContainText('×3')
     await expect(boost.locator('.active-badge')).toBeVisible()
     await boost.click()
     // The banner is not checked here: a monster raid's notice uses the same strip and may replace it.
     await expect.poll(() => usedActives).toEqual([{ code: 'boostDamage', ad: true }])
-    await expect(boost).toHaveAccessibleName('공격력 3배 · 60초 남았어요')
-    await expect(boost).not.toContainText('60s')
+    await expect(boost).toHaveAccessibleName('공격력 3배 · 180초 남았어요')
+    await expect(boost).not.toContainText('180s')
     await expect(boost.locator('.idle-active-shade')).toBeVisible()
     await expect(boost).toHaveCSS('border-radius', '50%')
     const boostSize = await boost.boundingBox()
     assert(boostSize && boostSize.width === 48 && boostSize.height === 48, 'compact round skill')
     await expect(boost).toBeDisabled()
-    await expect(page.locator('[data-testid=idle-ad-active][data-code=boostFire]')).toBeEnabled()
+    await expect(page.locator('[data-testid=idle-ad-active][data-code=boostFire]')).toBeDisabled()
+    await expect(page.locator('[data-testid=idle-ad-active][data-code=boostBuy]')).toBeDisabled()
     await page.screenshot({ path: `/tmp/idle-actives-${width}.png` })
     // 스킬 탭 (587번): 장착 칸 셋과 스킬 목록. 빼면 전투 화면의 단추가 사라지고, 다시 장착하면 돌아온다.
     await nav.getByRole('button', { name: '스킬', exact: true }).click()

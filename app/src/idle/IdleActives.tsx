@@ -32,8 +32,9 @@ export function IdleActives({ company, connected }: { company: Company; connecte
   const halted = useShownIdle(idle).circuitSeconds > 0
   const unique = actives.filter((active) => !active.ad && active.equipped)
   const ads = actives.filter((active) => active.ad)
+  const activeAd = ads.find((active) => active.left > 0)
   const use = async (active: Active) => {
-    if (pending) return
+    if (pending || (active.ad && activeAd)) return
     setPending(active.code)
     sfx.tap()
     haptic.light()
@@ -51,6 +52,7 @@ export function IdleActives({ company, connected }: { company: Company; connecte
     setPending(null)
   }
   const button = (active: Active) => {
+    const blockedByAd = active.ad && !!activeAd && activeAd.code !== active.code
     const wait = Math.ceil(active.readyIn)
     // 효과가 도는 동안에는 지속 시간, 그 뒤에는 재사용 대기를 원형 음영으로 나타낸다.
     const left = active.ad ? Math.ceil(active.left) : 0
@@ -63,17 +65,19 @@ export function IdleActives({ company, connected }: { company: Company; connecte
         type="button"
         data-testid={active.ad ? 'idle-ad-active' : 'idle-active'}
         data-code={active.code}
-        data-ready={wait === 0}
+        data-ready={wait === 0 && !blockedByAd}
         data-on={left > 0 || undefined}
-        disabled={!connected || halted || wait > 0 || pending !== null}
+        disabled={!connected || halted || wait > 0 || left > 0 || blockedByAd || pending !== null}
         aria-label={
           left > 0
             ? `${active.name} · ${left}초 남았어요`
-            : wait > 0
-              ? `${active.name} · ${wait}초 뒤에 쓸 수 있어요`
-              : `${active.name} · ${ACTIVE_HINTS[active.code]}${active.ad ? ' · 광고 보고 쓰기' : ''}`
+            : blockedByAd
+              ? `${active.name} · 다른 광고 스킬 사용 중`
+              : wait > 0
+                ? `${active.name} · ${wait}초 뒤에 쓸 수 있어요`
+                : `${active.name} · ${ACTIVE_HINTS[active.code]}${active.ad ? ' · 광고 보고 3분 사용 · 셋 중 하나 선택' : ''}`
         }
-        title={`${active.name} · ${ACTIVE_HINTS[active.code]}${active.ad ? ' · 광고 보고 쓰기' : ''}`}
+        title={`${active.name} · ${ACTIVE_HINTS[active.code]}${active.ad ? ' · 광고 보고 3분 사용 · 셋 중 하나 선택' : ''}`}
         aria-busy={pending === active.code}
         onClick={() => void use(active)}
       >
