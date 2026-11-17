@@ -3,7 +3,7 @@ import { money } from '@web/features/game/labels'
 import { retreatIdle, shownIdle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import type { ActiveCode } from '../mental/actives'
-import { idleAssaultSpec } from '../mental/assault'
+import { IDLE_GAME_SPEED, idleAssaultSpec } from '../mental/assault'
 import type { BattleHandle } from '../mental/battle'
 import { heroOf } from '../mental/hero'
 import type { IdleRaidKind } from '../mental/waves'
@@ -99,7 +99,8 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
         const spec = idleAssaultSpec(first.wall, first.maxHp)
         battle.current = startBattle(host.current, {
           mode: 'assault',
-          speed: 2,
+          // 전투의 빠르기 (580번): 2배속이 너무 빨라 1.5배속으로 줄였다. 서버 IdleEngine.SPEED와 같아야 한다.
+          speed: IDLE_GAME_SPEED,
           assault: spec,
           genre: 'DEFENSE',
           hero: heroOf(c),

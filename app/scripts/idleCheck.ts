@@ -56,12 +56,15 @@ try {
           maxLevel: 0,
         },
         {
+          // 매수벽 공격은 %가 아니라 수량으로 오른다 (579번): 한 단계에 10주.
           kind: 'buy',
-          level: 0,
+          level: 12,
           price: 1000000,
           priceGrowthPercent: 10,
           bonusPercent: 0,
-          nextBonusPercent: 10,
+          nextBonusPercent: 0,
+          bonusShares: 120,
+          nextBonusShares: 130,
           maxLevel: 0,
         },
       ],
@@ -312,6 +315,10 @@ try {
     await expect(stat('fire').getByRole('button')).toHaveText('MAX')
     await expect(stat('hp')).toContainText('매수벽 체력')
     await expect(stat('buy')).toContainText('매수벽 공격')
+    // %가 아니라 수량으로 적는다 (579번): 바탕 한 장 113주에 120주를 얹었다.
+    await expect(stat('buy')).toContainText('+120주 → +130주')
+    await expect(stat('buy')).toContainText('매수 주문 한 장 233주')
+    await expect(stat('buy')).not.toContainText('%')
     await expect(stat('crit')).toHaveCount(0)
     // 환생 (571번): 성장 탭 맨 아래. 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
     await expect(page.getByTestId('rebirth')).toBeVisible()
@@ -568,7 +575,8 @@ try {
           }
         ).__mentalMarket(),
       )
-    assert.equal((await market()).simSpeed, 1) // Existing 2x speed uses simScale(2) = 1.
+    // The fight runs at 1.5x (decisions.md 580): simScale(1.5) = 0.75.
+    assert.equal((await market()).simSpeed, 0.75)
     // 서킷브레이커는 꺼 두었다(IdleEngine.CIRCUIT_ENABLED): 여기서는 켜서 보지 않는다.
     // 앱이 뒤로 가면 서버에 멈춤을 알리고 전투 시계가 선다. 돌아오면 다시 흐른다.
     await page.evaluate(() =>

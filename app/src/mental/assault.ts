@@ -311,8 +311,14 @@ export function idleThreat(wall: number, maxHp: number): number {
 /** 자동 전투에서 매도벽이 물량을 내는 빈도의 배율 (미션 대비, 495번). */
 export const IDLE_FLOW = 1.5
 
-/** 자동 전투에서 매도 물량과 매수 주문이 날아가는 빠르기의 배율 (558번): 티켓이 너무 빨라 읽히지 않아 늦췄다. */
-export const IDLE_ORDER_SPEED = 0.6
+/** 자동 전투의 배속 (580번, gameSpeed.ts): 2배속이 너무 빨라 1.5배속으로 줄였다. 서버 IdleEngine.SPEED와 같아야 한다. */
+export const IDLE_GAME_SPEED = 1.5
+
+/**
+ * 자동 전투에서 매도 물량과 매수 주문이 날아가는 빠르기의 배율 (558번): 티켓이 너무 빨라 읽히지 않아 늦췄다. 2배속에서 0.6이던 것을
+ * 1.5배속으로 줄이면서(580번) 화면에서의 빠르기가 그대로이게 0.8로 올렸다: 0.6 × 2 = 0.8 × 1.5.
+ */
+export const IDLE_ORDER_SPEED = 0.8
 
 /** 물량 구성에서 몬스터(패닉셀·투매·공매도·투기·손절매)를 뺀다. */
 export function ordersOnly(mix: AssaultWall['mix']): AssaultWall['mix'] {

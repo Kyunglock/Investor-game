@@ -18,7 +18,12 @@ class IdleEngine {
   private final Clock clock;
   private final CompanyEngine engine;
   private final String serverId = UUID.randomUUID().toString();
-  private static final double SPEED = 2;
+  // The fight's speed on screen (580): matches the app's IdleCanvas speed. Hit budgets, skill
+  // cooldowns and the wall's progress follow it.
+  private static final double SPEED = 1.5;
+  // The income and the 전투력 number were set when the fight ran at 2. They keep that scale so that
+  // slowing the fight (580) does not cut what a company earns or shrink the number it is shown.
+  private static final double INCOME_SPEED = 2;
 
   /**
    * 서킷브레이커 (decisions.md 547번): 보스 도전이 시작될 때 건다. 보스 도전은 BOSS_EVERY번째 벽마다 저절로 나오고, 그 벽 앞에 서는 순간 거래가
@@ -487,7 +492,7 @@ class IdleEngine {
     if (gone <= 0) return;
     long cap = engine.offlineSeconds() * 1000;
     double seconds = Math.min(gone, cap) / 1000.0;
-    double income = s.incomeRemainder + seconds * SPEED * incomeRate(c);
+    double income = s.incomeRemainder + seconds * INCOME_SPEED * incomeRate(c);
     double earned = Math.floor(income);
     s.incomeRemainder = income - earned;
     s.earned += earned;
@@ -522,12 +527,12 @@ class IdleEngine {
 
   /** The company's income per real second on screen (the fight runs at SPEED). */
   double perSecond(CompanyState c) {
-    return SPEED * incomeRate(c);
+    return INCOME_SPEED * incomeRate(c);
   }
 
   /** One employee's share of that income, per real second on screen. */
   double incomeOf(CompanyState c, CompanyState.Employee e) {
-    return SPEED
+    return INCOME_SPEED
         * engine.incomeOf(e)
         * CompanyEngine.inflation(c)
         * (1 + engine.mental.bonusPercent(c) / 100.0);
@@ -634,12 +639,12 @@ class IdleEngine {
                 / COOLDOWNS[skill][level];
       }
     }
-    total += BUY_ORDER_DAMAGE * POWER_BUY_ORDERS * buyUp(c);
+    total += buyOrder(c) * POWER_BUY_ORDERS;
     double hpUp = 0;
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
       if ("hp".equals(u.kind())) hpUp = u.bonusPercent() / 100.0;
     }
-    return Math.floor(POWER_SCALE * SPEED * total * (1 + POWER_HP_WEIGHT * hpUp));
+    return Math.floor(POWER_SCALE * INCOME_SPEED * total * (1 + POWER_HP_WEIGHT * hpUp));
   }
 
   /** A cat's skill level (515, 534): one more at cat level 10, 20, 30 and 40, up to five. */
@@ -663,19 +668,24 @@ class IdleEngine {
         .doubleValue();
   }
 
+  // Matches the app's mental/shares.ts SHARES_PER_HP: shares shown per point of damage.
+  static final double SHARES_PER_HP = 150;
+
   /**
-   * One buy order's damage (514, 573). Neither the weapon nor the wall's depth is in it: only the
-   * buy wall attack upgrade raises it.
+   * One buy order's damage (514, 573, 579). Neither the weapon nor the wall's depth is in it: only
+   * the buy wall attack upgrade raises it, by a fixed number of shares a level and not by a
+   * percentage.
    */
   private double buyOrder(CompanyState c) {
-    return BUY_ORDER_DAMAGE * buyUp(c);
+    return BUY_ORDER_DAMAGE + buyUp(c);
   }
 
+  /** The damage the buy wall attack upgrade has added to one buy order. */
   private double buyUp(CompanyState c) {
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
-      if ("buy".equals(u.kind())) return 1 + u.bonusPercent() / 100.0;
+      if ("buy".equals(u.kind())) return u.bonusShares() / SHARES_PER_HP;
     }
-    return 1;
+    return 0;
   }
 
   /**
@@ -717,7 +727,8 @@ class IdleEngine {
     s.activeSeconds += active;
     // 물가 (505번): 시간 수입과 벽 보상은 그 벽의 물가만큼 크다.
     // 직원의 초당 수입과 멘탈 보호 보너스도 같은 틱에 들어온다 (523번).
-    double income = s.incomeRemainder + active * incomeRate(c);
+    // The income keeps its old pace per real second, whatever the fight's speed (580).
+    double income = s.incomeRemainder + active * (INCOME_SPEED / SPEED) * incomeRate(c);
     double earned = Math.floor(income);
     s.incomeRemainder = income - earned;
     if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
@@ -1223,9 +1234,9 @@ class IdleEngine {
                 .map(d -> new CompanyView.CatDraw(d.kind, d.level, d.isNew, catGrade(d.kind)))
                 .toList(),
         new CompanyView.Income(
-            CompanyView.money(SPEED * incomeRate(c)),
+            CompanyView.money(INCOME_SPEED * incomeRate(c)),
             CompanyView.money(
-                SPEED
+                INCOME_SPEED
                     * engine.staffIncome(c)
                     * CompanyEngine.inflation(c)
                     * (1 + engine.mental.bonusPercent(c) / 100.0)),
