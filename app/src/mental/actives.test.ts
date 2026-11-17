@@ -34,9 +34,9 @@ describe('액티브 스킬 (503·587·588·591번)', () => {
     }
   })
 
-  it('광고 스킬은 3배이고 전투 초로 90초(실제 60초) 이어진다: 서버 IdleEngine과 같다', () => {
+  it('광고 스킬은 3배이고 전투 초로 270초(실제 180초) 이어진다: 서버 IdleEngine과 같다', () => {
     expect(BOOST).toBe(3)
-    for (const code of codes.filter(isBoost)) expect(ACTIVES[code].seconds).toBe(90)
+    for (const code of codes.filter(isBoost)) expect(ACTIVES[code].seconds).toBe(270)
   })
 
   it('물타기는 매수벽이 가득 차면 1.5배, 깎인 만큼 커져 3배까지다', () => {
