@@ -69,7 +69,7 @@ export function IdleShop({
             data-sold={block === 'sold'}
           >
             <span className="idle-stat-icon" aria-hidden="true">
-              <ShopIcon kind={item.priceDiamonds === 0 && !item.priceMoney ? 'gift' : 'gems'} />
+              <ShopIcon kind="gift" />
             </span>
             <div className="idle-stat-info">
               <b>{item.name}</b>

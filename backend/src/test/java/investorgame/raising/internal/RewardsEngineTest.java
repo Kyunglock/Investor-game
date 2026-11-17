@@ -131,40 +131,25 @@ class RewardsEngineTest {
   }
 
   @Test
-  void 상점은_게임_재화로_사고_하루_횟수가_한국_시간_자정에_다시_찬다() {
-    // 무료 다이아와 돈으로 사는 다이아만 판매한다.
+  void 상점은_무료_다이아만_주고_교환_상품은_살_수_없다() {
+    // 무료 다이아만 하루 한 번 받는다.
     CompanyState c = opened();
-    assertThat(rewards.shopView(c).items())
-        .extracting(i -> i.code())
-        .containsExactly("free", "diamonds");
+    assertThat(rewards.shopView(c).items()).extracting(i -> i.code()).containsExactly("free");
     rewards.buy(c, "free");
     assertThat(c.diamonds).isEqualTo(20);
     assertThat(rewards.shopView(c).lastReceipt().diamonds()).isEqualTo(20);
     assertThatThrownBy(() -> rewards.buy(c, "free"))
         .as("하루 한 번")
         .isInstanceOf(InvalidRequestException.class);
-    // 돈으로 다이아: 값은 지금 초당 수입의 20분어치다.
-    double perSecond = idle.perSecond(c);
-    double price = Math.floor(20 * 60 * perSecond);
-    assertThat(rewards.shopView(c).items().get(1).priceMoney().doubleValue()).isEqualTo(price);
-    assertThatThrownBy(() -> rewards.buy(c, "diamonds"))
-        .as("돈이 모자라다")
-        .isInstanceOf(InvalidRequestException.class);
-    c.capital = price * 5 + 7;
-    for (int i = 0; i < 5; i++) rewards.buy(c, "diamonds");
-    assertThat(c.capital).isEqualTo(7);
-    assertThat(c.diamonds).isEqualTo(120);
-    assertThat(rewards.shopView(c).items().get(1).left()).isZero();
-    assertThatThrownBy(() -> rewards.buy(c, "diamonds"))
-        .isInstanceOf(InvalidRequestException.class);
     // 삭제된 상품은 충분한 다이아와 옛 구매 기록이 있어도 살 수 없다.
+    c.capital = 1_000_000_000;
     c.diamonds = 1000;
     c.shopBought.put("money-small", 1);
-    for (String removed : List.of("money-small", "money-large")) {
+    for (String removed : List.of("diamonds", "money-small", "money-large")) {
       assertThatThrownBy(() -> rewards.buy(c, removed)).isInstanceOf(InvalidRequestException.class);
     }
     assertThat(c.diamonds).isEqualTo(1000);
-    assertThat(c.capital).isEqualTo(7);
+    assertThat(c.capital).isEqualTo(1_000_000_000);
     assertThatThrownBy(() -> rewards.buy(c, "nothing")).isInstanceOf(InvalidRequestException.class);
     // 다음 날(한국 시간)에는 횟수가 다시 찬다.
     clock.now += DAY;

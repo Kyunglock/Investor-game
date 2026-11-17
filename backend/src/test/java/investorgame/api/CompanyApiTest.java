@@ -555,11 +555,11 @@ class CompanyApiTest {
 
   /** 상점 (decisions.md 541번): 게임 재화로 사고 하루 횟수가 있다. */
   @Test
-  void 상점에서_무료_다이아를_받고_삭제된_돈_상품은_살_수_없다() throws Exception {
+  void 상점에서_무료_다이아를_받고_삭제된_교환_상품은_살_수_없다() throws Exception {
     DocumentContext opened =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
     List<String> codes = opened.read("$.shop.items[*].code");
-    assertThat(codes).containsExactly("free", "diamonds");
+    assertThat(codes).containsExactly("free");
     assertThat(opened.read("$.idle.cats[0].grade", String.class)).as("하늘냥은 C 등급").isEqualTo("C");
     assertThat(opened.read("$.idle.power", Double.class)).isPositive();
     long diamonds = opened.read("$.diamonds.amount", Long.class);
@@ -572,7 +572,7 @@ class CompanyApiTest {
     mvc.perform(post("/api/company/shop/free").cookie(session)).andExpect(status().isBadRequest());
     mvc.perform(post("/api/company/shop/nothing").cookie(session))
         .andExpect(status().isBadRequest());
-    for (String removed : List.of("money-small", "money-large")) {
+    for (String removed : List.of("diamonds", "money-small", "money-large")) {
       mvc.perform(post("/api/company/shop/" + removed).cookie(session))
           .andExpect(status().isBadRequest());
     }

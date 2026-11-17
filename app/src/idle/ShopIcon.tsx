@@ -1,5 +1,5 @@
 /** 상점 전용 컬러 장난감 아이콘. 메뉴 아이콘과 구분하고 상품별 내용을 보여 준다. */
-export function ShopIcon({ kind }: { kind: 'gift' | 'gems' | 'cat' | 'weapon' }) {
+export function ShopIcon({ kind }: { kind: 'gift' | 'cat' | 'weapon' }) {
   return (
     <svg
       className="shop-art-icon"
@@ -26,15 +26,6 @@ export function ShopIcon({ kind }: { kind: 'gift' | 'gems' | 'cat' | 'weapon' })
             fill="#fff1ac"
             stroke="none"
           />
-        </>
-      ) : kind === 'gems' ? (
-        <>
-          <path d="M10 32h44v21H10z" fill="#2767ae" />
-          <path d="m8 31 8-12h32l8 12Z" fill="#ffd175" />
-          <path d="m15 24 7-10h10l7 10-12 16Z" fill="#5ee8ff" />
-          <path d="m31 24 7-11h10l8 11-13 16Z" fill="#8cf2ff" />
-          <path d="m16 24 11 16 5-26m0 10h23M10 37h44" stroke="#d0ffff" strokeWidth="2" />
-          <path d="M28 39h8v10h-8z" fill="#ffd175" />
         </>
       ) : kind === 'cat' ? (
         <>
