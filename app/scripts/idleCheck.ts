@@ -214,6 +214,20 @@ try {
       await route.fulfill({ json: company })
     })
     await page.goto(process.env.APP_URL ?? 'http://localhost:5173/app/')
+    // CI 러너의 네트워크가 바뀌는 순간(앞 단계의 도커 네트워크가 내려갈 때) 크롬은 진행 중인 요청을 모두
+    // net::ERR_NETWORK_CHANGED로 끊는다. 그러면 전투 모듈을 받지 못해 화면이 "다시 시도"에 멈춘다. 앱의 잘못이 아니므로
+    // 그 오류로 전투가 뜨지 않았을 때만 화면을 새로 받아 다시 본다. 다른 까닭으로 뜨지 않으면 아래 검사가 그대로 잡는다.
+    for (let reload = 0; reload < 3; reload++) {
+      const opened = await page
+        .locator('[data-testid=idle-canvas] canvas')
+        .waitFor({ timeout: 15000 })
+        .then(() => true)
+        .catch(() => false)
+      if (opened || !loadingErrors.some((line) => line.includes('ERR_NETWORK_CHANGED'))) break
+      console.log(`network changed while loading (width ${width}): reloading, try ${reload + 1}`)
+      loadingErrors.length = 0
+      await page.reload()
+    }
     // A cold Vite server may still be compiling modules after its HTML responds.
     await expect(page.getByTestId('idle-battle'))
       .toBeVisible({ timeout: 30000 })
