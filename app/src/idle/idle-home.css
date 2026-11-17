@@ -977,72 +977,57 @@
   position: relative;
   overflow: hidden;
   display: grid;
-  place-content: center;
-  gap: 2px;
+  justify-items: center;
   width: 66px;
-  min-height: 52px;
-  padding: 4px;
-  border: 2px solid #c48637;
-  border-radius: 14px;
-  background: linear-gradient(#fff3c9, #ffd27a);
-  box-shadow: 0 3px 0 #c48c42;
-  text-align: center;
-  color: #5a3310;
-}
-.idle-actives b {
-  font-size: 12px;
-  line-height: 1.15;
-  word-break: keep-all;
+  padding: 0 0 3px;
+  border: 1px solid #ac7bc2;
+  border-radius: 15px;
+  background: #f6e6ff;
+  box-shadow: 0 3px 0 #9162aa;
+  color: #59346c;
 }
 .idle-actives .idle-active-note {
-  font-size: 9px;
-  line-height: 1.2;
-  word-break: keep-all;
-  opacity: 0.85;
+  display: grid;
+  place-items: center;
+  min-height: 16px;
 }
-.idle-actives button:disabled {
-  background: #e8dfcc;
-  box-shadow: 0 3px 0 #b9ad95;
-  color: #7a6b55;
+.idle-actives button:disabled .active-badge {
+  filter: saturate(0.4) brightness(0.85);
+}
+.idle-actives button:focus-visible {
+  outline: 3px solid #237bd2;
+  outline-offset: 3px;
 }
 .idle-actives i {
   position: absolute;
   inset: 0 0 auto;
-  background: #2b234033;
+  background: #2b23404d;
   pointer-events: none;
 }
-/* 광고 스킬 단추 (588번): 왼쪽 가장자리에 세로로. 효과가 도는 동안 테가 빛난다. */
 .idle-actives.idle-actives-ad {
   right: auto;
   left: 6px;
 }
 .idle-actives-ad button {
-  border-color: #3f78c9;
-  background: linear-gradient(#e6f4ff, #a9d6ff);
-  box-shadow: 0 3px 0 #2f62ab;
-  color: #17365f;
-}
-.idle-actives .idle-active-ad {
-  justify-self: center;
-  padding: 1px 5px;
-  border-radius: 6px;
-  background: #17365f;
-  color: #ffd65c;
-  font-size: 8px;
-  font-style: normal;
-  line-height: 1.3;
-}
-.idle-actives-ad button:disabled .idle-active-ad {
-  background: #7a6b55;
-  color: #f4ecd9;
+  border-color: #ba7c26;
+  background: #fff3cf;
+  box-shadow: 0 3px 0 #b57b29;
+  color: #68431d;
 }
 .idle-actives-ad button[data-on] {
-  border-color: #ffb21c;
-  background: linear-gradient(#fff3c9, #ffd27a);
   box-shadow:
-    0 3px 0 #c48c42,
-    0 0 0 3px #ffe58a99;
-  color: #5a3310;
+    0 0 0 3px #ffe58a,
+    0 0 12px #ffbf45;
+}
+.idle-actives-ad button[data-on] .active-badge {
+  filter: none;
+}
+.idle-actives button[data-on] .idle-active-note {
+  color: #28733c;
+}
+.idle-active-pending {
+  font-size: 14px;
+  line-height: 1;
 }
 /* 광고를 불러오지 못했을 때의 알림 (589번). */
 .idle-ad-notice {
@@ -1087,75 +1072,75 @@
   text-align: center;
 }
 .boss-skill-slots li.is-filled {
-  border: 2px solid #c48637;
-  background: linear-gradient(#fff3c9, #ffd27a);
-  box-shadow: 0 3px 0 #c48c42;
-  color: #5a3310;
+  border: 2px solid #c8a4db;
+  background: #f5e9fc;
+  color: #59346c;
 }
 .boss-skill-slot-icon {
-  display: grid;
-  font-size: 22px;
-}
-.boss-skill-slot-name {
-  font-size: 12px;
-  line-height: 1.15;
-  word-break: keep-all;
+  display: block;
+  width: 58px;
 }
 .boss-skill-list {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
 .boss-skill-list li {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px;
   border: 2px solid #e0c9a2;
   border-radius: 14px;
   background: #fffaf0;
 }
 .boss-skill-list li.is-equipped {
-  border-color: #c48637;
-  background: #fff3d2;
+  border-color: #b68acd;
+  background: #f7edfc;
 }
-.boss-skill-mark {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border: 2px solid #c48637;
-  border-radius: 12px;
-  background: linear-gradient(#fff3c9, #ffd27a);
-  color: #5a3310;
-  font-size: 22px;
+.boss-skill-art {
+  display: block;
+  width: 100%;
+  max-width: 120px;
+  align-self: center;
 }
-.boss-skill-mark.is-ad {
-  border-color: #3f78c9;
-  background: linear-gradient(#e6f4ff, #a9d6ff);
-  color: #17365f;
+.boss-skill-times {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 8px;
+  color: #77512d;
 }
-.boss-skill-info {
-  display: grid;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
+.boss-skill-times .active-time {
+  font-size: 11px;
 }
-.boss-skill-name {
-  font-size: 15px;
-  color: #553a27;
-}
-.boss-skill-note {
-  font:
-    500 11px / 1.45 "Noto Sans KR",
-    sans-serif;
-  color: #7a6243;
+.boss-skill-details {
+  font-size: 11px;
+  color: #765d48;
   word-break: keep-all;
 }
-.boss-skill-note.boss-skill-times {
-  color: #a0763c;
+.boss-skill-details summary {
+  display: grid;
+  place-items: center;
+  min-height: 32px;
+  cursor: pointer;
+  font-size: 18px;
+  list-style: none;
+}
+.boss-skill-details summary::-webkit-details-marker {
+  display: none;
+}
+.boss-skill-details summary:focus-visible {
+  outline: 2px solid #237bd2;
+  border-radius: 6px;
+}
+.boss-skill-details p {
+  margin-top: 4px;
 }
 .boss-skill-equip {
+  margin-top: auto;
   flex-shrink: 0;
   min-width: 62px;
   min-height: 44px;

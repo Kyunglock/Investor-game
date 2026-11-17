@@ -2,23 +2,10 @@ import type { Company } from '@web/api/client'
 import { type UniqueActiveCode, useRaisingStore } from '@web/features/raising/store'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { ACTIVE_NOTES, type ActiveCode } from '../mental/actives'
-import { IdleIcon, type IdleIconName } from './icons'
+import { ACTIVE_NOTES } from '../mental/actives'
+import { ActiveBadge, ActiveTime } from './ActiveBadge'
 
 type Active = NonNullable<NonNullable<Company['idle']>['actives']>[number]
-
-/** 스킬마다의 그림: 성장 탭의 능력치 그림을 같이 쓴다. */
-const ICONS: Record<ActiveCode, IdleIconName> = {
-  barrage: 'buy',
-  rally: 'fire',
-  fortify: 'hp',
-  limitUp: 'damage',
-  stopLoss: 'hp',
-  averaging: 'buy',
-  boostFire: 'fire',
-  boostDamage: 'damage',
-  boostBuy: 'buy',
-}
 
 const seconds = (value: number) => `${Math.round(value).toLocaleString()}초`
 
@@ -42,17 +29,30 @@ export function IdleSkills({ company }: { company: Company }) {
   }
   const info = (active: Active) => (
     <>
-      <span className={`boss-skill-mark ${active.ad ? 'is-ad' : ''}`} aria-hidden="true">
-        <IdleIcon name={ICONS[active.code]} />
+      <span
+        className="boss-skill-art"
+        role="img"
+        aria-label={`${active.name} · ${ACTIVE_NOTES[active.code]}`}
+      >
+        <ActiveBadge code={active.code} />
       </span>
-      <span className="boss-skill-info">
-        <b className="boss-skill-name">{active.name}</b>
-        <small className="boss-skill-note">{ACTIVE_NOTES[active.code]}</small>
-        <small className="boss-skill-note boss-skill-times">
+      <span
+        className="boss-skill-times"
+        role="img"
+        aria-label={`${active.seconds > 0 ? `지속 ${seconds(active.seconds)}` : '바로 발동'} · 재사용 대기 ${seconds(active.cooldown)}`}
+      >
+        <ActiveTime seconds={active.seconds} />
+        <ActiveTime seconds={active.cooldown} cooldown />
+      </span>
+      <details className="boss-skill-details">
+        <summary aria-label={`${active.name} 설명`}>ⓘ</summary>
+        <b>{active.name}</b>
+        <p>{ACTIVE_NOTES[active.code]}</p>
+        <p>
           {active.seconds > 0 ? `지속 ${seconds(active.seconds)}` : '바로 발동'} · 재사용 대기{' '}
           {seconds(active.cooldown)}
-        </small>
-      </span>
+        </p>
+      </details>
     </>
   )
   return (
@@ -71,12 +71,9 @@ export function IdleSkills({ company }: { company: Company }) {
             data-code={active?.code}
           >
             {active ? (
-              <>
-                <span className="boss-skill-slot-icon">
-                  <IdleIcon name={ICONS[active.code]} />
-                </span>
-                <b className="boss-skill-slot-name">{active.name}</b>
-              </>
+              <span className="boss-skill-slot-icon" role="img" aria-label={active.name}>
+                <ActiveBadge code={active.code} />
+              </span>
             ) : (
               <small>빈 칸</small>
             )}

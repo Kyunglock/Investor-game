@@ -1,0 +1,38 @@
+.active-badge {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.active-badge-value,
+.active-badge-power {
+  fill: #4b291d;
+  stroke: #fff7e5;
+  stroke-width: 4px;
+  paint-order: stroke;
+  font-family: "Jua", "Noto Sans KR", sans-serif;
+  font-weight: 900;
+  font-size: 32px;
+}
+.active-badge-value.is-wide {
+  font-size: 24px;
+}
+.active-badge-power {
+  stroke-width: 3px;
+  font-size: 16px;
+}
+.active-time {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.active-time svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
