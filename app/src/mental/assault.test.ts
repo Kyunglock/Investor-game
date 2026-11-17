@@ -14,8 +14,10 @@ import {
   climbSpeed,
   IDLE_GAME_SPEED,
   IDLE_ORDER_SPEED,
+  IDLE_QUICK_FLOOR,
   IDLE_THREAT_HP,
   idleAssaultSpec,
+  idleBreakPace,
   idleThreat,
   orderPriceStep,
   ordersOnly,
@@ -159,6 +161,13 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     expect(climbSpeed(0, true)).toBe(climbSpeed(10, true))
   })
 
+  it('자동 전투는 벽을 빨리 부술수록 다음 벽이 빨리 나온다 (606번)', () => {
+    expect(idleBreakPace(3)).toBe(1)
+    expect(idleBreakPace(1)).toBe(1)
+    expect(idleBreakPace(0.5)).toBe(0.5)
+    expect(idleBreakPace(0)).toBe(IDLE_QUICK_FLOOR)
+    expect(idleBreakPace(Number.NaN)).toBe(1)
+  })
   it('큰손은 체력이 반 아래면 더 자주 쏟아 낸다', () => {
     expect(whaleSummonSeconds(100, 100)).toBe(ASSAULT_BOSS.summonSeconds)
     expect(whaleSummonSeconds(50, 100)).toBeLessThan(ASSAULT_BOSS.summonSeconds)

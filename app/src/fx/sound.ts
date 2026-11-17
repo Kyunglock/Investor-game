@@ -394,7 +394,7 @@ export const sfx = {
   charge: () => tone(180, 380, { wave: 'triangle', gain: 0.06, slide: 620 }),
   /** 건물 확장: 옆 건물과 부딪히는 쾅. 낮게 울리는 북 + 짧은 금속음 + 큰 잡음. */
   crash: () => {
-    if (sample('bigKill', { gain: 0.7 })) {
+    if (sample('bigKill', { gain: 0.7, every: 250 })) {
       sample('impact', { gain: 0.45, rate: 0.75 })
       return
     }

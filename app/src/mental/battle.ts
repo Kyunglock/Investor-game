@@ -67,6 +67,7 @@ import {
   IDLE_ORDER_SPEED,
   IDLE_SELL_POWER,
   idleAssaultSpec,
+  idleBreakPace,
   MID_BOSS_NAME,
   pickFlow,
   rowHps,
@@ -604,6 +605,9 @@ class BattleScene extends Phaser.Scene {
   /** 지금 벽에 방금 맞힌 피해(실제 ms와 양). 서버 값이 따라올 때까지 화면의 벽 체력에서 먼저 뺀다 (493번). */
   /** 먼저 빼 둔 명중. sequence는 실려 나간 접속 신호의 순번이고, 아직 안 나갔으면 없다 (496번). */
   private idleTransition = false
+  /** 자동 전투에서 다음 벽으로 넘어가는 빠르기 (606번): 앞의 벽을 빨리 부술수록 작다(idleBreakPace). 그리고 지금 벽이 벽 앞에 선 전투 초. */
+  private idlePace = 1
+  private wallStoodAt = 0
   private runRush = 0
   private wallsBroken = 0
   private sinceBreak = 0
@@ -1846,7 +1850,11 @@ class BattleScene extends Phaser.Scene {
     haptic.medium()
     if (this.opts.idle) {
       this.idleTransition = true
-      this.time.delayedCall(this.reducedMotion ? 450 : 160, () => {
+      // 빨리 부순 벽일수록 다음 벽이 빨리 나온다 (606번): 부서지는 족족 이어진다. 물러난 벽(부순 것이 아니다)은 전과 같다.
+      // 벽 앞에 서기도 전에 부쉈으면 가장 빠르다.
+      this.idlePace = moved ? 1 : idleBreakPace(wall.arrived ? this.elapsed - this.wallStoodAt : 0)
+      const pace = this.idlePace
+      this.time.delayedCall((this.reducedMotion ? 450 : 160) * pace, () => {
         for (const old of this.walls) {
           old.price.destroy()
           if (old.band.active) old.band.destroy()
@@ -1872,7 +1880,7 @@ class BattleScene extends Phaser.Scene {
         const spacing = idleWallLayout(this.lane().width, this.view().h).spacing
         this.addWall(0, Math.min(wall.y, this.stopY()) - spacing)
         this.idleTransition = false
-        this.runRush = 0.95
+        this.runRush = 0.95 * pace
       })
       return
     }
@@ -2308,7 +2316,7 @@ class BattleScene extends Phaser.Scene {
     const rushing = this.rushLeft > 0
     if (wall && !wall.arrived) {
       move = this.opts.idle
-        ? (idleWallLayout(this.lane().width, this.view().h).spacing * dt) / 0.45
+        ? (idleWallLayout(this.lane().width, this.view().h).spacing * dt) / (0.45 * this.idlePace)
         : climbSpeed(this.sinceBreak, this.reducedMotion) * dt
       const stop = rushing ? this.holdY() : this.stopY()
       if (rushing) this.rushLeft = Math.max(0, this.rushLeft - dt)
@@ -2317,6 +2325,7 @@ class BattleScene extends Phaser.Scene {
       }
       if (!rushing && wall.y + move >= stop) {
         wall.arrived = true
+        this.wallStoodAt = this.elapsed
         this.stuck = 0
         if (wall.index === 0) {
           this.opts.onBanner('매도벽을 부수고 다음 벽으로!', '#3a7bea')
@@ -2595,6 +2604,7 @@ class BattleScene extends Phaser.Scene {
     this.circuit = null
     if (wall) {
       wall.arrived = true
+      this.wallStoodAt = this.elapsed
       wall.band.setAlpha(1)
       for (const e of wall.cells) {
         e.setAlpha(1)
@@ -2622,6 +2632,8 @@ class BattleScene extends Phaser.Scene {
       arena: { front: this.bg?.frame.name, back: this.bg2?.frame.name },
       boss: this.bossEnemy?.active ? { hp: this.bossEnemy.hp, maxHp: this.bossEnemy.maxHp } : null,
       simSpeed: this.simSpeed,
+      /** 다음 벽으로 넘어가는 빠르기 (606번): 1이면 보통, 작을수록 빠르다. */
+      idlePace: this.idlePace,
       climbed: this.climbed,
       nextWallIn: this.nextWallIn,
       /** 날아가는 총알 수. */
