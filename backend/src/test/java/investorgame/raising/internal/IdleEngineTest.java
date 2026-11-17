@@ -593,6 +593,21 @@ class IdleEngineTest {
   }
 
   @Test
+  void theBossCatWithoutAWeaponShootsTheStartingPistol() {
+    // 585: the boss cat's weapon comes off like a cat's, and it then shoots the F pistol.
+    start(1);
+    company.mental.grant(state, "A", 1);
+    double armed = engine.view(state).dps();
+    company.mental.unequip(state);
+    double bare = engine.view(state).dps();
+    assertThat(bare).isLessThan(armed);
+    company.mental.equip(state, "pistol", "F");
+    assertThat(engine.view(state).dps()).isEqualTo(bare);
+    // Its field slot is not a slot: nothing can take the boss cat off the field.
+    assertThat(engine.view(state).fieldSlots()).isEqualTo(4);
+  }
+
+  @Test
   void circuitStopsClocksAndSurvivesOffline() {
     start(6);
     state.idle.circuitSeconds = 4;

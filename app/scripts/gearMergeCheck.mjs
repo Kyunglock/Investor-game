@@ -236,7 +236,8 @@ try {
       await expect(cell(page, 'E', 'sky')).toContainText('장착 중')
       await expect(cell(page, 'E', 'sky')).toContainText('하늘냥')
       await expect(cell(page, 'S', 'mint')).toBeDisabled()
-      await expect(page.getByTestId('cat-unequip')).toHaveCount(0)
+      // 사장냥의 무기도 뺄 수 있다 (585번).
+      await expect(page.getByTestId('cat-unequip')).toHaveCount(1)
       await now.scrollIntoViewIfNeeded()
       await shot('boss')
       // 사장냥이 남은 리볼버 D를 든다.

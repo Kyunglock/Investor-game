@@ -34,6 +34,8 @@ interface RaisingState {
   upgrade: () => Promise<void>
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
   equipWeapon: (kind: WeaponKind, grade: WeaponGrade) => Promise<void>
+  /** 사장냥이 든 무기를 뺀다 (decisions.md 585번): 기본 권총을 쏜다. */
+  unequipWeapon: () => Promise<void>
   /** 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번). 보상은 company.stages.lastResult. */
   reportStage: (stage: number, cleared: boolean, stars: number) => Promise<void>
   /** 종목 회의 뒤 전투의 결과 (decisions.md 414번, #573). 별에 따라 회의 손익이 바뀐다. */
@@ -211,6 +213,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     equipWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon', { body: { kind, grade } })),
+
+    unequipWeapon: () => change(api.POST('/api/company/weapon', { body: {} })),
 
     reportStage: (stage, cleared, stars) =>
       change(api.POST('/api/company/stage', { body: { stage, cleared, stars } })),

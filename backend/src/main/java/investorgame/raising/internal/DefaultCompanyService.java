@@ -54,7 +54,7 @@ class DefaultCompanyService implements CompanyService {
     if (c.gachaReady
         && c.realtime
         && c.diamondsReady
-        && c.weapon != null
+        && (c.weapon != null || c.weaponOff)
         && c.weaponGachaReady
         && !resting
         && !engine.mental.needsWeaponReset(c)
@@ -405,9 +405,14 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView equipWeapon(UUID sessionId, String kind, String grade) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.requireFreeForBoss(row.state(), kind, grade);
-    engine.mental.equip(row.state(), kind, grade);
-    idle.releaseWeapons(row.state());
+    if (kind == null && grade == null) {
+      // 사장냥의 무기 빼기 (585번).
+      engine.mental.unequip(row.state());
+    } else {
+      idle.requireFreeForBoss(row.state(), kind, grade);
+      engine.mental.equip(row.state(), kind, grade);
+      idle.releaseWeapons(row.state());
+    }
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

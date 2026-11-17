@@ -168,11 +168,14 @@ class CompanyController {
 
   record InvestBattleRequest(@NotBlank String mode, @Min(0) @Max(3) int stars) {}
 
-  /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
+  /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). kind와 grade를 비우면 사장냥의 무기를 뺀다 (585번). */
   @PostMapping("/weapon")
   CompanyView equipWeapon(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody WeaponRequest request) {
+      @Valid @RequestBody EquipRequest request) {
+    if ((request.kind() == null) != (request.grade() == null)) {
+      throw new InvalidRequestException("kind와 grade는 함께 보내거나 함께 비운다");
+    }
     UUID sessionId = cookies.requirePlayer(token);
     CompanyView company = companies.equipWeapon(sessionId, request.kind(), request.grade());
     PLAY.info(
@@ -186,6 +189,8 @@ class CompanyController {
   }
 
   record WeaponRequest(@NotBlank String kind, @NotBlank String grade) {}
+
+  record EquipRequest(String kind, String grade) {}
 
   /** 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번). */
   @PostMapping("/stage")

@@ -110,6 +110,24 @@ class CompanyApiTest {
   }
 
   @Test
+  void 사장냥의_무기를_빼고_다시_든다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
+    // kind와 grade를 함께 비우면 뺀다 (585번). 하나만 비우면 400.
+    postJson("/api/company/weapon", "{}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.weapons[0].equipped").value(false))
+        .andExpect(jsonPath("$.weapons[0].count").value(1));
+    postJson("/api/company/weapon", "{\"kind\":\"pistol\"}").andExpect(status().isBadRequest());
+    // 다시 불러와도 빈손 그대로다.
+    mvc.perform(get("/api/company").cookie(session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.weapons[0].equipped").value(false));
+    postJson("/api/company/weapon", "{\"kind\":\"pistol\",\"grade\":\"F\"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.weapons[0].equipped").value(true));
+  }
+
+  @Test
   void 다이아로_무기를_뽑고_다_쓰면_400이다() throws Exception {
     DocumentContext opened =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));

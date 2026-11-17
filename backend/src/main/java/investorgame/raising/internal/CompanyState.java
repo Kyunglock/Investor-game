@@ -223,6 +223,9 @@ class CompanyState {
   /** 든 무기. weapons 가운데 하나. */
   Weapon weapon;
 
+  /** 사장냥이 무기를 뺐다 (decisions.md 585번): weapon이 비어 있어도 다시 들리지 않고 기본 권총을 쏜다. */
+  boolean weaponOff;
+
   /** 무기 뽑기권 (decisions.md 366번). */
   int weaponTickets;
 

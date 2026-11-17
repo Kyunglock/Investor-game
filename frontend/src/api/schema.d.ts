@@ -149,6 +149,7 @@ export interface paths {
          * @description 무기는 멘탈 전투에서 드는 총이다. 종류(F·E 권총, D 리볼버, C·B 기관단총, A 폭발포, S~LR 성운포)와 등급(F·E·D·C·B·A·S·SS·SSS·SR·UR·LR)이 있고, F~A는 무기 뽑기로, S~LR은 합성으로만 얻는다.
          *     든 무기의 수치가 다음 판의 바탕 수치(공격력·연사·탄 강화 단계·탄 속도)가 된다. 없는 종류·등급이거나 안 가진 무기면 400.
          *     고양이가 들고 있어 아무도 들지 않은 것이 없는 무기도 400 (decisions.md 530번).
+         *     kind와 grade를 함께 비우면 사장냥이 든 무기를 뺀다 (decisions.md 585번): 무기 없는 고양이처럼 기본 권총(F 권총)을 쏘고, 뺀 무기는 가진 무기에 그대로 남는다. 하나만 비우면 400.
          */
         post: operations["equipWeapon"];
         delete?: never;
@@ -1952,9 +1953,9 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
+                    kind?: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                     /** @enum {string} */
-                    grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "SR" | "UR" | "LR";
+                    grade?: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "SR" | "UR" | "LR";
                 };
             };
         };

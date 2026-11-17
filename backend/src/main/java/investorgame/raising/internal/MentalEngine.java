@@ -63,13 +63,15 @@ class MentalEngine {
     if (needsWeaponReset(c)) {
       c.weapons = null;
       c.weapon = null;
+      c.weaponOff = false;
       c.lastWeaponDraw = null;
       c.lastWeaponDrawNew = false;
       c.lastWeaponDraws = new ArrayList<>();
       c.weaponDraws = 0;
       c.weaponGachaReady = true;
     }
-    if (c.weapons != null && !c.weapons.isEmpty() && c.weapon != null) {
+    // 사장냥이 무기를 뺀 회사 (585번)는 빈손 그대로 둔다.
+    if (c.weapons != null && !c.weapons.isEmpty() && (c.weapon != null || c.weaponOff)) {
       return false;
     }
     if (c.weapons == null || c.weapons.isEmpty()) {
@@ -77,6 +79,7 @@ class MentalEngine {
           new ArrayList<>(List.of(new CompanyState.Weapon(PISTOL, WEAPON_GRADES.getFirst())));
     }
     c.weapon = c.weapons.getFirst();
+    c.weaponOff = false;
     return true;
   }
 
@@ -361,6 +364,14 @@ class MentalEngine {
       throw new InvalidRequestException("가지지 않은 무기다: " + kind + " " + grade);
     }
     c.weapon = owned;
+    c.weaponOff = false;
+  }
+
+  /** 사장냥이 든 무기를 뺀다 (585번): 무기 없는 고양이처럼 기본 권총(F 권총)을 쏜다. 이미 뺐으면 그대로다. */
+  void unequip(CompanyState c) {
+    initWeapons(c);
+    c.weapon = null;
+    c.weaponOff = true;
   }
 
   /** 가진 무기의 화면 값 (346번): 등급을 더한 최종 수치와 든 것 표시. 무기 전에 차린 회사는 불러올 때 권총을 받는다(adopt). */

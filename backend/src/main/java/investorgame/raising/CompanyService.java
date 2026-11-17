@@ -63,7 +63,10 @@ public interface CompanyService {
    */
   CompanyView investBattle(UUID sessionId, String mode, int stars);
 
-  /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). 없는 종류·등급이거나 안 가진 무기면 400. */
+  /**
+   * 가진 무기 가운데 하나를 든다 (decisions.md 346번). 없는 종류·등급이거나 안 가진 무기면 400. kind와 grade가 모두 null이면 사장냥이 무기를
+   * 빼고 기본 권총을 쏜다 (585번).
+   */
   CompanyView equipWeapon(UUID sessionId, String kind, String grade);
 
   /**

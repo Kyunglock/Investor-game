@@ -40,6 +40,26 @@ class MentalEngineTest {
     return company;
   }
 
+  /** 사장냥의 무기 빼기 (585번): 빈손은 다시 채워지지 않고, 뺀 무기는 가진 무기에 남으며, 다시 들 수 있다. */
+  @Test
+  void 사장냥이_무기를_빼면_빈손으로_남고_다시_들_수_있다() {
+    CompanyState c = company(1);
+    ENGINE.mental.grant(c, "A", 1);
+    assertThat(c.weapon.grade).isEqualTo("A");
+
+    ENGINE.mental.unequip(c);
+    assertThat(c.weapon).isNull();
+    assertThat(ENGINE.mental.initWeapons(c)).as("빈손을 다시 채우지 않는다").isFalse();
+    assertThat(c.weapon).isNull();
+    assertThat(ENGINE.mental.weaponViews(c)).hasSize(2).noneMatch(CompanyView.Weapon::equipped);
+    ENGINE.mental.unequip(c);
+    assertThat(c.weapon).as("두 번 빼도 그대로").isNull();
+
+    ENGINE.mental.equip(c, "pistol", "F");
+    assertThat(c.weapon.grade).isEqualTo("F");
+    assertThat(c.weaponOff).isFalse();
+  }
+
   /** 매도벽 돌파 스테이지 (#698): 멘탈 스테이지와 따로 차례로 열리고, 보상 규칙은 같으며, 분기 강화율에는 들어가지 않는다. */
   @Test
   void 매도벽_돌파_스테이지는_멘탈_스테이지와_따로_차례로_열린다() {
