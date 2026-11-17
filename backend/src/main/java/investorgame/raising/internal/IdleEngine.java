@@ -111,7 +111,8 @@ class IdleEngine {
   // A buy order's damage is its own number (514): this base times the wall's order scale (the
   // same scale the sell orders and the buy wall's health use, 498) times the buy upgrade. It does
   // not follow the weapon. Matches the app's mental/buyWall.ts BUY_WALL.orderDamage.
-  private static final double BUY_ORDER_DAMAGE = 0.75;
+  // Doubled from 0.75 in 594.
+  private static final double BUY_ORDER_DAMAGE = 1.5;
   // The buy wall answers every sell order with two buy orders, a pair every 0.15 game seconds at
   // the fastest (buyWall.ts shotSeconds - shotJitter).
   private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;

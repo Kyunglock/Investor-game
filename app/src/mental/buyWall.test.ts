@@ -145,11 +145,11 @@ describe('매수벽 붕괴 밀어내기 (#699)', () => {
 })
 
 describe('자동 전투의 매수 주문 피해 (514·573번)', () => {
-  it('무기와도 벽의 깊이와도 따로 센다: 바탕 0.75 + 매수벽 공격 강화가 더한 수량', () => {
-    expect(idleBuyOrderDamage(0)).toBe(0.75)
+  it('무기와도 벽의 깊이와도 따로 센다: 바탕 1.5 + 매수벽 공격 강화가 더한 수량', () => {
+    expect(idleBuyOrderDamage(0)).toBe(1.5)
     // 매수벽 공격 강화는 %가 아니라 더하는 값이다 (579번): 10단계 +100주.
-    expect(idleBuyOrderDamage(100 / SHARES_PER_HP)).toBeCloseTo(0.75 + 100 / 150)
-    expect(sharesOf(idleBuyOrderDamage(1000 / SHARES_PER_HP))).toBe(1113)
+    expect(idleBuyOrderDamage(100 / SHARES_PER_HP)).toBeCloseTo(1.5 + 100 / 150)
+    expect(sharesOf(idleBuyOrderDamage(1000 / SHARES_PER_HP))).toBe(1225)
   })
 
   it('손절은 지금 체력의 절반을 버리고, 벽은 무너지지 않는다 (591번)', () => {
