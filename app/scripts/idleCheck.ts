@@ -937,19 +937,23 @@ try {
     await expect(page.getByTestId('skills')).toBeVisible()
     await expect(page.getByTestId('skill-slot')).toHaveCount(3)
     await expect(page.getByTestId('unique-skill')).toHaveCount(6)
-    await expect(page.getByTestId('ad-skill')).toHaveCount(3)
+    await expect(page.getByTestId('ad-skill')).toHaveCount(0)
+    await expect(page.getByTestId('skills').getByText('광고 스킬', { exact: true })).toHaveCount(0)
     const rally = page.locator('[data-testid=unique-skill][data-code=rally]')
     await expect(rally.getByRole('img', { name: /불장/ })).toBeVisible()
     await expect(rally).toContainText('×2')
-    await expect(rally.getByRole('img', { name: '지속 7초 · 재사용 대기 60초' })).toBeVisible()
     await rally.locator('summary[aria-label="불장 설명"]').click()
+    await expect(rally.getByRole('img', { name: '지속 7초 · 재사용 대기 60초' })).toBeVisible()
     await expect(rally.locator('details')).toHaveAttribute('open', '')
     await expect(
       rally.getByText('사장냥과 고양이의 총이 두 배 빨리 나가요.', { exact: true }),
     ).toBeVisible()
     await rally.locator('summary[aria-label="불장 설명"]').click()
     await page.screenshot({ path: `/tmp/idle-skills-${width}.png` })
-    await rally.getByTestId('skill-equip').click()
+    await page
+      .locator('[data-testid=skill-slot][data-code=rally]')
+      .getByRole('button', { name: '불장 해제' })
+      .click()
     await expect(rally).toHaveAttribute('data-equipped', 'false')
     assert.deepEqual(equips, [{ code: 'rally', equipped: false }])
     await expect(page.locator('[data-testid=skill-slot][data-code]')).toHaveCount(2)
@@ -964,11 +968,13 @@ try {
     // 상한가·손절·물타기 (591번): 칸이 꽉 차 있으면 장착하지 못하고, 하나를 빼면 그 자리에 장착해 전투 화면에 단추가 선다.
     const stopLoss = page.locator('[data-testid=unique-skill][data-code=stopLoss]')
     await expect(stopLoss).toContainText('손절')
-    await expect(stopLoss).toContainText('바로 발동 · 재사용 대기 60초')
+    await stopLoss.locator('summary').click()
+    await expect(stopLoss.getByRole('img', { name: '바로 발동 · 재사용 대기 60초' })).toBeVisible()
+    await stopLoss.locator('summary').click()
     await expect(stopLoss.getByTestId('skill-equip')).toBeDisabled()
-    await expect(stopLoss.getByTestId('skill-equip')).toHaveText('칸 없음')
+    await expect(stopLoss.getByTestId('skill-equip')).toHaveText('장착')
     await expect(page.locator('[data-testid=unique-skill][data-code=limitUp]')).toContainText(
-      '지속 8초',
+      '전부 치명타',
     )
     await expect(page.locator('[data-testid=unique-skill][data-code=averaging]')).toContainText(
       '물타기',
