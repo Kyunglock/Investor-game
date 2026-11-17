@@ -21,6 +21,13 @@ export type TenCard = {
   sound: Parameters<typeof sfx.weaponReveal>[0]
   /** A등급 이상 (574번): 좋은 것을 뽑았다는 느낌이 들게 빛난다 */
   shiny: boolean
+  /** S등급 이상 (576번): 더 좋은 장은 열리기 전의 뜸이 더 길다 */
+  jackpot: boolean
+}
+
+/** 한 장이 뒷면으로 나와 열리기까지의 뜸(ms, 576번): 보통 장은 금방, A등급은 0.5초, S등급 이상은 1초. */
+export function cardSuspense(card: Pick<TenCard, 'shiny' | 'jackpot'>): number {
+  return card.jackpot ? 1000 : card.shiny ? 500 : 220
 }
 
 /** 10연차 단추에 붙는 덤 표시 (526번): 10연차는 열 개 값에 tenCount개가 나온다. 덤이 없으면 그리지 않는다. */
@@ -65,8 +72,11 @@ export function TenReveal({
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [phase, setPhase] = useState<'charge' | 'open' | 'cards' | 'result'>('charge')
-  // 한 장씩 보는 동안 지금 보는 장.
+  // 한 장씩 보는 동안 지금 보는 장과, 그 장이 열렸는가(뒷면 → 앞면, 576번).
   const [at, setAt] = useState(0)
+  // 열린 장의 번호로 적는다: 다음 장으로 넘어가면 그 장은 저절로 뒷면이다.
+  const [openedAt, setOpenedAt] = useState(-1)
+  const opened = openedAt === at
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const sounded = useRef(-1)
   const best = cards?.reduce((a, b) => (b.power > a.power ? b : a), cards[0]) ?? null
@@ -101,16 +111,31 @@ export function TenReveal({
       clearTimeout(reveal)
     }
   }, [cards, reduced, charge])
-  // 한 장이 나올 때마다 그 장의 등급으로 소리와 떨림을 낸다. 빛나는 장은 더 세게.
   const shown = phase === 'cards' ? (cards?.[at] ?? null) : null
+  // 장은 뒷면으로 나온다 (576번). 뜸을 들인 뒤 스스로 열리고, 좋은 장일수록 뜸이 길다. 그동안 뒷면이 떨며 빛을 모은다.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 장이 바뀔 때만 다시 덮는다.
   useEffect(() => {
-    if (!shown || sounded.current === at || reduced) return
+    if (!shown) return
+    if (reduced) {
+      setOpenedAt(at)
+      return
+    }
+    const wait = cardSuspense(shown)
+    if (shown.shiny) sfx.cardTease(wait)
+    else sfx.cardDeal()
+    const open = setTimeout(() => setOpenedAt(at), wait)
+    return () => clearTimeout(open)
+  }, [at, phase === 'cards', reduced])
+  // 열리는 순간 그 장의 등급으로 소리와 떨림을 낸다. 빛나는 장은 더 세게.
+  useEffect(() => {
+    if (!shown || !opened || sounded.current === at || reduced) return
     sounded.current = at
+    sfx.cardFlip()
     sfx.weaponReveal(shown.sound)
-    if (shown.power >= 3) haptic.burst()
+    if (shown.jackpot) haptic.burst()
     else if (shown.shiny) haptic.heavy()
     else haptic.light()
-  }, [shown, at, reduced])
+  }, [shown, opened, at, reduced])
   useEffect(() => {
     if (phase === 'result')
       dialog.current?.querySelector<HTMLButtonElement>('.weapon-reveal-actions button')?.focus()
@@ -118,6 +143,8 @@ export function TenReveal({
   }, [phase])
   const next = () => {
     if (!cards) return
+    // 아직 뒷면이면 누른 것은 열기다.
+    if (!opened) return setOpenedAt(at)
     if (at + 1 >= cards.length) setPhase('result')
     else setAt(at + 1)
   }
@@ -127,7 +154,8 @@ export function TenReveal({
   const fresh = cards?.filter((c) => c.isNew).length ?? 0
   const shiny = cards?.filter((c) => c.shiny).length ?? 0
   // 한 장씩 볼 때는 그 장이, 그 밖에는 가장 좋은 장이 창의 빛을 정한다.
-  const lead = shown ?? best
+  // 뒷면인 동안에는 창이 등급을 미리 알려 주지 않는다.
+  const lead = phase === 'cards' ? (opened ? shown : null) : best
   return createPortal(
     <dialog
       ref={dialog}
@@ -159,7 +187,7 @@ export function TenReveal({
             <p className="ten-single-count" data-testid={`${testId}-count`}>
               {at + 1} / {cards.length}
             </p>
-            {/* 한 장씩 (574번): 누르면 다음 장. 장마다 새로 그려 뒤집히는 연출이 다시 돈다. */}
+            {/* 한 장씩 (574번): 누르면 다음 장. 장마다 새로 그려 뒷면부터 다시 시작한다. */}
             <button
               key={shown.key}
               type="button"
@@ -168,20 +196,39 @@ export function TenReveal({
               data-testid={`${testId}-single`}
               data-new={shown.isNew}
               data-shiny={shown.shiny}
+              data-jackpot={shown.jackpot}
+              data-open={opened}
+              aria-label={opened ? undefined : '뒤집힌 카드 · 누르면 바로 열기'}
               style={{ '--card-color': shown.color } as CSSProperties}
             >
-              {shown.shiny && (
-                <span className="ten-single-wow" aria-hidden="true">
-                  ✦ 대박! ✦
+              {/* 뒷면이었다가 앞면으로 뒤집힌다 (576번). 앞면이 카드의 크기를 정하고 뒷면이 그 위에 겹친다. */}
+              <span className="ten-flip">
+                <span className="ten-face ten-back" aria-hidden="true">
+                  <b className="ten-back-mark">{icon}</b>
                 </span>
-              )}
-              <span className="ten-single-badge">{shown.badge}</span>
-              <span className="ten-single-art">{shown.art}</span>
-              <b className="ten-single-name">{shown.name}</b>
-              <small className="ten-single-note">{shown.note}</small>
+                <span className="ten-face ten-front" aria-hidden={!opened}>
+                  {shown.shiny && (
+                    <span className="ten-single-wow" aria-hidden="true">
+                      ✦ 대박! ✦
+                    </span>
+                  )}
+                  <span className="ten-single-badge">{shown.badge}</span>
+                  <span className="ten-single-art">{shown.art}</span>
+                  <b className="ten-single-name">{shown.name}</b>
+                  <small className="ten-single-note">{shown.note}</small>
+                </span>
+              </span>
+              {/* 열리는 순간의 번쩍임: 빛나는 장에만. */}
+              {shown.shiny && opened && <i className="ten-burst" aria-hidden="true" />}
             </button>
             <small className="ten-single-hint">
-              {at + 1 < cards.length ? '카드를 누르면 다음 카드' : '카드를 누르면 결과 모아 보기'}
+              {!opened
+                ? shown.shiny
+                  ? '두근두근…'
+                  : '카드가 열려요'
+                : at + 1 < cards.length
+                  ? '카드를 누르면 다음 카드'
+                  : '카드를 누르면 결과 모아 보기'}
             </small>
             <button
               type="button"

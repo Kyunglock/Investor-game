@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { cardSuspense } from '../mental/TenReveal'
 import { shinyWeapon } from '../mental/weaponRevealPlan'
 import { CAT_GRADE_PERCENT, CAT_ODDS, catRevealPlan, shinyCat, sortCats } from './catGrade'
 
@@ -12,6 +13,12 @@ describe('고양이 등급 (539번)', () => {
     expect((['C', 'B', 'A', 'S'] as const).map(shinyCat)).toEqual([false, false, true, true])
     expect((['F', 'E', 'D', 'C', 'B'] as const).some(shinyWeapon)).toBe(false)
     expect((['A', 'S', 'SS', 'SSS', 'SR', 'UR', 'LR'] as const).every(shinyWeapon)).toBe(true)
+  })
+
+  it('좋은 장일수록 열리기 전의 뜸이 길다: A등급 0.5초, S등급 이상 1초 (576번)', () => {
+    expect(cardSuspense({ shiny: false, jackpot: false })).toBeLessThan(300)
+    expect(cardSuspense({ shiny: true, jackpot: false })).toBe(500)
+    expect(cardSuspense({ shiny: true, jackpot: true })).toBe(1000)
   })
 
   it('등급이 높을수록 뽑기 연출이 길고 세다', () => {

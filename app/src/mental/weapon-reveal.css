@@ -408,21 +408,135 @@
 }
 .ten-single {
   position: relative;
-  display: flex;
   width: min(230px, 70vw);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  perspective: 900px;
+  animation: ten-single-in 0.3s ease-out both;
+}
+/* 뒷면이었다가 앞면으로 (576번): 두 면을 등을 맞대어 두고 통째로 돌린다. */
+.ten-flip {
+  position: relative;
+  display: block;
+  transform-style: preserve-3d;
+  transform: rotateY(180deg);
+  transition: transform 0.5s cubic-bezier(0.2, 1.25, 0.35, 1);
+}
+.ten-single[data-open="true"] .ten-flip {
+  transform: none;
+}
+.ten-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 20px;
+}
+.ten-front {
+  position: relative;
+  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding: 18px 12px 20px;
   border: 2.5px solid var(--card-color);
-  border-radius: 20px;
-  background: radial-gradient(
-    circle at 50% 32%,
-    color-mix(in srgb, var(--card-color) 30%, transparent),
-    #ffffff10 72%
-  );
-  color: inherit;
-  animation: ten-single-in 0.42s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  background:
+    radial-gradient(
+      circle at 50% 32%,
+      color-mix(in srgb, var(--card-color) 30%, transparent),
+      #ffffff10 72%
+    ),
+    #1b1930;
+}
+.ten-back {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transform: rotateY(180deg);
+  border: 2.5px solid #8f86b8;
+  background:
+    repeating-linear-gradient(45deg, #ffffff0a 0 10px, transparent 10px 20px),
+    linear-gradient(160deg, #3a3460, #1d1a35);
+}
+.ten-back-mark {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border: 2px solid #ffffff40;
+  border-radius: 50%;
+  background: #ffffff12;
+  font-size: 40px;
+}
+/* 뜸 (576번): 좋은 장은 열리기 전에 뒷면이 떨며 빛을 모은다. A등급 0.5초, S등급 이상 1초. */
+.ten-single[data-shiny="true"]:not([data-open="true"]) {
+  animation:
+    ten-single-in 0.3s ease-out both,
+    ten-tease-shake 0.12s linear 0.1s infinite;
+}
+.ten-single[data-shiny="true"] .ten-back {
+  border-color: #fff3b0;
+  animation: ten-tease-glow 0.5s ease-in both;
+}
+.ten-single[data-jackpot="true"] .ten-back {
+  animation-duration: 1s;
+}
+.ten-single[data-shiny="true"] .ten-back-mark {
+  border-color: #fff3b0;
+  color: #fff3b0;
+  animation: ten-shiny-wow 0.25s ease-in-out infinite alternate;
+}
+/* 열리는 순간: 카드 뒤에서 빛이 터져 나간다. */
+.ten-burst {
+  position: absolute;
+  z-index: -1;
+  inset: -30%;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 12%, var(--card-color) 30%, transparent 68%);
+  animation: ten-burst 0.7s ease-out both;
+}
+.ten-single[data-jackpot="true"] .ten-burst {
+  inset: -60%;
+  animation-duration: 0.95s;
+}
+@keyframes ten-tease-shake {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  25% {
+    translate: -3px 1px;
+    rotate: -1.2deg;
+  }
+  75% {
+    translate: 3px -1px;
+    rotate: 1.2deg;
+  }
+}
+@keyframes ten-tease-glow {
+  from {
+    box-shadow: 0 0 0 0 transparent;
+    filter: brightness(1);
+  }
+  to {
+    box-shadow:
+      0 0 0 3px #fff3b0,
+      0 0 46px 14px var(--card-color);
+    filter: brightness(1.5);
+  }
+}
+@keyframes ten-burst {
+  from {
+    opacity: 0.95;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
 }
 .ten-single-badge {
   font-size: 16px;
@@ -475,7 +589,7 @@
 @keyframes ten-single-in {
   from {
     opacity: 0;
-    transform: rotateY(90deg) scale(0.7);
+    transform: translateY(26px) scale(0.8);
   }
   to {
     opacity: 1;
@@ -484,7 +598,7 @@
 }
 
 /* 빛나는 장 (574번): A등급부터는 좋은 것을 뽑았다는 느낌이 들게 테두리가 빛나고, 빛줄기가 훑고 지나간다. */
-.ten-single[data-shiny="true"],
+.ten-single[data-shiny="true"] .ten-front,
 .ten-card[data-shiny="true"] {
   overflow: hidden;
   border-color: #fff3b0;
@@ -492,9 +606,9 @@
     0 0 0 2px var(--card-color),
     0 0 26px 4px var(--card-color),
     inset 0 0 22px color-mix(in srgb, var(--card-color) 55%, transparent);
-  animation:
-    ten-single-in 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both,
-    ten-shiny-pulse 1.4s ease-in-out 0.5s infinite alternate;
+}
+.ten-single[data-shiny="true"][data-open="true"] .ten-front {
+  animation: ten-shiny-pulse 1.4s ease-in-out 0.6s infinite alternate;
 }
 .ten-card[data-shiny="true"] {
   position: relative;
@@ -505,7 +619,7 @@
     ten-card-flip 0.38s ease-out both,
     ten-shiny-pulse 1.4s ease-in-out 0.5s infinite alternate;
 }
-.ten-single[data-shiny="true"]::after,
+.ten-single[data-shiny="true"] .ten-front::after,
 .ten-card[data-shiny="true"]::after {
   content: "";
   position: absolute;
