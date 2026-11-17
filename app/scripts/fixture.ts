@@ -257,6 +257,7 @@ export const company = {
     pointsPerStep: 300,
     step: 3,
     claimable: 0,
+    missionsReady: 1,
     steps: Array.from({ length: 30 }, (_, i) => {
       const step = i + 1
       return {
@@ -282,7 +283,12 @@ export const company = {
       },
       { code: 'merge', title: '무기 합성 5번', count: 2, target: 5, every: 5, points: 30 },
       { code: 'attend', title: '출석 9일', count: 8, target: 9, every: 1, points: 100 },
-    ].map((m) => ({ ...m, earned: Math.floor(m.count / m.every) * m.points })),
+      // 출석 미션은 포인트를 아직 받지 않았다 (572번): 눌러서 받는다.
+    ].map((m) => ({
+      ...m,
+      earned: Math.floor(m.count / m.every) * m.points - (m.code === 'attend' ? 100 : 0),
+      ready: m.code === 'attend' ? 100 : 0,
+    })),
     lastRewards: [],
   },
   gacha: {

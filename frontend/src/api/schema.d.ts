@@ -323,6 +323,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/pass/missions/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 시즌패스 미션의 포인트를 받는다 (decisions.md 572번)
+         * @description 미션의 센 수가 문턱에 닿으면 그 포인트를 받을 수 있게 되고(pass.missions[].ready), 이 요청으로 받아야 pass.points에 들어온다.
+         *     code를 실으면 그 미션의 것을, 본문이 없거나 code가 없으면 받을 수 있는 것을 모두 받는다. 없는 미션이거나 받을 포인트가 없으면 400.
+         */
+        post: operations["claimPassMission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/attendance": {
         parameters: {
             query?: never;
@@ -924,6 +945,8 @@ export interface components {
                 step: number;
                 /** @description 받을 수 있는 보상의 수 */
                 claimable: number;
+                /** @description 받을 포인트가 있는 미션의 수 (572번) */
+                missionsReady: number;
                 /** @description 단계마다의 보상, 1단계부터 */
                 steps: {
                     step: number;
@@ -966,6 +989,11 @@ export interface components {
                      * @description 이 미션으로 이번 시즌에 받은 포인트
                      */
                     earned: number;
+                    /**
+                     * Format: int64
+                     * @description 문턱에 닿았지만 아직 받지 않은 포인트. 눌러서 받는다 (572번)
+                     */
+                    ready: number;
                 }[];
                 /** @description 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다 */
                 lastRewards: {
@@ -2092,6 +2120,36 @@ export interface operations {
         };
         responses: {
             /** @description 보상을 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    claimPassMission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description 받을 미션의 코드. 없으면 받을 수 있는 것을 모두 받는다 */
+                    code?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 포인트를 받은 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

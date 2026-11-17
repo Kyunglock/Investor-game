@@ -75,6 +75,7 @@ public record CompanyView(
    * @param step 지금 도달한 단계(0부터)
    * @param claimable 받을 수 있는 보상의 수
    * @param steps 단계마다의 보상, 1단계부터
+   * @param missionsReady 받을 포인트가 있는 미션의 수 (572번)
    * @param missions 포인트를 주는 미션과 그 진행도 (570번)
    * @param lastRewards 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다
    */
@@ -88,6 +89,7 @@ public record CompanyView(
       int pointsPerStep,
       int step,
       int claimable,
+      int missionsReady,
       List<PassStep> steps,
       List<PassMission> missions,
       List<PassReward> lastRewards) {}
@@ -102,9 +104,17 @@ public record CompanyView(
    * @param every 포인트를 받는 간격
    * @param points target에 닿으면 받는 포인트
    * @param earned 이 미션으로 이번 시즌에 받은 포인트
+   * @param ready 문턱에 닿았지만 아직 받지 않은 포인트. 눌러서 받는다 (572번)
    */
   public record PassMission(
-      String code, String title, long count, long target, int every, int points, long earned) {}
+      String code,
+      String title,
+      long count,
+      long target,
+      int every,
+      int points,
+      long earned,
+      long ready) {}
 
   /**
    * 시즌패스의 한 단계. 돈은 주지 않는다 (570번).

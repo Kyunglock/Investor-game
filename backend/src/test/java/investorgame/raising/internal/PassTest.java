@@ -88,7 +88,7 @@ class PassTest {
   }
 
   @Test
-  void 포인트는_미션을_깨면_들어온다() {
+  void 미션을_깨면_포인트를_받을_수_있고_눌러야_들어온다() {
     CompanyState c = opened();
     assertThat(rewards.passView(c).missions())
         .extracting(m -> m.code())
@@ -96,30 +96,51 @@ class PassTest {
     assertThat(mission(c, "wall").title()).isEqualTo("매도벽 50개 통과");
     assertThat(mission(c, "wall").target()).isEqualTo(50);
     assertThat(mission(c, "wall").points()).isEqualTo(30);
-    // 출석 하루에 100.
+    assertThatThrownBy(() -> rewards.claimPassMission(c, null))
+        .as("받을 것이 없다")
+        .isInstanceOf(InvalidRequestException.class);
+    // 출석 하루에 100: 저절로 들어오지 않고 받을 수 있게 된다 (572번).
     rewards.attend(c);
-    assertThat(c.passExp).isEqualTo(100);
+    assertThat(c.passExp).isZero();
     assertThat(mission(c, "attend").count()).isEqualTo(1);
     assertThat(mission(c, "attend").title()).isEqualTo("출석 2일");
+    assertThat(mission(c, "attend").ready()).isEqualTo(100);
+    assertThat(mission(c, "attend").earned()).isZero();
+    assertThat(rewards.passView(c).missionsReady()).isEqualTo(1);
+    rewards.claimPassMission(c, "attend");
+    assertThat(c.passExp).isEqualTo(100);
+    assertThat(mission(c, "attend").ready()).isZero();
     assertThat(mission(c, "attend").earned()).isEqualTo(100);
+    assertThat(rewards.passView(c).missionsReady()).isZero();
+    assertThatThrownBy(() -> rewards.claimPassMission(c, "attend"))
+        .as("두 번 받지 못한다")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> rewards.claimPassMission(c, "nothing"))
+        .as("없는 미션")
+        .isInstanceOf(InvalidRequestException.class);
     // 강화는 50번마다 30: 49번까지는 없다.
     rewards.upgraded(c, 49);
-    assertThat(c.passExp).isEqualTo(100);
     assertThat(mission(c, "upgrade").count()).isEqualTo(49);
     assertThat(mission(c, "upgrade").target()).isEqualTo(50);
+    assertThat(mission(c, "upgrade").ready()).isZero();
     rewards.upgraded(c, 1);
-    assertThat(c.passExp).isEqualTo(130);
+    assertThat(mission(c, "upgrade").ready()).isEqualTo(30);
     assertThat(mission(c, "upgrade").title()).isEqualTo("강화 100번");
-    // 한꺼번에 여러 문턱을 넘으면 그만큼 받는다.
+    // 받지 않고 여러 문턱을 넘으면 그만큼 쌓여 한 번에 받는다.
     rewards.upgraded(c, 100);
+    assertThat(mission(c, "upgrade").ready()).isEqualTo(90);
+    assertThat(c.passExp).isEqualTo(100);
+    rewards.claimPassMission(c, "upgrade");
     assertThat(c.passExp).isEqualTo(190);
-    // 뽑기는 10번마다 30, 합성은 5번마다 30.
+    // 뽑기는 10번마다 30, 합성은 5번마다 30. 모두 받기는 받을 수 있는 미션을 다 받는다.
     rewards.drew(c, 11);
-    assertThat(c.passExp).isEqualTo(220);
     for (int i = 0; i < 5; i++) {
       rewards.merged(c);
     }
+    assertThat(rewards.passView(c).missionsReady()).isEqualTo(2);
+    rewards.claimPassMission(c, null);
     assertThat(c.passExp).isEqualTo(250);
+    assertThat(rewards.passView(c).missionsReady()).isZero();
     // 매도벽: 통과한 벽을 센다.
     idle.beat(c, "one", 0, "start");
     c.idle.damage = IdleEngine.maxHp(1) - 1;
@@ -127,18 +148,19 @@ class PassTest {
     idle.beat(c, "one", 1, "tick", List.of(new IdleHit(1, "bullet", 1)));
     assertThat(c.idle.wall).isEqualTo(2);
     assertThat(mission(c, "wall").count()).isEqualTo(1);
-    assertThat(c.passExp).as("벽 하나로는 아직 없다").isEqualTo(250);
+    assertThat(mission(c, "wall").ready()).as("벽 하나로는 아직 없다").isZero();
     engine.pass.progress(c, "wall", 49, idle.todayDate());
-    assertThat(c.passExp).as("쉰 번째 벽").isEqualTo(280);
+    assertThat(mission(c, "wall").ready()).as("쉰 번째 벽").isEqualTo(30);
     assertThat(mission(c, "wall").title()).isEqualTo("매도벽 100개 통과");
     // 보스는 한 번에 30.
     engine.pass.progress(c, "boss", 1, idle.todayDate());
+    rewards.claimPassMission(c, null);
     assertThat(c.passExp).isEqualTo(310);
     assertThat(rewards.passView(c).points()).isEqualTo(310);
     assertThat(rewards.passView(c).step()).isEqualTo(1);
     // 없는 미션은 아무 일도 없다.
     engine.pass.progress(c, "nothing", 100, idle.todayDate());
-    assertThat(c.passExp).isEqualTo(310);
+    assertThat(rewards.passView(c).missionsReady()).isZero();
     // 마지막 단계를 채우면 더 쌓이지 않는다.
     rewards.addPassExp(c, 100_000);
     assertThat(c.passExp).isEqualTo(9000);
@@ -156,7 +178,31 @@ class PassTest {
     assertThat(c.idle.wall).isEqualTo(51);
     assertThat(mission(c, "boss").count()).isEqualTo(1);
     assertThat(mission(c, "wall").count()).isEqualTo(1);
-    assertThat(c.passExp).isEqualTo(30);
+    assertThat(mission(c, "boss").ready()).isEqualTo(30);
+    assertThat(c.passExp).as("눌러서 받기 전에는 들어오지 않는다").isZero();
+  }
+
+  @Test
+  void 포인트가_저절로_들어오던_때의_저장은_닿은_문턱을_두_번_주지_않는다() throws Exception {
+    opened();
+    JsonMapper json = JsonMapper.builder().build();
+    // 572번 전: 벽 120개로 60, 출석 하루로 100이 이미 들어와 있다.
+    CompanyState old =
+        json.readValue(
+            "{\"capital\":1000,\"passSeason\":1,\"passExp\":160,\"passRules\":2,"
+                + "\"passMissions\":{\"wall\":120,\"attend\":1}}",
+            CompanyState.class);
+    CompanyView.Pass pass = rewards.passView(old);
+    assertThat(pass.points()).isEqualTo(160);
+    assertThat(pass.missionsReady()).isZero();
+    assertThat(mission(old, "wall").earned()).isEqualTo(60);
+    assertThatThrownBy(() -> rewards.claimPassMission(old, null))
+        .isInstanceOf(InvalidRequestException.class);
+    // 그 뒤에 닿은 문턱부터 눌러서 받는다.
+    engine.pass.progress(old, "wall", 30, idle.todayDate());
+    assertThat(mission(old, "wall").ready()).isEqualTo(30);
+    rewards.claimPassMission(old, "wall");
+    assertThat(rewards.passView(old).points()).isEqualTo(190);
   }
 
   @Test
@@ -231,6 +277,8 @@ class PassTest {
     c.diamonds = 0;
     rewards.addPassExp(c, 1500);
     rewards.upgraded(c, 20);
+    rewards.drew(c, 10);
+    assertThat(rewards.passView(c).missionsReady()).isEqualTo(1);
     rewards.claimPass(c, 1, random);
     assertThat(c.diamonds).isEqualTo(50);
     // 저장하고 다시 읽어도 그대로다.
@@ -243,6 +291,7 @@ class PassTest {
     assertThat(next.season()).isEqualTo(2);
     assertThat(next.points()).isZero();
     assertThat(next.missions()).as("미션도 처음부터 센다").allMatch(m -> m.count() == 0);
+    assertThat(next.missionsReady()).as("받지 않은 미션 포인트도 사라졌다").isZero();
     assertThat(next.step()).isZero();
     assertThat(next.claimable()).as("받지 않은 2~5단계는 사라졌다").isZero();
     assertThat(next.steps()).noneMatch(s -> s.claimed());
@@ -278,6 +327,7 @@ class PassTest {
     // 한 번만 옮긴다.
     assertThat(rewards.passView(old).points()).isEqualTo(1350);
     rewards.attend(old);
+    rewards.claimPassMission(old, "attend");
     assertThat(rewards.passView(old).points()).isEqualTo(1450);
   }
 }

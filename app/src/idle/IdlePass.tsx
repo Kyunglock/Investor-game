@@ -16,33 +16,35 @@ import {
   rewardsText,
   stepProgress,
   stepState,
+  waiting,
 } from './pass'
 
 /**
- * 시즌패스 (decisions.md 529·571번). 미션을 깨서 포인트를 모으면 단계 보상을 받는다. 돌파 화면 위쪽의 패스 단추(받을 보상의 수를 단다)와 시즌패스 시트다. 스스로 뜨지 않는다: 단추로 연다.
+ * 시즌패스 (decisions.md 529·571번). 미션을 깨고 눌러서 포인트를 받아(572번) 모으면 단계 보상을 받는다. 돌파 화면 위쪽의 패스 단추(받을 보상과 미션의 수를 단다)와 시즌패스 시트다. 스스로 뜨지 않는다: 단추로 연다.
  */
 export function IdlePass({ company }: { company: Company }) {
   const pass = company.pass
   const [open, setOpen] = useState(false)
   // 시즌이 곧 끝나는데 받을 것이 남았으면 배지가 깜빡인다.
-  const hurry = pass.endingSoon && pass.claimable > 0
+  const count = waiting(pass)
+  const hurry = pass.endingSoon && count > 0
   return (
     <>
       <button
         type="button"
         className="idle-quick-button"
-        aria-label={pass.claimable > 0 ? `시즌패스 받을 보상 ${pass.claimable}개` : '시즌패스'}
+        aria-label={count > 0 ? `시즌패스 받을 것 ${count}개` : '시즌패스'}
         data-testid="idle-pass"
         onClick={() => setOpen(true)}
       >
         <IdleIcon name="pass" />
-        {pass.claimable > 0 && (
+        {count > 0 && (
           <b
             className={`idle-quick-count ${hurry ? 'is-hurry' : ''}`}
             data-testid="pass-badge"
             aria-hidden="true"
           >
-            {pass.claimable}
+            {count}
           </b>
         )}
       </button>
@@ -86,6 +88,20 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
     sfx.cash()
     setGot(rewardsText(after.pass.lastRewards, after.weapons ?? []))
   }
+  // 미션의 포인트는 눌러서 받는다 (572번). 받은 포인트는 서버가 준 받을 포인트(ready)로 적는다.
+  const take = async (code: string, points: number) => {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    const after = await useRaisingStore.getState().claimPassMission(code)
+    setBusy(false)
+    if (!after) {
+      setError(useRaisingStore.getState().error ?? '연결이 끊겼어요. 다시 시도해 주세요.')
+      return
+    }
+    sfx.cash()
+    setGot(`포인트 +${points.toLocaleString()}P`)
+  }
   const progress = stepProgress(pass)
   return (
     <Sheet title="시즌패스" onClose={onClose} testId="pass" className="idle-sheet idle-pass-sheet">
@@ -98,7 +114,7 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
           {leftText(pass.secondsLeft)}
         </span>
       </p>
-      {pass.endingSoon && pass.claimable > 0 && (
+      {pass.endingSoon && waiting(pass) > 0 && (
         <p className="idle-pass-ending" role="alert" data-testid="pass-ending">
           시즌이 곧 끝나요. 보상을 받아 가세요
         </p>
@@ -145,16 +161,33 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
           모두 받기 <small className="idle-pass-all-count">{pass.claimable}개</small>
         </button>
       )}
-      {/* 미션 (570번): 깨면 포인트가 들어온다. 문턱에 닿으면 다음 문턱으로 넘어가며 되풀이된다. */}
-      <h4 className="idle-pass-missions-title">미션 · 깨면 포인트를 받아요</h4>
+      {/* 미션 (570·572번): 깨면 포인트를 눌러서 받는다. 문턱에 닿으면 다음 문턱으로 넘어가며 되풀이된다. */}
+      <h4 className="idle-pass-missions-title">미션 · 깨고 눌러서 포인트를 받아요</h4>
       <ul className="idle-pass-missions" data-testid="pass-missions">
         {pass.missions.map((mission) => {
           const progress = missionProgress(mission)
           return (
-            <li key={mission.code} data-testid="pass-mission" data-code={mission.code}>
+            <li
+              key={mission.code}
+              className={mission.ready > 0 ? 'is-ready' : ''}
+              data-testid="pass-mission"
+              data-code={mission.code}
+            >
               <span className="idle-pass-mission-name">{mission.title}</span>
               <span className="idle-pass-mission-count">{progress.text}</span>
-              <b className="idle-pass-mission-points">{mission.points}P</b>
+              {mission.ready > 0 ? (
+                <button
+                  type="button"
+                  className="idle-pass-mission-claim"
+                  disabled={busy}
+                  onClick={() => void take(mission.code, mission.ready)}
+                  data-testid="pass-mission-claim"
+                >
+                  받기 +{mission.ready.toLocaleString()}P
+                </button>
+              ) : (
+                <b className="idle-pass-mission-points">{mission.points}P</b>
+              )}
               <div
                 className="idle-pass-bar"
                 role="progressbar"
