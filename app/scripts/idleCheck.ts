@@ -905,6 +905,15 @@ try {
       1,
       'menu labels stay on one line',
     )
+    // 환생 아이콘은 안내창만 열며 실제 환생 확인을 건너뛰지 않는다.
+    const rebirthShortcut = page.getByTestId('rebirth-shortcut')
+    await expect(rebirthShortcut).toBeVisible()
+    await expect(rebirthShortcut.locator('img')).toHaveJSProperty('complete', true)
+    await rebirthShortcut.click()
+    await expect(page.getByTestId('rebirth')).toBeVisible()
+    await expect(page.getByTestId('rebirth-confirm')).toHaveCount(0)
+    await page.getByTestId('idle-menu').getByRole('button', { name: '닫기 ✕' }).click()
+    await expect(rebirthShortcut).toBeFocused()
     // 고유 스킬 (587번): 장착한 셋이 전투 화면 오른쪽에 선다. 광고 스킬 (588번)은 왼쪽에 늘 셋이다.
     await expect(page.getByTestId('idle-active')).toHaveCount(3)
     await expect(page.getByTestId('idle-ad-active')).toHaveCount(3)

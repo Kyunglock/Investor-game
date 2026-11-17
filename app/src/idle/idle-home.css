@@ -2348,3 +2348,27 @@
 .idle-cat-feed:disabled {
   opacity: 0.5;
 }
+
+/* 환생 바로가기: 상단 재화 아래, 전투 화면 왼쪽 위. */
+.idle-rebirth-shortcut {
+  position: absolute;
+  z-index: 1;
+  top: calc(max(12px, env(safe-area-inset-top)) + 46px);
+  left: 12px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.idle-rebirth-shortcut img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.idle-rebirth-shortcut:focus-visible {
+  outline: 3px solid #714bb7;
+  outline-offset: 2px;
+}
