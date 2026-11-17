@@ -10,7 +10,7 @@ export const BOOST = 3
 
 export const ACTIVES = {
   /** 매수세례: 매수벽이 이 시간 동안 매수 주문 shots장을 쏟아 낸다. 한 장은 보통 매수 주문의 power배다. */
-  barrage: { seconds: 6, shots: 40, power: 3 },
+  barrage: { seconds: 6, shots: 40, power: 1 },
   /** 불장: 이 시간 동안 사장냥과 고양이의 총이 fire배 빨리 나간다. */
   rally: { seconds: 10, fire: 2 },
   /** 방어선 구축: 매수벽이 바로 다시 서고 이 시간 동안 깎이지 않는다. */
@@ -83,7 +83,7 @@ export const ACTIVE_HINTS: Record<ActiveCode, string> = {
 
 /** 스킬 탭에 적는 설명 (587번). */
 export const ACTIVE_NOTES: Record<ActiveCode, string> = {
-  barrage: '매수벽이 매수 주문 40장을 한꺼번에 쏟아 내요. 한 장이 보통 매수 주문의 3배예요.',
+  barrage: '매수벽이 매수 주문 40장을 한꺼번에 쏟아 내요.',
   rally: '사장냥과 고양이의 총이 두 배 빨리 나가요.',
   fortify: '매수벽이 바로 다시 서고, 그동안 깎이지 않아요.',
   limitUp: '사장냥과 고양이의 총알이 모두 치명타가 돼요.',

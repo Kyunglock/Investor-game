@@ -107,7 +107,8 @@ class IdleEngine {
   private static final double BOOST_GRACE = 2;
   // Matches the app's mental/actives.ts.
   private static final int BARRAGE_SHOTS = 40;
-  private static final double BARRAGE_POWER = 3;
+  // One barrage order is a plain buy order (601): it was three times one before.
+  private static final double BARRAGE_POWER = 1;
   // A buy order's damage is its own number (514): this base times the wall's order scale (the
   // same scale the sell orders and the buy wall's health use, 498) times the buy upgrade. It does
   // not follow the weapon. Matches the app's mental/buyWall.ts BUY_WALL.orderDamage.
