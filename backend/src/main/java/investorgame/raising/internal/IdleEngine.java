@@ -1176,14 +1176,17 @@ class IdleEngine {
         throw new InvalidRequestException("출전 구성이 바뀌었어요. 다시 골라 주세요");
       }
       s.fielded.set(s.fielded.indexOf(replaceCode), code);
+      // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번).
+      s.catWeapons.remove(replaceCode);
     } else if (fielded) {
       if (s.fielded.contains(code)) return;
       if (s.fielded.size() >= FIELD_SLOTS) {
         throw new InvalidRequestException("출전 칸이 꽉 찼다: " + FIELD_SLOTS + "마리까지 출전한다");
       }
       s.fielded.add(code);
-    } else {
-      s.fielded.remove(code);
+    } else if (s.fielded.remove(code)) {
+      // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번): 그 무기는 다른 고양이가 바로 들 수 있다.
+      s.catWeapons.remove(code);
     }
     s.hitCredits = new double[KINDS];
   }

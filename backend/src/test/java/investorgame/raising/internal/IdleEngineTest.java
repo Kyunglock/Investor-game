@@ -1313,6 +1313,25 @@ class IdleEngineTest {
   }
 
   @Test
+  void 출전에서_빠진_고양이는_무기를_내려놓는다() {
+    start(16);
+    for (String code : List.of("sky", "mint", "night")) state.idle.cats.put(code, 1);
+    state.idle.fielded = new java.util.ArrayList<>(List.of("sky", "mint"));
+    for (String code : List.of("sky", "mint", "night"))
+      state.idle.catWeapons.put(code, new CompanyState.Weapon("rifle", "S"));
+    // 빼면 그 고양이의 무기만 풀린다 (598번).
+    engine.fieldCat(state, "sky", false);
+    assertThat(state.idle.catWeapons).containsOnlyKeys("mint", "night");
+    // 교체로 빠져도 풀린다. 새로 들어온 고양이가 들던 무기는 그대로다.
+    engine.fieldCat(state, "night", true, "mint");
+    assertThat(state.idle.catWeapons).containsOnlyKeys("night");
+    // 쉬는 고양이를 다시 빼도(이미 쉬는 중) 아무 일도 없다.
+    state.idle.catWeapons.put("sky", new CompanyState.Weapon("rifle", "S"));
+    engine.fieldCat(state, "sky", false);
+    assertThat(state.idle.catWeapons).containsOnlyKeys("night", "sky");
+  }
+
+  @Test
   void 교체_대상이_바뀌었거나_미보유이면_기존_팀을_보존한다() {
     start(16);
     state.idle.cats.put("sky", 1);
