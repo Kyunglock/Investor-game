@@ -907,8 +907,8 @@ try {
     await expect(boost).toContainText('광고')
     await expect(boost).toContainText('공격력 3배')
     await boost.click()
-    await expect(page.getByTestId('idle-raid')).toContainText('공격력 3배!!')
-    assert.deepEqual(usedActives, [{ code: 'boostDamage', ad: true }])
+    // The banner is not checked here: a monster raid's notice uses the same strip and may replace it.
+    await expect.poll(() => usedActives).toEqual([{ code: 'boostDamage', ad: true }])
     await expect(boost).toContainText('60초 남음')
     await expect(boost).toBeDisabled()
     await expect(page.locator('[data-testid=idle-ad-active][data-code=boostFire]')).toBeEnabled()
