@@ -13,9 +13,7 @@ export function App() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-5 px-4 py-6 text-center">
-      <h1 className="font-pen text-[40px] font-normal leading-tight text-pen">
-        매도벽 돌파냥
-      </h1>
+      <h1 className="font-pen text-[40px] font-normal leading-tight text-pen">매도벽 돌파냥</h1>
       <p className="text-sm text-muted">게임은 앱 화면에서 해요.</p>
       <a
         href={APP_URL}
