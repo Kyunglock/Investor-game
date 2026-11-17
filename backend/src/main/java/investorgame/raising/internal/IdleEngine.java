@@ -56,12 +56,12 @@ class IdleEngine {
   private static final int KINDS = SKILLS + 4;
   private static final int BARRAGE = SKILLS + 1;
   private static final int BUY = SKILLS + 2;
-  // 손절 (590): one hit per press.
+  // 손절 (591): one hit per press.
   private static final int STOP_LOSS = SKILLS + 3;
   // Active skills (503): the player presses them. Seconds are game seconds (SPEED times real time).
   // barrage: the buy wall pours buy orders; rally: every gun fires twice as fast; fortify: the buy
   // wall is rebuilt and cannot be hurt (the wall is the screen's, so the server only keeps time).
-  // Three more came in 590. limitUp (상한가): every bullet is a critical hit; a critical hit is
+  // Three more came in 591. limitUp (상한가): every bullet is a critical hit; a critical hit is
   // already the most one bullet may do here, so the server only keeps time. stopLoss (손절): the
   // screen gives up half of the buy wall for one big hit on the sell wall. averaging (물타기): the
   // buy orders hit harder the more the buy wall has lost.
@@ -91,10 +91,10 @@ class IdleEngine {
   /** The 고유 스킬 a company starts with equipped (587): the first three. */
   private static final int STARTING = 3;
 
-  /** 손절 (590번): 매수벽을 가득 찬 채로 절반 버렸을 때의 한 방이 매수 주문 이만큼이다. Matches the app's mental/actives.ts. */
+  /** 손절 (591번): 매수벽을 가득 찬 채로 절반 버렸을 때의 한 방이 매수 주문 이만큼이다. Matches the app's mental/actives.ts. */
   static final double STOP_LOSS_ORDERS = 240;
 
-  /** 물타기 (590번): 매수 주문이 가장 세질 때의 배수. Matches the app's mental/actives.ts. */
+  /** 물타기 (591번): 매수 주문이 가장 세질 때의 배수. Matches the app's mental/actives.ts. */
   static final double AVERAGING_MAX = 3;
 
   /** 고유 스킬 장착 칸 (587번). */
@@ -828,7 +828,7 @@ class IdleEngine {
             boost(s, "boostFire", s.activeSeconds));
     double damageBoost = boost(s, "boostDamage", s.activeSeconds);
     double buyBoost = boost(s, "boostBuy", s.activeSeconds);
-    // 물타기 (590): the screen knows how much of the buy wall is gone; here its most counts.
+    // 물타기 (591): the screen knows how much of the buy wall is gone; here its most counts.
     double averaging = running(s, "averaging", s.activeSeconds) ? AVERAGING_MAX : 1;
     s.activeSeconds += active;
     // 물가 (505번): 시간 수입과 벽 보상은 그 벽의 물가만큼 크다.
@@ -951,7 +951,7 @@ class IdleEngine {
       s.damage += amount;
       dealt += amount;
     }
-    // 손절 (590): the one big hit the press paid for. It is a buy-side hit, so 매수공격 3배 counts;
+    // 손절 (591): the one big hit the press paid for. It is a buy-side hit, so 매수공격 3배 counts;
     // 물타기 does not.
     double stopLossMax = buyBoost * buyOrder(c) * STOP_LOSS_ORDERS;
     for (IdleHit hit : hits) {

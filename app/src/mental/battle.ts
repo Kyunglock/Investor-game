@@ -755,7 +755,7 @@ class BattleScene extends Phaser.Scene {
   private rallyUntil = 0
   /** 광고 스킬 (588번): 배수가 끝나는 전투 초. */
   private boostUntil: Record<BoostCode, number> = { boostFire: 0, boostDamage: 0, boostBuy: 0 }
-  /** 상한가·물타기 (590번)가 끝나는 전투 초, 그리고 눌러 놓고 아직 치지 못한 손절. */
+  /** 상한가·물타기 (591번)가 끝나는 전투 초, 그리고 눌러 놓고 아직 치지 못한 손절. */
   private limitUpUntil = 0
   private averagingUntil = 0
   private stopLossPending = false
@@ -975,7 +975,7 @@ class BattleScene extends Phaser.Scene {
         bullet.disableBody(true, true)
       }
       const kind = bullet.kind
-      // 상한가 (590번): 도는 동안에는 모든 총알이 치명타다.
+      // 상한가 (591번): 도는 동안에는 모든 총알이 치명타다.
       const roll = this.elapsed < this.limitUpUntil ? 0 : Math.random()
       const shot = weaponDamage(kind, bullet.damage, roll, bullet.critical - 1)
       if (kind === 'smg') {
@@ -2423,7 +2423,7 @@ class BattleScene extends Phaser.Scene {
       : this.loadout.damage * (BUY_WALL.orderDamage + this.loadout.buyBonus)
   }
 
-  /** 물타기 (590번): 도는 동안 매수 주문이 매수벽이 깎인 만큼 세진다. */
+  /** 물타기 (591번): 도는 동안 매수 주문이 매수벽이 깎인 만큼 세진다. */
   private get averaging() {
     return this.buyWall && this.elapsed < this.averagingUntil
       ? averagingMult(this.buyWall.hp, this.buyWall.maxHp)
@@ -2431,7 +2431,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 손절 (590번): 매수벽의 남은 체력 절반을 버리고 그만큼 매도벽을 한 번 친다. 매수벽이 무너져 있거나 칠 벽이 아직 없으면(벽 사이를 달리는 중)
+   * 손절 (591번): 매수벽의 남은 체력 절반을 버리고 그만큼 매도벽을 한 번 친다. 매수벽이 무너져 있거나 칠 벽이 아직 없으면(벽 사이를 달리는 중)
    * 기다렸다가 친다. 물타기는 붙지 않고 매수공격 3배(588번)는 붙는다(서버도 같다).
    */
   private stopLoss() {

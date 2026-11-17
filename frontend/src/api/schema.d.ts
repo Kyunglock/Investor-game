@@ -210,7 +210,7 @@ export interface paths {
                             /** Format: int64 */
                             wall: number;
                             /**
-                             * @description stoploss는 고유 스킬 손절의 한 방(590번). barrage는 액티브 스킬 매수세례의 매수 주문 (503번)
+                             * @description stoploss는 고유 스킬 손절의 한 방(591번). barrage는 액티브 스킬 매수세례의 매수 주문 (503번)
                              * @enum {string}
                              */
                             kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb" | "barrage" | "buy" | "stoploss";
@@ -252,7 +252,7 @@ export interface paths {
         put?: never;
         /**
          * 액티브 스킬을 쓴다 (decisions.md 503·587·588번)
-         * @description 고유 스킬은 매수세례(barrage)·불장(rally)·방어선 구축(fortify)과 상한가(limitUp)·손절(stopLoss)·물타기(averaging, 590번)다 (587번): 장착한 것만 쓸 수 있다. 쓰면 재사용 대기 시간이 돈다. 대기 시간은
+         * @description 고유 스킬은 매수세례(barrage)·불장(rally)·방어선 구축(fortify)과 상한가(limitUp)·손절(stopLoss)·물타기(averaging, 591번)다 (587번): 장착한 것만 쓸 수 있다. 쓰면 재사용 대기 시간이 돈다. 대기 시간은
          *     전투가 돌아가는 동안만 흐른다. 없는 스킬이거나 장착하지 않았거나 대기 중이거나 거래 정지 중이면 400.
          *     광고 스킬은 공격속도 3배(boostFire)·공격력 3배(boostDamage)·매수공격 3배(boostBuy)다 (588번): 장착하지 않고, 광고를 본 뒤(ad가 참)에만 쓴다.
          *     ad 없이 광고 스킬을 쓰면 400. 아직 광고를 붙이지 않아 서버는 ad를 그대로 믿는다.
@@ -1506,7 +1506,7 @@ export interface components {
                     /** @description 처음 얻은 고양이 */
                     isNew: boolean;
                 }[];
-                /** @description 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다. 앞의 여섯은 고유 스킬(587·590번), 뒤의 셋은 광고 스킬(588번)이다 */
+                /** @description 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다. 앞의 여섯은 고유 스킬(587·591번), 뒤의 셋은 광고 스킬(588번)이다 */
                 actives?: {
                     /** @enum {string} */
                     code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "boostFire" | "boostDamage" | "boostBuy";

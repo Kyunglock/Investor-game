@@ -1,4 +1,4 @@
-// 실제 전투에서 상한가·손절·물타기(decisions.md 590번)가 도는지 확인한다.
+// 실제 전투에서 상한가·손절·물타기(decisions.md 591번)가 도는지 확인한다.
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'

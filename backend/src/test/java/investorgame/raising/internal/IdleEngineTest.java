@@ -855,7 +855,7 @@ class IdleEngineTest {
     state.idle.wall = 100;
     tick(1000);
     var actives = engine.view(state).actives();
-    // The boss cat's six 고유 스킬 (587, 590), then the three 광고 스킬 (588).
+    // The boss cat's six 고유 스킬 (587, 591), then the three 광고 스킬 (588).
     assertThat(actives)
         .extracting(a -> a.code())
         .containsExactly(
@@ -960,7 +960,7 @@ class IdleEngineTest {
 
   @Test
   void theThreeNewUniqueSkillsAreEquippedInPlaceOfTheOldOnes() {
-    // 590: 상한가·손절·물타기. A company starts with the first three equipped, so a new one needs a
+    // 591: 상한가·손절·물타기. A company starts with the first three equipped, so a new one needs a
     // slot freed.
     start(1);
     state.idle.wall = 100;
@@ -1189,12 +1189,12 @@ class IdleEngineTest {
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
-    // Only the buy upgrade raises it, by a fixed ten shares a level and not by a percentage (579):
-    // ten levels add a hundred shares to the 112.5 of one order.
+    // Only the buy upgrade raises it, by a fixed twenty shares a level and not by a percentage
+    // (579, doubled in 590): ten levels add two hundred shares to the 112.5 of one order.
     assertThat(buyBonus()).isZero();
     company.mental.buyUpgrade(state, "buy", 10);
-    assertThat(buyBonus()).isEqualTo(100);
-    double up = (order + 100 / 150.0) / order;
+    assertThat(buyBonus()).isEqualTo(200);
+    double up = (order + 200 / 150.0) / order;
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order * up, offset(1e-9));

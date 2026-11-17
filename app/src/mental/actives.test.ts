@@ -11,7 +11,7 @@ import {
   stopLossDamage,
 } from './actives'
 
-describe('액티브 스킬 (503·587·588·590번)', () => {
+describe('액티브 스킬 (503·587·588·591번)', () => {
   const codes = Object.keys(ACTIVES) as ActiveCode[]
 
   it('고유 스킬 여섯과 광고 스킬 셋이다', () => {

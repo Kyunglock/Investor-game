@@ -119,7 +119,7 @@ class CompanyApiTest {
         .andExpect(jsonPath("$.idle.actives[1].code").value("rally"))
         .andExpect(jsonPath("$.idle.actives[1].equipped").value(true))
         .andExpect(jsonPath("$.idle.actives[1].ad").value(false))
-        // 상한가·손절·물타기 (590번)는 장착하지 않은 채로 시작한다.
+        // 상한가·손절·물타기 (591번)는 장착하지 않은 채로 시작한다.
         .andExpect(jsonPath("$.idle.actives[4].code").value("stopLoss"))
         .andExpect(jsonPath("$.idle.actives[4].equipped").value(false))
         .andExpect(jsonPath("$.idle.actives[4].ad").value(false))
@@ -139,7 +139,7 @@ class CompanyApiTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.idle.actives[1].equipped").value(true));
     postJson("/api/company/idle/active", "{\"code\":\"rally\"}").andExpect(status().isOk());
-    // 새 고유 스킬은 칸이 꽉 차면 장착하지 못하고, 하나를 빼고 장착하면 쓴다 (590번).
+    // 새 고유 스킬은 칸이 꽉 차면 장착하지 못하고, 하나를 빼고 장착하면 쓴다 (591번).
     postJson("/api/company/idle/active/equip", "{\"code\":\"stopLoss\",\"equipped\":true}")
         .andExpect(status().isBadRequest());
     postJson("/api/company/idle/active/equip", "{\"code\":\"fortify\",\"equipped\":false}")

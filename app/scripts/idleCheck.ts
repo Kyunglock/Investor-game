@@ -86,7 +86,7 @@ try {
         ],
         fieldSlots: 4,
         rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51, adGain: 0 },
-        // 고유 스킬 여섯(587·590번, 앞의 셋을 장착)과 광고 스킬 셋(588번). 시간은 실제 초다.
+        // 고유 스킬 여섯(587·591번, 앞의 셋을 장착)과 광고 스킬 셋(588번). 시간은 실제 초다.
         activeSlots: 3,
         actives: [
           ['barrage', '매수세례', 40, 4, false],
@@ -938,7 +938,7 @@ try {
     await expect(rally).toHaveAttribute('data-equipped', 'true')
     assert.deepEqual(equips.at(-1), { code: 'rally', equipped: true })
     await expect(page.getByTestId('idle-active')).toHaveCount(3)
-    // 상한가·손절·물타기 (590번): 칸이 꽉 차 있으면 장착하지 못하고, 하나를 빼면 그 자리에 장착해 전투 화면에 단추가 선다.
+    // 상한가·손절·물타기 (591번): 칸이 꽉 차 있으면 장착하지 못하고, 하나를 빼면 그 자리에 장착해 전투 화면에 단추가 선다.
     const stopLoss = page.locator('[data-testid=unique-skill][data-code=stopLoss]')
     await expect(stopLoss).toContainText('손절')
     await expect(stopLoss).toContainText('바로 발동 · 재사용 대기 60초')

@@ -152,7 +152,7 @@ describe('자동 전투의 매수 주문 피해 (514·573번)', () => {
     expect(sharesOf(idleBuyOrderDamage(1000 / SHARES_PER_HP))).toBe(1113)
   })
 
-  it('손절은 지금 체력의 절반을 버리고, 벽은 무너지지 않는다 (590번)', () => {
+  it('손절은 지금 체력의 절반을 버리고, 벽은 무너지지 않는다 (591번)', () => {
     const wall = new BuyWall(200, () => 0.5)
     expect(wall.maxHp).toBe(100)
     expect(wall.sacrifice(0.5)).toBe(50)

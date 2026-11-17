@@ -23,7 +23,7 @@ const ICONS: Record<ActiveCode, IdleIconName> = {
 const seconds = (value: number) => `${Math.round(value).toLocaleString()}초`
 
 /**
- * 스킬 탭 (decisions.md 587번): 사장냥의 고유 스킬(매수세례·불장·방어선 구축, 590번의 상한가·손절·물타기)을 보고 장착한다. 위에 장착 칸(셋), 아래에 스킬 목록이 있다.
+ * 스킬 탭 (decisions.md 587번): 사장냥의 고유 스킬(매수세례·불장·방어선 구축, 591번의 상한가·손절·물타기)을 보고 장착한다. 위에 장착 칸(셋), 아래에 스킬 목록이 있다.
  * 장착한 스킬만 전투 화면 오른쪽에 단추가 선다. 맨 아래에는 장착하지 않고 광고를 보면 쓰는 광고 스킬(588번)을 알린다.
  */
 export function IdleSkills({ company }: { company: Company }) {
