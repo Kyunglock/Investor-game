@@ -154,8 +154,6 @@ raising:
       items:
         - { code: free, name: 오늘의 무료 다이아, give-diamonds: 20, daily-limit: 1 }
         - { code: diamonds, name: 다이아 꾸러미, price-income-minutes: 20, give-diamonds: 20, daily-limit: 5 }
-        - { code: money-small, name: 돈 보따리, price-diamonds: 60, give-income-minutes: 30, daily-limit: 3 }
-        - { code: money-large, name: 큰 돈 보따리, price-diamonds: 200, give-income-minutes: 120, daily-limit: 1 }
     # 시즌패스 (decisions.md 529·571번): 무료 줄 하나. 시즌은 epoch(한국 시간 자정)부터 days일(4주)마다 이어지고, steps단계에 단계마다
     # 포인트 points-per-step. 포인트는 미션을 깨면 들어온다: 미션마다 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points
     # (끝없이 되풀이된다). title의 {n}은 다음에 닿을 수다. 보상에 돈은 없다: 보통 단계 normal-diamonds, 5의 배수 five-diamonds,

@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { IdleGacha } from './IdleGacha'
-import { IdleIcon } from './icons'
+import { ShopIcon } from './ShopIcon'
 import { freeLeft, giveText, rewardText, type ShopItem, shopBlock } from './shop'
 
 /**
@@ -69,7 +69,7 @@ export function IdleShop({
             data-sold={block === 'sold'}
           >
             <span className="idle-stat-icon" aria-hidden="true">
-              <IdleIcon name={item.giveDiamonds > 0 ? 'diamond' : 'growth'} />
+              <ShopIcon kind={item.priceDiamonds === 0 && !item.priceMoney ? 'gift' : 'gems'} />
             </span>
             <div className="idle-stat-info">
               <b>{item.name}</b>

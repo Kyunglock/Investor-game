@@ -12,6 +12,7 @@ import { CatPortrait as Portrait } from './CatPortrait'
 import { type CatDraw, CatReveal } from './CatReveal'
 import { CAT_ODDS, catRevealPlan, shinyCat } from './catGrade'
 import { RewardPlacement } from './RewardPlacement'
+import { ShopIcon } from './ShopIcon'
 import { skillNames } from './skills'
 
 type Kind = 'cat' | 'weapon'
@@ -218,6 +219,7 @@ export function IdleGacha({
                 setKind(k)
               }}
             >
+              <ShopIcon kind={k} />
               {k === 'cat' ? '고양이 뽑기' : '무기 뽑기'}
               {/* 무기 뽑기 배지 (526번): 가진 다이아로 뽑을 수 있는 횟수. */}
               {k === 'weapon' && badge && (

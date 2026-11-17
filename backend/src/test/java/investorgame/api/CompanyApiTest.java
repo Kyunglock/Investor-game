@@ -555,11 +555,11 @@ class CompanyApiTest {
 
   /** 상점 (decisions.md 541번): 게임 재화로 사고 하루 횟수가 있다. */
   @Test
-  void 상점에서_무료_다이아를_하루에_한_번_받고_다이아로_돈을_산다() throws Exception {
+  void 상점에서_무료_다이아를_받고_삭제된_돈_상품은_살_수_없다() throws Exception {
     DocumentContext opened =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
     List<String> codes = opened.read("$.shop.items[*].code");
-    assertThat(codes).containsExactly("free", "diamonds", "money-small", "money-large");
+    assertThat(codes).containsExactly("free", "diamonds");
     assertThat(opened.read("$.idle.cats[0].grade", String.class)).as("하늘냥은 C 등급").isEqualTo("C");
     assertThat(opened.read("$.idle.power", Double.class)).isPositive();
     long diamonds = opened.read("$.diamonds.amount", Long.class);
@@ -572,14 +572,10 @@ class CompanyApiTest {
     mvc.perform(post("/api/company/shop/free").cookie(session)).andExpect(status().isBadRequest());
     mvc.perform(post("/api/company/shop/nothing").cookie(session))
         .andExpect(status().isBadRequest());
-    double capital = free.read("$.capital", Double.class);
-    DocumentContext bought =
-        json(
-            mvc.perform(post("/api/company/shop/money-small").cookie(session))
-                .andExpect(status().isOk()));
-    assertThat(bought.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 20 - 60);
-    assertThat(bought.read("$.capital", Double.class)).isGreaterThan(capital);
-    assertThat(bought.read("$.shop.items[2].left", Integer.class)).isEqualTo(2);
+    for (String removed : List.of("money-small", "money-large")) {
+      mvc.perform(post("/api/company/shop/" + removed).cookie(session))
+          .andExpect(status().isBadRequest());
+    }
   }
 
   /** 시즌패스 (decisions.md 529·571번): 미션을 깨면 포인트가 들어오고, 닿지 않은 단계는 받지 못한다. */
