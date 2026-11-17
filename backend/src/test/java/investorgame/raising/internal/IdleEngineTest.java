@@ -1015,7 +1015,7 @@ class IdleEngineTest {
     // 매수공격 3배 stacks on it.
     engine.useActive(state, "boostBuy", true);
     assertThat(accepted("buy")).isCloseTo(9 * buys, offset(1e-9));
-    for (int i = 0; i < 62; i++) tick(1000);
+    for (int i = 0; i < 182; i++) tick(1000);
     assertThat(accepted("buy")).isCloseTo(buys, offset(1e-9));
   }
 
@@ -1028,9 +1028,30 @@ class IdleEngineTest {
   }
 
   @Test
-  void adSkillsTripleTheirPartForAMinuteAfterAnAd() {
-    // 588: 공격속도·공격력·매수공격 3배. They need the ad, are never equipped, and last 60 real
-    // seconds (90 game seconds at 1.5x) with a 180 second cooldown.
+  void adSkillChoiceUnlocksExactlyAfterThreeMinutes() {
+    start(1);
+    tick(1000);
+    for (String chosen : List.of("boostFire", "boostDamage", "boostBuy")) {
+      double pressedAt = state.idle.activeSeconds;
+      engine.useActive(state, chosen, true);
+      state.idle.activeSeconds = pressedAt + 179 * SPEED;
+      assertThat(engine.view(state).actives())
+          .filteredOn(a -> a.code().equals(chosen))
+          .allMatch(a -> Math.abs(a.left() - 1) < 1e-9);
+      for (String other : List.of("boostFire", "boostDamage", "boostBuy")) {
+        assertThatThrownBy(() -> engine.useActive(state, other, true))
+            .isInstanceOf(InvalidRequestException.class);
+      }
+      state.idle.activeSeconds = pressedAt + 180 * SPEED;
+      assertThat(engine.view(state).actives()).filteredOn(a -> a.ad()).allMatch(a -> a.left() == 0);
+    }
+    engine.useActive(state, "boostBuy", true);
+  }
+
+  @Test
+  void adSkillsTripleOnePartForThreeMinutesAfterAnAd() {
+    // 588: 공격속도·공격력·매수공격 3배. They need the ad, are never equipped, and last 180 real
+    // seconds (270 game seconds at 1.5x) with a 180 second cooldown.
     start(1);
     state.idle.wall = 100;
     for (int i = 0; i < 3; i++) tick(1000);
@@ -1045,14 +1066,20 @@ class IdleEngineTest {
     engine.useActive(state, "boostDamage", true);
     var boost = engine.view(state).actives().get(7);
     assertThat(boost.ad()).isTrue();
-    assertThat(boost.seconds()).isEqualTo(60);
-    assertThat(boost.left()).isEqualTo(60);
+    assertThat(boost.seconds()).isEqualTo(180);
+    assertThat(boost.left()).isEqualTo(180);
     assertThat(boost.readyIn()).isEqualTo(180);
     assertThat(accepted("bullet")).isCloseTo(3 * bullets, offset(1e-9));
     assertThat(accepted("buy")).as("only the guns and skills").isCloseTo(buys, offset(1e-9));
     assertThatThrownBy(() -> engine.useActive(state, "boostDamage", true))
         .isInstanceOf(InvalidRequestException.class);
 
+    for (String other : List.of("boostBuy", "boostFire")) {
+      assertThatThrownBy(() -> engine.useActive(state, other, true))
+          .isInstanceOf(InvalidRequestException.class)
+          .hasMessageContaining("하나만");
+    }
+    for (int i = 0; i < 182; i++) tick(1000);
     engine.useActive(state, "boostBuy", true);
     assertThat(accepted("buy")).isCloseTo(3 * buys, offset(1e-9));
     // The barrage's orders are buy orders too: three times three.
@@ -1062,13 +1089,14 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isCloseTo(40 * 3 * 3 * 1.5, offset(1e-9));
 
     // 공격속도 3배 triples the bullet budget, and the rally is not stacked on it.
+    for (int i = 0; i < 182; i++) tick(1000);
     engine.useActive(state, "boostFire", true);
-    assertThat(accepted("bullet")).isCloseTo(9 * bullets, offset(1e-6));
+    assertThat(accepted("bullet")).isCloseTo(3 * bullets, offset(1e-6));
     engine.useActive(state, "rally");
-    assertThat(accepted("bullet")).isCloseTo(9 * bullets, offset(1e-6));
+    assertThat(accepted("bullet")).isCloseTo(3 * bullets, offset(1e-6));
 
-    // A minute after the last press everything is back to plain.
-    for (int i = 0; i < 62; i++) tick(1000);
+    // Three minutes after the last press everything is back to plain.
+    for (int i = 0; i < 182; i++) tick(1000);
     assertThat(engine.view(state).actives().get(6).left()).isZero();
     assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
     assertThat(accepted("buy")).isCloseTo(buys, offset(1e-9));

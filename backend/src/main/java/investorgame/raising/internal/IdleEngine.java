@@ -83,7 +83,7 @@ class IdleEngine {
     "매수세례", "불장", "방어선 구축", "상한가", "손절", "물타기", "공격속도 3배", "공격력 3배", "매수공격 3배"
   };
   private static final double[] ACTIVE_COOLDOWN = {60, 90, 90, 90, 90, 90, 270, 270, 270};
-  private static final double[] ACTIVE_SECONDS = {6, 10, 6, 12, 0, 15, 90, 90, 90};
+  private static final double[] ACTIVE_SECONDS = {6, 10, 6, 12, 0, 15, 270, 270, 270};
 
   /** The first UNIQUE actives are 고유 스킬, the rest are 광고 스킬. */
   private static final int UNIQUE = 6;
@@ -747,6 +747,11 @@ class IdleEngine {
       throw new InvalidRequestException("장착하지 않은 스킬이다: " + ACTIVE_NAMES[at]);
     }
     if (at >= UNIQUE && !ad) throw new InvalidRequestException("광고를 본 뒤에 쓸 수 있다");
+    if (at >= UNIQUE
+        && ACTIVES.subList(UNIQUE, ACTIVES.size()).stream()
+            .anyMatch(boost -> s.activeUntil.getOrDefault(boost, 0.0) > s.activeSeconds + 1e-9)) {
+      throw new InvalidRequestException("광고 스킬은 한 번에 하나만 쓸 수 있다");
+    }
     if (s.activeReady.getOrDefault(code, 0.0) > s.activeSeconds + 1e-9) {
       throw new InvalidRequestException("아직 쓸 수 없다");
     }

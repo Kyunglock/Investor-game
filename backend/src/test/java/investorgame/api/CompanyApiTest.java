@@ -148,14 +148,18 @@ class CompanyApiTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.idle.actives[4].equipped").value(true));
     postJson("/api/company/idle/active", "{\"code\":\"stopLoss\"}").andExpect(status().isOk());
-    // 광고 스킬은 ad가 참이어야 한다: 60초 동안 이어지고 180초 뒤에 다시 쓴다.
+    // 광고 스킬은 ad가 참이어야 한다: 180초 동안 하나만 쓰고, 끝나면 다시 선택한다.
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\"}")
         .andExpect(status().isBadRequest());
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.idle.actives[6].left").value(60.0))
+        .andExpect(jsonPath("$.idle.actives[6].left").value(180.0))
         .andExpect(jsonPath("$.idle.actives[6].readyIn").value(180.0));
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/idle/active", "{\"code\":\"boostBuy\",\"ad\":true}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/idle/active", "{\"code\":\"boostDamage\",\"ad\":true}")
         .andExpect(status().isBadRequest());
   }
 
