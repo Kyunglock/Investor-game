@@ -21,6 +21,11 @@
             </intent-filter>
         </activity>
 
+        <!-- AdMob 앱 ID (decisions.md 589번). 없으면 광고 SDK가 앱을 켜자마자 멈춘다. 값은 build.gradle 이 ADMOB_APP_ID 로 넣는다. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

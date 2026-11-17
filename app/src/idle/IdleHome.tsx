@@ -5,6 +5,7 @@ import { idleBossChallenge } from '@web/features/raising/idlePredict'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useShownIdle } from '@web/features/raising/useIdleBattle'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { preloadRewardedAd } from '../app/ads'
 import { rate, readOfflineSeen, shouldShowOffline } from '../app/income'
 import { meetingReady } from '../app/meeting'
 import { Sheet } from '../app/Sheet'
@@ -123,6 +124,8 @@ export function IdleHome({
   const offlineShowing = shouldShowOffline(idle?.offline, offlineSeen)
   const elsewhere = useAppUi((s) => s.battle != null || s.investOpen)
   const exReady = stageBadge(company) !== null
+  // 광고 단추를 누르자마자 광고가 뜨도록 앱에서는 미리 받아 둔다 (589번).
+  useEffect(preloadRewardedAd, [])
   useEffect(() => {
     if (menu === 'battle' || menu === 'company') return
     const previous = useAppUi.getState().modalBack

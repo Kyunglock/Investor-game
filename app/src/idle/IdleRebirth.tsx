@@ -2,7 +2,7 @@ import type { Company } from '@web/api/client'
 import { useRaisingStore } from '@web/features/raising/store'
 import { rebirthIdle } from '@web/features/raising/useIdleBattle'
 import { useState } from 'react'
-import { watchRewardedAd } from '../app/ads'
+import { AD_UNAVAILABLE, watchRewardedAd } from '../app/ads'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { FishIcon } from './FishIcon'
@@ -24,10 +24,14 @@ export function IdleRebirth({ company }: { company: Company }) {
     if (busy) return
     setBusy(true)
     setError(null)
-    // 광고를 끝까지 봤을 때만 3배다. 닫았으면 환생하지 않고 다시 고르게 둔다.
-    if (ad && !(await watchRewardedAd('rebirth'))) {
-      setBusy(false)
-      return
+    // 광고를 끝까지 봤을 때만 3배다. 닫았거나 광고가 없으면 환생하지 않고 다시 고르게 둔다.
+    if (ad) {
+      const watched = await watchRewardedAd('rebirth')
+      if (watched !== 'rewarded') {
+        setBusy(false)
+        if (watched === 'unavailable') setError(AD_UNAVAILABLE)
+        return
+      }
     }
     const gain = ad ? rebirth.adGain : rebirth.gain
     const done = await rebirthIdle(ad)

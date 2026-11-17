@@ -1044,6 +1044,26 @@
     0 0 0 3px #ffe58a99;
   color: #5a3310;
 }
+/* 광고를 불러오지 못했을 때의 알림 (589번). */
+.idle-ad-notice {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  z-index: 3;
+  width: max-content;
+  max-width: 86%;
+  padding: 9px 14px;
+  border: 2px solid #fff5df;
+  border-radius: 14px;
+  background: #3b2a4ee6;
+  box-shadow: 0 3px 0 #2b234055;
+  color: #fff;
+  font-size: 13px;
+  text-align: center;
+  word-break: keep-all;
+  transform: translateX(-50%);
+}
 /* 스킬 탭 (587번): 위에 장착 칸 셋, 아래에 스킬 목록. */
 .boss-skills {
   display: grid;
