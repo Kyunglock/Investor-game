@@ -1,3 +1,4 @@
+import arenaMaps from './assets/arena-maps.png'
 import heroPoses from './assets/cat-hero-poses.png'
 import lilacPoses from './assets/cat-lilac-poses.png'
 import mintPoses from './assets/cat-mint-poses.png'
@@ -26,6 +27,7 @@ export const STAGE_ASSETS = {
   snowPoses,
 
   street,
+  arenaMaps,
   hero,
   enemies,
   wallBlocks,

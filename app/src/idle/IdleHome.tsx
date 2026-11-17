@@ -34,6 +34,7 @@ import './idle-home.css'
 import './toy-arcade.css'
 import './loadout-tray.css'
 import './upgrade-feedback.css'
+import './toy-shop.css'
 
 type Menu = 'battle' | 'growth' | 'cats' | 'shop' | 'company'
 /**

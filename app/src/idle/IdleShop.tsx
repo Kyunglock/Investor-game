@@ -46,12 +46,18 @@ export function IdleShop({
     }
   }
   return (
-    <>
+    <div className="idle-shop">
+      <div className="idle-shop-wallet">
+        <span>게임 재화 전용</span>
+        <b>{money(company.capital)}</b>
+        <DiamondPrice amount={company.diamonds.amount} />
+      </div>
       <IdleGacha company={company} initialKind={kind} onCat={() => {}} onUse={onUse} />
-      <p className="idle-subtitle">
-        오늘의 상품 · 매일 자정에 다시 열려요
-        {freeLeft(company) && ' · 무료 상품이 남아 있어요'}
-      </p>
+      <div className="idle-shop-daily">
+        <h4>오늘의 상품</h4>
+        <span>매일 자정 갱신</span>
+      </div>
+      {freeLeft(company) && <p className="idle-shop-free-note">오늘의 무료 선물이 기다려요!</p>}
       {company.shop.items.map((item) => {
         const block = shopBlock(company, item)
         return (
@@ -60,6 +66,8 @@ export function IdleShop({
             key={item.code}
             data-testid="shop-item"
             data-code={item.code}
+            data-free={item.priceDiamonds === 0 && !item.priceMoney}
+            data-sold={block === 'sold'}
           >
             <span className="idle-stat-icon" aria-hidden="true">
               <IdleIcon name={item.giveDiamonds > 0 ? 'diamond' : 'growth'} />
@@ -102,6 +110,6 @@ export function IdleShop({
         </p>
       )}
       {error && <p role="alert">{error}</p>}
-    </>
+    </div>
   )
 }
