@@ -400,7 +400,7 @@ class IdleEngineTest {
     // 전투력 (538번): 권총·강화 없음이면 100 × 2배속 × (1 × 3.846 ÷ 1.25 × 1.2 + 매수 주문 1.5) = 1,038.
     start(1);
     double base = engine.view(state).power();
-    assertThat(base).isEqualTo(1038);
+    assertThat(base).isEqualTo(1338);
     state.idle.wall = 500;
     assertThat(engine.view(state).power()).as("the wall is not in it").isEqualTo(base);
     double last = base;
@@ -879,9 +879,9 @@ class IdleEngineTest {
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
     assertThatThrownBy(() -> engine.useActive(state, "nope"))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
-    // Forty buy orders, each at most three times a buy order: 0.75, whatever the wall (514, 573).
+    // Forty buy orders, each at most three times a buy order: 1.5, whatever the wall (514, 573).
     // Neither the weapon nor the wall's order scale is in it.
-    double order = 0.75;
+    double order = 1.5;
     tick(1000, new IdleHit(100, "barrage", 50, 50 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(40 * 3 * order, offset(1e-9));
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
@@ -989,16 +989,16 @@ class IdleEngineTest {
     assertThat(limitUp.readyIn()).isEqualTo(60);
     assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
 
-    // 손절: nothing without the press, then one hit of at most 240 buy orders (0.75 each).
+    // 손절: nothing without the press, then one hit of at most 240 buy orders (1.5 each).
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "stoploss", 1, 1e9));
     assertThat(state.idle.damage).isZero();
     engine.useActive(state, "stopLoss");
     assertThat(engine.view(state).actives().get(4).seconds()).isZero();
     tick(1000, new IdleHit(100, "stoploss", 1, 1e9));
-    assertThat(state.idle.damage).isCloseTo(240 * 0.75, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(240 * 1.5, offset(1e-9));
     tick(1000, new IdleHit(100, "stoploss", 1, 1e9));
-    assertThat(state.idle.damage).as("the press is spent").isCloseTo(240 * 0.75, offset(1e-9));
+    assertThat(state.idle.damage).as("the press is spent").isCloseTo(240 * 1.5, offset(1e-9));
     // A smaller hit (less of the buy wall given up) is taken as reported.
     for (int i = 0; i < 60; i++) tick(1000);
     state.idle.damage = 0;
@@ -1059,7 +1059,7 @@ class IdleEngineTest {
     engine.useActive(state, "barrage");
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "barrage", 40, 1e9));
-    assertThat(state.idle.damage).isCloseTo(40 * 3 * 3 * 0.75, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(40 * 3 * 3 * 1.5, offset(1e-9));
 
     // 공격속도 3배 triples the bullet budget, and the rally is not stacked on it.
     engine.useActive(state, "boostFire", true);
@@ -1177,7 +1177,7 @@ class IdleEngineTest {
     state.idle.wall = 100;
     tick(1000);
     // A deep wall does not make a buy order stronger (573): the order scale is not in it.
-    double order = 0.75;
+    double order = 1.5;
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
     assertThat(IdleEngine.threat(100)).isEqualTo(5.2);
     // A buy order is capped at its own damage, whatever the screen reports.
@@ -1189,12 +1189,12 @@ class IdleEngineTest {
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
-    // Only the buy upgrade raises it, by a fixed twenty shares a level and not by a percentage
-    // (579, doubled in 590): ten levels add two hundred shares to the 112.5 of one order.
+    // Only the buy upgrade raises it, by a fixed forty shares a level and not by a percentage
+    // (579, doubled in 590 and 594): ten levels add four hundred shares to the 225 of one order.
     assertThat(buyBonus()).isZero();
     company.mental.buyUpgrade(state, "buy", 10);
-    assertThat(buyBonus()).isEqualTo(200);
-    double up = (order + 200 / 150.0) / order;
+    assertThat(buyBonus()).isEqualTo(400);
+    double up = (order + 400 / 150.0) / order;
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order * up, offset(1e-9));

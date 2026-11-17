@@ -301,6 +301,12 @@ export const IDLE_SELL_POWER = 2
 /** 큰손 벽의 체력 배율(서버 IdleEngine.BOSS_HP, 518번): 물량은 큰손 벽이라고 세 배가 되지 않는다. */
 export const IDLE_BOSS_HP = 3
 
+/**
+ * 자동 전투의 큰손(매도 고래) 체력 배율 (593번): 미션의 큰손 체력에 곱한다. 너무 약해 다섯 배로 올렸다. 큰손은 화면에서만 세는 별도 적이라
+ * 서버에는 같은 값이 없다.
+ */
+export const IDLE_WHALE_HP = 5
+
 /** wall번째 벽(체력 maxHp) 앞 물량의 배율. 주문서의 주식 수가 깔끔하게 유효 숫자 둘로 끊는다. */
 export function idleThreat(wall: number, maxHp: number): number {
   if (!Number.isFinite(maxHp) || maxHp <= 0) return 1
@@ -333,6 +339,7 @@ export function idleAssaultSpec(wall: number, maxHp = 0): AssaultSpec {
   return {
     ...spec,
     enemyHp: threat,
+    bossHp: spec.bossHp * IDLE_WHALE_HP,
     enemyDmg: spec.enemyDmg * threat,
     // 매도 물량이 내려오는 빠르기를 늦춘다 (558번).
     enemySpeed: spec.enemySpeed * IDLE_ORDER_SPEED,
