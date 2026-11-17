@@ -11,6 +11,8 @@ export class BuyWallFx {
   private surface: Phaser.GameObjects.Image
   private title: Phaser.GameObjects.Text
   private hitLeft = 0
+  /** 배속과 별개로 유지하는 강화 외형. 실제 무적 판정은 BuyWall이 맡는다. */
+  private fortifyLeft = 0
   private breakLeft = 0
   private hitX = 0
   private debris: Phaser.GameObjects.Image[]
@@ -61,8 +63,17 @@ export class BuyWallFx {
     this.hitLeft = 0.28
     if (broken) this.breakLeft = 0.55
   }
+  fortify() {
+    this.fortifyLeft = 5
+  }
+  stepFortify(realSeconds: number) {
+    this.fortifyLeft = Math.max(0, this.fortifyLeft - realSeconds)
+  }
   inspect() {
     return {
+      fortifySecondsLeft: this.fortifyLeft,
+      fortified: this.fortifyLeft > 0 && this.surface.visible,
+      label: this.title.text,
       hitLeft: this.hitLeft,
       breakLeft: this.breakLeft,
       fragments: this.debris.filter((piece) => piece.visible).length,
@@ -154,6 +165,33 @@ export class BuyWallFx {
         .setDisplaySize(width, height)
       this.surface.clearTint()
       if (this.hitLeft > 0.2) this.surface.setTintFill(0xffedc2)
+      if (this.fortifyLeft > 0) {
+        const alpha = reduced ? 1 : Math.min(1, this.fortifyLeft / 0.25)
+        const x = left + shake
+        const z = top + Math.abs(shake) * 0.4
+        // 기존 붉은 블록 위에 보호막과 두꺼운 보강대를 얹어 벽 자체가 단단해 보이게 한다.
+        g.lineStyle(8, 0x72e4ef, 0.2 * alpha).strokeRoundedRect(
+          x - 2,
+          z - 3,
+          width + 4,
+          height + 6,
+          9,
+        )
+        g.fillStyle(0xffe8a3, 0.18 * alpha).fillRoundedRect(x, z, width, height, 7)
+        for (const railY of [z + 2, z + height - 8]) {
+          g.fillStyle(0x805334, alpha).fillRoundedRect(x + 2, railY, width - 4, 7, 3)
+          g.fillStyle(0xffd477, alpha).fillRoundedRect(x + 3, railY, width - 6, 4, 2)
+        }
+        for (let i = 0; i <= 6; i++) {
+          const braceX = x + 4 + ((width - 8) * i) / 6
+          g.fillStyle(0x805334, alpha).fillRoundedRect(braceX - 4, z + 3, 8, height - 6, 2)
+          g.fillStyle(0xeebd63, alpha).fillRoundedRect(braceX - 2, z + 3, 4, height - 8, 1)
+          for (const boltY of [z + 8, z + height - 10]) {
+            g.fillStyle(0x614635, alpha).fillCircle(braceX, boltY + 1, 2.6)
+            g.fillStyle(0xfff4ce, alpha).fillCircle(braceX, boltY, 1.7)
+          }
+        }
+      }
       // 블록 하단(y + 32)을 덮지 않도록 체력 막대를 5px 아래에 둔다.
       g.fillStyle(0x4f2837, 0.7).fillRoundedRect(left + 5, y + 37, width - 10, 4, 2)
       const hpWidth = ((width - 10) * wall.hp) / wall.maxHp
@@ -166,15 +204,11 @@ export class BuyWallFx {
           Math.min(2, hpWidth / 2),
         )
       }
-      this.title
-        .setText(`매수벽 ${shareLabel(wall.hp)}`)
-        .setPosition(left + width / 2, top + height * 0.58)
+      this.title.setText(shareLabel(wall.hp)).setPosition(left + width / 2, top + height * 0.58)
     } else {
       this.surface.setVisible(false)
       g.lineStyle(1, 0xe78181, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
-      this.title
-        .setText(`매수벽 붕괴 · 재정비 ${wall.rebuildLeft.toFixed(1)}초`)
-        .setPosition(left + width / 2, y)
+      this.title.setText(`재정비 ${wall.rebuildLeft.toFixed(1)}초`).setPosition(left + width / 2, y)
     }
     if (hit > 0) {
       const radius = 12 + (1 - hit) * 34

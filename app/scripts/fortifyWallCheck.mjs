@@ -1,4 +1,4 @@
-// 실제 전투에서 방패 고양이의 표시 시간·재발동·위치를 확인한다.
+// 실제 전투에서 매수벽 강화의 표시 시간·재발동·상태를 확인한다.
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
@@ -43,57 +43,55 @@ try {
   })
   await page.goto(process.env.APP_URL ?? 'http://localhost:5182/app/')
   await page.waitForFunction(() => window.__mentalWalls?.().length > 0)
-  const inspect = () => page.evaluate(() => window.__mentalMarket?.())
+  await expect(page.locator('[data-testid=idle-canvas] canvas')).toBeVisible()
+  await page.waitForTimeout(1500)
+  const inspect = () => page.evaluate(() => window.__mentalMarket?.().buyWall.feedback)
   const cast = () =>
     page.evaluate(() => window.dispatchEvent(new CustomEvent('idle-active', { detail: 'fortify' })))
-  assert.equal((await inspect()).fortifyGuards, null)
+  assert.equal((await inspect()).fortified, false)
   await cast()
-  await page.screenshot({ path: '/tmp/fortify-guards-390.png' })
+  await expect.poll(async () => (await inspect()).fortified).toBe(true)
+  await page.screenshot({ path: '/tmp/fortify-wall-390.png' })
   for (const speed of [1, 2]) {
     await page.evaluate((speed) => window.__mentalSpeed(speed), speed)
-    await cast()
-    await expect.poll(async () => (await inspect()).fortifyGuards.guards.length).toBe(3)
     const start = Date.now()
-    const state = await inspect()
-    for (const guard of state.fortifyGuards.guards) {
-      assert.equal(guard.texture, 'art-shieldGuard')
-      assert.ok(guard.feetY < state.buyWall.wallY)
-    }
+    await cast()
+    await expect.poll(async () => (await inspect()).fortified).toBe(true)
+    assert.match((await inspect()).label, /^[\d,]+주$/)
     await page.waitForTimeout(4000)
-    assert.equal((await inspect()).fortifyGuards.guards.length, 3)
+    assert.equal((await inspect()).fortified, true)
     await expect
-      .poll(async () => (await inspect()).fortifyGuards.guards.length, {
-        timeout: 2500,
-        intervals: [50],
-      })
-      .toBe(0)
+      .poll(async () => (await inspect()).fortified, { timeout: 2500, intervals: [50] })
+      .toBe(false)
     assert.ok(Date.now() - start >= 4700)
     assert.ok(Date.now() - start < 6500)
+    assert.match((await inspect()).label, /^[\d,]+주$/)
   }
   await cast()
   await page.waitForTimeout(3000)
   await cast()
   await page.setViewportSize({ width: 320, height: 740 })
   await page.waitForTimeout(3000)
-  const state = await inspect()
-  assert.equal(state.fortifyGuards.guards.length, 3)
-  for (const guard of state.fortifyGuards.guards) {
-    assert.ok(guard.x - guard.width / 2 > 0)
-    assert.ok(guard.x + guard.width / 2 < 320)
-    assert.ok(guard.feetY < state.buyWall.wallY)
-  }
-  await page.screenshot({ path: '/tmp/fortify-guards-320.png' })
+  assert.equal((await inspect()).fortified, true)
+  await page.screenshot({ path: '/tmp/fortify-wall-320.png' })
   await expect
-    .poll(async () => (await inspect()).fortifyGuards.guards.length, {
-      timeout: 3000,
-      intervals: [50],
-    })
-    .toBe(0)
+    .poll(async () => (await inspect()).fortified, { timeout: 3000, intervals: [50] })
+    .toBe(false)
+  await cast()
+  await page.evaluate(() =>
+    window.dispatchEvent(new CustomEvent('idle-app-active', { detail: false })),
+  )
+  const left = (await inspect()).fortifySecondsLeft
+  await page.waitForTimeout(1200)
+  assert.equal((await inspect()).fortifySecondsLeft, left)
+  await page.evaluate(() =>
+    window.dispatchEvent(new CustomEvent('idle-app-active', { detail: true })),
+  )
   await page.reload()
   await page.waitForFunction(() => window.__mentalWalls?.().length > 0)
-  assert.equal((await inspect()).fortifyGuards, null)
+  assert.equal((await inspect()).fortified, false)
   assert.deepEqual(errors, [])
-  console.log('fortify guards ok: three cats, five seconds at 1x/2x, recast, resize, reload')
+  console.log('fortified wall ok: five seconds at 1x/2x, label, recast, resize, pause, reload')
 } finally {
   await browser.close()
 }
