@@ -219,7 +219,14 @@ try {
     // No status line (decisions.md 493): the HUD shows only the wall number while fighting.
     await expect(page.getByTestId('idle-wall-number')).toHaveAttribute('data-state', 'auto')
     await expect(page.locator('.idle-stage')).toHaveCount(0)
-    await expect(page.locator('[data-testid=idle-canvas] canvas')).toBeVisible({ timeout: 30000 })
+    await expect(page.locator('[data-testid=idle-canvas] canvas'))
+      .toBeVisible({ timeout: 30000 })
+      .catch(async (e) => {
+        // Why the battle did not open: the page logs the cause to the console (#836).
+        console.log({ width, errors, loadingErrors })
+        await page.screenshot({ path: `/tmp/idle-failure-${width}.png` }).catch(() => {})
+        throw e
+      })
     await page.evaluate(() => {
       ;(window as unknown as { idleCanvas: Element | null }).idleCanvas = document.querySelector(
         '[data-testid=idle-canvas] canvas',

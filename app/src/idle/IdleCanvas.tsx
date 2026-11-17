@@ -9,6 +9,10 @@ import { heroOf } from '../mental/hero'
 import type { IdleRaidKind } from '../mental/waves'
 import { idleLoadout } from './loadout'
 
+/** 전투 화면을 띄우지 못했을 때 스스로 다시 해 보는 횟수와 그 틈. 그래도 안 되면 오류 문구와 "다시 시도"를 보인다. */
+const AUTO_RETRIES = 2
+const RETRY_MS = 800
+
 export function IdleCanvas({ company, connected }: { company: Company; connected: boolean }) {
   const equipped = heroOf(company).weapon
   const host = useRef<HTMLDivElement>(null)
@@ -17,6 +21,10 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
   const battle = useRef<BattleHandle | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  // 전투 화면을 띄우지 못하면 알리기 전에 스스로 다시 해 본다 (#836): 모듈을 못 받았거나 그리기 장치를 못 잡은 것은 대개 잠깐이다.
+  const retries = useRef(0)
+  // 전투 모듈을 받지 못했는가. 그러면 "다시 시도"는 화면을 새로 고친다.
+  const stale = useRef(false)
   const [raid, setRaid] = useState<{ text: string; color: string; id: number } | null>(null)
   // biome-ignore lint/correctness/useExhaustiveDependencies: Retry and weapon changes recreate the renderer; server wall progress is preserved.
   useEffect(() => {
@@ -24,6 +32,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     let disposed = false
     let foreground = !document.hidden
     let nativeActive = true
+    let retry = 0
     const pause = () =>
       battle.current?.setPaused(!foreground || !nativeActive || !latest.current.connected)
     const visibility = () => {
@@ -46,6 +55,11 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     window.addEventListener('idle-active', activeUsed)
     setError(null)
     void import('../mental/battle')
+      .catch((cause) => {
+        // 모듈을 받지 못했다: 브라우저가 이 실패를 기억해 같은 화면에서는 다시 받지 못한다. 새로 고쳐야 한다.
+        stale.current = true
+        throw cause
+      })
       .then(({ startBattle }) => {
         if (disposed || !host.current) return
         const c = latest.current.company
@@ -91,11 +105,21 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
           },
         })
       })
-      .catch(() => {
-        if (!disposed) setError('전투 화면을 불러오지 못했어요.')
+      .then(() => {
+        if (!disposed && battle.current) retries.current = 0
+      })
+      .catch((cause) => {
+        if (disposed) return
+        // 까닭을 콘솔에 남긴다: 브라우저 검사와 원격 디버깅이 읽는다.
+        console.error('전투 화면을 띄우지 못했다', cause)
+        if (!stale.current && retries.current < AUTO_RETRIES) {
+          retries.current++
+          retry = window.setTimeout(() => setAttempt((n) => n + 1), RETRY_MS)
+        } else setError('전투 화면을 불러오지 못했어요.')
       })
     return () => {
       disposed = true
+      window.clearTimeout(retry)
       document.removeEventListener('visibilitychange', visibility)
       window.removeEventListener('idle-app-active', native)
       window.removeEventListener('idle-test-raid', raidCalled)
@@ -140,7 +164,14 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       {error && (
         <div className="idle-canvas-error" role="alert">
           {error}
-          <button type="button" onClick={() => setAttempt((n) => n + 1)}>
+          <button
+            type="button"
+            onClick={() => {
+              if (stale.current) return window.location.reload()
+              retries.current = 0
+              setAttempt((n) => n + 1)
+            }}
+          >
             다시 시도
           </button>
         </div>
