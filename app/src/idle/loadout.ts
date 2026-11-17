@@ -4,6 +4,7 @@ import { loadoutOf } from '../mental/cards'
 import { NEW_CATS } from '../mental/catRoster'
 import { DEFAULT_WEAPON, heroOf } from '../mental/hero'
 import { EXTRA_SPELLS, type ExtraSpell } from '../mental/spellbook'
+import { fieldedInOrder } from './seats'
 
 /** 고양이마다 전투 그림이 정해져 있다 (mates.ts MATE_LOOKS의 차례, 492번). */
 export const CAT_LOOKS = {
@@ -35,7 +36,8 @@ export function idleLoadout(company: Company) {
   const loadout = loadoutOf(hero.weapon, hero.upgrades)
   // 스킬은 고양이의 고유 능력이다 (501번): 출전한 고양이가 제 총을 쏘고 제 스킬을 쓴다. 스킬은 A등급부터 있고 S등급은 둘이다 (561번).
   // 총이 없으면 기본 권총이다(서버 IdleEngine과 같다).
-  const cats = company.idle?.cats.filter((cat) => cat.fielded) ?? []
+  // 출전 칸의 번호순으로 줄을 선다 (599번).
+  const cats = fieldedInOrder(company.idle?.cats ?? [])
   loadout.mateMagic = cats.map((cat) => cat.skills.map((skill) => SKILL_MAGIC[skill.code]))
   // 스킬 레벨은 고양이마다 다르다 (515번). 마법 칸(loadout.water 등)에는 그 스킬의 가장 높은 레벨을 둔다.
   loadout.mateMagicLevels = cats.map((cat) => cat.skillLevel)

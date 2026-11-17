@@ -68,13 +68,13 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     scale: 1.3,
     shares: 200,
   },
-  /** 대량 매도(5,000주): 묵직하고 느리고 단단하다 */
+  /** 대량 매도(5,000주): 묵직하고 느리고 단단하다. 빠르기를 30에서 올렸다 (597번): 그래도 매도 주문보다 느리다 */
   bulk: {
     r: 24,
     fill: '#2347a8',
     label: '대량 매도',
     hp: 13,
-    speed: 30,
+    speed: 42,
     dmg: 13,
     reward: 55,
     scale: 1.55,

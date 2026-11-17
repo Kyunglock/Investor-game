@@ -5,6 +5,7 @@ import { haptic } from '../fx/haptics'
 import { GunSprite } from '../mental/GunSprite'
 import type { Weapon } from '../mental/hero'
 import { CatPortrait } from './CatPortrait'
+import { fieldSeats } from './seats'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
 export type Reward = { cat: CatCode } | { weapon: Pick<Weapon, 'kind' | 'grade'> }
@@ -30,15 +31,18 @@ export function RewardPlacement({
     }
   }, [])
   const cats = company.idle?.cats ?? []
-  const fielded = cats.filter((c) => c.fielded)
   const alreadyFielded = 'cat' in reward && cats.some((c) => c.code === reward.cat && c.fielded)
   const targets = [
-    ...('weapon' in reward ? [{ id: 'boss', code: null, name: '사장냥' }] : []),
-    ...Array.from({ length: company.idle?.fieldSlots ?? 0 }, (_, i) => ({
-      id: fielded[i]?.code ?? `empty${i}`,
-      code: fielded[i]?.code ?? null,
-      name: fielded[i]?.name ?? '빈 칸',
-    })).filter((t) => 'cat' in reward || t.code !== null),
+    ...('weapon' in reward ? [{ id: 'boss', code: null as CatCode | null, name: '사장냥' }] : []),
+    // 출전 칸 그대로 (599번): 빈 칸에 놓으면 그 칸에 선다.
+    ...fieldSeats(cats, company.idle?.fieldSlots ?? 0)
+      .map((seat, i) => ({
+        id: seat?.code ?? `empty${i}`,
+        code: seat?.code ?? null,
+        name: seat?.name ?? '빈 칸',
+        slot: i,
+      }))
+      .filter((t) => 'cat' in reward || t.code !== null),
   ]
   const place = async (target: string) => {
     if (useRaisingStore.getState().busy) return
@@ -46,7 +50,13 @@ export function RewardPlacement({
     if (!t) return
     const store = useRaisingStore.getState()
     if ('cat' in reward) {
-      if (!alreadyFielded) await store.fieldCat(reward.cat, true, t.code ?? undefined)
+      if (!alreadyFielded)
+        await store.fieldCat(
+          reward.cat,
+          true,
+          t.code ?? undefined,
+          t.code || !('slot' in t) ? undefined : t.slot,
+        )
     } else if (t.code) await store.equipCat(t.code, reward.weapon)
     else await store.equipWeapon(reward.weapon.kind, reward.weapon.grade)
     if (mounted.current && !useRaisingStore.getState().error) {

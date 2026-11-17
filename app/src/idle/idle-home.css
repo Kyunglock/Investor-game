@@ -2318,35 +2318,37 @@
   color: #b0412d;
 }
 /* 생선으로 레벨업 (571번): 고양이 정보 카드 안의 한 줄 단추. */
-.idle-cat-feed {
-  grid-column: 1 / -1;
+
+/* 성장 탭의 작은 탭 (600번): 강화 · 영구 강화. */
+.idle-growth-tabs {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 42px;
-  margin-top: 4px;
-  padding: 0 12px;
-  border: 1.5px solid #8cc9e8;
+  gap: 3px;
+  padding: 3px;
+  margin-bottom: 8px;
   border-radius: 12px;
-  background: #e9f6fd;
-  color: #1f5f86;
-  font-size: 14px;
+  background: #eadbbe;
 }
-.idle-cat-feed-level {
-  font:
-    700 11px "Noto Sans KR",
-    sans-serif;
-  color: #5d8fae;
-}
-.idle-cat-feed-cost {
+.idle-growth-tabs button {
+  flex: 1;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-style: normal;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border-radius: 9px;
+  font-size: 14px;
+  color: #947247;
 }
-.idle-cat-feed:disabled {
-  opacity: 0.5;
+.idle-growth-tabs [aria-selected="true"] {
+  background: #fff9ec;
+  box-shadow: 0 1px 3px #73542120;
+  color: #745333;
+}
+.idle-stat .idle-buy.idle-fish-buy small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
 }
 
 /* 환생 바로가기: 상단 재화 아래, 전투 화면 왼쪽 위. */

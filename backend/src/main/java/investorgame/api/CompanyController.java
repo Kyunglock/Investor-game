@@ -424,25 +424,30 @@ class CompanyController {
 
   record RebirthRequest(Boolean ad) {}
 
-  /** 생선으로 고양이의 레벨을 하나 올린다 (571번). */
-  @PostMapping("/cat/level")
-  CompanyView feedCat(
+  /** 생선으로 영구 강화를 한 단계 올린다 (600번). */
+  @PostMapping("/rebirth/upgrade")
+  CompanyView buyFishUpgrade(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody CatLevelRequest request) {
-    return companies.feedCat(cookies.requirePlayer(token), request.code());
+      @Valid @RequestBody FishUpgradeRequest request) {
+    return companies.buyFishUpgrade(cookies.requirePlayer(token), request.kind());
   }
 
-  record CatLevelRequest(@NotBlank String code) {}
+  record FishUpgradeRequest(@NotBlank String kind) {}
 
   @PostMapping("/cat/field")
   CompanyView fieldCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody CatFieldRequest request) {
     return companies.fieldCat(
-        cookies.requirePlayer(token), request.code(), request.fielded(), request.replaceCode());
+        cookies.requirePlayer(token),
+        request.code(),
+        request.fielded(),
+        request.replaceCode(),
+        request.slot());
   }
 
-  record CatFieldRequest(@NotBlank String code, @NotNull Boolean fielded, String replaceCode) {}
+  record CatFieldRequest(
+      @NotBlank String code, @NotNull Boolean fielded, String replaceCode, Integer slot) {}
 
   /** 고양이에게 가진 무기 하나를 들린다. kind와 grade를 비우면 뺀다 (decisions.md 488번). */
   @PostMapping("/cat/weapon")

@@ -108,9 +108,11 @@ interface RaisingState {
   /** 테스트판: 다음 시즌으로 넘긴다. 진행도가 비워진다 (529번). */
   skipSandboxSeason: () => Promise<void>
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
-  fieldCat: (code: CatCode, fielded: boolean, replaceCode?: CatCode) => Promise<void>
+  /** slot: 세울 출전 칸의 번호(0부터, 599번). */
+  fieldCat: (code: CatCode, fielded: boolean, replaceCode?: CatCode, slot?: number) => Promise<void>
   /** 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 571번). */
-  feedCat: (code: CatCode) => Promise<void>
+  /** 생선으로 영구 강화를 한 단계 올린다 (600번). */
+  buyFishUpgrade: (kind: 'damage' | 'hp' | 'buy') => Promise<void>
   /** 고양이에게 가진 무기 하나를 들린다. weapon이 null이면 뺀다 (488번). */
   equipCat: (
     code: CatCode,
@@ -305,10 +307,10 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       return res?.data ?? null
     },
 
-    fieldCat: (code, fielded, replaceCode) =>
-      change(api.POST('/api/company/cat/field', { body: { code, fielded, replaceCode } })),
+    fieldCat: (code, fielded, replaceCode, slot) =>
+      change(api.POST('/api/company/cat/field', { body: { code, fielded, replaceCode, slot } })),
 
-    feedCat: (code) => change(api.POST('/api/company/cat/level', { body: { code } })),
+    buyFishUpgrade: (kind) => change(api.POST('/api/company/rebirth/upgrade', { body: { kind } })),
 
     equipCat: (code, weapon) =>
       change(api.POST('/api/company/cat/weapon', { body: { code, ...weapon } })),

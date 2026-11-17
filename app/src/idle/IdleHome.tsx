@@ -18,6 +18,7 @@ import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
 import { idleBuyOrderDamage } from '../mental/buyWall'
 import { SHARES_PER_HP, sharesOf } from '../mental/shares'
+import { FishIcon } from './FishIcon'
 import { GrowthIcon } from './GrowthIcon'
 import { IdleActives } from './IdleActives'
 import { IdleAttendance } from './IdleAttendance'
@@ -293,12 +294,7 @@ export function IdleHome({
           footer={nav}
         >
           {menu === 'rebirth' && <IdleRebirth company={company} />}
-          {menu === 'growth' && (
-            <>
-              <p className="idle-subtitle">강해진 만큼, 더 빠르게 돌파해요</p>
-              <IdleStats company={company} />
-            </>
-          )}
+          {menu === 'growth' && <IdleGrowth company={company} />}
           {menu === 'cats' && (
             <IdleCats
               company={company}
@@ -387,6 +383,112 @@ function IdlePower({ power }: { power: number }) {
         {powerText(shown)}
       </strong>
     </div>
+  )
+}
+
+/**
+ * 성장 탭 (decisions.md 600번): 돈으로 올리는 강화와, 환생해서 얻은 생선으로 올리는 영구 강화를 탭으로 나눈다. 환생 카드는 영구 강화 쪽에 있다.
+ */
+function IdleGrowth({ company }: { company: Company }) {
+  const [tab, setTab] = useState<'stats' | 'forever'>('stats')
+  const fish = company.idle?.rebirth?.fish ?? 0
+  const tabs = [
+    { key: 'stats', label: '강화' },
+    { key: 'forever', label: '영구 강화' },
+  ] as const
+  return (
+    <>
+      <div className="idle-growth-tabs" role="tablist" aria-label="성장">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.key}
+            data-testid={`growth-tab-${t.key}`}
+            onClick={() => {
+              sfx.tap()
+              setTab(t.key)
+            }}
+          >
+            {t.label}
+            {t.key === 'forever' && (
+              <span className="idle-fish-count">
+                <FishIcon />
+                {fish.toLocaleString()}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      {tab === 'stats' ? (
+        <>
+          <p className="idle-subtitle">강해진 만큼, 더 빠르게 돌파해요</p>
+          <IdleStats company={company} />
+        </>
+      ) : (
+        <IdleForever company={company} />
+      )}
+    </>
+  )
+}
+
+type FishUpgrade = NonNullable<
+  NonNullable<NonNullable<Company['idle']>['rebirth']>['upgrades']
+>[number]
+/** 영구 강화 (600번): 전투 강화와 같은 능력치에 더해지고 환생해도 남는다. */
+const FOREVER: Record<FishUpgrade['kind'], { name: string; unit: string }> = {
+  damage: { name: '공격력', unit: '%' },
+  hp: { name: '매수벽 체력', unit: '%' },
+  buy: { name: '매수벽 공격', unit: '주' },
+}
+
+function IdleForever({ company }: { company: Company }) {
+  const busy = useRaisingStore((s) => s.busy)
+  const rebirth = company.idle?.rebirth
+  const [failed, setFailed] = useState<string | null>(null)
+  if (!rebirth) return null
+  return (
+    <>
+      <p className="idle-subtitle">환생해서 얻은 생선으로 올려요. 환생해도 사라지지 않아요</p>
+      {(rebirth.upgrades ?? []).map((u) => (
+        <article className="idle-stat" key={u.kind} data-testid="fish-upgrade" data-kind={u.kind}>
+          <span className="idle-stat-icon" aria-hidden="true">
+            <GrowthIcon name={u.kind} />
+          </span>
+          <div className="idle-stat-info">
+            <b>
+              {FOREVER[u.kind].name} <small>Lv.{u.level}</small>
+            </b>
+            <small>환생해도 그대로예요</small>
+            <p>
+              +{u.bonus.toLocaleString()}
+              {FOREVER[u.kind].unit} → +{u.nextBonus.toLocaleString()}
+              {FOREVER[u.kind].unit}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="idle-buy idle-fish-buy"
+            disabled={busy || rebirth.fish < u.cost}
+            onClick={async () => {
+              setFailed(null)
+              await useRaisingStore.getState().buyFishUpgrade(u.kind)
+              const reason = useRaisingStore.getState().error
+              if (reason) setFailed(reason)
+              else sfx.levelUp()
+            }}
+          >
+            강화
+            <small>
+              <FishIcon /> {u.cost.toLocaleString()}
+            </small>
+          </button>
+        </article>
+      ))}
+      {failed && <p role="alert">{failed}</p>}
+      <IdleRebirth company={company} />
+    </>
   )
 }
 
@@ -485,7 +587,7 @@ function IdleStats({ company }: { company: Company }) {
                 setBuying(u.kind)
                 setReceipt(null)
                 setError(null)
-                haptic.light()
+                // 누를 때와 강화가 될 때의 진동은 없앴다 (600번): 연달아 누르면 화면이 떨리는 것처럼 느껴졌다.
                 try {
                   const result = await useRaisingStore.getState().buyBattleUpgrade(u.kind, levels)
                   if (!mounted.current) return
@@ -501,7 +603,6 @@ function IdleStats({ company }: { company: Company }) {
                           : after.bonusPercent - u.bonusPercent,
                     })
                     sfx.levelUp()
-                    haptic.success()
                   } else {
                     setError(
                       useRaisingStore.getState().error ?? '강화되지 않았어요. 다시 시도해 주세요.',
@@ -526,7 +627,6 @@ function IdleStats({ company }: { company: Company }) {
         )
       })}
       {error && <p role="alert">{error}</p>}
-      <IdleRebirth company={company} />
     </>
   )
 }

@@ -74,6 +74,8 @@ try {
           firePercent: 100,
           criticalPercent: 100,
           fielded: i < 4,
+          // 출전 칸의 번호 (599번).
+          slot: (i < 4 ? i : null) as number | null,
           skills: [{ code: 'meteor', name: '메테오' }],
           skillLevel: 1,
           skillNextLevel: 20,
@@ -82,7 +84,7 @@ try {
         })),
       },
     }
-    const mutations: { path: string; body: Record<string, string | boolean> }[] = []
+    const mutations: { path: string; body: Record<string, string | boolean | number> }[] = []
     let reject = false
     await page.route(/\/api\/(company|sessions)(\/|$|\?)/, async (route) => {
       const path = new URL(route.request().url()).pathname
@@ -99,9 +101,22 @@ try {
         }
       }
       if (path.endsWith('/cat/field')) {
-        if (body.replaceCode)
-          required(company.idle.cats.find((c) => c.code === body.replaceCode)).fielded = false
-        required(company.idle.cats.find((c) => c.code === body.code)).fielded = body.fielded
+        // 서버 IdleEngine.fieldCat처럼 칸을 지킨다 (599번).
+        const me = required(company.idle.cats.find((c) => c.code === body.code))
+        if (body.replaceCode) {
+          const out = required(company.idle.cats.find((c) => c.code === body.replaceCode))
+          Object.assign(me, { fielded: true, slot: out.slot })
+          Object.assign(out, { fielded: false, slot: null })
+        } else if (body.slot != null) {
+          const there = company.idle.cats.find((c) => c.fielded && c.slot === body.slot)
+          if (there && me.fielded) there.slot = me.slot
+          else if (there) Object.assign(there, { fielded: false, slot: null })
+          Object.assign(me, { fielded: true, slot: body.slot })
+        } else {
+          const taken = company.idle.cats.filter((c) => c.fielded).map((c) => c.slot)
+          me.fielded = body.fielded
+          me.slot = body.fielded ? ([0, 1, 2, 3].find((at) => !taken.includes(at)) ?? null) : null
+        }
       }
       if (path.endsWith('/cat/weapon'))
         required(company.idle.cats.find((c) => c.code === body.code)).weapon = body.kind
@@ -245,6 +260,19 @@ try {
     await page.mouse.move(4, 90, { steps: 6 })
     await page.mouse.up()
     assert.equal(mutations.length, 1)
+    // 출전 중인 고양이를 다른 칸에 놓으면 그 칸 번호로 옮기고, 둘이 자리를 맞바꾼다 (599번).
+    const slotOrder = () =>
+      page
+        .locator('[data-testid=cat-slot]')
+        .evaluateAll((slots) => slots.map((slot) => (slot as HTMLElement).dataset.code ?? null))
+    assert.deepEqual(await slotOrder(), ['night', 'mint', 'lilac', 'sunset'])
+    await drag(target('slot:mint'), target('slot:lilac'))
+    await expect.poll(slotOrder).toEqual(['night', 'lilac', 'mint', 'sunset'])
+    assert.deepEqual(mutations[1].body, { code: 'mint', fielded: true, slot: 2 })
+    await drag(target('slot:mint'), target('slot:lilac'))
+    await expect.poll(slotOrder).toEqual(['night', 'mint', 'lilac', 'sunset'])
+    assert.deepEqual(mutations[2].body, { code: 'mint', fielded: true, slot: 1 })
+    mutations.splice(1)
     // Keyboard-equivalent tap selection + slot works and server rejection preserves the team.
     await cat('snow').click()
     reject = true
