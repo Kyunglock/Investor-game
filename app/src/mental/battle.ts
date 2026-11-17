@@ -109,6 +109,7 @@ import {
   type UnitKind,
 } from './enemies'
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
+import { FortifyGuards } from './fortifyGuards'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
@@ -605,6 +606,7 @@ class BattleScene extends Phaser.Scene {
   /** 중간 매도벽을 부쉈는데 중간 큰손이 아직 살아 있다: 잡으면 잡몹 구간이 시작된다. */
   private buyWall: BuyWall | null = null
   private buyWallFx: BuyWallFx | null = null
+  private fortifyGuards: FortifyGuards | null = null
   /** 지금 오르는 빠르기(px/s)와 지금까지 오른 거리(px): 배경·호가 줄·가격 눈금이 이만큼 내려간다. */
   private climbV = 0
   private climbed = 0
@@ -883,6 +885,7 @@ class BattleScene extends Phaser.Scene {
         this.player.setPosition(this.standX(0), this.playerY())
       }
       if (this.player && this.heroGun) this.poseGun(this.player, this.aim, this.heroKick)
+      if (this.player) this.drawBuyWall()
       for (const [i, m] of this.mates.entries()) {
         m.body.setX(this.standX(i + 1))
         this.poseGun(m.body, m.aim, m.kick, m)
@@ -2520,6 +2523,7 @@ class BattleScene extends Phaser.Scene {
     return {
       ...this.marketStats,
       arena: { front: this.bg?.frame.name, back: this.bg2?.frame.name },
+      fortifyGuards: this.fortifyGuards?.inspect() ?? null,
       boss: this.bossEnemy?.active ? { hp: this.bossEnemy.hp, maxHp: this.bossEnemy.maxHp } : null,
       simSpeed: this.simSpeed,
       climbed: this.climbed,
@@ -3208,6 +3212,7 @@ class BattleScene extends Phaser.Scene {
     if (!this.buyWall || !this.buyWallFx) return
     const lane = this.lane()
     this.buyWallFx.draw(this.buyWall, lane.left, lane.width, this.buyWallY(), this.reducedMotion)
+    this.fortifyGuards?.layout(lane.left, lane.width, this.buyWallY())
   }
 
   /**
@@ -3387,6 +3392,8 @@ class BattleScene extends Phaser.Scene {
       this.rallyUntil = this.elapsed + ACTIVES.rally.seconds
     } else {
       this.buyWall?.fortify(ACTIVES.fortify.seconds)
+      this.fortifyGuards ??= new FortifyGuards(this, this.reducedMotion)
+      this.fortifyGuards.show()
       this.drawBuyWall()
     }
     const [text, color] = ACTIVE_BANNERS[code]
@@ -4760,6 +4767,7 @@ class BattleScene extends Phaser.Scene {
     if (this.over || this.stopped || this.choosing || this.paused) {
       return
     }
+    this.fortifyGuards?.step(this.game.loop.rawDelta / 1000)
     this.syncIdleWall()
     const dt = dtMs / 1000
     this.runRush = Math.max(0, this.runRush - dt)

@@ -8,6 +8,7 @@ import snowPoses from './assets/cat-snow-poses.png'
 import sunsetPoses from './assets/cat-sunset-poses.png'
 import enemies from './assets/enemies.png'
 import hero from './assets/hero-unarmed.png'
+import shieldGuard from './assets/shield-guard.png'
 import shortSeller from './assets/short-seller.png'
 import street from './assets/toy-arena.png'
 import wallBlocks from './assets/wall-blocks-toy.png'
@@ -32,6 +33,7 @@ export const STAGE_ASSETS = {
   enemies,
   wallBlocks,
   shortSeller,
+  shieldGuard,
   weapons,
   battleWeapons,
 }
