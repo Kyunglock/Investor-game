@@ -370,7 +370,7 @@ export function IdleCats({
           <p className="loadout-hint" aria-live="polite">
             {drag?.over
               ? '놓으면 출전 고양이를 교체해요'
-              : '길게 집어 출전 칸에 놓기 · 또는 고양이 선택 후 출전 칸 누르기'}
+              : '집어서 끌어 출전 칸에 놓기 · 또는 고양이 선택 후 출전 칸 누르기'}
           </p>
           <ul
             className="idle-cat-grid"

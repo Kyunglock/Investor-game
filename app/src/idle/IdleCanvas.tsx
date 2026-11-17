@@ -12,6 +12,8 @@ import { idleLoadout } from './loadout'
 /** 전투 화면을 띄우지 못했을 때 스스로 다시 해 보는 횟수와 그 틈. 그래도 안 되면 오류 문구와 "다시 시도"를 보인다. */
 const AUTO_RETRIES = 2
 const RETRY_MS = 800
+/** 전장이 이만큼 아무 진척 없이 열리지 않으면 멈춘 것으로 보고 다시 띄운다 (#836). 화면이 보이는 동안만 잰다. */
+const STALL_MS = 12000
 
 export function IdleCanvas({ company, connected }: { company: Company; connected: boolean }) {
   const equipped = heroOf(company).weapon
@@ -21,6 +23,8 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
   const battle = useRef<BattleHandle | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  // 전장이 다 차려졌는가. 그 전에는 배경색만 보이므로 불러오는 중임을 알린다 (#836).
+  const [ready, setReady] = useState(false)
   // 전투 화면을 띄우지 못하면 알리기 전에 스스로 다시 해 본다 (#836): 모듈을 못 받았거나 그리기 장치를 못 잡은 것은 대개 잠깐이다.
   const retries = useRef(0)
   // 전투 모듈을 받지 못했는가. 그러면 "다시 시도"는 화면을 새로 고친다.
@@ -33,15 +37,39 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     let foreground = !document.hidden
     let nativeActive = true
     let retry = 0
+    let stall = 0
+    let opened = false
+    // 전장이 열리지 않은 채 멈췄다 (#836): 그림 하나가 끝나지 않거나 차리다 멈추면 오류도 없이 배경색만 남는다.
+    // 스스로 몇 번 다시 띄우고, 그래도 안 되면 오류 문구와 "다시 시도"를 보인다.
+    const stalled = () => {
+      if (disposed || opened) return
+      console.error('전장이 열리지 않아 다시 띄운다')
+      if (retries.current < AUTO_RETRIES) {
+        retries.current++
+        setAttempt((n) => n + 1)
+      } else {
+        battle.current?.stop()
+        battle.current = null
+        setError('전장 그림을 불러오지 못했어요.')
+      }
+    }
+    // 진척이 있을 때마다 다시 잰다. 화면이 가려진 동안은 브라우저가 그리기를 멈추므로 재지 않는다.
+    const watch = () => {
+      window.clearTimeout(stall)
+      if (!disposed && !opened && foreground && nativeActive)
+        stall = window.setTimeout(stalled, STALL_MS)
+    }
     const pause = () =>
       battle.current?.setPaused(!foreground || !nativeActive || !latest.current.connected)
     const visibility = () => {
       foreground = !document.hidden
       pause()
+      watch()
     }
     const native = (event: Event) => {
       nativeActive = (event as CustomEvent<boolean>).detail
       pause()
+      watch()
     }
     // 테스트판의 도구 창이 몬스터 습격을 바로 부른다 (decisions.md 499번).
     const raidCalled = (event: Event) =>
@@ -54,6 +82,8 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     window.addEventListener('idle-test-raid', raidCalled)
     window.addEventListener('idle-active', activeUsed)
     setError(null)
+    setReady(false)
+    watch()
     void import('../mental/battle')
       .catch((cause) => {
         // 모듈을 받지 못했다: 브라우저가 이 실패를 기억해 같은 화면에서는 다시 받지 못한다. 새로 고쳐야 한다.
@@ -98,18 +128,29 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
           onBanner: () => {},
           onHurt: () => {},
           onDone: () => {},
-          onError: setError,
+          onProgress: watch,
+          onReady: () => {
+            if (disposed) return
+            opened = true
+            window.clearTimeout(stall)
+            retries.current = 0
+            setReady(true)
+          },
+          onError: (message) => {
+            opened = true
+            window.clearTimeout(stall)
+            setError(message)
+          },
           onLevelUp: () => {
             battle.current?.applyLoadout(idleLoadout(latest.current.company))
             pause()
           },
         })
       })
-      .then(() => {
-        if (!disposed && battle.current) retries.current = 0
-      })
       .catch((cause) => {
         if (disposed) return
+        opened = true
+        window.clearTimeout(stall)
         // 까닭을 콘솔에 남긴다: 브라우저 검사와 원격 디버깅이 읽는다.
         console.error('전투 화면을 띄우지 못했다', cause)
         if (!stale.current && retries.current < AUTO_RETRIES) {
@@ -120,6 +161,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     return () => {
       disposed = true
       window.clearTimeout(retry)
+      window.clearTimeout(stall)
       document.removeEventListener('visibilitychange', visibility)
       window.removeEventListener('idle-app-active', native)
       window.removeEventListener('idle-test-raid', raidCalled)
@@ -159,6 +201,11 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
           aria-live="polite"
         >
           {raid.text}
+        </p>
+      )}
+      {!ready && !error && (
+        <p className="idle-canvas-loading" data-testid="idle-canvas-loading" aria-live="polite">
+          전장을 불러오는 중…
         </p>
       )}
       {error && (

@@ -253,7 +253,10 @@ export interface BattleOptions {
   genre: Genre
   hero: Hero
   loadout: Loadout
+  /** 전장을 다 차렸다(create 끝). */
   onReady?: () => void
+  /** 그림을 받는 진행(0~1). 받는 쪽이 멈췄는지 가리는 데 쓴다 (#836). */
+  onProgress?: (value: number) => void
   onError?: (message: string) => void
   onHud: (hud: Hud) => void
   onBanner: (text: string, color: string) => void
@@ -829,6 +832,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.on('progress', (value: number) => this.opts.onProgress?.(value))
     for (const [key, url] of Object.entries(STAGE_ASSETS)) this.load.image(`art-${key}`, url)
   }
 
@@ -846,7 +850,6 @@ class BattleScene extends Phaser.Scene {
         mapTexture.add(map.key, 0, map.x, ARENA_FRAME.y, ARENA_FRAME.width, ARENA_FRAME.height)
       }
     }
-    this.opts.onReady?.()
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero.weapon.grade)
     this.bakeMateGuns()
@@ -1135,6 +1138,8 @@ class BattleScene extends Phaser.Scene {
     this.choosing = true
     this.physics.pause()
     this.pushHud(true)
+    // 여기까지 왔으면 전장이 그려진다. 중간에 멈추면 부른 쪽이 기다리다 다시 띄운다 (#836).
+    this.opts.onReady?.()
     this.opts.onLevelUp(this.level)
   }
 
@@ -5062,6 +5067,9 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     // 벡터 그림(341번): 부드럽게.
     render: { pixelArt: false, antialias: true, powerPreference: 'high-performance' },
     fps: { target: 60 },
+    // 그림을 XHR로 다시 내려받지 않고 <img>로 올린다 (#836): 접속 때 미리 받은 그림(App의 BOOT_IMAGES)을 브라우저가 그대로 내준다.
+    // XHR은 게임을 만들 때마다 서른 장 가까이를 다시 청했고, 그중 하나가 끝나지 않으면 전장이 배경색만 남았다.
+    loader: { imageLoadType: 'HTMLImageElement' },
     scene: [scene],
   })
   if (import.meta.env.DEV) {
