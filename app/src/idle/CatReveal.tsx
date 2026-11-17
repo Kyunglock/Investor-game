@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { CatPortrait, catTrait } from './CatPortrait'
-import { catRevealPlan } from './catGrade'
+import { catRevealPlan, shinyCat } from './catGrade'
 import { SkillBadge } from './SkillBadge'
 import { skillNames } from './skills'
 import '../mental/weapon-reveal.css'
@@ -86,6 +86,7 @@ export function CatReveal({
       data-phase={phase}
       data-grade={result ? plan.sound : undefined}
       data-power={plan.power}
+      data-shiny={result ? shinyCat(result.cat.grade) : false}
       style={{ '--reveal-color': plan.color } as CSSProperties}
       onCancel={(e) => {
         e.preventDefault()

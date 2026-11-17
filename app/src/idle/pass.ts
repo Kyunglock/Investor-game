@@ -19,6 +19,11 @@ export function leftText(secondsLeft: number): string {
   return m > 0 ? `${m}분 남음` : '곧 끝나요'
 }
 
+/** 패스 단추에 다는 수 (572번): 받을 단계 보상과, 받을 포인트가 있는 미션을 더한다. */
+export function waiting(pass: Pass): number {
+  return pass.claimable + pass.missionsReady
+}
+
 /** 다음 단계까지의 포인트: 이번 단계에서 모은 것과 한 단계에 드는 것. 마지막 단계에 닿았으면 full이다. */
 export function stepProgress(pass: Pass): { have: number; need: number; full: boolean } {
   const need = Math.max(1, pass.pointsPerStep)

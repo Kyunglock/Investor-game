@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { idleThreat } from './assault'
 import {
   assaultBonusPercent,
   BUY_WALL,
@@ -144,14 +143,10 @@ describe('매수벽 붕괴 밀어내기 (#699)', () => {
   })
 })
 
-describe('자동 전투의 매수 주문 피해 (514번)', () => {
-  it('무기와 따로 센다: 바탕 0.75 × 그 벽의 물량 배율 × 매수벽 공격 강화', () => {
-    expect(idleBuyOrderDamage(1, 0)).toBe(0.75)
-    // 물량 배율은 서버 IdleEngine.threat과 같다: 100벽(큰손)은 5.2 (518번의 체력 곡선).
-    const hp100 = (10 + 6 * 99 + 0.1 * 99 * 99) * 3
-    expect(idleThreat(100, hp100)).toBe(5.2)
-    expect(idleBuyOrderDamage(5.2, 0)).toBeCloseTo(3.9)
+describe('자동 전투의 매수 주문 피해 (514·573번)', () => {
+  it('무기와도 벽의 깊이와도 따로 센다: 바탕 0.75 × 매수벽 공격 강화', () => {
+    expect(idleBuyOrderDamage(0)).toBe(0.75)
     // 매수벽 공격 강화 +30%.
-    expect(idleBuyOrderDamage(5.2, 0.3)).toBeCloseTo(3.9 * 1.3)
+    expect(idleBuyOrderDamage(0.3)).toBeCloseTo(0.75 * 1.3)
   })
 })

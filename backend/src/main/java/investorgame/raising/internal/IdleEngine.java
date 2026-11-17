@@ -663,9 +663,12 @@ class IdleEngine {
         .doubleValue();
   }
 
-  /** One buy order's damage at this wall (514). The weapon is not in it. */
-  private double buyOrder(CompanyState c, long wall) {
-    return BUY_ORDER_DAMAGE * threat(wall) * buyUp(c);
+  /**
+   * One buy order's damage (514, 573). Neither the weapon nor the wall's depth is in it: only the
+   * buy wall attack upgrade raises it.
+   */
+  private double buyOrder(CompanyState c) {
+    return BUY_ORDER_DAMAGE * buyUp(c);
   }
 
   private double buyUp(CompanyState c) {
@@ -814,7 +817,7 @@ class IdleEngine {
       }
     }
     // 매수세례 (503): its buy orders that reach the front wall. Credits come from the press, not time.
-    double barrageMax = buyOrder(c, front) * BARRAGE_POWER;
+    double barrageMax = buyOrder(c) * BARRAGE_POWER;
     for (IdleHit hit : hits) {
       if (active <= 0 || hit == null || !"barrage".equals(hit.kind()) || hit.count() <= 0) continue;
       if (Math.abs(hit.wall() - front) > AHEAD) continue;
@@ -833,7 +836,7 @@ class IdleEngine {
           Math.min(
               SPEED * GRACE_MS / 1000 * BUY_ORDERS_PER_SECOND,
               s.hitCredits[BUY] + active * BUY_ORDERS_PER_SECOND);
-      double buyMax = buyOrder(c, front);
+      double buyMax = buyOrder(c);
       for (IdleHit hit : hits) {
         if (hit == null || !"buy".equals(hit.kind()) || hit.count() <= 0) continue;
         if (Math.abs(hit.wall() - front) > AHEAD) continue;

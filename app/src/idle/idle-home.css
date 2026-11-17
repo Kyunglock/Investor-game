@@ -1359,6 +1359,25 @@
   font-size: 12px;
   text-align: center;
 }
+/* 받을 포인트가 있는 미션 (572번): 줄이 밝아지고 포인트 자리에 받기 단추가 선다. */
+.idle-pass-missions li.is-ready {
+  border-color: #e09a2c;
+  background: #fff1cf;
+}
+.idle-pass-mission-claim {
+  min-height: 32px;
+  padding: 2px 10px;
+  border: 1.5px solid #c18c46;
+  border-radius: 9px;
+  background: linear-gradient(#ffe6a5, #ffd07b);
+  box-shadow: 0 2px 0 #d2a25d;
+  color: #6b3a00;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.idle-pass-mission-claim:disabled {
+  opacity: 0.5;
+}
 .idle-pass-missions .idle-pass-bar {
   grid-column: 1 / -1;
   height: 6px;

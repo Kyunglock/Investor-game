@@ -7,7 +7,7 @@ import { sfx } from '../fx/sound'
 import { GunSprite } from './GunSprite'
 import type { Weapon } from './hero'
 import { FIRE_STYLE_NAMES, SHOT_WEIGHT, WEAPON_EFFECTS } from './weaponEffects'
-import { weaponRevealPlan } from './weaponRevealPlan'
+import { shinyWeapon, weaponRevealPlan } from './weaponRevealPlan'
 import './weapon-reveal.css'
 
 export type DrawResult = {
@@ -86,6 +86,7 @@ export function WeaponReveal({
       data-phase={phase}
       data-grade={result?.draw.grade}
       data-power={plan.power}
+      data-shiny={result ? shinyWeapon(result.draw.grade) : false}
       style={{ '--reveal-color': plan.color } as CSSProperties}
       onCancel={(e) => {
         e.preventDefault()

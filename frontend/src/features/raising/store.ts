@@ -92,6 +92,10 @@ interface RaisingState {
    * company.pass.lastRewards. 받은 회사(거절되거나 끊겼으면 null)를 돌려준다. 전투를 멈추지 않게 busy를 켜지 않는다.
    */
   claimPass: (step?: number) => Promise<Company | null>
+  /**
+   * 시즌패스 미션의 포인트를 받는다 (572번). code가 없으면 받을 수 있는 것을 모두 받는다. 받은 회사(거절되거나 끊겼으면 null)를 돌려준다.
+   */
+  claimPassMission: (code?: string) => Promise<Company | null>
   /** 테스트판: 시즌패스 경험치를 더한다 (529번). */
   addSandboxPassExp: (exp: number) => Promise<void>
   /** 테스트판: 다음 시즌으로 넘긴다. 진행도가 비워진다 (529번). */
@@ -263,6 +267,13 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     claimPass: async (step) => {
       const res = await safely(
         api.POST('/api/company/pass/claim', { body: step == null ? {} : { step } }),
+      )
+      set({ company: res?.data ?? get().company, error: reason(res?.error) })
+      return res?.data ?? null
+    },
+    claimPassMission: async (code) => {
+      const res = await safely(
+        api.POST('/api/company/pass/missions/claim', { body: code == null ? {} : { code } }),
       )
       set({ company: res?.data ?? get().company, error: reason(res?.error) })
       return res?.data ?? null

@@ -178,6 +178,14 @@ try {
         drawn.damagePercent = 50 + (drawn.level - 1) * 10
         if (drawn.level === 1 && company.idle.cats.filter((c) => c.fielded).length < 4)
           drawn.fielded = true
+      } else if (path.endsWith('/pass/missions/claim')) {
+        for (const mission of company.pass.missions) {
+          if (sent?.code && mission.code !== sent.code) continue
+          company.pass.points += mission.ready
+          mission.earned += mission.ready
+          mission.ready = 0
+        }
+        company.pass.missionsReady = 0
       } else if (path.includes('/shop/')) {
         const item = company.shop.items.find((i) => path.endsWith(`/shop/${i.code}`))
         if (item) {
@@ -277,6 +285,15 @@ try {
     await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('73/100')
     await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('30P')
     await expect(page.getByTestId('pass-exp')).toHaveText('120 / 300P')
+    // 포인트는 눌러서 받는다 (572번): 받을 것이 있는 미션에만 받기 단추가 서고, 누르면 그 미션을 받는다.
+    await expect(page.getByTestId('pass-mission-claim')).toHaveCount(1)
+    const attend = page.locator('[data-testid=pass-mission][data-code=attend]')
+    await expect(attend.getByTestId('pass-mission-claim')).toHaveText('받기 +100P')
+    await attend.getByTestId('pass-mission-claim').click()
+    await expect(page.getByTestId('pass-got')).toContainText('포인트 +100P')
+    await expect(page.getByTestId('pass-mission-claim')).toHaveCount(0)
+    await expect(page.getByTestId('pass-exp')).toHaveText('220 / 300P')
+    await expect(page.getByTestId('pass-badge')).toHaveCount(0)
     await expect(page.getByTestId('pass').locator('.idle-coin')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     await expect(page.getByTestId('pass')).toHaveCount(0)

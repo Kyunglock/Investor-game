@@ -468,6 +468,15 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView claimPassMission(UUID sessionId, String code) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    rewards.claimPassMission(row.state(), code);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView sandboxPassExp(UUID sessionId, long exp) {
     CompanyRepository.Row row = lockSandbox(sessionId);
     rewards.addPassExp(row.state(), exp);

@@ -33,3 +33,8 @@ export function catRevealPlan(grade: CatGrade, isNew: boolean) {
   const at = ['C', 'B', 'A', 'S'].indexOf(grade)
   return plans[Math.min(plans.length - 1, Math.max(0, at) + (isNew ? 1 : 0))]
 }
+
+/** 빛나는 등급 (574번): A등급부터는 좋은 것을 뽑았다는 느낌이 들게 뽑기 연출이 빛난다. */
+export function shinyCat(grade: CatGrade): boolean {
+  return grade === 'A' || grade === 'S'
+}

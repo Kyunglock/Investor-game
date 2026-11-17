@@ -132,6 +132,21 @@ describe('시즌패스 (529번)', () => {
     expect(post).toHaveBeenLastCalledWith('/api/company/pass/claim', { body: {} })
   })
 
+  it('미션의 포인트를 받는다: 미션 하나나 모두 (572번)', async () => {
+    const after = { ...before, pass: pass(0) }
+    post.mockResolvedValue({ data: after } as never)
+    expect(await useRaisingStore.getState().claimPassMission('attend')).toBe(after)
+    expect(post).toHaveBeenLastCalledWith('/api/company/pass/missions/claim', {
+      body: { code: 'attend' },
+    })
+    expect(useRaisingStore.getState().company).toBe(after)
+    await useRaisingStore.getState().claimPassMission()
+    expect(post).toHaveBeenLastCalledWith('/api/company/pass/missions/claim', { body: {} })
+    post.mockResolvedValueOnce({ error: { message: '받을 수 있는 미션 포인트가 없어요' } } as never)
+    expect(await useRaisingStore.getState().claimPassMission('wall')).toBeNull()
+    expect(useRaisingStore.getState().error).toBe('받을 수 있는 미션 포인트가 없어요')
+  })
+
   it('받을 것이 없어 거절되거나 끊기면 null이고 회사는 그대로다', async () => {
     post.mockResolvedValueOnce({ error: { message: '받을 보상이 없습니다.' } } as never)
     expect(await useRaisingStore.getState().claimPass()).toBeNull()

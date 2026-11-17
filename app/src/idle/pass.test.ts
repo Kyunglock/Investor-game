@@ -10,6 +10,7 @@ import {
   rewardsText,
   stepProgress,
   stepState,
+  waiting,
 } from './pass'
 
 /** 서버의 보상표 (529·571번): 보통 단계 다이아 50, 5의 배수는 200, 10·20은 300 + 무기, 30은 500 + 고양이. 한 단계에 300포인트. */
@@ -36,6 +37,7 @@ function pass(points: number, claimed: number[] = [], over: Partial<Pass> = {}):
     pointsPerStep: 300,
     step,
     claimable: steps.filter((s) => s.reached && !s.claimed).length,
+    missionsReady: 0,
     steps,
     missions: [],
     lastRewards: [],
@@ -59,6 +61,7 @@ const mission = (count: number, every: number): PassMission => ({
   every,
   points: 30,
   earned: Math.floor(count / every) * 30,
+  ready: 0,
 })
 
 describe('시즌패스 (529·571번)', () => {
@@ -97,6 +100,12 @@ describe('시즌패스 (529·571번)', () => {
         ),
       ),
     ).toBe(30)
+  })
+
+  it('패스 단추의 수는 받을 단계 보상과 받을 포인트가 있는 미션을 더한다 (572번)', () => {
+    expect(waiting(pass(0))).toBe(0)
+    expect(waiting(pass(650, [1]))).toBe(1)
+    expect(waiting(pass(650, [1], { missionsReady: 2 }))).toBe(3)
   })
 
   it('미션은 다음 문턱까지의 진행도를 적는다', () => {

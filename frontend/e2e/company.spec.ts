@@ -387,14 +387,30 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
 
   // 출석 미션: 하루에 100포인트. 아직 1단계(300)에는 못 닿는다.
   const attended = await companyOf(await api.post('/api/company/attendance'))
-  expect(attended.pass.points).toBe(100)
-  expect(attended.pass.step).toBe(0)
-  expect(attended.pass.claimable).toBe(0)
+  // 포인트는 저절로 들어오지 않는다 (572번): 받을 수 있게 되고, 눌러서 받는다.
+  expect(attended.pass.points).toBe(0)
+  expect(attended.pass.missionsReady).toBe(1)
   expect(attended.pass.missions.find((mission) => mission.code === 'attend')).toMatchObject({
     count: 1,
     target: 2,
-    earned: 100,
+    earned: 0,
+    ready: 100,
   })
+  expect(
+    (await api.post('/api/company/pass/missions/claim', { data: { code: 'wall' } })).status(),
+  ).toBe(400)
+  const taken = await companyOf(
+    await api.post('/api/company/pass/missions/claim', { data: { code: 'attend' } }),
+  )
+  expect(taken.pass.points).toBe(100)
+  expect(taken.pass.step).toBe(0)
+  expect(taken.pass.claimable).toBe(0)
+  expect(taken.pass.missionsReady).toBe(0)
+  expect(taken.pass.missions.find((mission) => mission.code === 'attend')).toMatchObject({
+    earned: 100,
+    ready: 0,
+  })
+  expect((await api.post('/api/company/pass/missions/claim', { data: {} })).status()).toBe(400)
   // 못 닿은 단계는 400이고, 본 게임에서는 포인트를 채우거나 시즌을 넘길 수 없다.
   expect((await api.post('/api/company/pass/claim', { data: { step: 1 } })).status()).toBe(400)
   expect((await api.post('/api/company/pass/claim', { data: { step: 2 } })).status()).toBe(400)

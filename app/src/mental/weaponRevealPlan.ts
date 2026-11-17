@@ -18,3 +18,10 @@ export function weaponRevealPlan(grade: Weapon['grade']) {
   }
   return plans[grade]
 }
+
+const GRADES: Weapon['grade'][] = ['F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS', 'SR', 'UR', 'LR']
+
+/** 빛나는 등급 (574번): A등급부터는 좋은 것을 뽑았다는 느낌이 들게 뽑기 연출이 빛난다. */
+export function shinyWeapon(grade: Weapon['grade']): boolean {
+  return GRADES.indexOf(grade) >= GRADES.indexOf('A')
+}
