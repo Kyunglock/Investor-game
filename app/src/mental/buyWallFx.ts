@@ -204,15 +204,11 @@ export class BuyWallFx {
           Math.min(2, hpWidth / 2),
         )
       }
-      this.title
-        .setText(`매수벽 ${shareLabel(wall.hp)}`)
-        .setPosition(left + width / 2, top + height * 0.58)
+      this.title.setText(shareLabel(wall.hp)).setPosition(left + width / 2, top + height * 0.58)
     } else {
       this.surface.setVisible(false)
       g.lineStyle(1, 0xe78181, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
-      this.title
-        .setText(`매수벽 붕괴 · 재정비 ${wall.rebuildLeft.toFixed(1)}초`)
-        .setPosition(left + width / 2, y)
+      this.title.setText(`재정비 ${wall.rebuildLeft.toFixed(1)}초`).setPosition(left + width / 2, y)
     }
     if (hit > 0) {
       const radius = 12 + (1 - hit) * 34

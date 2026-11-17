@@ -57,7 +57,7 @@ try {
     const start = Date.now()
     await cast()
     await expect.poll(async () => (await inspect()).fortified).toBe(true)
-    assert.match((await inspect()).label, /^매수벽 /)
+    assert.match((await inspect()).label, /^[\d,]+주$/)
     await page.waitForTimeout(4000)
     assert.equal((await inspect()).fortified, true)
     await expect
@@ -65,7 +65,7 @@ try {
       .toBe(false)
     assert.ok(Date.now() - start >= 4700)
     assert.ok(Date.now() - start < 6500)
-    assert.match((await inspect()).label, /^매수벽 /)
+    assert.match((await inspect()).label, /^[\d,]+주$/)
   }
   await cast()
   await page.waitForTimeout(3000)
