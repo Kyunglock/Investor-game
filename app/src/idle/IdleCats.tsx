@@ -177,11 +177,11 @@ export function IdleCats({
               {c ? (
                 <button
                   type="button"
-                  className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''} ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:${c.code}` ? 'is-drop-over' : ''}`}
+                  className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''} ${drag?.item === c.code ? 'is-lifted' : ''} ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:${c.code}` ? 'is-drop-over' : ''}`}
                   data-testid="cat-slot"
                   data-loadout-target={`slot:${c.code}`}
                   data-code={c.code}
-                  aria-label={`출전 ${i + 1}번 ${c.name} · 끌어서 자리 옮기기`}
+                  aria-label={`출전 ${i + 1}번 ${c.name} · 꾹 눌러 끌어서 자리 옮기기`}
                   // 출전 중인 고양이도 집어 다른 칸에 놓아 자리를 옮긴다 (599번).
                   onPointerDown={busy ? undefined : down(c.code)}
                   onContextMenu={(e) => e.preventDefault()}
@@ -386,7 +386,7 @@ export function IdleCats({
                 ? drag.over.startsWith('slot:empty')
                   ? '놓으면 이 칸에 서요'
                   : '놓으면 이 칸의 고양이와 바꿔요'
-                : '집어서 끌어 출전 칸에 놓기 · 또는 고양이 선택 후 출전 칸 누르기'}
+                : '집어서 끌어 출전 칸에 놓기 · 출전 칸의 고양이는 꾹 눌러 끌어 자리 바꾸기'}
             </p>
             <ul
               className="idle-cat-grid"
