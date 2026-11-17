@@ -16,7 +16,8 @@ android {
         ]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        // Play 는 올릴 때마다 더 큰 versionCode 를 요구한다. CI 는 워크플로 실행 번호를 넣는다(decisions.md 581번). 없으면 1.
+        versionCode((System.getenv("APP_VERSION_CODE") ?: "1") as Integer)
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
