@@ -86,23 +86,26 @@ try {
         ],
         fieldSlots: 4,
         rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51, adGain: 0 },
-        // 고유 스킬 셋(587번)과 광고 스킬 셋(588번). 시간은 실제 초다.
+        // 고유 스킬 여섯(587·591번, 앞의 셋을 장착)과 광고 스킬 셋(588번). 시간은 실제 초다.
         activeSlots: 3,
         actives: [
           ['barrage', '매수세례', 40, 4, false],
           ['rally', '불장', 60, 6.7, false],
           ['fortify', '방어선 구축', 60, 4, false],
+          ['limitUp', '상한가', 60, 8, false],
+          ['stopLoss', '손절', 60, 0, false],
+          ['averaging', '물타기', 60, 10, false],
           ['boostFire', '공격속도 3배', 180, 60, true],
           ['boostDamage', '공격력 3배', 180, 60, true],
           ['boostBuy', '매수공격 3배', 180, 60, true],
-        ].map(([code, name, cooldown, seconds, ad]) => ({
+        ].map(([code, name, cooldown, seconds, ad], index) => ({
           code,
           name,
           cooldown,
           seconds,
           readyIn: 0,
           left: 0,
-          equipped: !ad,
+          equipped: index < 3,
           ad,
         })) as {
           code: string
@@ -917,7 +920,7 @@ try {
     await nav.getByRole('button', { name: '스킬', exact: true }).click()
     await expect(page.getByTestId('skills')).toBeVisible()
     await expect(page.getByTestId('skill-slot')).toHaveCount(3)
-    await expect(page.getByTestId('unique-skill')).toHaveCount(3)
+    await expect(page.getByTestId('unique-skill')).toHaveCount(6)
     await expect(page.getByTestId('ad-skill')).toHaveCount(3)
     const rally = page.locator('[data-testid=unique-skill][data-code=rally]')
     await expect(rally).toContainText('불장')
@@ -935,6 +938,29 @@ try {
     await expect(rally).toHaveAttribute('data-equipped', 'true')
     assert.deepEqual(equips.at(-1), { code: 'rally', equipped: true })
     await expect(page.getByTestId('idle-active')).toHaveCount(3)
+    // 상한가·손절·물타기 (591번): 칸이 꽉 차 있으면 장착하지 못하고, 하나를 빼면 그 자리에 장착해 전투 화면에 단추가 선다.
+    const stopLoss = page.locator('[data-testid=unique-skill][data-code=stopLoss]')
+    await expect(stopLoss).toContainText('손절')
+    await expect(stopLoss).toContainText('바로 발동 · 재사용 대기 60초')
+    await expect(stopLoss.getByTestId('skill-equip')).toBeDisabled()
+    await expect(stopLoss.getByTestId('skill-equip')).toHaveText('칸 없음')
+    await expect(page.locator('[data-testid=unique-skill][data-code=limitUp]')).toContainText(
+      '지속 8초',
+    )
+    await expect(page.locator('[data-testid=unique-skill][data-code=averaging]')).toContainText(
+      '물타기',
+    )
+    await rally.getByTestId('skill-equip').click()
+    await stopLoss.getByTestId('skill-equip').click()
+    await expect(stopLoss).toHaveAttribute('data-equipped', 'true')
+    assert.deepEqual(equips.at(-1), { code: 'stopLoss', equipped: true })
+    await expect(page.locator('[data-testid=idle-active][data-code=stopLoss]')).toContainText(
+      '손절',
+    )
+    await page.screenshot({ path: `/tmp/idle-skills-new-${width}.png` })
+    await stopLoss.getByTestId('skill-equip').click()
+    await rally.getByTestId('skill-equip').click()
+    await expect(page.locator('[data-testid=idle-active][data-code=rally]')).toHaveCount(1)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     await expect(page.getByTestId('idle-menu')).toHaveCount(0)
     await expect(nav.getByRole('button', { name: /^무기/ })).toHaveCount(0)
