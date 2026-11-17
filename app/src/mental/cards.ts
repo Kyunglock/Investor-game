@@ -1,3 +1,4 @@
+import type { CatTag } from './catTag'
 import type { Weapon } from './hero'
 import {
   earthStats,
@@ -244,6 +245,8 @@ export interface MateGun {
   critical: number
   /** 전투 그림 (mates.ts MATE_LOOKS의 차례): 고양이마다 제 그림으로 선다. */
   look: number
+  /** 전투에서 밑에 적는 이름표 (605번): 고양이의 코드·이름·등급. 없으면 적지 않는다. */
+  tag?: CatTag
 }
 
 export const BASE_LOADOUT: Loadout = {

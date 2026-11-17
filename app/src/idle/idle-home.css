@@ -2354,9 +2354,10 @@
 /* 환생 바로가기: 상단 재화 아래, 전투 화면 왼쪽 위. */
 .idle-rebirth-shortcut {
   position: absolute;
-  z-index: 1;
-  top: calc(max(12px, env(safe-area-inset-top)) + 46px);
-  left: 12px;
+  z-index: 2;
+  /* 광고 스킬 줄(.idle-actives-ad: top 44%, left 6px) 바로 위 (605번): 단추 48px에 그 줄의 간격 8px만큼 띄운다. */
+  top: calc(44% - 56px);
+  left: 6px;
   width: 48px;
   height: 48px;
   padding: 0;

@@ -94,6 +94,16 @@ import {
 import { CAT_GUN, catGunAim, catGunPose, catShotAngle, catShoulder } from './catGun'
 import { CAT_SCALE, mateModel } from './catModels'
 import { catRunFrame } from './catRun'
+import {
+  type CatTag,
+  catAt,
+  dressTag,
+  HOLD_MS,
+  HOLD_SLOP,
+  makeTag,
+  tagStyle,
+  tagText,
+} from './catTag'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
 import { CircuitBreakerFx } from './circuitBreakerFx'
 import {
@@ -246,6 +256,8 @@ export interface BattleOptions {
   onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number, depth: number) => void
   /** 자동 전투의 몬스터 습격 알림 (500번). */
   onIdleRaid?: (text: string, color: string) => void
+  /** 자동 전투에서 고양이를 꾹 눌렀다 (605번): 그 고양이의 정보를 띄운다. code는 고양이의 코드, 사장냥은 'boss'. */
+  onCatHold?: (code: string) => void
   /** 자동 전투의 매수벽이 무너졌다: 알림을 띄운다. 벽은 그대로다 (584번, 전에는 열 벽 앞으로 돌아갔다). */
   onBuyWallBreak?: () => void
 
@@ -371,6 +383,8 @@ interface MagicCaster {
  * 뒤에 서서 쏘기만 하고 적에게 맞지 않는다.
  */
 interface Mate {
+  /** 밑에 적는 이름표 (605번): 등급과 이름. */
+  tag: Phaser.GameObjects.Text
   magicMark: Phaser.GameObjects.Text
   /** 자동 전투 (557번): 이 고양이의 스킬 그림. 마법 표식(✦) 대신 머리 위에 뜬다. */
   skillMarks: Phaser.GameObjects.Image[]
@@ -538,6 +552,9 @@ const ASSAULT_MOB_BANNERS: Record<'stop' | 'spec' | 'short', [string, string]> =
   spec: ['투기 몬스터 출현! 부풀면 터진다', '#ea4d6a'],
   short: ['공매도 출현! 방패로 버틴다', '#9eb7ff'],
 }
+
+/** 고양이 이름표 (605번)가 몸통 가운데에서 내려오는 거리(px): 발 바로 밑. */
+const TAG_DROP = HERO_SIZE.h / 2 - 6
 
 class BattleScene extends Phaser.Scene {
   private readonly opts: BattleOptions
@@ -1133,6 +1150,9 @@ class BattleScene extends Phaser.Scene {
       )
       this.buyWallFx = new BuyWallFx(this, unitK('order'), this.opts.idle ? IDLE_ORDER_SPEED : 1)
       this.drawBuyWall()
+      // 고양이 밑의 이름표와 꾹 눌러 정보 보기 (605번).
+      this.dressTags()
+      this.watchCatHold()
       // 자동 전투는 쌓인 벽 앞에서 시작하고, 기존 스테이지는 첫 카드 선택 뒤 벽까지 전진한다.
       if (this.opts.idle) {
         this.idleWall = this.opts.idle().wall
@@ -1209,9 +1229,12 @@ class BattleScene extends Phaser.Scene {
       m.body.destroy()
       m.gun.destroy()
       m.magicMark.destroy()
+      this.tweens.killTweensOf(m.tag)
+      m.tag.destroy()
       for (const mark of m.skillMarks) mark.destroy()
     }
     while (this.mates.length < want) this.addMate()
+    this.dressTags()
     this.damageStats.mates = this.mates.length
     // 자동 전투에서는 출전한 고양이가 모두 제 스킬을 쓴다 (501번).
     const own = this.loadout.mateMagic
@@ -1259,6 +1282,7 @@ class BattleScene extends Phaser.Scene {
       .setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
       .setDepth(5)
     const mate: Mate = {
+      tag: makeTag(this),
       magicMark: this.add
         .text(body.x, body.y - 58, '✦', {
           fontSize: '24px',
@@ -2656,6 +2680,10 @@ class BattleScene extends Phaser.Scene {
       catTextures: [this.player.texture.key, ...this.mates.map((mate) => mate.body.texture.key)],
       /** 늘어선 자리 (599번): 사장냥과 고양이의 x, 그리고 고양이마다의 생김새 번호. */
       stand: {
+        y: this.player.y,
+        tags: [this.heroTag, ...this.mates.map((mate) => mate.tag)].map((tag) =>
+          tag?.visible ? tag.text : null,
+        ),
         xs: [this.player.x, ...this.mates.map((mate) => mate.body.x)],
         looks: this.mates.map((_, i) => this.mateLook(i)),
       },
@@ -4800,8 +4828,89 @@ class BattleScene extends Phaser.Scene {
     if (ratio > 0) g.fillStyle(0xff4f6d, 1).fillRoundedRect(x, y, Math.max(h, w * ratio), h, 4)
   }
 
+  /** 사장냥의 이름표 (605번). 자동 전투에서만 선다. */
+  private static readonly TAG_NAME = '사장냥'
+
+  private heroTag: Phaser.GameObjects.Text | null = null
+  private tagsDressed = ''
+
+  /** 이름표에 등급과 이름을 입힌다 (605번): 자동 전투에서 고양이마다 밑에 적는다. S등급은 숨 쉬듯 커졌다 작아진다. */
+  private dressTags() {
+    if (!this.opts.idle || !this.player) return
+    this.heroTag ??= makeTag(this)
+    const tags: (CatTag | undefined)[] = [
+      { code: 'boss', name: BattleScene.TAG_NAME },
+      ...this.mates.map((_, i) => this.mateGun(i)?.tag),
+    ]
+    const key = tags.map((tag) => (tag ? tagText(tag) : '')).join('|')
+    if (key === this.tagsDressed) return
+    this.tagsDressed = key
+    for (const [i, text] of [this.heroTag, ...this.mates.map((m) => m.tag)].entries()) {
+      const tag = tags[i]
+      dressTag(text, tag)
+      // 이웃 이름표와 겹치지 않게, 고양이 사이의 간격에 맞춰 글자를 줄인다(좁은 화면, 긴 이름).
+      if (tag) {
+        const room = this.mates.length > 0 ? Math.abs(this.standX(1) - this.standX(0)) - 3 : 999
+        for (let size = tagStyle(tag).size; text.width > room && size > 8; size--)
+          text.setFontSize(size - 1)
+      }
+      this.tweens.killTweensOf(text)
+      text.setScale(1)
+      if (tag && tagStyle(tag).pulse && !this.reducedMotion) {
+        this.tweens.add({
+          targets: text,
+          scale: 1.06,
+          duration: 700,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        })
+      }
+    }
+  }
+
+  /** 꾹 누르기 (605번): 자동 전투에서 고양이를 누르고 있으면 그 고양이의 정보를 띄운다. */
+  private watchCatHold() {
+    if (!this.opts.idle || !this.opts.onCatHold) return
+    let timer: Phaser.Time.TimerEvent | null = null
+    let from = { x: 0, y: 0 }
+    const cancel = () => {
+      timer?.remove()
+      timer = null
+    }
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      cancel()
+      const spots = [this.player, ...this.mates.map((m) => m.body)]
+      // 몸통의 가운데는 발보다 위다.
+      const at = catAt(
+        spots.map((s) => ({ x: s.x, y: s.y - 10 })),
+        pointer.x,
+        pointer.y,
+      )
+      if (at < 0) return
+      from = { x: pointer.x, y: pointer.y }
+      const code = at === 0 ? 'boss' : this.mateGun(at - 1)?.tag?.code
+      if (!code) return
+      // 화면의 실제 시간으로 잰다: 배속과 상관없다.
+      timer = this.time.addEvent({
+        delay: HOLD_MS * this.time.timeScale,
+        callback: () => {
+          timer = null
+          haptic.light()
+          this.opts.onCatHold?.(code)
+        },
+      })
+    })
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (timer && Math.hypot(pointer.x - from.x, pointer.y - from.y) > HOLD_SLOP) cancel()
+    })
+    this.input.on('pointerup', cancel)
+    this.input.on('pointerupoutside', cancel)
+  }
+
   /** 함께 싸우는 고양이: 제자리로 미끄러지고, 숨 쉬고, 맡은 적을 겨눠 연사 간격마다 쏜다 (393·409번). */
   private updateMates(time: number, dt: number, targets: ({ x: number; y: number } | null)[]) {
+    this.heroTag?.setPosition(this.player.x, this.player.y + TAG_DROP)
     const y = this.mode === 'defense' ? this.playerY() : this.player.y
     const k = Math.min(1, dt * 8)
     const turn = Math.min(1, dt * 10)
@@ -4811,6 +4920,7 @@ class BattleScene extends Phaser.Scene {
       m.kick = recoilDecay(m.kick, dt)
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
       m.magicMark.setPosition(b.x, b.y - 58)
+      m.tag.setPosition(b.x, b.y + TAG_DROP)
       // 스킬이 둘이면 머리 위에 나란히 선다.
       m.skillMarks.forEach((mark, k) => {
         mark.setPosition(b.x + (k - (m.skillCount - 1) / 2) * (SKILL_MARK - 4), b.y - 58)

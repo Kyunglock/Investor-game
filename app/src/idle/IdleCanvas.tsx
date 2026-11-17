@@ -124,6 +124,9 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
               id: (old?.id ?? 0) + 1,
             }))
           },
+          // 고양이를 꾹 누르면 그 고양이의 정보를 띄운다 (605번): 창은 IdleHome이 연다.
+          onCatHold: (code) =>
+            window.dispatchEvent(new CustomEvent('idle-cat-info', { detail: code })),
           onHud: () => {},
           onBanner: () => {},
           onHurt: () => {},

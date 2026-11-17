@@ -18,6 +18,7 @@ import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
 import { idleBuyOrderDamage } from '../mental/buyWall'
 import { SHARES_PER_HP, sharesOf } from '../mental/shares'
+import { CatInfoCard } from './CatInfoCard'
 import { FishIcon } from './FishIcon'
 import { GrowthIcon } from './GrowthIcon'
 import { IdleActives } from './IdleActives'
@@ -284,6 +285,14 @@ export function IdleHome({
           <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
           <IdleSandbox company={company} />
           <IdleActives company={company} connected={connected} />
+          {/* 전투 화면에서 고양이를 꾹 누르면 그 고양이의 정보가 뜬다 (605번). */}
+          <CatInfoCard
+            company={company}
+            onManage={(code) => {
+              setWearer(code)
+              navigate('cats')
+            }}
+          />
           {blocked && (
             <div className="idle-blocked" role="alert" data-testid="idle-blocked">
               <p>다른 화면에서 전투 중이라 여기는 멈췄어요</p>

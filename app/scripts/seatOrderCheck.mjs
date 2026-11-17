@@ -11,7 +11,10 @@ try {
   // 도감 순서와 다르게 세운다: 3번 칸의 하늘냥이 도감에서는 가장 앞이다.
   const seats = { sky: 3, mint: 0, lilac: 2, sunset: 1 }
   const names = ['하늘냥', '민트냥', '라일락냥', '노을냥', '밤냥']
-  const cats = ['sky', 'mint', 'lilac', 'sunset', 'night'].map((code, i) => ({
+  const codes = ['sky', 'mint', 'lilac', 'sunset', 'night']
+  const grades = { sky: 'S', mint: 'A', lilac: 'B' }
+  const marks = { S: '★ ', A: '◆ ', B: '', C: '' }
+  const cats = codes.map((code, i) => ({
     code,
     name: names[i],
     level: 1,
@@ -23,7 +26,8 @@ try {
     skills: [],
     skillLevel: 1,
     skillNextLevel: 20,
-    grade: 'C',
+    // 등급마다 이름표가 다르다 (605번).
+    grade: grades[code] ?? 'C',
     weapon: null,
   }))
   const company = {
@@ -70,7 +74,36 @@ try {
     'the boss cat first, then the cats left to right',
   )
   assert.deepEqual(stand.looks, looks, 'cats stand in slot order')
+  // 고양이 밑의 이름표 (605번): 사장냥과, 칸 번호순으로 등급과 이름.
+  assert.deepEqual(stand.tags, [
+    '♛ 사장냥',
+    ...expected.map((code) => {
+      const grade = grades[code] ?? 'C'
+      return `${marks[grade]}${grade} ${names[codes.indexOf(code)]}`
+    }),
+  ])
   await page.screenshot({ path: '/tmp/seat-order.png' })
+  // 꾹 누르면 그 고양이의 정보가 뜬다 (605번): 짧게 누르면 뜨지 않는다.
+  const canvas = await page.locator('[data-testid=idle-canvas] canvas').boundingBox()
+  const at = (i) => [canvas.x + stand.xs[i], canvas.y + stand.y - 10]
+  await page.mouse.click(...at(2))
+  await page.waitForTimeout(600)
+  await expect(page.getByTestId('cat-info')).toHaveCount(0)
+  await page.mouse.move(...at(2))
+  await page.mouse.down()
+  await expect(page.getByTestId('cat-info')).toBeVisible()
+  await page.mouse.up()
+  await expect(page.getByTestId('cat-info')).toHaveAttribute('data-code', expected[1])
+  await expect(page.getByTestId('cat-info')).toContainText(names[codes.indexOf(expected[1])])
+  await page.screenshot({ path: '/tmp/cat-info.png' })
+  await page.getByTestId('cat-info-close').click()
+  await expect(page.getByTestId('cat-info')).toHaveCount(0)
+  // 사장냥도 같다.
+  await page.mouse.move(...at(0))
+  await page.mouse.down()
+  await expect(page.getByTestId('cat-info')).toHaveAttribute('data-code', 'boss')
+  await page.mouse.up()
+  await page.getByTestId('cat-info-close').click()
   // 출전 칸에도 같은 차례로 보인다.
   await page
     .getByRole('button', { name: /고양이/ })

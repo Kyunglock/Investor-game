@@ -1,0 +1,122 @@
+/* 고양이 정보 (605번): 전투 화면에서 고양이를 꾹 누르면 뜨는 작은 창. 등급이 높을수록 테두리가 화려하다. */
+.cat-info-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #2a1b1055;
+}
+.cat-info-card {
+  width: min(100%, 320px);
+  padding: 14px;
+  border: 2px solid #c9a36a;
+  border-radius: 18px;
+  background: #fffaf0;
+  box-shadow: 0 8px 0 #7a552c55;
+  color: #5a3d22;
+}
+.cat-info-card.is-B {
+  border-color: #58a83d;
+}
+.cat-info-card.is-A {
+  border-color: #3d8de0;
+  box-shadow:
+    0 0 0 3px #bfe0ff,
+    0 8px 0 #1d4d8c55;
+}
+.cat-info-card.is-S,
+.cat-info-card.is-boss {
+  border-color: #f0a400;
+  background: linear-gradient(#fffbe6, #fff1c2);
+  box-shadow:
+    0 0 0 3px #ffe680,
+    0 0 22px #ffbf45,
+    0 8px 0 #8a4a0055;
+}
+.cat-info-card header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cat-info-face {
+  flex: none;
+  width: 56px;
+  height: 56px;
+}
+.cat-info-card header b {
+  display: block;
+  font-size: 17px;
+}
+.cat-info-card header b small {
+  font:
+    700 11px "Noto Sans KR",
+    sans-serif;
+  color: #b0762f;
+}
+.cat-info-card header div > small {
+  display: block;
+  margin-top: 3px;
+  font:
+    500 11px "Noto Sans KR",
+    sans-serif;
+  color: #8f7448;
+  word-break: keep-all;
+}
+.cat-info-grade {
+  display: inline-block;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 7px;
+  background: #e9dcc4;
+  font-style: normal;
+  text-align: center;
+}
+.cat-info-grade.is-B {
+  background: #c9f7ae;
+  color: #2f6b1f;
+}
+.cat-info-grade.is-A {
+  background: #a9dcff;
+  color: #1d4d8c;
+}
+.cat-info-grade.is-S,
+.cat-info-grade.is-boss {
+  background: linear-gradient(#fff3a6, #ffc93d);
+  color: #8a4a00;
+}
+.cat-info-card dl {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.cat-info-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #f5e9d2;
+  font-size: 13px;
+}
+.cat-info-card dt {
+  color: #8f7448;
+}
+.cat-info-card dd {
+  margin: 0;
+  text-align: right;
+}
+.cat-info-card footer {
+  display: flex;
+  gap: 8px;
+}
+.cat-info-card footer button {
+  flex: 1;
+  min-height: 44px;
+  border: 1.5px solid #c18c46;
+  border-radius: 11px;
+  background: #fff3d8;
+  color: #6b4720;
+  font-size: 13px;
+}
