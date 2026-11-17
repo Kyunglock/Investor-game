@@ -553,14 +553,21 @@ try {
           ).__mentalWalls()[0]?.upcoming ?? [],
       )
     await expect.poll(async () => (await queuedWalls()).map((wall) => wall.wall)).toEqual([7, 8])
-    // The queue is rebuilt while a broken wall falls: a read in that moment finds it empty. These
-    // reads wait for the two walls to be back instead of throwing on an empty queue.
+    // Wait for a settled queue and retain that exact snapshot. Combat keeps running during
+    // screenshots and DOM checks, so a later read can find the next wall falling or an empty queue.
     const rearWalls = async () => {
-      for (;;) {
-        await expect.poll(async () => (await queuedWalls()).length).toBe(2)
-        const walls = await queuedWalls()
-        if (walls.length === 2) return walls
-      }
+      let walls: Awaited<ReturnType<typeof queuedWalls>> = []
+      await expect
+        .poll(async () => {
+          walls = await queuedWalls()
+          return (
+            walls.length === 2 &&
+            walls.every((wall) => wall.visible && wall.top >= 55) &&
+            walls[1].bottom < walls[0].top
+          )
+        })
+        .toBe(true)
+      return walls
     }
     const intact = (await rearWalls())[0].crack
     company.idle.upcoming = [
@@ -599,7 +606,7 @@ try {
     // The company tab is off (decisions.md 540), so its meeting dot is not shown either.
     await expect(page.getByTestId('meeting-dot')).toHaveCount(0)
     await expect(page.getByTestId('offline-income')).toHaveCount(0)
-    const queue = await queuedWalls()
+    const queue = rear
     assert(queue.every((wall) => wall.visible && wall.top >= 55))
     assert(queue[1].bottom < queue[0].top)
     await page.screenshot({ path: `/tmp/idle-${width}.png`, fullPage: true })
