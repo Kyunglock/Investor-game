@@ -263,6 +263,42 @@ try {
       kind: 'rifle',
       grade: 'E',
     })
+    // Unequip (575): the held weapon is picked up from its slot and dropped below. A touch that
+    // moves straight down picks it up at once, and the cat is back to the default pistol.
+    {
+      const slot = page.locator('[data-testid=gun-slot][data-code=night]')
+      await expect(slot).toHaveAttribute('data-kind', 'rifle')
+      const from = required(await slot.boundingBox())
+      const to = required(await page.getByTestId('cat-detail').boundingBox())
+      const [x, y] = [Math.round(from.x + from.width / 2), Math.round(from.y + from.height / 2)]
+      const cdp = await page.context().newCDPSession(page)
+      const touch = (type: 'touchStart' | 'touchMove', tx: number, ty: number) =>
+        cdp.send('Input.dispatchTouchEvent', { type, touchPoints: [{ x: tx, y: ty }] })
+      const before = mutations.length
+      await touch('touchStart', x, y)
+      await touch('touchMove', x, y + 20)
+      await expect(page.getByTestId('unequip-hint')).toBeVisible({ timeout: 100 })
+      await touch('touchMove', Math.round(to.x + to.width / 2), Math.round(to.y + to.height / 2))
+      await expect(page.getByTestId('unequip-hint')).toHaveText('놓으면 무기를 빼요')
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await cdp.detach()
+      await expect(slot).toHaveClass(/is-bare/)
+      assert.equal(required(company.idle.cats.find((c) => c.code === 'night')).weapon, null)
+      assert.deepEqual(mutations.at(-1)?.body, { code: 'night' })
+      assert.equal(mutations.length, before + 1)
+      // Dropped back on the slots it does nothing; a tap still opens that cat's gear.
+      await drag(freeGun(), target('wearer:night'))
+      await expect(slot).toHaveAttribute('data-kind', 'rifle')
+      const again = mutations.length
+      await page.mouse.move(x, y)
+      await page.mouse.down()
+      await page.mouse.move(x + 40, y, { steps: 4 })
+      await page.mouse.up()
+      assert.equal(mutations.length, again)
+      await expect(page.getByTestId('unequip-hint')).toHaveCount(0)
+      // The click a drop itself makes is swallowed; a later tap is not.
+      await page.waitForTimeout(150)
+    }
     // Tap compares; the confirmation button is the only mutation.
     await target('wearer:snow').click()
     const before = mutations.length
