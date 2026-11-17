@@ -1028,6 +1028,27 @@ class IdleEngineTest {
   }
 
   @Test
+  void adSkillChoiceUnlocksExactlyAfterThreeMinutes() {
+    start(1);
+    tick(1000);
+    for (String chosen : List.of("boostFire", "boostDamage", "boostBuy")) {
+      double pressedAt = state.idle.activeSeconds;
+      engine.useActive(state, chosen, true);
+      state.idle.activeSeconds = pressedAt + 179 * SPEED;
+      assertThat(engine.view(state).actives())
+          .filteredOn(a -> a.code().equals(chosen))
+          .allMatch(a -> Math.abs(a.left() - 1) < 1e-9);
+      for (String other : List.of("boostFire", "boostDamage", "boostBuy")) {
+        assertThatThrownBy(() -> engine.useActive(state, other, true))
+            .isInstanceOf(InvalidRequestException.class);
+      }
+      state.idle.activeSeconds = pressedAt + 180 * SPEED;
+      assertThat(engine.view(state).actives()).filteredOn(a -> a.ad()).allMatch(a -> a.left() == 0);
+    }
+    engine.useActive(state, "boostBuy", true);
+  }
+
+  @Test
   void adSkillsTripleOnePartForThreeMinutesAfterAnAd() {
     // 588: 공격속도·공격력·매수공격 3배. They need the ad, are never equipped, and last 180 real
     // seconds (270 game seconds at 1.5x) with a 180 second cooldown.
