@@ -161,8 +161,7 @@ class RewardsEngineTest {
     c.diamonds = 1000;
     c.shopBought.put("money-small", 1);
     for (String removed : List.of("money-small", "money-large")) {
-      assertThatThrownBy(() -> rewards.buy(c, removed))
-          .isInstanceOf(InvalidRequestException.class);
+      assertThatThrownBy(() -> rewards.buy(c, removed)).isInstanceOf(InvalidRequestException.class);
     }
     assertThat(c.diamonds).isEqualTo(1000);
     assertThat(c.capital).isEqualTo(7);
