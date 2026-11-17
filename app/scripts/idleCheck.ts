@@ -368,8 +368,8 @@ try {
       'C 등급 하늘냥 합류! 고유 스킬 메테오 스킬',
     )
     assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw)
-    // Today's goods (541): four items; the free one is taken once and the tab's dot goes out.
-    await expect(page.getByTestId('shop-item')).toHaveCount(4)
+    // Today's goods (541): one free item; the free one is taken once and the tab's dot goes out.
+    await expect(page.getByTestId('shop-item')).toHaveCount(1)
     const free = page.locator('[data-testid=shop-item][data-code=free]')
     await expect(free).toContainText('다이아 20개')
     await expect(free.getByTestId('shop-buy')).toContainText('무료')
@@ -382,9 +382,8 @@ try {
     await expect(free).toContainText('오늘 0 / 1번 남음')
     await expect(page.getByTestId('shop-dot')).toHaveCount(0)
     assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw + 20)
-    await expect(page.locator('[data-testid=shop-item][data-code=money-small]')).toContainText(
-      '수입 30분어치',
-    )
+    await expect(page.locator('[data-testid=shop-item]:not([data-code=free])')).toHaveCount(0)
+    await expect(page.locator('.idle-shop-item .shop-art-icon')).toHaveCount(1)
     await page.screenshot({ path: `/tmp/idle-shop-${width}.png`, fullPage: true })
     await toCats()
     await pickCat('sky')
@@ -756,15 +755,24 @@ try {
       await page.waitForTimeout(1500)
       moves.length = 0
       retreating = true
-      const flowsLeft = await page.evaluate(() => {
-        const dev = window as unknown as {
-          __mentalBuyWallHit: (n: number) => void
-          __mentalMarket: () => { flows: number }
-        }
-        dev.__mentalBuyWallHit(1e12)
-        return dev.__mentalMarket().flows
-      })
-      assert.equal(flowsLeft, 0, 'no sell order or monster is left when the buy wall falls')
+      // A just-rebuilt wall may still be protected. Only inspect cleanup after a hit actually
+      // breaks it, in the same browser task so the next frame cannot spawn another enemy.
+      await expect
+        .poll(
+          () =>
+            page.evaluate(() => {
+              const dev = window as unknown as {
+                __mentalBuyWallHit: (n: number) => void
+                __mentalMarket: () => { flows: number; buyWall: { breaks: number } }
+              }
+              const before = dev.__mentalMarket().buyWall.breaks
+              dev.__mentalBuyWallHit(1e12)
+              const after = dev.__mentalMarket()
+              return after.buyWall.breaks > before ? after.flows : null
+            }),
+          { timeout: 10000, intervals: [100] },
+        )
+        .toBe(0)
       await expect(page.getByTestId('idle-raid')).toContainText('매수벽 붕괴')
       await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 40')
       assert.deepEqual(moves, ['retreat'])
