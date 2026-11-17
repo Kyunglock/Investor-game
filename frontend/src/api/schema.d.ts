@@ -973,7 +973,7 @@ export interface components {
                 missions: {
                     /** @description wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석) */
                     code: string;
-                    /** @description 화면에 적는 글. "매도벽 100개 통과"처럼 다음에 닿을 수가 들어 있다 */
+                    /** @description 화면에 적는 글. "매도벽 최고 기록 100개 돌파"처럼 다음에 닿을 수가 들어 있다 */
                     title: string;
                     /**
                      * Format: int64

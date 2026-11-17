@@ -237,7 +237,14 @@ export const company = {
       }
     }),
     missions: [
-      { code: 'wall', title: '매도벽 100개 통과', count: 73, target: 100, every: 50, points: 30 },
+      {
+        code: 'wall',
+        title: '매도벽 최고 기록 100개 돌파',
+        count: 73,
+        target: 100,
+        every: 50,
+        points: 30,
+      },
       { code: 'boss', title: '보스 2번 처치', count: 1, target: 2, every: 1, points: 30 },
       { code: 'upgrade', title: '강화 150번', count: 120, target: 150, every: 50, points: 30 },
       {

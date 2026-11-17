@@ -2502,14 +2502,12 @@ class BattleScene extends Phaser.Scene {
     const c = this.circuit
     if (!c) return
     const remaining = this.opts.idle?.().circuitSeconds ?? 0
-    const target = this.opts.idle
-      ? remaining > 0
-        ? Math.min(
-            CIRCUIT_BREAKER.seconds - 0.001,
-            Math.max(c.elapsed + dt, CIRCUIT_BREAKER.seconds - remaining),
-          )
-        : CIRCUIT_BREAKER.seconds
-      : c.elapsed + dt
+    // 자동 전투의 정지는 서버가 끝낸다. 화면의 시계는 실제보다 빨리 가므로, 서버가 끝냈다고 할 때까지는 차단벽이 열리기 직전에서
+    // 멈춰 둔다: 그러지 않으면 정지가 남았는데 차단벽이 먼저 열려 사라진다 (595번). 끝나면 그때 열린다.
+    const target =
+      this.opts.idle && remaining > 0
+        ? Math.min(CIRCUIT_BREAKER.seconds - CIRCUIT_BREAKER.openSeconds, c.elapsed + dt)
+        : c.elapsed + dt
     const recovered = c.step(Math.max(0, target - c.elapsed))
     this.mental = Math.min(this.loadout.maxMental, this.mental + recovered)
     this.marketStats.recovered += recovered
@@ -2552,11 +2550,7 @@ class BattleScene extends Phaser.Scene {
         e.cell?.label.setAlpha(1)
       }
     }
-    this.circuitFx?.draw(c, w, h, this.player.x, this.player.y, this.reducedMotion, {
-      ...barrier,
-      buys: this.buyWallFx?.queuedOrders ?? 0,
-      sells: this.circuitSellQueue.size,
-    })
+    this.circuitFx?.draw(c, w, h, this.player.x, this.player.y, this.reducedMotion, barrier)
     this.player.setTexture('hero-idle')
     this.poseGun(this.player, this.aim, 0)
     for (const [i, mate] of this.mates.entries()) {
