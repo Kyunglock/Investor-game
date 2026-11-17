@@ -358,13 +358,13 @@ export function IdleHome({
               }}
             />
           )}
-          <p className="idle-sheet-note">
-            {connected
-              ? halted
+          {(!connected || halted) && (
+            <p className="idle-sheet-note">
+              {connected
                 ? '서킷브레이커 · 거래 재개 대기'
-                : '● 메뉴를 보는 동안에도 자동 전투 중'
-              : '연결을 기다리는 동안 전투가 멈춰 있어요'}
-          </p>
+                : '연결을 기다리는 동안 전투가 멈춰 있어요'}
+            </p>
+          )}
         </Sheet>
       )}
     </section>
