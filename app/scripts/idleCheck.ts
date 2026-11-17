@@ -129,6 +129,10 @@ try {
     const actions: string[] = []
     const reportedHits: { wall: number; kind: string; count: number; damage: number }[] = []
     const moves: string[] = []
+    // The buy wall also falls by itself during this long check (the sell orders are twice as strong
+    // since 562), and a retreat then would take the wall the check has just set back to wall 1.
+    // The mock server moves the fight only while the check is testing the retreat itself.
+    let retreating = false
     let catDraws = 0
     const hires: number[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -154,7 +158,7 @@ try {
       const sent = route.request().postDataJSON()
       // The retreat after the buy wall fell (decisions.md 546): ten walls back, never behind
       // the last cleared boss (every 50th wall, 547 and 548).
-      if (path.endsWith('/idle/retreat')) {
+      if (path.endsWith('/idle/retreat') && retreating) {
         moves.push('retreat')
         const wall = company.idle.wall
         company.idle.wall = Math.max(Math.floor((wall - 1) / 50) * 50 + 1, wall - 10)
@@ -724,9 +728,10 @@ try {
       await expect(page.getByTestId('idle-raid')).toContainText('보스 50 클리어! 다이아 +100')
       await page.screenshot({ path: '/tmp/idle-boss-reward.png' })
       // The buy wall falls: every enemy is gone and the fight goes ten walls back (546).
-      // The long fast fight above may have lost its buy wall and gone back already.
-      moves.length = 0
+      // The long fast fight above may have lost its buy wall already: those retreats moved nothing.
       await page.waitForTimeout(1500)
+      moves.length = 0
+      retreating = true
       const flowsLeft = await page.evaluate(() => {
         const dev = window as unknown as {
           __mentalBuyWallHit: (n: number) => void
@@ -739,6 +744,7 @@ try {
       await expect(page.getByTestId('idle-raid')).toContainText('매수벽 붕괴')
       await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 40')
       assert.deepEqual(moves, ['retreat'])
+      retreating = false
       await page.screenshot({ path: '/tmp/idle-retreat.png' })
       company.idle.wall = 11
       company.idle.boss = false
