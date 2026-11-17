@@ -587,18 +587,19 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView feedCat(UUID sessionId, String code) {
+  public CompanyView buyFishUpgrade(UUID sessionId, String kind) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.feedCat(row.state(), code);
+    idle.buyFishUpgrade(row.state(), kind);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
 
   @Override
   @Transactional
-  public CompanyView fieldCat(UUID sessionId, String code, boolean fielded, String replaceCode) {
+  public CompanyView fieldCat(
+      UUID sessionId, String code, boolean fielded, String replaceCode, Integer slot) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.fieldCat(row.state(), code, fielded, replaceCode);
+    idle.fieldCat(row.state(), code, fielded, replaceCode, slot);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

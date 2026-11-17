@@ -69,8 +69,11 @@ class CompanyState {
     /** 가진 고양이의 레벨 (decisions.md 488번): 뽑으면 1, 또 뽑으면 하나씩 오른다. 이 칸이 없던 저장은 돌파한 벽으로 채운다. */
     Map<String, Integer> cats;
 
-    /** 출전한 고양이, 줄 선 차례대로. */
+    /** 출전한 고양이, 줄 선 차례대로: 출전 칸(seats)의 번호순이다 (599번). */
     List<String> fielded = new ArrayList<>();
+
+    /** 출전한 고양이가 선 출전 칸 (599번): 코드 → 칸 번호(0부터). 빈 칸을 사이에 둘 수 있다. 없던 저장은 줄 선 차례대로 앞에서부터 채운다. */
+    Map<String, Integer> seats = new LinkedHashMap<>();
 
     /** 고양이가 든 무기. 가진 무기(weapons)의 한 개씩을 빌려 든다. */
     Map<String, Weapon> catWeapons = new LinkedHashMap<>();
@@ -267,6 +270,9 @@ class CompanyState {
 
   /** 생선 (571번): 환생하면 얻고, 고양이의 레벨을 올리는 데 쓴다. */
   long fish;
+
+  /** 생선으로 올린 영구 강화의 단계 (600번): 종류(damage·hp·buy) → 단계. 환생해도 남는다. */
+  Map<String, Integer> fishLevels = new LinkedHashMap<>();
 
   /** 환생한 횟수 (571번). */
   int rebirths;

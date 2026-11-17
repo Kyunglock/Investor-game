@@ -137,8 +137,8 @@ public interface CompanyService {
    */
   CompanyView rebirth(UUID sessionId, boolean ad);
 
-  /** 생선으로 가진 고양이의 레벨을 하나 올린다 (571번). 생선이 모자라거나 가지지 않은 고양이면 400. */
-  CompanyView feedCat(UUID sessionId, String code);
+  /** 생선으로 영구 강화(damage·hp·buy)를 한 단계 올린다 (600번). 환생해도 남는다. 생선이 모자라거나 없는 강화면 400. */
+  CompanyView buyFishUpgrade(UUID sessionId, String kind);
 
   /**
    * 테스트판 (decisions.md 499번): 이 세션의 테스트판 회사를 돌려준다. 없으면 차리고, 자본·채용권·뽑기권을 채운다. 테스트판 회사는 무엇을 하든 그 전에
@@ -162,7 +162,8 @@ public interface CompanyService {
   CompanyView sandboxWeapon(UUID sessionId, String grade);
 
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
-  CompanyView fieldCat(UUID sessionId, String code, boolean fielded, String replaceCode);
+  CompanyView fieldCat(
+      UUID sessionId, String code, boolean fielded, String replaceCode, Integer slot);
 
   /** 고양이에게 가진 무기 하나를 들린다 (488번). kind와 grade가 null이면 뺀다. */
   CompanyView equipCat(UUID sessionId, String code, String kind, String grade);

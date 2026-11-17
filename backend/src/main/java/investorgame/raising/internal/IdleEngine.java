@@ -427,6 +427,7 @@ class IdleEngine {
       }
       c.idle.catSkills = true;
     }
+    seat(c.idle);
     return c.idle;
   }
 
@@ -1105,26 +1106,19 @@ class IdleEngine {
 
   // 환생 (decisions.md 571번): 첫 보스(50번째 벽)를 깬 뒤부터 할 수 있고, 지금 선 벽이 깊을수록 생선을 많이 준다.
   static final long REBIRTH_WALL = 51;
-  private static final double REBIRTH_FISH_DIVISOR = 500;
+
+  /** 환생하면 깬 벽 이만큼마다 생선 한 마리다 (600번): 진행한 만큼 비례해서 준다. */
+  static final long REBIRTH_WALLS_PER_FISH = 10;
 
   /** 환생할 때 광고를 보면 생선을 이 배수로 받는다 (586번). 볼 수 있는 횟수에는 한도가 없다. */
   static final long REBIRTH_AD_MULTIPLIER = 3;
 
-  // 생선으로 고양이 레벨을 하나 올리는 값: 지금 레벨 × 이만큼.
-  static final long FISH_PER_LEVEL = 5;
-
-  /** 지금 환생하면 받는 생선 (571번): (깬 벽 수)² ÷ 500. 51번째 벽에서 5, 101번째 20, 301번째 180. 아직 못 하면 0. */
+  /** 지금 환생하면 받는 생선 (571·600번): 깬 벽 수 ÷ 10. 51번째 벽에서 5, 101번째 10, 301번째 30. 아직 못 하면 0. */
   long rebirthFish(CompanyState c) {
     long cleared = state(c).wall - 1;
-    return state(c).wall < REBIRTH_WALL
-        ? 0
-        : (long) Math.floor(cleared * cleared / REBIRTH_FISH_DIVISOR);
+    return state(c).wall < REBIRTH_WALL ? 0 : cleared / REBIRTH_WALLS_PER_FISH;
   }
 
-  /**
-   * 환생한다 (571번): 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선을 받는다. 고양이·무기·다이아·시즌패스·직원과 이미 받은 보스 보상(같은
-   * 보스의 보상은 다시 주지 않는다)은 그대로다. 첫 보스를 깨기 전이면 400.
-   */
   void rebirth(CompanyState c) {
     rebirth(c, false);
   }
@@ -1148,31 +1142,82 @@ class IdleEngine {
     s.wallDps = 0;
   }
 
-  /** 생선으로 고양이의 레벨을 하나 올리는 값 (571번). 없는 고양이거나 최고 레벨이면 0. */
-  long fishCost(int level) {
-    return level < 1 || level >= MAX_CAT_LEVEL ? 0 : level * FISH_PER_LEVEL;
-  }
-
-  /** 생선으로 가진 고양이의 레벨을 하나 올린다 (571번). 가지지 않았거나 최고 레벨이거나 생선이 모자라면 400. */
-  void feedCat(CompanyState c, String code) {
-    CompanyState.Idle s = state(c);
-    int level = s.cats.getOrDefault(code, 0);
-    if (level < 1) throw new InvalidRequestException("가지지 않은 고양이다: " + code);
-    long cost = fishCost(level);
-    if (cost <= 0) throw new InvalidRequestException("더 올릴 수 없는 고양이다: " + code);
+  /**
+   * 생선으로 영구 강화를 한 단계 올린다 (600번): 환생해도 남는다. 값은 다음 단계의 번호(1, 2, 3 …)만큼의 생선이다. 없는 강화이거나 생선이 모자라면 400.
+   */
+  void buyFishUpgrade(CompanyState c, String kind) {
+    state(c);
+    if (!MentalEngine.FISH_UPGRADES.contains(kind)) {
+      throw new InvalidRequestException("없는 영구 강화다: " + kind);
+    }
+    int level = c.fishLevels.getOrDefault(kind, 0);
+    long cost = MentalEngine.fishUpgradeCost(level);
     if (c.fish < cost) throw new InvalidRequestException("생선이 모자라요");
     c.fish -= cost;
-    s.cats.put(code, level + 1);
+    c.fishLevels.put(kind, level + 1);
   }
 
   void fieldCat(CompanyState c, String code, boolean fielded) {
-    fieldCat(c, code, fielded, null);
+    fieldCat(c, code, fielded, null, null);
+  }
+
+  void fieldCat(CompanyState c, String code, boolean fielded, String replaceCode) {
+    fieldCat(c, code, fielded, replaceCode, null);
+  }
+
+  /**
+   * 출전 칸을 맞춘다 (599번): 출전한 고양이마다 칸 하나, 칸 번호순으로 줄을 선다. 칸이 없는 고양이(없던 저장, 뽑아서 저절로 출전)는 빈 칸 가운데 가장 앞에
+   * 선다.
+   */
+  private static void seat(CompanyState.Idle s) {
+    if (s.seats == null) s.seats = new LinkedHashMap<>();
+    s.seats.keySet().retainAll(s.fielded);
+    java.util.Set<Integer> taken = new java.util.HashSet<>();
+    for (String code : s.fielded) {
+      Integer at = s.seats.get(code);
+      if (at == null || at < 0 || at >= FIELD_SLOTS || !taken.add(at)) s.seats.remove(code);
+    }
+    for (String code : s.fielded) {
+      if (s.seats.containsKey(code)) continue;
+      int free = 0;
+      while (taken.contains(free)) free++;
+      taken.add(free);
+      s.seats.put(code, free);
+    }
+    s.fielded.sort(java.util.Comparator.comparing(s.seats::get));
   }
 
   /** Validate the whole swap before changing the team; a stale target must not remove anyone. */
-  void fieldCat(CompanyState c, String code, boolean fielded, String replaceCode) {
+  /**
+   * slot(0부터)을 주면 그 출전 칸에 세운다 (599번): 빈 칸이면 거기에, 다른 고양이가 있으면 쉬던 고양이는 그 고양이와 교체하고 출전 중인 고양이는 자리를
+   * 맞바꾼다. slot이 없으면 빈 칸 가운데 가장 앞에 선다.
+   */
+  void fieldCat(CompanyState c, String code, boolean fielded, String replaceCode, Integer slot) {
     CompanyState.Idle s = state(c);
     if (!s.cats.containsKey(code)) throw new InvalidRequestException("가지지 않은 고양이다: " + code);
+    if (slot != null && replaceCode == null && fielded) {
+      if (slot < 0 || slot >= FIELD_SLOTS) throw new InvalidRequestException("없는 출전 칸이다: " + slot);
+      String there =
+          s.fielded.stream().filter(k -> s.seats.get(k).equals(slot)).findFirst().orElse(null);
+      if (code.equals(there)) return;
+      if (s.fielded.contains(code)) {
+        // 출전 중인 고양이를 옮긴다: 그 칸에 있던 고양이는 비운 자리로 간다.
+        if (there != null) s.seats.put(there, s.seats.get(code));
+        s.seats.put(code, slot);
+      } else {
+        if (there != null) {
+          s.fielded.remove(there);
+          s.seats.remove(there);
+          // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번).
+          s.catWeapons.remove(there);
+        }
+        s.fielded.add(code);
+        s.seats.put(code, slot);
+      }
+      seat(s);
+      s.hitCredits = new double[KINDS];
+      return;
+    }
     if (replaceCode != null) {
       if (!fielded
           || code.equals(replaceCode)
@@ -1181,15 +1226,21 @@ class IdleEngine {
         throw new InvalidRequestException("출전 구성이 바뀌었어요. 다시 골라 주세요");
       }
       s.fielded.set(s.fielded.indexOf(replaceCode), code);
+      // 교체한 고양이는 그 칸을 물려받는다 (599번).
+      s.seats.put(code, s.seats.remove(replaceCode));
+      // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번).
+      s.catWeapons.remove(replaceCode);
     } else if (fielded) {
       if (s.fielded.contains(code)) return;
       if (s.fielded.size() >= FIELD_SLOTS) {
         throw new InvalidRequestException("출전 칸이 꽉 찼다: " + FIELD_SLOTS + "마리까지 출전한다");
       }
       s.fielded.add(code);
-    } else {
-      s.fielded.remove(code);
+    } else if (s.fielded.remove(code)) {
+      // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번): 그 무기는 다른 고양이가 바로 들 수 있다.
+      s.catWeapons.remove(code);
     }
+    seat(s);
     s.hitCredits = new double[KINDS];
   }
 
@@ -1308,14 +1359,14 @@ class IdleEngine {
                       (int) Math.round(100 * CAT_FIRE[cat]),
                       (int) Math.round(100 * CAT_CRITICAL[cat]),
                       s.fielded.contains(code),
+                      s.seats.get(code),
                       weapon == null ? null : new CompanyView.CatWeapon(weapon.kind, weapon.grade),
                       java.util.Arrays.stream(CAT_SKILLS[cat])
                           .mapToObj(skill -> new CompanyView.CatSkill(CODES[skill], NAMES[skill]))
                           .toList(),
                       skillLevel(Math.max(1, level)),
                       nextSkillAt(Math.max(1, level)),
-                      CAT_GRADES.get(CAT_GRADE[cat]),
-                      fishCost(level));
+                      CAT_GRADES.get(CAT_GRADE[cat]));
                 })
             .toList();
     return new CompanyView.Idle(
@@ -1386,6 +1437,7 @@ class IdleEngine {
             c.fish,
             rebirthFish(c),
             REBIRTH_WALL,
-            rebirthFish(c) * REBIRTH_AD_MULTIPLIER));
+            rebirthFish(c) * REBIRTH_AD_MULTIPLIER,
+            engine.mental.fishUpgradeViews(c)));
   }
 }
