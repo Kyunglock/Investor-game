@@ -229,6 +229,19 @@ class RewardsEngine {
     c.lastPass = got;
   }
 
+  /** 미션의 포인트를 받는다 (572번). code가 null이면 받을 수 있는 것을 모두 받는다. 없는 미션이거나 받을 포인트가 없으면 400. */
+  void claimPassMission(CompanyState c, String code) {
+    java.time.LocalDate today = idle.todayDate();
+    engine.pass.roll(c, today);
+    if (code != null
+        && engine.pass.rule().missions().stream().noneMatch(m -> m.code().equals(code))) {
+      throw new InvalidRequestException("없는 미션이에요: " + code);
+    }
+    if (engine.pass.take(c, code, today) <= 0) {
+      throw new InvalidRequestException("받을 수 있는 미션 포인트가 없어요");
+    }
+  }
+
   /** 테스트판: 시즌패스 포인트를 더한다. */
   void addPassExp(CompanyState c, long exp) {
     engine.pass.gain(c, exp, idle.todayDate());
@@ -260,7 +273,9 @@ class RewardsEngine {
           new CompanyView.PassStep(
               at, reward.diamonds(), reward.weapon(), reward.cat(), at <= reached, claimed));
     }
-    // 미션 (570번): 이번 시즌에 센 수와 다음에 닿을 수, 그때 받는 포인트.
+    int missionsReady =
+        (int) rule.missions().stream().filter(m -> engine.pass.ready(c, m) > 0).count();
+    // 미션 (570번): 이번 시즌에 센 수와 다음에 닿을 수, 그때 받는 포인트. 닿은 문턱의 포인트는 눌러서 받는다 (572번).
     List<CompanyView.PassMission> missions =
         rule.missions().stream()
             .map(
@@ -274,7 +289,8 @@ class RewardsEngine {
                       target,
                       m.every(),
                       m.points(),
-                      count / m.every() * m.points());
+                      c.passMissionTaken.getOrDefault(m.code(), 0L) * m.points(),
+                      engine.pass.ready(c, m));
                 })
             .toList();
     List<CompanyView.PassReward> last =
@@ -300,6 +316,7 @@ class RewardsEngine {
         rule.pointsPerStep(),
         reached,
         claimable,
+        missionsReady,
         steps,
         missions,
         last);

@@ -256,6 +256,26 @@ class CompanyController {
 
   record PassClaimRequest(@Min(1) @Max(1000) Integer step) {}
 
+  /** 시즌패스 미션의 포인트를 받는다 (decisions.md 572번). code가 없으면 받을 수 있는 것을 모두 받는다. */
+  @PostMapping("/pass/missions/claim")
+  CompanyView claimPassMission(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody(required = false) PassMissionClaimRequest request) {
+    UUID sessionId = cookies.requirePlayer(token);
+    String code = request == null ? null : request.code();
+    CompanyView company = companies.claimPassMission(sessionId, code);
+    PLAY.info(
+        "company-pass-mission-claim session={} company={} code={} points={} ip={}",
+        sessionId,
+        company.companyId(),
+        code,
+        company.pass().points(),
+        ClientIp.current());
+    return company;
+  }
+
+  record PassMissionClaimRequest(String code) {}
+
   /** 오늘의 출석 보상을 받는다 (decisions.md 528번). 하루에 한 번이고 오늘 이미 받았으면 400. */
   @PostMapping("/attendance")
   CompanyView attend(@CookieValue(name = SessionCookies.NAME, required = false) String token) {

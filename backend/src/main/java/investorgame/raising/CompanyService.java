@@ -89,6 +89,9 @@ public interface CompanyService {
    */
   CompanyView claimPass(UUID sessionId, Integer step);
 
+  /** 시즌패스 미션의 포인트를 받는다 (572번). code가 null이면 받을 수 있는 것을 모두 받는다. */
+  CompanyView claimPassMission(UUID sessionId, String code);
+
   /** 테스트판: 패스 경험치를 더한다 (529번). 테스트판 회사가 아니면 400. */
   CompanyView sandboxPassExp(UUID sessionId, long exp);
 

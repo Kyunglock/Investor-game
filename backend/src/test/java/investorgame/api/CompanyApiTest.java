@@ -602,11 +602,28 @@ class CompanyApiTest {
         json(
             mvc.perform(post("/api/company/attendance").cookie(session))
                 .andExpect(status().isOk()));
-    assertThat(attended.read("$.pass.points", Long.class)).isEqualTo(100);
+    // 포인트는 저절로 들어오지 않는다 (572번): 받을 수 있게 되고, 눌러서 받는다.
+    assertThat(attended.read("$.pass.points", Long.class)).isZero();
     assertThat(attended.read("$.pass.missions[5].count", Long.class)).isEqualTo(1);
-    assertThat(attended.read("$.pass.missions[5].earned", Long.class)).isEqualTo(100);
-    assertThat(attended.read("$.pass.step", Integer.class)).isZero();
-    assertThat(attended.read("$.pass.claimable", Integer.class)).isZero();
+    assertThat(attended.read("$.pass.missions[5].ready", Long.class)).isEqualTo(100);
+    assertThat(attended.read("$.pass.missionsReady", Integer.class)).isEqualTo(1);
+    postJson("/api/company/pass/missions/claim", "{\"code\":\"wall\"}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/pass/missions/claim", "{\"code\":\"nothing\"}")
+        .andExpect(status().isBadRequest());
+    DocumentContext taken =
+        json(
+            postJson("/api/company/pass/missions/claim", "{\"code\":\"attend\"}")
+                .andExpect(status().isOk()));
+    assertThat(taken.read("$.pass.points", Long.class)).isEqualTo(100);
+    assertThat(taken.read("$.pass.missions[5].earned", Long.class)).isEqualTo(100);
+    assertThat(taken.read("$.pass.missions[5].ready", Long.class)).isZero();
+    assertThat(taken.read("$.pass.missionsReady", Integer.class)).isZero();
+    assertThat(taken.read("$.pass.step", Integer.class)).isZero();
+    assertThat(taken.read("$.pass.claimable", Integer.class)).isZero();
+    // 본문 없이 부르면 모두 받기다: 받을 것이 없으면 400.
+    mvc.perform(post("/api/company/pass/missions/claim").cookie(session))
+        .andExpect(status().isBadRequest());
     // 강화 미션: 산 단계만큼 센다.
     DocumentContext upgraded =
         json(
