@@ -358,6 +358,18 @@ export function idleAssaultSpec(wall: number, maxHp = 0): AssaultSpec {
   }
 }
 
+/**
+ * 자동 전투에서 벽을 부순 뒤 다음 벽이 나오는 빠르기 (decisions.md 606번). 벽 앞에 선 지 stood초(전투 시간) 만에 부쉈다면 다음 벽으로
+ * 넘어가는 시간에 이 배율을 곱한다: 1초 넘게 걸렸으면 전과 같고(1), 빨리 부술수록 줄어 한 방에 부수면 IDLE_QUICK_FLOOR까지 짧아진다. 플레이어가
+ * 셀수록 벽이 부서지는 족족 다음 벽이 나온다.
+ */
+export const IDLE_QUICK_SECONDS = 1
+export const IDLE_QUICK_FLOOR = 0.2
+export function idleBreakPace(stood: number): number {
+  if (!Number.isFinite(stood)) return 1
+  return Math.min(1, Math.max(IDLE_QUICK_FLOOR, stood / IDLE_QUICK_SECONDS))
+}
+
 /** 화면 폭에 맞는 한 줄의 칸 수. */
 export function wallCols(width: number): number {
   return width < 360 ? ASSAULT_COLS - 1 : ASSAULT_COLS

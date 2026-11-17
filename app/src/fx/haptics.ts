@@ -17,6 +17,12 @@ let off = (() => {
   }
 })()
 
+/** 절전 모드 (607번)에서 잠깐 쉰다: 설정의 진동 값은 그대로다. */
+let hushed = false
+export function setHapticHushed(on: boolean) {
+  hushed = on
+}
+
 export function isHapticOff(): boolean {
   return off
 }
@@ -31,7 +37,7 @@ export function setHapticOff(value: boolean) {
 }
 
 function vibrate(pattern: number | number[]) {
-  if (off) return
+  if (off || hushed) return
   try {
     navigator.vibrate?.(pattern)
   } catch {
@@ -40,12 +46,12 @@ function vibrate(pattern: number | number[]) {
 }
 
 function impact(style: ImpactStyle) {
-  if (off) return
+  if (off || hushed) return
   void Haptics.impact({ style }).catch(() => {})
 }
 
 function notify(type: NotificationType) {
-  if (off) return
+  if (off || hushed) return
   void Haptics.notification({ type }).catch(() => {})
 }
 
@@ -55,7 +61,7 @@ export const haptic = {
   heavy: () => (native() ? impact(ImpactStyle.Heavy) : vibrate([30, 30, 40])),
   /** 멘탈 카드의 전설이 터질 때 (393번): 세게 두 번, 길게. */
   burst: () => {
-    if (off) return
+    if (off || hushed) return
     if (!native()) {
       vibrate([60, 40, 120])
       return

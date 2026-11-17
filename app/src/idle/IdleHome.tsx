@@ -34,6 +34,7 @@ import { IdleSkills } from './IdleSkills'
 import { IdleIcon } from './icons'
 import { MenuIcon } from './MenuIcon'
 import { OfflineIncome } from './OfflineIncome'
+import { PowerSaveScreen } from './PowerSaveScreen'
 import { freeLeft } from './shop'
 import './idle-home.css'
 import './toy-arcade.css'
@@ -305,6 +306,7 @@ export function IdleHome({
       )}
       {nav}
       <OfflineIncome company={company} seen={offlineSeen} onSeen={setOfflineSeen} />
+      <PowerSaveScreen company={company} />
       {menu !== 'battle' && menu !== 'company' && (
         <Sheet
           title={menu === 'rebirth' ? '환생' : menus.find((m) => m.key === menu)?.label}
