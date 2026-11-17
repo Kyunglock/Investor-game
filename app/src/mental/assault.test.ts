@@ -18,6 +18,7 @@ import {
   IDLE_THREAT_HP,
   idleAssaultSpec,
   idleBreakPace,
+  idleMomentum,
   idleThreat,
   orderPriceStep,
   ordersOnly,
@@ -167,6 +168,13 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     expect(idleBreakPace(0.5)).toBe(0.5)
     expect(idleBreakPace(0)).toBe(IDLE_QUICK_FLOOR)
     expect(idleBreakPace(Number.NaN)).toBe(1)
+  })
+  it('벽을 빨리 부술수록 질주의 기세가 찬다 (608번)', () => {
+    expect(idleMomentum(1)).toBe(0)
+    expect(idleMomentum(IDLE_QUICK_FLOOR)).toBe(1)
+    expect(idleMomentum(0.6)).toBeCloseTo(0.5)
+    // 이미 더 높은 기세는 느린 돌파로 깎이지 않는다.
+    expect(idleMomentum(1, 0.7)).toBe(0.7)
   })
   it('큰손은 체력이 반 아래면 더 자주 쏟아 낸다', () => {
     expect(whaleSummonSeconds(100, 100)).toBe(ASSAULT_BOSS.summonSeconds)

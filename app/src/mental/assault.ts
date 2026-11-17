@@ -370,6 +370,20 @@ export function idleBreakPace(stood: number): number {
   return Math.min(1, Math.max(IDLE_QUICK_FLOOR, stood / IDLE_QUICK_SECONDS))
 }
 
+/**
+ * 질주의 기세 (decisions.md 608번): 벽을 빨리 부술수록(idleBreakPace가 작을수록) 차오르고, 부수지 않으면 IDLE_MOMENTUM_FADE초에 걸쳐 빠진다.
+ * 기세가 있는 동안 고양이들이 달리고 배경과 속도선이 빠르게 흐른다: 벽 앞에 멈춰 선 틈에도 끊기지 않아 속도감이 이어진다.
+ */
+export const IDLE_MOMENTUM_FADE = 1.1
+/** 기세가 가득 찼을 때 배경이 흐르는 빠르기(px/초)와, 고양이가 달리는 그림이 빨라지는 배수. */
+export const IDLE_MOMENTUM_SCROLL = 1500
+export const IDLE_MOMENTUM_RUN = 2.2
+/** 벽을 부쉈을 때의 기세: 넘어가는 빠르기(pace)가 1이면 0, 가장 빠르면(IDLE_QUICK_FLOOR) 1. 이미 더 높으면 그대로 둔다. */
+export function idleMomentum(pace: number, now = 0): number {
+  const gained = Math.min(1, Math.max(0, (1 - pace) / (1 - IDLE_QUICK_FLOOR)))
+  return Math.max(now, gained)
+}
+
 /** 화면 폭에 맞는 한 줄의 칸 수. */
 export function wallCols(width: number): number {
   return width < 360 ? ASSAULT_COLS - 1 : ASSAULT_COLS
