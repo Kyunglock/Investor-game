@@ -6,7 +6,7 @@ import { AD_UNAVAILABLE, watchRewardedAd } from '../app/ads'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { ACTIVE_HINTS } from '../mental/actives'
-import { ActiveBadge, ActiveTime } from './ActiveBadge'
+import { ActiveBadge } from './ActiveBadge'
 
 type Active = NonNullable<NonNullable<Company['idle']>['actives']>[number]
 
@@ -52,8 +52,11 @@ export function IdleActives({ company, connected }: { company: Company; connecte
   }
   const button = (active: Active) => {
     const wait = Math.ceil(active.readyIn)
-    // 효과가 도는 동안에는 남은 시간을 적는다 (588번).
+    // 효과가 도는 동안에는 지속 시간, 그 뒤에는 재사용 대기를 원형 음영으로 나타낸다.
     const left = active.ad ? Math.ceil(active.left) : 0
+    const remaining = left > 0 ? active.left : active.readyIn
+    const total = left > 0 ? active.seconds : active.cooldown
+    const shade = total > 0 ? Math.min(1, Math.max(0, remaining / total)) : 0
     return (
       <button
         key={active.code}
@@ -75,24 +78,14 @@ export function IdleActives({ company, connected }: { company: Company; connecte
         onClick={() => void use(active)}
       >
         <ActiveBadge code={active.code} />
-        <span className="idle-active-note">
-          {pending === active.code ? (
-            <span className="idle-active-pending" aria-hidden="true">
-              …
-            </span>
-          ) : (
-            <ActiveTime
-              seconds={left > 0 ? left : wait > 0 ? wait : active.seconds}
-              cooldown={wait > 0 && left === 0}
-            />
-          )}
-        </span>
-        {wait > 0 && left === 0 && (
+        {shade > 0 && (
           <i
+            className="idle-active-shade"
             aria-hidden="true"
-            style={{ height: `${Math.min(100, (100 * active.readyIn) / active.cooldown)}%` }}
+            style={{ background: `conic-gradient(transparent ${1 - shade}turn, #21162e99 0)` }}
           />
         )}
+        {pending === active.code && <span className="idle-active-pending" aria-hidden="true" />}
       </button>
     )
   }

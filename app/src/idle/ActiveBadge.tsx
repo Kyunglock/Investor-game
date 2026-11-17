@@ -118,28 +118,16 @@ export function ActiveBadge({ code }: { code: ActiveCode }) {
           <stop offset="1" stopColor={ad ? '#ffd56b' : '#d8acf5'} />
         </linearGradient>
       </defs>
-      <rect x="3" y="5" width="94" height="92" rx="23" fill={ad ? '#b57b29' : '#8452a4'} />
-      <rect
-        x="3"
-        y="2"
-        width="94"
-        height="92"
-        rx="23"
+      <circle
+        cx="50"
+        cy="50"
+        r="48"
         fill={`url(#${id})`}
         stroke={ad ? '#ba7c26' : '#9b64b9'}
         strokeWidth="3"
       />
-      <rect
-        x="8"
-        y="7"
-        width="84"
-        height="82"
-        rx="19"
-        fill="none"
-        stroke="#fff9e8"
-        strokeWidth="2"
-      />
-      <g transform="translate(2 4)">
+      <circle cx="50" cy="50" r="43" fill="none" stroke="#fff9e8" strokeWidth="2" />
+      <g transform="translate(10 8) scale(.85)">
         {code === 'boostDamage' && <Sword />}
         {(code === 'boostBuy' || code === 'barrage') && <Orders shower={code === 'barrage'} />}
         {(code === 'boostFire' || code === 'rally') && <Bullets fire={code === 'rally'} />}
@@ -190,8 +178,8 @@ export function ActiveBadge({ code }: { code: ActiveCode }) {
       </g>
       {values[code] !== null && (
         <text
-          x="88"
-          y={code === 'barrage' ? 68 : 84}
+          x="80"
+          y={code === 'barrage' ? 67 : 80}
           className={`active-badge-value ${code === 'averaging' || code === 'limitUp' || code === 'stopLoss' ? 'is-wide' : ''}`}
           textAnchor="end"
         >
@@ -199,7 +187,7 @@ export function ActiveBadge({ code }: { code: ActiveCode }) {
         </text>
       )}
       {code === 'barrage' && (
-        <g transform="translate(10 73)">
+        <g transform="translate(22 71)">
           <g transform="translate(0 -3) scale(.23)">
             <Sword />
           </g>
@@ -208,7 +196,12 @@ export function ActiveBadge({ code }: { code: ActiveCode }) {
           </text>
         </g>
       )}
-      <g stroke={ad ? '#9d6123' : '#81509d'} strokeWidth="2.5" strokeLinejoin="round">
+      <g
+        transform="translate(-16 12)"
+        stroke={ad ? '#9d6123' : '#81509d'}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      >
         {ad ? (
           <>
             <rect x="71" y="3" width="25" height="22" rx="6" fill="#cd7d25" />
