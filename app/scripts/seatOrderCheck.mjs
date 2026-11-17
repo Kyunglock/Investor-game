@@ -13,7 +13,6 @@ try {
   const names = ['하늘냥', '민트냥', '라일락냥', '노을냥', '밤냥']
   const codes = ['sky', 'mint', 'lilac', 'sunset', 'night']
   const grades = { sky: 'S', mint: 'A', lilac: 'B' }
-  const marks = { S: '★ ', A: '◆ ', B: '', C: '' }
   const cats = codes.map((code, i) => ({
     code,
     name: names[i],
@@ -76,10 +75,10 @@ try {
   assert.deepEqual(stand.looks, looks, 'cats stand in slot order')
   // 고양이 밑의 이름표 (605번): 사장냥과, 칸 번호순으로 등급과 이름.
   assert.deepEqual(stand.tags, [
-    '♛ 사장냥',
+    '사장냥',
     ...expected.map((code) => {
       const grade = grades[code] ?? 'C'
-      return `${marks[grade]}${grade} ${names[codes.indexOf(code)]}`
+      return `${grade} · ${names[codes.indexOf(code)]}`
     }),
   ])
   await page.screenshot({ path: '/tmp/seat-order.png' })

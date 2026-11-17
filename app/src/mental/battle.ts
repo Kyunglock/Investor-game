@@ -4834,7 +4834,7 @@ class BattleScene extends Phaser.Scene {
   private heroTag: Phaser.GameObjects.Text | null = null
   private tagsDressed = ''
 
-  /** 이름표에 등급과 이름을 입힌다 (605번): 자동 전투에서 고양이마다 밑에 적는다. S등급은 숨 쉬듯 커졌다 작아진다. */
+  /** 이름표에 등급과 이름을 입힌다 (605번): 자동 전투에서 고양이마다 밑에 적는다. */
   private dressTags() {
     if (!this.opts.idle || !this.player) return
     this.heroTag ??= makeTag(this)
@@ -4853,18 +4853,6 @@ class BattleScene extends Phaser.Scene {
         const room = this.mates.length > 0 ? Math.abs(this.standX(1) - this.standX(0)) - 3 : 999
         for (let size = tagStyle(tag).size; text.width > room && size > 8; size--)
           text.setFontSize(size - 1)
-      }
-      this.tweens.killTweensOf(text)
-      text.setScale(1)
-      if (tag && tagStyle(tag).pulse && !this.reducedMotion) {
-        this.tweens.add({
-          targets: text,
-          scale: 1.06,
-          duration: 700,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        })
       }
     }
   }
