@@ -57,7 +57,7 @@ type Upgrade = NonNullable<Company['battleUpgrades']>[number]
 const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
   damage: { name: '공격력', note: '탄 공격력' },
   fire: { name: '공격 속도', note: '쏘는 빠르기' },
-  hp: { name: '매수벽 체력', note: '매수벽이 무너지면 열 벽 뒤로 물러나요' },
+  hp: { name: '매수벽 체력', note: '매수벽이 무너지면 다시 설 때까지 공격이 멈춰요' },
   buy: { name: '매수벽 공격', note: '매수 주문의 피해 · 무기와 따로 세요' },
 }
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel

@@ -386,12 +386,6 @@ class CompanyController {
 
   record ActiveRequest(@NotBlank String code) {}
 
-  /** 매수벽이 무너졌다: 열 벽 앞으로 돌아간다 (decisions.md 546번). */
-  @PostMapping("/idle/retreat")
-  CompanyView retreatIdle(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.retreatIdle(cookies.requirePlayer(token));
-  }
-
   /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가고 생선을 받는다. */
   @PostMapping("/rebirth")
   CompanyView rebirth(@CookieValue(name = SessionCookies.NAME, required = false) String token) {

@@ -593,38 +593,6 @@ class IdleEngineTest {
   }
 
   @Test
-  void aBrokenBuyWallSendsTheFightTenWallsBack() {
-    start(37);
-    state.idle.damage = 100;
-    state.idle.nextDamage = 50;
-    long epoch = state.idle.epoch;
-    engine.retreat(state);
-    assertThat(state.idle.wall).isEqualTo(27);
-    assertThat(state.idle.damage).isZero();
-    assertThat(state.idle.nextDamage).isZero();
-    assertThat(state.idle.epoch).isEqualTo(epoch + 1);
-    // Never behind the last cleared boss (548): the wall after it is where the fight starts again.
-    assertThat(IdleEngine.retreatWall(51)).isEqualTo(51);
-    assertThat(IdleEngine.retreatWall(55)).isEqualTo(51);
-    assertThat(IdleEngine.retreatWall(60)).isEqualTo(51);
-    assertThat(IdleEngine.retreatWall(61)).isEqualTo(51);
-    assertThat(IdleEngine.retreatWall(67)).isEqualTo(57);
-    assertThat(IdleEngine.retreatWall(100)).isEqualTo(90);
-    assertThat(IdleEngine.retreatWall(104)).isEqualTo(101);
-    // The boss itself is not cleared yet: losing to it goes ten walls back. Never below wall 1.
-    assertThat(IdleEngine.retreatWall(50)).isEqualTo(40);
-    assertThat(IdleEngine.retreatWall(30)).isEqualTo(20);
-    assertThat(IdleEngine.retreatWall(10)).isEqualTo(1);
-    assertThat(IdleEngine.retreatWall(4)).isEqualTo(1);
-    // A halt in a lost boss challenge is gone, and reaching the boss again halts again.
-    state.idle.wall = 50;
-    state.idle.circuitSeconds = 3;
-    engine.retreat(state);
-    assertThat(state.idle.wall).isEqualTo(40);
-    assertThat(state.idle.circuitSeconds).isZero();
-  }
-
-  @Test
   void circuitStopsClocksAndSurvivesOffline() {
     start(6);
     state.idle.circuitSeconds = 4;

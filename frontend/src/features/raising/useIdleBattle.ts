@@ -41,29 +41,7 @@ function inOrder<T>(send: () => Promise<T>): Promise<T> {
 let moving = 0
 
 /**
- * The buy wall fell (decisions.md 546): the fight goes ten walls back. The request leaves in order
- * with the heartbeats, and the hits not yet sent are dropped with the wall they were on.
- */
-export async function retreatIdle(): Promise<boolean> {
-  moving++
-  window.dispatchEvent(new Event('idle-moved'))
-  predictor.clear()
-  try {
-    const res = await inOrder(() => api.POST('/api/company/idle/retreat'))
-    if (!res.data) return false
-    useRaisingStore.setState({ company: res.data })
-    return true
-  } catch {
-    return false
-  } finally {
-    moving--
-    window.dispatchEvent(new Event('idle-moved'))
-    predictor.clear()
-  }
-}
-
-/**
- * 환생 (decisions.md 571번): 매도벽 1로 돌아가고 생선을 받는다. 후퇴처럼 접속 신호와 차례를 지켜 보내고, 아직 보내지 않은 명중은 떠나는 벽과 함께
+ * 환생 (decisions.md 571번): 매도벽 1로 돌아가고 생선을 받는다. 접속 신호와 차례를 지켜 보내고, 아직 보내지 않은 명중은 떠나는 벽과 함께
  * 버린다. 환생했으면 true. 거절되면(첫 보스를 깨기 전) 그 까닭이 store의 error에 남는다.
  */
 export async function rebirthIdle(): Promise<boolean> {

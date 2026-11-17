@@ -45,9 +45,6 @@ class IdleEngine {
 
   static final double BOSS_CLEAR_REWARDS = 5;
 
-  /** 매수벽이 무너지면 이만큼 앞의 벽으로 돌아간다 (546번). */
-  static final long RETREAT_WALLS = 10;
-
   /** 보스 도전의 벽 (547번). */
   static boolean bossWall(long wall) {
     return wall % BOSS_EVERY == 0;
@@ -952,25 +949,6 @@ class IdleEngine {
     s.circuitSeconds = 0;
     s.hitCredits = new double[KINDS];
     s.epoch++;
-  }
-
-  /**
-   * Where a broken buy wall sends the fight from this wall (546): ten walls back, but never behind
-   * the last boss already cleared (548). The wall right after that boss is the checkpoint: 51 for
-   * walls 51 to 100, the first wall before any boss is cleared.
-   */
-  static long retreatWall(long wall) {
-    long checkpoint = (Math.max(1, wall) - 1) / BOSS_EVERY * BOSS_EVERY + 1;
-    return Math.max(checkpoint, wall - RETREAT_WALLS);
-  }
-
-  /**
-   * 매수벽이 무너졌다 (decisions.md 546번): 열 벽 앞으로 돌아간다. 깬 보스의 다음 벽보다 앞으로는 가지 않는다 (548번). 매수벽은 화면의 것이라 서버는
-   * 무너졌는지 따지지 않는다: 돌아가면 수입과 보상이 줄 뿐이다.
-   */
-  void retreat(CompanyState c) {
-    CompanyState.Idle s = state(c);
-    move(s, retreatWall(s.wall));
   }
 
   static final long MAX_JUMP_WALL = 100_000;

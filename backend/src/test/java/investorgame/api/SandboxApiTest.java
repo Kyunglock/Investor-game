@@ -136,18 +136,8 @@ class SandboxApiTest {
         .isEqualTo(jumped.read("$.idle.maxHp", Double.class));
     mvc.perform(wall(0).cookie(session, in)).andExpect(status().isBadRequest());
 
-    // 후퇴 (decisions.md 546번): 매수벽이 무너지면 열 벽 앞으로 돌아간다. 보스 도전의 벽(50번째마다, 547번) 위로는 서지 않는다.
+    // 보스 도전의 벽은 50번째마다다 (547번).
     assertThat(jumped.read("$.idle.bossChallenge", Boolean.class)).isTrue();
-    mvc.perform(wall(60).cookie(session, in)).andExpect(status().isOk());
-    DocumentContext back =
-        json(
-            mvc.perform(post("/api/company/idle/retreat").cookie(session, in))
-                .andExpect(status().isOk())
-                .andReturn());
-    assertThat(back.read("$.idle.wall", Long.class)).isEqualTo(51);
-    assertThat(back.read("$.idle.bossChallenge", Boolean.class)).isFalse();
-    assertThat(back.read("$.idle.hp", Double.class))
-        .isEqualTo(back.read("$.idle.maxHp", Double.class));
 
     mvc.perform(
             post("/api/company/battle-upgrade")

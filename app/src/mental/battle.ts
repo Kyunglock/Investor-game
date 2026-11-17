@@ -238,7 +238,7 @@ export interface BattleOptions {
   onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number, depth: number) => void
   /** 자동 전투의 몬스터 습격 알림 (500번). */
   onIdleRaid?: (text: string, color: string) => void
-  /** 자동 전투의 매수벽이 무너졌다 (546번): 서버에 알려 열 벽 앞으로 돌아간다. */
+  /** 자동 전투의 매수벽이 무너졌다: 알림을 띄운다. 벽은 그대로다 (584번, 전에는 열 벽 앞으로 돌아갔다). */
   onBuyWallBreak?: () => void
 
   /** 처음 배속(gameSpeed.ts). 없으면 1배. */
@@ -1985,7 +1985,7 @@ class BattleScene extends Phaser.Scene {
     if (!wall) return
     // 번호가 같아도 serial이 바뀌면 새 벽이다 (546번).
     if (snapshot.wall !== this.idleWall || snapshot.serial !== this.idleSerial) {
-      // 번호가 내린 것은 부순 것이 아니라 후퇴다.
+      // 번호가 내린 것은 부순 것이 아니라 옮긴 것이다(환생, 테스트판의 벽 고르기).
       this.idleMoved = snapshot.wall < this.idleWall
       if (this.circuit) this.endCircuit()
       if (this.bossEnemy?.active) this.kill(this.bossEnemy, false)
@@ -2039,7 +2039,7 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  /** 자동 전투에서 물러날 때 (546번): 매도 물량과 습격 몬스터가 모두 사라진다. 벽 칸과 큰손은 벽이 바뀔 때 함께 치운다. */
+  /** 자동 전투의 매수벽이 무너질 때 (494·584번): 매도 물량과 습격 몬스터가 모두 사라진다. 벽 칸과 큰손은 그대로 남는다. */
   private clearIdleEnemies() {
     this.panicRushLeft = 0
     for (const child of [...this.enemies.getChildren()]) {
@@ -3251,7 +3251,7 @@ class BattleScene extends Phaser.Scene {
     const lost = broken ? before : before - this.buyWall.hp
     this.pop(x, this.buyWallY() - 55, `매수 -${shareLabel(lost)}`, '#ffb278', 20)
     if (broken && this.opts.idle) {
-      this.pop(this.view().w / 2, this.buyWallY() - 84, '매수벽 붕괴! 후퇴', '#ff8a5c', 22)
+      this.pop(this.view().w / 2, this.buyWallY() - 84, '매수벽 붕괴!', '#ff8a5c', 22)
     }
     if (broken) {
       const loss = Math.max(1, Math.round(this.loadout.maxMental * BUY_WALL.mentalLossRatio))
@@ -3261,8 +3261,7 @@ class BattleScene extends Phaser.Scene {
       this.pushEnemiesBack(0.35)
       // 자동 전투는 무너진 동안 공격이 멈춘다(492번): 쌓인 물량이 새 벽을 곧바로 다시 무너뜨리지 않게, 무너지며 화면의 물량을 모두 받아 낸다 (494번).
       if (this.opts.idle) {
-        // 매수벽이 무너지면 열 벽 앞으로 돌아간다 (546번): 화면의 적은 몬스터까지 모두 사라지고, 거래 정지도 거기서 끝난다.
-        if (this.circuit) this.endCircuit()
+        // 매수벽이 무너져도 지금 벽에 그대로 선다 (584번): 화면의 적은 몬스터까지 모두 사라지고, 벽이 다시 설 때까지 공격이 멈춘다.
         this.clearIdleEnemies()
         this.stuck = 0
         this.opts.onBuyWallBreak?.()

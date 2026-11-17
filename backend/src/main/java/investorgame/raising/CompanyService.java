@@ -122,9 +122,6 @@ public interface CompanyService {
   /** 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 재사용 대기 중이면 400. */
   CompanyView useActive(UUID sessionId, String code);
 
-  /** 매수벽이 무너졌다 (decisions.md 546번): 열 벽 앞으로 돌아간다. 쌓인 피해와 거래 정지는 지운다. */
-  CompanyView retreatIdle(UUID sessionId);
-
   /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈이 처음으로 돌아가고 생선을 받는다. 첫 보스를 깨기 전이면 400. */
   CompanyView rebirth(UUID sessionId);
 

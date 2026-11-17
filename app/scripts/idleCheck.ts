@@ -131,11 +131,8 @@ try {
     const loadingErrors: string[] = []
     const actions: string[] = []
     const reportedHits: { wall: number; kind: string; count: number; damage: number }[] = []
+    // Calls to the retired retreat address (584): a fallen buy wall no longer moves the fight.
     const moves: string[] = []
-    // The buy wall also falls by itself during this long check (the sell orders are twice as strong
-    // since 562), and a retreat then would take the wall the check has just set back to wall 1.
-    // The mock server moves the fight only while the check is testing the retreat itself.
-    let retreating = false
     let catDraws = 0
     const hires: number[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -159,19 +156,7 @@ try {
       // Cat gacha, fielding and equipment (decisions.md 488): the mock keeps the server's shape.
       const path = new URL(route.request().url()).pathname
       const sent = route.request().postDataJSON()
-      // The retreat after the buy wall fell (decisions.md 546): ten walls back, never behind
-      // the last cleared boss (every 50th wall, 547 and 548).
-      if (path.endsWith('/idle/retreat') && retreating) {
-        moves.push('retreat')
-        const wall = company.idle.wall
-        company.idle.wall = Math.max(Math.floor((wall - 1) / 50) * 50 + 1, wall - 10)
-        company.idle.boss = company.idle.wall % 50 === 0
-        company.idle.hp = company.idle.maxHp = 1200
-        company.idle.circuitSeconds = 0
-        Object.assign(company.idle, {
-          epoch: ((company.idle as { epoch?: number }).epoch ?? 0) + 1,
-        })
-      }
+      if (path.endsWith('/idle/retreat')) moves.push('retreat')
       const cat = company.idle.cats.find((c) => c.code === sent?.code)
       if (path.endsWith('/draws')) hires.push(sent.count)
       if (path.endsWith('/cat/draw')) {
@@ -772,11 +757,9 @@ try {
       Object.assign(company.idle, { bossReward: { wall: 50, diamonds: 100, money: 123_000_000 } })
       await expect(page.getByTestId('idle-raid')).toContainText('보스 50 클리어! 다이아 +100')
       await page.screenshot({ path: '/tmp/idle-boss-reward.png' })
-      // The buy wall falls: every enemy is gone and the fight goes ten walls back (546).
-      // The long fast fight above may have lost its buy wall already: those retreats moved nothing.
+      // The buy wall falls: every enemy is gone and the fight stays at its wall (584). It used to
+      // go ten walls back (546).
       await page.waitForTimeout(1500)
-      moves.length = 0
-      retreating = true
       // A just-rebuilt wall may still be protected. Only inspect cleanup after a hit actually
       // breaks it, in the same browser task so the next frame cannot spawn another enemy.
       await expect
@@ -795,11 +778,10 @@ try {
           { timeout: 10000, intervals: [100] },
         )
         .toBe(0)
-      await expect(page.getByTestId('idle-raid')).toContainText('매수벽 붕괴')
-      await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 40')
-      assert.deepEqual(moves, ['retreat'])
-      retreating = false
-      await page.screenshot({ path: '/tmp/idle-retreat.png' })
+      await expect(page.getByTestId('idle-raid')).toContainText('매수벽 붕괴! 다시 세우는 중')
+      await expect(page.getByTestId('idle-wall-number')).toHaveText('보스 50')
+      assert.deepEqual(moves, [])
+      await page.screenshot({ path: '/tmp/idle-buy-wall-broken.png' })
       company.idle.wall = 11
       company.idle.boss = false
       await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 11')

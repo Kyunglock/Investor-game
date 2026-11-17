@@ -261,26 +261,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/idle/retreat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 매수벽이 무너져 열 벽 앞으로 돌아간다 (decisions.md 546·548번)
-         * @description 화면의 매수벽이 무너지면 보낸다. 열 벽 앞에 선다. 다만 이미 깬 보스(50번째 벽마다)의 다음 벽보다 앞으로는 가지 않는다(51~100번째 벽에서는 51번째 벽까지, 548번). 그 벽은 새 벽으로 서고 쌓인 피해와 거래 정지는 지운다.
-         */
-        post: operations["retreatIdle"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/company/assault": {
         parameters: {
             query?: never;
@@ -2050,28 +2030,6 @@ export interface operations {
                 };
             };
             400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    retreatIdle: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 옮긴 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
         };
