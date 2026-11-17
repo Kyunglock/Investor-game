@@ -4,6 +4,10 @@ import { BUY_ORDER_SPEED, type BuyWall } from './buyWall'
 import { type BarrierLane, OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
 
+/** 손절 (591번)로 떼어 낸 매수벽 반쪽이 매도벽까지 날아가는 시간(전투 초)과, 맞힌 뒤에도 떼어 낸 자리를 비워 두는 시간. */
+const TOSS_SECONDS = 0.45
+const TOSS_GAP_SECONDS = 0.3
+
 /** 붉은색 장난감 매수벽. 단일 벽의 체력·재건·지원 사격은 기존 규칙을 따른다. */
 export class BuyWallFx {
   private circuitQueue = new OrderBarrierQueue()
@@ -16,6 +20,12 @@ export class BuyWallFx {
   private breakLeft = 0
   private hitX = 0
   private debris: Phaser.GameObjects.Image[]
+  /** 손절 (591번)로 떼어 던지는 매수벽 반쪽. tossAt은 날아간 정도(0~1)이고 던지지 않을 때는 -1이다. */
+  private chunk: Phaser.GameObjects.Image
+  private tossAt = -1
+  private tossTo = { x: 0, y: 0 }
+  /** 반쪽이 떨어져 나간 자리를 비워 두는 남은 시간(초): 날아가는 동안과 맞힌 뒤 잠깐. */
+  private gapLeft = 0
   private shots: {
     x: number
     y: number
@@ -51,6 +61,12 @@ export class BuyWallFx {
       )
       return piece
     })
+    this.chunk = scene.add
+      .image(0, 0, 'buy-wall')
+      .setOrigin(0.75, 0.5)
+      .setDepth(7)
+      .setVisible(false)
+    this.chunk.setCrop(this.chunk.width / 2, 0, this.chunk.width / 2, this.chunk.height)
     this.title = scene.add
       .text(0, 0, '', { ...WALL_LABEL_STYLE })
       .setOrigin(0.5)
@@ -66,6 +82,24 @@ export class BuyWallFx {
   fortify() {
     this.fortifyLeft = 5
   }
+  /** 손절: 매수벽의 오른쪽 반을 뚝 떼어 던지기 시작한다. */
+  tear() {
+    this.tossAt = 0
+    this.gapLeft = TOSS_SECONDS + TOSS_GAP_SECONDS
+  }
+  get tossing() {
+    return this.tossAt >= 0
+  }
+  /** 던진 반쪽을 (x, y)로 날린다. 이번에 닿았으면 true다. */
+  stepToss(dt: number, x: number, y: number): boolean {
+    if (this.tossAt < 0) return false
+    this.tossTo = { x, y }
+    this.tossAt += dt / TOSS_SECONDS
+    if (this.tossAt < 1) return false
+    this.tossAt = -1
+    this.gapLeft = TOSS_GAP_SECONDS
+    return true
+  }
   stepFortify(realSeconds: number) {
     this.fortifyLeft = Math.max(0, this.fortifyLeft - realSeconds)
   }
@@ -74,6 +108,7 @@ export class BuyWallFx {
       fortifySecondsLeft: this.fortifyLeft,
       fortified: this.fortifyLeft > 0 && this.surface.visible,
       label: this.title.text,
+      tossing: this.tossing,
       hitLeft: this.hitLeft,
       breakLeft: this.breakLeft,
       fragments: this.debris.filter((piece) => piece.visible).length,
@@ -113,6 +148,7 @@ export class BuyWallFx {
   ) {
     this.hitLeft = Math.max(0, this.hitLeft - dt)
     this.breakLeft = Math.max(0, this.breakLeft - dt)
+    if (this.tossAt < 0) this.gapLeft = Math.max(0, this.gapLeft - dt)
     for (const shot of this.shots) {
       if (!shot.active) continue
       const next = shot.y - dt * BUY_ORDER_SPEED * this.speedScale
@@ -163,6 +199,10 @@ export class BuyWallFx {
         .setTexture(wall.hp < wall.maxHp * 0.5 ? 'buy-wall-cracked' : 'buy-wall')
         .setPosition(left + shake, top + Math.abs(shake) * 0.4)
         .setDisplaySize(width, height)
+      // 손절로 반쪽을 떼어 낸 동안에는 왼쪽 반만 남는다.
+      if (this.gapLeft > 0) {
+        this.surface.setCrop(0, 0, this.surface.width / 2, this.surface.height)
+      } else this.surface.setCrop()
       this.surface.clearTint()
       if (this.hitLeft > 0.2) this.surface.setTintFill(0xffedc2)
       if (this.fortifyLeft > 0) {
@@ -212,6 +252,25 @@ export class BuyWallFx {
           y - 18 + Math.sin(angle) * (radius + 12),
         )
       }
+    }
+    // 떼어 낸 반쪽: 잠깐 들썩이다가 점점 빨라지며 돌면서 매도벽으로 날아간다.
+    this.chunk.setVisible(this.tossAt >= 0)
+    if (this.tossAt >= 0) {
+      const fly = this.tossAt * this.tossAt
+      const fromX = left + width * 0.75
+      const fromY = top + height / 2
+      const grow = 1 + Math.sin(this.tossAt * Math.PI) * 0.25
+      this.chunk
+        .setDisplaySize(width * grow, height * grow)
+        .setPosition(
+          fromX + (this.tossTo.x - fromX) * fly,
+          fromY +
+            (this.tossTo.y - fromY) * fly -
+            Math.sin(Math.min(1, this.tossAt * 4) * Math.PI) * 8,
+        )
+        .setAngle(fly * 360)
+      // 떨어져 나간 자리의 테두리.
+      g.lineStyle(2, 0x8fc4ff, 0.7).strokeRoundedRect(left + width / 2, top, width / 2, height, 7)
     }
     // 파편은 새 벽의 체력/활성 상태와 별도로 그려 즉시 재생성되어도 붕괴가 보인다.
     const fall = 1 - this.breakLeft / 0.55
