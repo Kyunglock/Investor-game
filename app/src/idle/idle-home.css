@@ -729,6 +729,22 @@
   padding: 20px;
   text-align: center;
 }
+/* 전장이 열리기 전 (#836). 금방 열리면 번쩍이지 않게 조금 뒤에 나타난다. */
+.idle-canvas-loading {
+  pointer-events: none;
+  position: absolute;
+  inset: 42% 20px auto;
+  color: #8a6a3c;
+  font-family: var(--font-game);
+  font-size: 16px;
+  text-align: center;
+  animation: idle-canvas-loading 0.3s 0.6s both;
+}
+@keyframes idle-canvas-loading {
+  from {
+    opacity: 0;
+  }
+}
 .idle-canvas-error button {
   display: block;
   margin: 10px auto;
@@ -1498,7 +1514,7 @@
   border: 1px solid #fff6db;
   border-radius: 50%;
 }
-/* 장비 목록 (530번): 한 칸이 무기 하나. 짧게 누르면 장착, 길게 눌러 같은 무기 위로 끌면 합친다. */
+/* 장비 목록 (530번): 한 칸이 무기 하나. 짧게 누르면 비교, 집어서 같은 무기 위로 끌면 합친다. */
 .idle-gear {
   grid-column: 1 / -1;
   min-width: 0;
@@ -1533,7 +1549,7 @@
   overflow: hidden;
   background: #fff;
   font-size: 11px;
-  /* 길게 눌러 끌 때 글자가 골라지거나 메뉴가 뜨지 않게 한다. 위아래로 넘기는 것은 그대로다. */
+  /* 집어서 끌 때 글자가 골라지거나 메뉴가 뜨지 않게 한다. 위아래로 넘기는 것은 그대로다. */
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
