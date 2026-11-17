@@ -11,7 +11,7 @@ export const BUY_WALL = {
   shotsPerSell: 2,
   retreatSeconds: 0.7,
   retreatDistance: 80,
-  /** 자동 전투의 재건 시간(초, 492번): 그동안 공격이 멈춘다. 무너지면 열 벽 앞으로도 돌아간다 (546번). */
+  /** 자동 전투의 재건 시간(초, 492번): 그동안 공격이 멈춘다. 무너져도 벽 번호는 그대로다 (584번). */
   idleRebuildSeconds: 2,
   /** 매수 주문 한 장의 바탕 피해 (514번, 서버 IdleEngine.BUY_ORDER_DAMAGE). */
   orderDamage: 0.75,

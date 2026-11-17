@@ -246,6 +246,7 @@ public record CompanyView(
       boolean bossChallenge,
       BossReward bossReward,
       List<IdleActive> actives,
+      int activeSlots,
       List<CatDraw> lastDraws,
       Income income,
       Offline offline,
@@ -259,8 +260,9 @@ public record CompanyView(
    * @param fish 가진 생선
    * @param gain 지금 환생하면 받는 생선. 아직 할 수 없으면 0
    * @param fromWall 이 벽에 서야 환생할 수 있다(첫 보스를 깬 다음 벽)
+   * @param adGain 광고를 보고 환생하면 받는 생선 (586번): gain의 3배
    */
-  public record Rebirth(int count, long fish, long gain, long fromWall) {}
+  public record Rebirth(int count, long fish, long gain, long fromWall, long adGain) {}
 
   /**
    * 고양이 뽑기에서 나온 한 마리 (517번).
@@ -277,9 +279,19 @@ public record CompanyView(
    * @param cooldown 한 번 쓰고 다시 쓸 때까지
    * @param seconds 효과가 이어지는 시간
    * @param readyIn 다시 쓸 수 있을 때까지 남은 시간. 0이면 쓸 수 있다. 전투가 돌아가는 동안만 준다
+   * @param left 효과가 남은 시간 (588번). 불장과 광고 스킬만 값이 있고 나머지는 0이다
+   * @param equipped 장착한 고유 스킬이다 (587번). 광고 스킬은 늘 거짓이다
+   * @param ad 광고를 보면 쓰는 스킬이다 (588번). 장착하지 않고 쓴다
    */
   public record IdleActive(
-      String code, String name, double cooldown, double seconds, double readyIn) {}
+      String code,
+      String name,
+      double cooldown,
+      double seconds,
+      double readyIn,
+      double left,
+      boolean equipped,
+      boolean ad) {}
 
   /**
    * 고양이 한 마리 (decisions.md 488·501번). 뽑기로 얻고, 출전하면 제 총으로 함께 쏘고 제 스킬을 쓴다.

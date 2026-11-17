@@ -53,6 +53,13 @@ const SHAPES = {
       />
     </>
   ),
+  // 스킬 (587번): 번개.
+  skills: (
+    <>
+      <path d="M13.5 2 5 13.5h5.5L9.5 22 19 10h-5.5Z" fill="currentColor" fillOpacity=".28" />
+      <path d="M13.5 2 5 13.5h5.5L9.5 22 19 10h-5.5Z" />
+    </>
+  ),
   // 공격력: 비스듬히 세운 칼.
   damage: (
     <>

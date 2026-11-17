@@ -107,6 +107,10 @@ try {
         required(company.idle.cats.find((c) => c.code === body.code)).weapon = body.kind
           ? { kind: body.kind, grade: body.grade }
           : null
+      // The boss cat's weapon (585): an empty body takes it off, a weapon puts it on.
+      if (path.endsWith('/company/weapon'))
+        for (const weapon of company.weapons)
+          weapon.equipped = weapon.kind === body.kind && weapon.grade === body.grade
       if (path.endsWith('/weapon/merge')) {
         company.weapons[1].count -= 2
         company.weapons.push({ ...company.weapons[1], grade: 'D', gradeName: 'D', count: 1 })
@@ -297,6 +301,45 @@ try {
       assert.equal(mutations.length, again)
       await expect(page.getByTestId('unequip-hint')).toHaveCount(0)
       // The click a drop itself makes is swallowed; a later tap is not.
+      await page.waitForTimeout(150)
+    }
+    // The boss cat's weapon comes off the same way (585): dragged from its slot and dropped below.
+    // The boss cat then shoots the default pistol. It still cannot leave the field.
+    {
+      const slot = page.locator('[data-testid=gun-slot][data-code=boss]')
+      await expect(slot).not.toHaveClass(/is-bare/)
+      const before = mutations.length
+      await drag(slot, page.getByTestId('cat-detail'))
+      await expect(slot).toHaveClass(/is-bare/)
+      assert.deepEqual(mutations.at(-1), { path: '/api/company/weapon', body: {} })
+      assert.equal(mutations.length, before + 1)
+      assert.equal(
+        company.weapons.some((w) => w.equipped),
+        false,
+      )
+      await expect(slot).toHaveAttribute('aria-label', /사장냥의 무기 기본 권총/)
+      // A bare slot cannot be picked up again.
+      await drag(slot, page.getByTestId('cat-detail'))
+      assert.equal(mutations.length, before + 1)
+      await page.waitForTimeout(150)
+      // The button in the boss cat's gear list does the same.
+      await drag(
+        page.locator('[data-testid=cat-weapon][data-kind=pistol][data-grade=F]').first(),
+        target('wearer:boss'),
+      )
+      await expect(slot).not.toHaveClass(/is-bare/)
+      await expect(page.getByTestId('cat-detail')).toHaveAttribute('data-code', 'boss')
+      await page.getByTestId('cat-unequip').click()
+      await expect(slot).toHaveClass(/is-bare/)
+      await expect(page.getByTestId('cat-unequip')).toHaveCount(0)
+      await expect(page.getByTestId('cat-boss')).toHaveAttribute('aria-label', /늘 출전/)
+      await expect(page.getByTestId('cat-field')).toHaveCount(0)
+      // Put the pistol back for the rest of the check.
+      await drag(
+        page.locator('[data-testid=cat-weapon][data-kind=pistol][data-grade=F]').first(),
+        target('wearer:boss'),
+      )
+      await expect(slot).not.toHaveClass(/is-bare/)
       await page.waitForTimeout(150)
     }
     // Tap compares; the confirmation button is the only mutation.

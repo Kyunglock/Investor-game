@@ -250,7 +250,8 @@ export function CatGear({
       </p>
       {error && <p role="alert">{error}</p>}
       <div className="idle-gear-foot">
-        {wearer && cells.some(mine) && (
+        {/* 사장냥의 무기도 뺄 수 있다 (585번). */}
+        {cells.some(mine) && (
           <button
             type="button"
             className="idle-gear-off"
@@ -258,7 +259,8 @@ export function CatGear({
             disabled={busy}
             onClick={() => {
               sfx.tap()
-              void useRaisingStore.getState().equipCat(wearer.code, null)
+              const store = useRaisingStore.getState()
+              void (wearer ? store.equipCat(wearer.code, null) : store.unequipWeapon())
             }}
           >
             무기 빼기 <small className="idle-gear-off-note">기본 권총을 쏴요</small>

@@ -63,7 +63,10 @@ public interface CompanyService {
    */
   CompanyView investBattle(UUID sessionId, String mode, int stars);
 
-  /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). 없는 종류·등급이거나 안 가진 무기면 400. */
+  /**
+   * 가진 무기 가운데 하나를 든다 (decisions.md 346번). 없는 종류·등급이거나 안 가진 무기면 400. kind와 grade가 모두 null이면 사장냥이 무기를
+   * 빼고 기본 권총을 쏜다 (585번).
+   */
   CompanyView equipWeapon(UUID sessionId, String kind, String grade);
 
   /**
@@ -119,14 +122,20 @@ public interface CompanyService {
    */
   CompanyView drawCat(UUID sessionId, int count);
 
-  /** 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 재사용 대기 중이면 400. */
-  CompanyView useActive(UUID sessionId, String code);
+  /**
+   * 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 재사용 대기 중이면 400. 고유 스킬은 장착한 것만 쓰고 (587번), 광고 스킬은 광고를 본
+   * 뒤(ad)에만 쓴다 (588번).
+   */
+  CompanyView useActive(UUID sessionId, String code, boolean ad);
 
-  /** 매수벽이 무너졌다 (decisions.md 546번): 열 벽 앞으로 돌아간다. 쌓인 피해와 거래 정지는 지운다. */
-  CompanyView retreatIdle(UUID sessionId);
+  /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). 세 개까지. 광고 스킬이거나 칸이 꽉 찼으면 400. */
+  CompanyView equipActive(UUID sessionId, String code, boolean equipped);
 
-  /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈이 처음으로 돌아가고 생선을 받는다. 첫 보스를 깨기 전이면 400. */
-  CompanyView rebirth(UUID sessionId);
+  /**
+   * 환생한다 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈이 처음으로 돌아가고 생선을 받는다. 첫 보스를 깨기 전이면 400. ad가 참이면 광고를
+   * 본 것으로 보고 생선을 3배로 준다 (586번).
+   */
+  CompanyView rebirth(UUID sessionId, boolean ad);
 
   /** 생선으로 가진 고양이의 레벨을 하나 올린다 (571번). 생선이 모자라거나 가지지 않은 고양이면 400. */
   CompanyView feedCat(UUID sessionId, String code);

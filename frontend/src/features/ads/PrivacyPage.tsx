@@ -2,14 +2,14 @@ import { Document } from '../game/Document'
 
 /**
  * 개인정보처리방침 (decisions.md 271번, #224). 광고(구글 애드센스)를 붙이면서 무엇을 모으고 광고가 쿠키를 어떻게 쓰는지 알린다. 국내 방문자만 받는 것으로
- * 보고 동의 배너(CMP)는 붙이지 않았다.
+ * 보고 동의 배너(CMP)는 붙이지 않았다. 안드로이드 앱의 애드몹 보상형 광고(589번)도 여기서 알린다: 앱은 영국·유럽에 배포하지 않는다.
  */
 export function PrivacyPage() {
   return (
     <main className="mx-auto max-w-[640px] px-4 py-6">
       <Document title="개인정보처리방침" testId="privacy">
         <div className="grid gap-4 text-[14px] leading-relaxed">
-          <p className="text-[12px] text-muted">시행일 2026년 11월 6일</p>
+          <p className="text-[12px] text-muted">시행일 2026년 11월 6일 · 개정 2026년 11월 17일</p>
           <section>
             <h2 className="font-semibold">1. 모으는 것</h2>
             <ul className="mt-1 list-disc pl-5">
@@ -52,6 +52,12 @@ export function PrivacyPage() {
                 구글 광고 정책
               </a>
               에서 볼 수 있습니다.
+            </p>
+            <p className="mt-1">
+              안드로이드 앱은 구글 애드몹(AdMob)의 보상형 광고를 보여 줍니다. "광고 보기"를 누를
+              때만 광고가 나오고, 게임 화면에는 광고를 띄우지 않습니다. 애드몹은 광고를 고르고 부정
+              이용을 막으려고 기기의 광고 ID, IP 주소, 기기 정보, 광고를 보고 누른 기록을
+              수집합니다. 광고 ID는 기기의 설정(Google &gt; 광고)에서 재설정하거나 지울 수 있습니다.
             </p>
           </section>
           <section>

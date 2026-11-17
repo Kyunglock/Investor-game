@@ -16,6 +16,7 @@
     "assets": "node scripts/appAssets.ts && pnpm dlx @capacitor/assets generate --android --assetPath assets --iconBackgroundColor '#ff571c' --iconBackgroundColorDark '#ff571c' --splashBackgroundColor '#fff3df' --splashBackgroundColorDark '#fff3df'"
   },
   "dependencies": {
+    "@capacitor-community/admob": "8.2.1",
     "@capacitor/android": "8.6.0",
     "@capacitor/app": "8.0.0",
     "@capacitor/core": "8.6.0",

@@ -168,11 +168,14 @@ class CompanyController {
 
   record InvestBattleRequest(@NotBlank String mode, @Min(0) @Max(3) int stars) {}
 
-  /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
+  /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). kind와 grade를 비우면 사장냥의 무기를 뺀다 (585번). */
   @PostMapping("/weapon")
   CompanyView equipWeapon(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody WeaponRequest request) {
+      @Valid @RequestBody EquipRequest request) {
+    if ((request.kind() == null) != (request.grade() == null)) {
+      throw new InvalidRequestException("kind와 grade는 함께 보내거나 함께 비운다");
+    }
     UUID sessionId = cookies.requirePlayer(token);
     CompanyView company = companies.equipWeapon(sessionId, request.kind(), request.grade());
     PLAY.info(
@@ -186,6 +189,8 @@ class CompanyController {
   }
 
   record WeaponRequest(@NotBlank String kind, @NotBlank String grade) {}
+
+  record EquipRequest(String kind, String grade) {}
 
   /** 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번). */
   @PostMapping("/stage")
@@ -376,36 +381,48 @@ class CompanyController {
   }
 
   /** 가진 고양이를 출전시키거나 쉬게 한다 (decisions.md 488번). */
-  /** 액티브 스킬을 쓴다 (decisions.md 503번). */
+  /** 액티브 스킬을 쓴다 (decisions.md 503번). 광고 스킬은 ad가 참이어야 한다 (588번). */
   @PostMapping("/idle/active")
   CompanyView useActive(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody ActiveRequest request) {
-    return companies.useActive(cookies.requirePlayer(token), request.code());
+    return companies.useActive(
+        cookies.requirePlayer(token), request.code(), Boolean.TRUE.equals(request.ad()));
   }
 
-  record ActiveRequest(@NotBlank String code) {}
+  record ActiveRequest(@NotBlank String code, Boolean ad) {}
 
-  /** 매수벽이 무너졌다: 열 벽 앞으로 돌아간다 (decisions.md 546번). */
-  @PostMapping("/idle/retreat")
-  CompanyView retreatIdle(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.retreatIdle(cookies.requirePlayer(token));
+  /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). */
+  @PostMapping("/idle/active/equip")
+  CompanyView equipActive(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody ActiveEquipRequest request) {
+    return companies.equipActive(cookies.requirePlayer(token), request.code(), request.equipped());
   }
+
+  record ActiveEquipRequest(@NotBlank String code, @NotNull Boolean equipped) {}
 
   /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가고 생선을 받는다. */
   @PostMapping("/rebirth")
-  CompanyView rebirth(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+  CompanyView rebirth(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @RequestBody(required = false) RebirthRequest request) {
     UUID sessionId = cookies.requirePlayer(token);
-    CompanyView company = companies.rebirth(sessionId);
+    // 광고를 보고 환생하면 생선이 3배다 (586번).
+    boolean ad = request != null && Boolean.TRUE.equals(request.ad());
+    CompanyView company = companies.rebirth(sessionId, ad);
     PLAY.info(
-        "company-rebirth session={} company={} count={} fish={} ip={}",
+        "company-rebirth session={} company={} count={} fish={} ad={} ip={}",
         sessionId,
         company.companyId(),
         company.idle().rebirth().count(),
         company.idle().rebirth().fish(),
+        ad,
         ClientIp.current());
     return company;
   }
+
+  record RebirthRequest(Boolean ad) {}
 
   /** 생선으로 고양이의 레벨을 하나 올린다 (571번). */
   @PostMapping("/cat/level")

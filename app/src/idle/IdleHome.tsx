@@ -5,6 +5,7 @@ import { idleBossChallenge } from '@web/features/raising/idlePredict'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useShownIdle } from '@web/features/raising/useIdleBattle'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { preloadRewardedAd } from '../app/ads'
 import { rate, readOfflineSeen, shouldShowOffline } from '../app/income'
 import { meetingReady } from '../app/meeting'
 import { Sheet } from '../app/Sheet'
@@ -26,6 +27,7 @@ import { IdlePass } from './IdlePass'
 import { IdleRebirth } from './IdleRebirth'
 import { IdleSandbox } from './IdleSandbox'
 import { IdleShop } from './IdleShop'
+import { IdleSkills } from './IdleSkills'
 import { IdleIcon } from './icons'
 import { MenuIcon } from './MenuIcon'
 import { OfflineIncome } from './OfflineIncome'
@@ -36,7 +38,7 @@ import './loadout-tray.css'
 import './upgrade-feedback.css'
 import './toy-shop.css'
 
-type Menu = 'battle' | 'growth' | 'cats' | 'shop' | 'company'
+type Menu = 'battle' | 'growth' | 'cats' | 'skills' | 'shop' | 'company'
 /**
  * 회사 탭은 꺼 두었다 (decisions.md 540번): 아래 메뉴의 회사 탭과 위의 회사 메뉴 단추(☰)가 나오지 않는다. 회사 화면의 코드는 그대로라 이 값을
  * 켜면 돌아온다.
@@ -48,6 +50,8 @@ const menus: { key: Menu; label: string }[] = (
     { key: 'growth', label: '성장' },
     // 무기 탭은 고양이 탭에 합쳤다 (560번): 고양이를 고르고 그 자리에서 무기를 바꾸고 합친다.
     { key: 'cats', label: '고양이·무기' },
+    // 스킬 탭 (587번): 사장냥의 고유 스킬을 보고 장착한다.
+    { key: 'skills', label: '스킬' },
     { key: 'shop', label: '상점' },
     { key: 'company', label: '회사' },
   ] as const
@@ -57,7 +61,7 @@ type Upgrade = NonNullable<Company['battleUpgrades']>[number]
 const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
   damage: { name: '공격력', note: '탄 공격력' },
   fire: { name: '공격 속도', note: '쏘는 빠르기' },
-  hp: { name: '매수벽 체력', note: '매수벽이 무너지면 열 벽 뒤로 물러나요' },
+  hp: { name: '매수벽 체력', note: '매수벽이 무너지면 다시 설 때까지 공격이 멈춰요' },
   buy: { name: '매수벽 공격', note: '매수 주문의 피해 · 무기와 따로 세요' },
 }
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
@@ -120,6 +124,8 @@ export function IdleHome({
   const offlineShowing = shouldShowOffline(idle?.offline, offlineSeen)
   const elsewhere = useAppUi((s) => s.battle != null || s.investOpen)
   const exReady = stageBadge(company) !== null
+  // 광고 단추를 누르자마자 광고가 뜨도록 앱에서는 미리 받아 둔다 (589번).
+  useEffect(preloadRewardedAd, [])
   useEffect(() => {
     if (menu === 'battle' || menu === 'company') return
     const previous = useAppUi.getState().modalBack
@@ -302,6 +308,7 @@ export function IdleHome({
               }}
             />
           )}
+          {menu === 'skills' && <IdleSkills company={company} />}
           {menu === 'shop' && (
             <IdleShop
               key={shopKind}

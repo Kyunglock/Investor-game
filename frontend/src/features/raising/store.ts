@@ -6,6 +6,8 @@ type Status = 'loading' | 'ready' | 'error'
 export type WeaponKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle'
 export type WeaponGrade = NonNullable<Company['weapons']>[number]['grade']
 export type ActiveCode = NonNullable<NonNullable<Company['idle']>['actives']>[number]['code']
+/** 장착하는 고유 스킬 (decisions.md 587번). 광고 스킬(588번)은 장착하지 않는다. */
+export type UniqueActiveCode = Exclude<ActiveCode, `boost${string}`>
 export type CatCode = NonNullable<Company['idle']>['cats'][number]['code']
 
 interface RaisingState {
@@ -34,6 +36,8 @@ interface RaisingState {
   upgrade: () => Promise<void>
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
   equipWeapon: (kind: WeaponKind, grade: WeaponGrade) => Promise<void>
+  /** 사장냥이 든 무기를 뺀다 (decisions.md 585번): 기본 권총을 쏜다. */
+  unequipWeapon: () => Promise<void>
   /** 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번). 보상은 company.stages.lastResult. */
   reportStage: (stage: number, cleared: boolean, stars: number) => Promise<void>
   /** 종목 회의 뒤 전투의 결과 (decisions.md 414번, #573). 별에 따라 회의 손익이 바뀐다. */
@@ -60,7 +64,10 @@ interface RaisingState {
   /** 다이아로 고양이를 뽑는다 (decisions.md 488·526번). count가 10이면 10연차다. 받은 회사(실패면 null)를 돌려준다. */
   drawCat: (count?: number) => Promise<Company | null>
   /** 액티브 스킬을 쓴다 (decisions.md 503번). 서버가 받아 줬으면 true. 전투를 멈추지 않게 busy를 켜지 않는다. */
-  useActive: (code: ActiveCode) => Promise<boolean>
+  /** ad: 광고를 끝까지 본 뒤에 쓴다 (588번). 광고 스킬은 ad가 참이어야 서버가 받아 준다. */
+  useActive: (code: ActiveCode, ad?: boolean) => Promise<boolean>
+  /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). 세 개까지. */
+  equipActive: (code: UniqueActiveCode, equipped: boolean) => Promise<void>
   /** 코드를 넣고 테스트판에 들어간다 (decisions.md 499번). 안 되면 까닭을, 되면 null을 돌려준다. */
   enterSandbox: (code: string) => Promise<string | null>
   /** 테스트판에서 나와 본 게임의 회사를 다시 읽는다. */
@@ -212,6 +219,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     equipWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon', { body: { kind, grade } })),
 
+    unequipWeapon: () => change(api.POST('/api/company/weapon', { body: {} })),
+
     reportStage: (stage, cleared, stars) =>
       change(api.POST('/api/company/stage', { body: { stage, cleared, stars } })),
 
@@ -280,12 +289,16 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     },
     addSandboxPassExp: (exp) => change(api.POST('/api/sandbox/pass-exp', { body: { exp } })),
     skipSandboxSeason: () => change(api.POST('/api/sandbox/next-season')),
-    useActive: async (code) => {
-      const res = await safely(api.POST('/api/company/idle/active', { body: { code } }))
+    useActive: async (code, ad) => {
+      const res = await safely(
+        api.POST('/api/company/idle/active', { body: ad ? { code, ad } : { code } }),
+      )
       if (!res?.data) return false
       set({ company: res.data })
       return true
     },
+    equipActive: (code, equipped) =>
+      change(api.POST('/api/company/idle/active/equip', { body: { code, equipped } })),
     drawCat: async (count = 1) => {
       const res = await safely(api.POST('/api/company/cat/draw', { body: { count } }))
       set({ company: res?.data ?? get().company, error: reason(res?.error) })

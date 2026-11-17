@@ -40,7 +40,7 @@ export interface IdleServer extends IdleWallHealth {
   sequence?: number
   /** Walls broken so far (decisions.md 546). */
   cleared?: number
-  /** Moves that broke no wall: a buy-wall retreat, the jump tool (546). */
+  /** Moves that broke no wall: a rebirth, the jump tool (546). */
   epoch?: number
 }
 
@@ -246,7 +246,7 @@ export class IdlePredictor {
 
     // What was shown is never taken back (the debt): the shown wall just stops losing health until
     // the server's side has caught up. A long way ahead, or a server that went back, starts over.
-    // A retreat or a jump (another epoch) moved the fight: nothing shown counts.
+    // A rebirth or a jump (another epoch) moved the fight: nothing shown counts.
     const floor = this.floor
     if (
       !floor ||

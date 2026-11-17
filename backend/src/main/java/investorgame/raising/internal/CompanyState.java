@@ -80,6 +80,12 @@ class CompanyState {
     /** 불장이 끝나는 활성 시간 (503번). */
     double rallyUntil;
 
+    /** 장착한 고유 스킬 (587번): 세 개까지. null이면 장착이 생기기 전의 저장이라 셋을 모두 장착한 것으로 본다. */
+    List<String> activeSlots;
+
+    /** 광고 스킬 (588번): 코드 → 효과가 끝나는 활성 시간(activeSeconds). */
+    Map<String, Double> activeUntil = new LinkedHashMap<>();
+
     /** 스킬이 고양이의 고유 능력이 된 뒤의 저장이다 (501번). 아니면 벽으로 얻었던 스킬을 그 스킬의 고양이로 한 번 바꿔 준다. */
     boolean catSkills;
 
@@ -222,6 +228,9 @@ class CompanyState {
 
   /** 든 무기. weapons 가운데 하나. */
   Weapon weapon;
+
+  /** 사장냥이 무기를 뺐다 (decisions.md 585번): weapon이 비어 있어도 다시 들리지 않고 기본 권총을 쏜다. */
+  boolean weaponOff;
 
   /** 무기 뽑기권 (decisions.md 366번). */
   int weaponTickets;

@@ -593,35 +593,18 @@ class IdleEngineTest {
   }
 
   @Test
-  void aBrokenBuyWallSendsTheFightTenWallsBack() {
-    start(37);
-    state.idle.damage = 100;
-    state.idle.nextDamage = 50;
-    long epoch = state.idle.epoch;
-    engine.retreat(state);
-    assertThat(state.idle.wall).isEqualTo(27);
-    assertThat(state.idle.damage).isZero();
-    assertThat(state.idle.nextDamage).isZero();
-    assertThat(state.idle.epoch).isEqualTo(epoch + 1);
-    // Never behind the last cleared boss (548): the wall after it is where the fight starts again.
-    assertThat(IdleEngine.retreatWall(51)).isEqualTo(51);
-    assertThat(IdleEngine.retreatWall(55)).isEqualTo(51);
-    assertThat(IdleEngine.retreatWall(60)).isEqualTo(51);
-    assertThat(IdleEngine.retreatWall(61)).isEqualTo(51);
-    assertThat(IdleEngine.retreatWall(67)).isEqualTo(57);
-    assertThat(IdleEngine.retreatWall(100)).isEqualTo(90);
-    assertThat(IdleEngine.retreatWall(104)).isEqualTo(101);
-    // The boss itself is not cleared yet: losing to it goes ten walls back. Never below wall 1.
-    assertThat(IdleEngine.retreatWall(50)).isEqualTo(40);
-    assertThat(IdleEngine.retreatWall(30)).isEqualTo(20);
-    assertThat(IdleEngine.retreatWall(10)).isEqualTo(1);
-    assertThat(IdleEngine.retreatWall(4)).isEqualTo(1);
-    // A halt in a lost boss challenge is gone, and reaching the boss again halts again.
-    state.idle.wall = 50;
-    state.idle.circuitSeconds = 3;
-    engine.retreat(state);
-    assertThat(state.idle.wall).isEqualTo(40);
-    assertThat(state.idle.circuitSeconds).isZero();
+  void theBossCatWithoutAWeaponShootsTheStartingPistol() {
+    // 585: the boss cat's weapon comes off like a cat's, and it then shoots the F pistol.
+    start(1);
+    company.mental.grant(state, "A", 1);
+    double armed = engine.view(state).dps();
+    company.mental.unequip(state);
+    double bare = engine.view(state).dps();
+    assertThat(bare).isLessThan(armed);
+    company.mental.equip(state, "pistol", "F");
+    assertThat(engine.view(state).dps()).isEqualTo(bare);
+    // Its field slot is not a slot: nothing can take the boss cat off the field.
+    assertThat(engine.view(state).fieldSlots()).isEqualTo(4);
   }
 
   @Test
@@ -872,7 +855,10 @@ class IdleEngineTest {
     state.idle.wall = 100;
     tick(1000);
     var actives = engine.view(state).actives();
-    assertThat(actives).extracting(a -> a.code()).containsExactly("barrage", "rally", "fortify");
+    // The boss cat's three 고유 스킬 (587), then the three 광고 스킬 (588).
+    assertThat(actives)
+        .extracting(a -> a.code())
+        .containsExactly("barrage", "rally", "fortify", "boostFire", "boostDamage", "boostBuy");
     assertThat(actives).allMatch(a -> a.readyIn() == 0);
     // Without the press, barrage hits are worth nothing.
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
@@ -920,6 +906,99 @@ class IdleEngineTest {
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage).isCloseTo(plain, org.assertj.core.data.Offset.offset(1e-9));
+  }
+
+  @Test
+  void onlyEquippedUniqueSkillsCanBeUsedAndThreeFitTheSlots() {
+    // 587: a save from before equipping has all three equipped.
+    start(1);
+    tick(1000);
+    var view = engine.view(state);
+    assertThat(view.activeSlots()).isEqualTo(3);
+    assertThat(view.actives()).filteredOn(a -> !a.ad()).allMatch(a -> a.equipped());
+    assertThat(view.actives()).filteredOn(a -> a.ad()).noneMatch(a -> a.equipped());
+
+    engine.equipActive(state, "rally", false);
+    assertThat(engine.view(state).actives().get(1).equipped()).isFalse();
+    assertThatThrownBy(() -> engine.useActive(state, "rally"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("장착하지 않은");
+    engine.useActive(state, "barrage");
+    // Taking a skill off and putting it back does not skip its cooldown.
+    engine.equipActive(state, "barrage", false);
+    engine.equipActive(state, "barrage", true);
+    assertThatThrownBy(() -> engine.useActive(state, "barrage"))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(state.idle.activeSlots).containsExactly("fortify", "barrage");
+
+    engine.equipActive(state, "rally", true);
+    engine.equipActive(state, "rally", true);
+    assertThat(state.idle.activeSlots).containsExactly("fortify", "barrage", "rally");
+    engine.useActive(state, "rally");
+    // Ad skills and unknown codes cannot be equipped, and a fourth skill has no slot.
+    assertThatThrownBy(() -> engine.equipActive(state, "boostFire", true))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.equipActive(state, "nope", true))
+        .isInstanceOf(InvalidRequestException.class);
+    state.idle.activeSlots.set(2, "other");
+    assertThatThrownBy(() -> engine.equipActive(state, "rally", true))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("꽉 찼다");
+  }
+
+  /** What one beat of far too many hits of a kind is accepted for, with fresh credits. */
+  private double accepted(String kind) {
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[18];
+    tick(1000, new IdleHit(100, kind, 1000, 1e9));
+    return state.idle.damage;
+  }
+
+  @Test
+  void adSkillsTripleTheirPartForAMinuteAfterAnAd() {
+    // 588: 공격속도·공격력·매수공격 3배. They need the ad, are never equipped, and last 60 real
+    // seconds (90 game seconds at 1.5x) with a 180 second cooldown.
+    start(1);
+    state.idle.wall = 100;
+    for (int i = 0; i < 3; i++) tick(1000);
+    double bullets = accepted("bullet");
+    double buys = accepted("buy");
+    assertThat(bullets).isPositive();
+    assertThat(buys).isPositive();
+
+    assertThatThrownBy(() -> engine.useActive(state, "boostDamage"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("광고");
+    engine.useActive(state, "boostDamage", true);
+    var boost = engine.view(state).actives().get(4);
+    assertThat(boost.ad()).isTrue();
+    assertThat(boost.seconds()).isEqualTo(60);
+    assertThat(boost.left()).isEqualTo(60);
+    assertThat(boost.readyIn()).isEqualTo(180);
+    assertThat(accepted("bullet")).isCloseTo(3 * bullets, offset(1e-9));
+    assertThat(accepted("buy")).as("only the guns and skills").isCloseTo(buys, offset(1e-9));
+    assertThatThrownBy(() -> engine.useActive(state, "boostDamage", true))
+        .isInstanceOf(InvalidRequestException.class);
+
+    engine.useActive(state, "boostBuy", true);
+    assertThat(accepted("buy")).isCloseTo(3 * buys, offset(1e-9));
+    // The barrage's orders are buy orders too: three times three.
+    engine.useActive(state, "barrage");
+    state.idle.damage = 0;
+    tick(1000, new IdleHit(100, "barrage", 40, 1e9));
+    assertThat(state.idle.damage).isCloseTo(40 * 3 * 3 * 0.75, offset(1e-9));
+
+    // 공격속도 3배 triples the bullet budget, and the rally is not stacked on it.
+    engine.useActive(state, "boostFire", true);
+    assertThat(accepted("bullet")).isCloseTo(9 * bullets, offset(1e-6));
+    engine.useActive(state, "rally");
+    assertThat(accepted("bullet")).isCloseTo(9 * bullets, offset(1e-6));
+
+    // A minute after the last press everything is back to plain.
+    for (int i = 0; i < 62; i++) tick(1000);
+    assertThat(engine.view(state).actives().get(3).left()).isZero();
+    assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
+    assertThat(accepted("buy")).isCloseTo(buys, offset(1e-9));
   }
 
   @Test
@@ -1185,6 +1264,27 @@ class IdleEngineTest {
         .weapon();
   }
 
+  /** 광고를 보고 환생하면 생선이 3배다 (586번). 횟수 한도는 없고, 첫 보스를 깨기 전에는 광고를 봐도 못 한다. */
+  @Test
+  void 광고를_보고_환생하면_생선을_세_배로_받는다() {
+    CompanyState c = company.open(new HashSeededRandom(3), company.openingCapital());
+    engine.beat(c, "one", 0, "start");
+    c.idle.wall = 50;
+    assertThatThrownBy(() -> engine.rebirth(c, true)).isInstanceOf(InvalidRequestException.class);
+    c.idle.wall = 101;
+    engine.rebirth(c, true);
+    assertThat(c.fish).isEqualTo(60);
+    assertThat(c.idle.wall).isEqualTo(1);
+    // 다음 환생에도 다시 3배를 받는다. 그냥 환생은 1배다.
+    c.idle.wall = 101;
+    engine.rebirth(c, true);
+    assertThat(c.fish).isEqualTo(120);
+    c.idle.wall = 101;
+    engine.rebirth(c, false);
+    assertThat(c.fish).isEqualTo(140);
+    assertThat(c.rebirths).isEqualTo(3);
+  }
+
   @Test
   void 환생하면_처음으로_돌아가고_생선을_받아_고양이_레벨을_올린다() {
     CompanyState c = company.open(new HashSeededRandom(3), company.openingCapital());
@@ -1201,6 +1301,7 @@ class IdleEngineTest {
     c.idle.wall = 301;
     assertThat(engine.rebirthFish(c)).isEqualTo(180);
     assertThat(engine.view(c).rebirth().gain()).isEqualTo(180);
+    assertThat(engine.view(c).rebirth().adGain()).as("광고를 보면 3배 (586번)").isEqualTo(540);
     assertThat(engine.view(c).rebirth().fromWall()).isEqualTo(51);
     // 환생: 벽 1, 강화와 돈은 처음으로. 고양이·무기·다이아·받은 보스 보상은 그대로다.
     c.idle.cats.put("sky", 3);

@@ -38,7 +38,7 @@ const company = {
     upcoming: [],
     skills: [],
     fieldSlots: 4,
-    rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51 },
+    rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51, adGain: 0 },
     wallDps: 0,
     power: 1038,
     income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },

@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
-import { retreatIdle, shownIdle } from '@web/features/raising/useIdleBattle'
+import { shownIdle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import type { ActiveCode } from '../mental/actives'
 import { IDLE_GAME_SPEED, idleAssaultSpec } from '../mental/assault'
@@ -115,15 +115,14 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
           },
           // 몬스터 습격만 알린다 (decisions.md 500번). 그 밖의 전투 알림은 자동 전투에서 띄우지 않는다.
           onIdleRaid: (text, color) => setRaid((old) => ({ text, color, id: (old?.id ?? 0) + 1 })),
-          // 매수벽이 무너지면 열 벽 앞으로 돌아간다 (546번).
+          // 매수벽이 무너져도 지금 벽에 그대로 머문다 (584번): 다시 설 때까지 공격이 멈출 뿐이다.
           onBuyWallBreak: () => {
             if (disposed || !latest.current.connected) return
             setRaid((old) => ({
-              text: '매수벽 붕괴! 열 벽 뒤로 후퇴',
+              text: '매수벽 붕괴! 다시 세우는 중',
               color: '#ff8a5c',
               id: (old?.id ?? 0) + 1,
             }))
-            void retreatIdle()
           },
           onHud: () => {},
           onBanner: () => {},
@@ -136,6 +135,11 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
             window.clearTimeout(stall)
             retries.current = 0
             setReady(true)
+            // 이미 돌고 있던 효과(불장, 광고 스킬 588번)는 화면을 다시 열어도 남은 시간만큼 이어진다. 서버의 초는 실제 시간이라 전투 초로 바꾼다.
+            for (const active of latest.current.company.idle?.actives ?? []) {
+              if (active.left > 0)
+                battle.current?.castActive(active.code, active.left * IDLE_GAME_SPEED)
+            }
           },
           onError: (message) => {
             opened = true

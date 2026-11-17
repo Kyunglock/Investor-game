@@ -45,9 +45,6 @@ class IdleEngine {
 
   static final double BOSS_CLEAR_REWARDS = 5;
 
-  /** 매수벽이 무너지면 이만큼 앞의 벽으로 돌아간다 (546번). */
-  static final long RETREAT_WALLS = 10;
-
   /** 보스 도전의 벽 (547번). */
   static boolean bossWall(long wall) {
     return wall % BOSS_EVERY == 0;
@@ -59,13 +56,31 @@ class IdleEngine {
   private static final int KINDS = SKILLS + 3;
   private static final int BARRAGE = SKILLS + 1;
   private static final int BUY = SKILLS + 2;
-  // Active skills (503): the player presses them. Seconds are game seconds (twice real time).
+  // Active skills (503): the player presses them. Seconds are game seconds (SPEED times real time).
   // barrage: the buy wall pours buy orders; rally: every gun fires twice as fast; fortify: the buy
   // wall is rebuilt and cannot be hurt (the wall is the screen's, so the server only keeps time).
-  private static final List<String> ACTIVES = List.of("barrage", "rally", "fortify");
-  private static final String[] ACTIVE_NAMES = {"매수세례", "불장", "방어선 구축"};
-  private static final double[] ACTIVE_COOLDOWN = {60, 90, 90};
-  private static final double[] ACTIVE_SECONDS = {6, 10, 6};
+  // Those three are the boss cat's 고유 스킬 (587): only the equipped ones can be used.
+  // The three after them are the 광고 스킬 (588), used after watching an ad: for a while the guns
+  // fire, the guns and skills hit, or the buy orders hit BOOST times as much.
+  private static final List<String> ACTIVES =
+      List.of("barrage", "rally", "fortify", "boostFire", "boostDamage", "boostBuy");
+  private static final String[] ACTIVE_NAMES = {
+    "매수세례", "불장", "방어선 구축", "공격속도 3배", "공격력 3배", "매수공격 3배"
+  };
+  private static final double[] ACTIVE_COOLDOWN = {60, 90, 90, 270, 270, 270};
+  private static final double[] ACTIVE_SECONDS = {6, 10, 6, 90, 90, 90};
+
+  /** The first UNIQUE actives are 고유 스킬, the rest are 광고 스킬. */
+  private static final int UNIQUE = 3;
+
+  /** 고유 스킬 장착 칸 (587번). */
+  static final int ACTIVE_SLOTS = 3;
+
+  /** 광고 스킬의 배수 (588번). Matches the app's mental/actives.ts. */
+  static final double BOOST = 3;
+
+  // A boosted bullet or buy order may land a moment after its boost ended.
+  private static final double BOOST_GRACE = 2;
   // Matches the app's mental/actives.ts.
   private static final int BARRAGE_SHOTS = 40;
   private static final double BARRAGE_POWER = 3;
@@ -693,9 +708,20 @@ class IdleEngine {
    * 시간).
    */
   void useActive(CompanyState c, String code) {
+    useActive(c, code, false);
+  }
+
+  /**
+   * 고유 스킬(587번)은 장착한 것만 쓴다. 광고 스킬(588번)은 광고를 본 뒤(ad)에만 쓴다: 아직 광고를 붙이지 않아 화면이 보낸 값을 그대로 믿는다 (#888).
+   */
+  void useActive(CompanyState c, String code, boolean ad) {
     CompanyState.Idle s = state(c);
     int at = ACTIVES.indexOf(code);
     if (at < 0) throw new InvalidRequestException("없는 스킬이다: " + code);
+    if (at < UNIQUE && !equipped(s).contains(code)) {
+      throw new InvalidRequestException("장착하지 않은 스킬이다: " + ACTIVE_NAMES[at]);
+    }
+    if (at >= UNIQUE && !ad) throw new InvalidRequestException("광고를 본 뒤에 쓸 수 있다");
     if (s.activeReady.getOrDefault(code, 0.0) > s.activeSeconds + 1e-9) {
       throw new InvalidRequestException("아직 쓸 수 없다");
     }
@@ -704,6 +730,44 @@ class IdleEngine {
     if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
     if (at == 0) s.hitCredits[BARRAGE] = BARRAGE_SHOTS;
     if (at == 1) s.rallyUntil = s.activeSeconds + ACTIVE_SECONDS[at];
+    if (at >= UNIQUE) s.activeUntil.put(code, s.activeSeconds + ACTIVE_SECONDS[at]);
+  }
+
+  /** 장착한 고유 스킬 (587번). 장착이 생기기 전의 저장은 셋을 모두 장착한 것으로 본다. */
+  private static List<String> equipped(CompanyState.Idle s) {
+    if (s.activeSlots == null) s.activeSlots = new ArrayList<>(ACTIVES.subList(0, UNIQUE));
+    return s.activeSlots;
+  }
+
+  /**
+   * 고유 스킬을 장착하거나 뺀다 (587번). ACTIVE_SLOTS개까지 장착한다. 광고 스킬이거나 없는 스킬이거나 칸이 꽉 찼으면 400. 재사용 대기 시간은 뺐다 끼워도
+   * 그대로 흐른다.
+   */
+  void equipActive(CompanyState c, String code, boolean equip) {
+    CompanyState.Idle s = state(c);
+    int at = ACTIVES.indexOf(code);
+    if (at < 0 || at >= UNIQUE) throw new InvalidRequestException("장착할 수 없는 스킬이다: " + code);
+    List<String> slots = equipped(s);
+    if (!equip) {
+      slots.remove(code);
+    } else if (!slots.contains(code)) {
+      if (slots.size() >= ACTIVE_SLOTS) {
+        throw new InvalidRequestException("장착 칸이 꽉 찼다: " + ACTIVE_SLOTS + "개까지 장착한다");
+      }
+      slots.add(code);
+    }
+  }
+
+  /** Whether an ad skill's boost counts for a beat that starts at this active time (588). */
+  private static double boost(CompanyState.Idle s, String code, double start) {
+    Double until = s.activeUntil.get(code);
+    return until != null && start < until + BOOST_GRACE ? BOOST : 1;
+  }
+
+  /** Seconds of effect left, in game seconds: the rally and the ad skills. Zero for the others. */
+  private static double effectLeft(CompanyState.Idle s, String code) {
+    double until = "rally".equals(code) ? s.rallyUntil : s.activeUntil.getOrDefault(code, 0.0);
+    return Math.max(0, until - s.activeSeconds);
   }
 
   /** How many fielded cats cast each skill (501). A resting cat's skill does nothing. */
@@ -723,7 +787,13 @@ class IdleEngine {
     s.circuitSeconds -= stopped;
     double active = seconds - stopped;
     // 불장 (503): bullets come twice as often while it burns. A beat that starts inside it counts.
-    double rally = s.activeSeconds < s.rallyUntil ? RALLY_FIRE : 1;
+    // 광고 스킬 (588): 공격속도 3배 is not stacked on the rally; the larger of the two counts.
+    double rally =
+        Math.max(
+            s.activeSeconds < s.rallyUntil ? RALLY_FIRE : 1,
+            boost(s, "boostFire", s.activeSeconds));
+    double damageBoost = boost(s, "boostDamage", s.activeSeconds);
+    double buyBoost = boost(s, "boostBuy", s.activeSeconds);
     s.activeSeconds += active;
     // 물가 (505번): 시간 수입과 벽 보상은 그 벽의 물가만큼 크다.
     // 직원의 초당 수입과 멘탈 보호 보너스도 같은 틱에 들어온다 (523번).
@@ -741,7 +811,12 @@ class IdleEngine {
     for (Shooter shooter : shooters) {
       bulletMax =
           Math.max(
-              bulletMax, BULLET_WEIGHT * shooter.damage() * shooter.power() * shooter.critical());
+              bulletMax,
+              damageBoost
+                  * BULLET_WEIGHT
+                  * shooter.damage()
+                  * shooter.power()
+                  * shooter.critical());
       bulletsPerSecond += rally * shooter.perSecond() / BULLET_WEIGHT;
     }
     long front = s.wall;
@@ -768,7 +843,7 @@ class IdleEngine {
         perSecond += SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
         gained += active * SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
       }
-      double damage = hero.damage() * perHit;
+      double damage = damageBoost * hero.damage() * perHit;
       double maxDamage = kind == 0 ? bulletMax : damage;
       s.hitCredits[kind] =
           Math.min(Math.max(2, SPEED * GRACE_MS / 1000 * perSecond), s.hitCredits[kind] + gained);
@@ -828,7 +903,7 @@ class IdleEngine {
       }
     }
     // 매수세례 (503): its buy orders that reach the front wall. Credits come from the press, not time.
-    double barrageMax = buyOrder(c) * BARRAGE_POWER;
+    double barrageMax = buyBoost * buyOrder(c) * BARRAGE_POWER;
     for (IdleHit hit : hits) {
       if (active <= 0 || hit == null || !"barrage".equals(hit.kind()) || hit.count() <= 0) continue;
       if (Math.abs(hit.wall() - front) > AHEAD) continue;
@@ -847,7 +922,7 @@ class IdleEngine {
           Math.min(
               SPEED * GRACE_MS / 1000 * BUY_ORDERS_PER_SECOND,
               s.hitCredits[BUY] + active * BUY_ORDERS_PER_SECOND);
-      double buyMax = buyOrder(c);
+      double buyMax = buyBoost * buyOrder(c);
       for (IdleHit hit : hits) {
         if (hit == null || !"buy".equals(hit.kind()) || hit.count() <= 0) continue;
         if (Math.abs(hit.wall() - front) > AHEAD) continue;
@@ -954,25 +1029,6 @@ class IdleEngine {
     s.epoch++;
   }
 
-  /**
-   * Where a broken buy wall sends the fight from this wall (546): ten walls back, but never behind
-   * the last boss already cleared (548). The wall right after that boss is the checkpoint: 51 for
-   * walls 51 to 100, the first wall before any boss is cleared.
-   */
-  static long retreatWall(long wall) {
-    long checkpoint = (Math.max(1, wall) - 1) / BOSS_EVERY * BOSS_EVERY + 1;
-    return Math.max(checkpoint, wall - RETREAT_WALLS);
-  }
-
-  /**
-   * 매수벽이 무너졌다 (decisions.md 546번): 열 벽 앞으로 돌아간다. 깬 보스의 다음 벽보다 앞으로는 가지 않는다 (548번). 매수벽은 화면의 것이라 서버는
-   * 무너졌는지 따지지 않는다: 돌아가면 수입과 보상이 줄 뿐이다.
-   */
-  void retreat(CompanyState c) {
-    CompanyState.Idle s = state(c);
-    move(s, retreatWall(s.wall));
-  }
-
   static final long MAX_JUMP_WALL = 100_000;
 
   /** 테스트판 (499번): 동료 고양이 39종을 모두 그 레벨로 주고, 빈 출전 칸을 차례대로 채운다. */
@@ -990,6 +1046,10 @@ class IdleEngine {
   // 환생 (decisions.md 571번): 첫 보스(50번째 벽)를 깬 뒤부터 할 수 있고, 지금 선 벽이 깊을수록 생선을 많이 준다.
   static final long REBIRTH_WALL = 51;
   private static final double REBIRTH_FISH_DIVISOR = 500;
+
+  /** 환생할 때 광고를 보면 생선을 이 배수로 받는다 (586번). 볼 수 있는 횟수에는 한도가 없다. */
+  static final long REBIRTH_AD_MULTIPLIER = 3;
+
   // 생선으로 고양이 레벨을 하나 올리는 값: 지금 레벨 × 이만큼.
   static final long FISH_PER_LEVEL = 5;
 
@@ -1006,8 +1066,16 @@ class IdleEngine {
    * 보스의 보상은 다시 주지 않는다)은 그대로다. 첫 보스를 깨기 전이면 400.
    */
   void rebirth(CompanyState c) {
+    rebirth(c, false);
+  }
+
+  /**
+   * 광고를 보고 환생하면(ad) 생선을 REBIRTH_AD_MULTIPLIER배로 받는다 (586번). 아직 광고를 붙이지 않아 화면이 보낸 값을 그대로 믿는다: 광고를 붙일
+   * 때(#888) 광고 서버의 확인으로 바꾼다.
+   */
+  void rebirth(CompanyState c, boolean ad) {
     CompanyState.Idle s = state(c);
-    long fish = rebirthFish(c);
+    long fish = rebirthFish(c) * (ad ? REBIRTH_AD_MULTIPLIER : 1);
     if (fish <= 0) {
       throw new InvalidRequestException("환생은 " + (REBIRTH_WALL - 1) + "번째 벽의 보스를 깬 뒤에 할 수 있어요");
     }
@@ -1226,8 +1294,12 @@ class IdleEngine {
                         Math.max(
                                 0,
                                 s.activeReady.getOrDefault(ACTIVES.get(i), 0.0) - s.activeSeconds)
-                            / SPEED))
+                            / SPEED,
+                        effectLeft(s, ACTIVES.get(i)) / SPEED,
+                        i < UNIQUE && equipped(s).contains(ACTIVES.get(i)),
+                        i >= UNIQUE))
             .toList(),
+        ACTIVE_SLOTS,
         (s.lastDraws == null ? List.<CompanyState.Pulled>of() : s.lastDraws)
             .stream()
                 .filter(d -> CATS.contains(d.kind))
@@ -1249,6 +1321,11 @@ class IdleEngine {
                 CompanyView.money(s.offlineEarned),
                 s.offlineCapped),
         power(c),
-        new CompanyView.Rebirth(c.rebirths, c.fish, rebirthFish(c), REBIRTH_WALL));
+        new CompanyView.Rebirth(
+            c.rebirths,
+            c.fish,
+            rebirthFish(c),
+            REBIRTH_WALL,
+            rebirthFish(c) * REBIRTH_AD_MULTIPLIER));
   }
 }

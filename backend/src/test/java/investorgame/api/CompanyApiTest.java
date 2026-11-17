@@ -109,6 +109,61 @@ class CompanyApiTest {
     }
   }
 
+  /** 고유 스킬 장착 (587번)과 광고 스킬 (588번). */
+  @Test
+  void 고유_스킬은_장착한_것만_쓰고_광고_스킬은_광고를_본_뒤에_쓴다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.idle.activeSlots").value(3))
+        .andExpect(jsonPath("$.idle.actives.length()").value(6))
+        .andExpect(jsonPath("$.idle.actives[1].code").value("rally"))
+        .andExpect(jsonPath("$.idle.actives[1].equipped").value(true))
+        .andExpect(jsonPath("$.idle.actives[1].ad").value(false))
+        .andExpect(jsonPath("$.idle.actives[3].code").value("boostFire"))
+        .andExpect(jsonPath("$.idle.actives[3].equipped").value(false))
+        .andExpect(jsonPath("$.idle.actives[3].ad").value(true));
+    // 뺀 고유 스킬은 쓸 수 없다. 광고 스킬은 장착할 수 없다.
+    postJson("/api/company/idle/active/equip", "{\"code\":\"rally\",\"equipped\":false}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.idle.actives[1].equipped").value(false));
+    postJson("/api/company/idle/active", "{\"code\":\"rally\"}").andExpect(status().isBadRequest());
+    postJson("/api/company/idle/active/equip", "{\"code\":\"boostFire\",\"equipped\":true}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/idle/active/equip", "{\"code\":\"rally\"}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/idle/active/equip", "{\"code\":\"rally\",\"equipped\":true}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.idle.actives[1].equipped").value(true));
+    postJson("/api/company/idle/active", "{\"code\":\"rally\"}").andExpect(status().isOk());
+    // 광고 스킬은 ad가 참이어야 한다: 60초 동안 이어지고 180초 뒤에 다시 쓴다.
+    postJson("/api/company/idle/active", "{\"code\":\"boostFire\"}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.idle.actives[3].left").value(60.0))
+        .andExpect(jsonPath("$.idle.actives[3].readyIn").value(180.0));
+    postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void 사장냥의_무기를_빼고_다시_든다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
+    // kind와 grade를 함께 비우면 뺀다 (585번). 하나만 비우면 400.
+    postJson("/api/company/weapon", "{}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.weapons[0].equipped").value(false))
+        .andExpect(jsonPath("$.weapons[0].count").value(1));
+    postJson("/api/company/weapon", "{\"kind\":\"pistol\"}").andExpect(status().isBadRequest());
+    // 다시 불러와도 빈손 그대로다.
+    mvc.perform(get("/api/company").cookie(session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.weapons[0].equipped").value(false));
+    postJson("/api/company/weapon", "{\"kind\":\"pistol\",\"grade\":\"F\"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.weapons[0].equipped").value(true));
+  }
+
   @Test
   void 다이아로_무기를_뽑고_다_쓰면_400이다() throws Exception {
     DocumentContext opened =
@@ -642,7 +697,10 @@ class CompanyApiTest {
     assertThat(opened.read("$.idle.rebirth.fish", Long.class)).isZero();
     assertThat(opened.read("$.idle.rebirth.gain", Long.class)).isZero();
     assertThat(opened.read("$.idle.rebirth.fromWall", Long.class)).isEqualTo(51);
+    assertThat(opened.read("$.idle.rebirth.adGain", Long.class)).isZero();
     mvc.perform(post("/api/company/rebirth").cookie(session)).andExpect(status().isBadRequest());
+    // 광고를 봐도 첫 보스를 깨기 전에는 못 한다 (586번).
+    postJson("/api/company/rebirth", "{\"ad\":true}").andExpect(status().isBadRequest());
     postJson("/api/company/cat/level", "{\"code\":\"sky\"}").andExpect(status().isBadRequest());
     postJson("/api/company/cat/level", "{}").andExpect(status().isBadRequest());
   }

@@ -54,7 +54,7 @@ class DefaultCompanyService implements CompanyService {
     if (c.gachaReady
         && c.realtime
         && c.diamondsReady
-        && c.weapon != null
+        && (c.weapon != null || c.weaponOff)
         && c.weaponGachaReady
         && !resting
         && !engine.mental.needsWeaponReset(c)
@@ -405,9 +405,14 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView equipWeapon(UUID sessionId, String kind, String grade) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.requireFreeForBoss(row.state(), kind, grade);
-    engine.mental.equip(row.state(), kind, grade);
-    idle.releaseWeapons(row.state());
+    if (kind == null && grade == null) {
+      // 사장냥의 무기 빼기 (585번).
+      engine.mental.unequip(row.state());
+    } else {
+      idle.requireFreeForBoss(row.state(), kind, grade);
+      engine.mental.equip(row.state(), kind, grade);
+      idle.releaseWeapons(row.state());
+    }
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -554,28 +559,28 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView useActive(UUID sessionId, String code) {
+  public CompanyView useActive(UUID sessionId, String code, boolean ad) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.initWeapons(row.state());
-    idle.useActive(row.state(), code);
+    idle.useActive(row.state(), code, ad);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
 
   @Override
   @Transactional
-  public CompanyView retreatIdle(UUID sessionId) {
+  public CompanyView equipActive(UUID sessionId, String code, boolean equipped) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.retreat(row.state());
+    idle.equipActive(row.state(), code, equipped);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
 
   @Override
   @Transactional
-  public CompanyView rebirth(UUID sessionId) {
+  public CompanyView rebirth(UUID sessionId, boolean ad) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.rebirth(row.state());
+    idle.rebirth(row.state(), ad);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

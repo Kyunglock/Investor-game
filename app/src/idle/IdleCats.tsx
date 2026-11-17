@@ -54,6 +54,8 @@ export function IdleCats({
   const setPicked = onPick
   const idle = company.idle
   const hero = heroOf(company)
+  // 사장냥이 무기를 뺐다 (585번): 든 무기가 없어 기본 권총을 쏜다.
+  const bossBare = !(company.weapons ?? []).some((w) => w.equipped)
   const fish = idle?.rebirth?.fish ?? 0
   const same = (w: Weapon, held: Cat['weapon']) => w.kind === held?.kind && w.grade === held.grade
   const fielded = (idle?.cats ?? []).filter((cat) => cat.fielded)
@@ -90,27 +92,27 @@ export function IdleCats({
   })
   /**
    * 장비 해제 (575번): 고양이가 든 무기를 무기 칸에서 집어 아래(고양이 정보·목록 쪽)로 내려놓으면 뺀다. 장비 목록의 칸 위에 놓아도 같다.
-   * 무기 칸은 스크롤하지 않으므로 어느 쪽으로 움직여도 바로 집힌다.
+   * 무기 칸은 스크롤하지 않으므로 어느 쪽으로 움직여도 바로 집힌다. 사장냥의 무기도 같은 방식으로 뺀다 (585번).
    */
-  const takeOff = async (code: CatCode) => {
+  const takeOff = async (code: CatCode | 'boss') => {
     const store = useRaisingStore.getState()
     if (store.busy) return
-    await store.equipCat(code, null)
+    await (code === 'boss' ? store.unequipWeapon() : store.equipCat(code, null))
     if (!useRaisingStore.getState().error) {
       haptic.light()
       sfx.tap()
     }
   }
-  const gunDrag = useLoadoutDrag<CatCode>(
+  const gunDrag = useLoadoutDrag<CatCode | 'boss'>(
     (_code, target) => !busy && (target === 'unequip' || target.startsWith('gear:')),
     (code) => void takeOff(code),
     { anyDirection: true },
   )
-  const dragged = gunDrag.drag
-    ? (idle?.cats ?? []).find((c) => c.code === gunDrag.drag?.item)
-    : undefined
-  const canMerge = mergeable(company).length > 0
   const weaponOf = (c: Cat) => company.weapons?.find((w) => same(w, c.weapon)) ?? DEFAULT_WEAPON
+  const draggedCat = (idle?.cats ?? []).find((c) => c.code === gunDrag.drag?.item)
+  const draggedGun =
+    gunDrag.drag?.item === 'boss' ? hero.weapon : draggedCat ? weaponOf(draggedCat) : undefined
+  const canMerge = mergeable(company).length > 0
   /**
    * 무기 칸 (569번): 바로 위 고양이(code가 null이면 사장냥)가 드는 무기. 장비 목록에서 무기를 끌어 놓으면 그 고양이가 장착하고, 누르면 그
    * 고양이의 장비 목록이 펴진다. 든 무기가 없으면 기본 권총을 흐리게 보인다.
@@ -118,15 +120,15 @@ export function IdleCats({
   const gunSlot = (code: CatCode | null, name: string, held: Weapon, bare: boolean) => (
     <button
       type="button"
-      className={`idle-gun-slot ${bare ? 'is-bare' : ''} ${gearOpen && picked === code ? 'is-picked' : ''} ${code && !bare ? 'is-held' : ''} ${code && gunDrag.drag?.item === code ? 'is-lifted' : ''}`}
+      className={`idle-gun-slot ${bare ? 'is-bare' : ''} ${gearOpen && picked === code ? 'is-picked' : ''} ${bare ? '' : 'is-held'} ${gunDrag.drag?.item === (code ?? 'boss') ? 'is-lifted' : ''}`}
       data-testid="gun-slot"
       data-code={code ?? 'boss'}
       data-kind={held.kind}
       data-grade={held.grade}
       data-loadout-target={`wearer:${code ?? 'boss'}`}
-      aria-label={`${name}의 무기 ${bare ? '기본 권총' : `${held.name} ${held.gradeName}`} · 눌러서 바꾸기${code && !bare ? ' · 아래로 끌어 빼기' : ''}`}
-      // 사장냥의 무기와 기본 권총은 뺄 수 없다.
-      onPointerDown={code && !bare && !busy ? gunDrag.down(code) : undefined}
+      aria-label={`${name}의 무기 ${bare ? '기본 권총' : `${held.name} ${held.gradeName}`} · 눌러서 바꾸기${bare ? '' : ' · 아래로 끌어 빼기'}`}
+      // 기본 권총은 뺄 수 없다. 사장냥의 무기도 고양이와 같이 뺀다 (585번).
+      onPointerDown={!bare && !busy ? gunDrag.down(code ?? 'boss') : undefined}
       onClick={(event) => {
         if (gunDrag.consumeClick(event.detail)) return
         pick(code)
@@ -171,7 +173,7 @@ export function IdleCats({
             >
               <Portrait />
             </button>
-            {gunSlot(null, BOSS_NAME, hero.weapon, false)}
+            {gunSlot(null, BOSS_NAME, hero.weapon, bossBare)}
           </li>
           {Array.from({ length: idle?.fieldSlots ?? 0 }, (_, i) => fielded[i] ?? null).map(
             (c, i) => (
@@ -259,7 +261,7 @@ export function IdleCats({
             <small>
               {cat
                 ? `무기 공격력의 ${cat.damagePercent}%로 쏴요 · ${catTrait(cat)}`
-                : '늘 맨 앞에서 싸워요 · 아래 고양이를 누르면 출전·장비를 바꿔요'}
+                : '늘 맨 앞에서 싸워요 · 출전은 뺄 수 없어요 · 무기는 바꾸거나 뺄 수 있어요'}
             </small>
           </div>
           {cat ? (
@@ -378,7 +380,7 @@ export function IdleCats({
           >
             <GunSprite kind={gun.kind} grade={gun.grade} width={40} />
             <span className="idle-gun-text">
-              {cat && !cat.weapon ? '기본 권총' : gun.name}{' '}
+              {(cat ? !cat.weapon : bossBare) ? '기본 권총' : gun.name}{' '}
               <i className={`idle-grade ${GRADE_BADGE[gun.grade]}`}>{gun.gradeName}</i>
               <small className="idle-gun-note">
                 {FIRE_STYLE_NAMES[gun.kind]} · {WEAPON_EFFECTS[gun.kind].name}
@@ -472,14 +474,14 @@ export function IdleCats({
         )}
       </div>
       {gunDrag.drag &&
-        dragged &&
+        draggedGun &&
         createPortal(
           <div
             className="idle-gear-ghost"
             style={{ transform: `translate(${gunDrag.drag.x}px, ${gunDrag.drag.y}px)` }}
             aria-hidden="true"
           >
-            <GunSprite kind={weaponOf(dragged).kind} grade={weaponOf(dragged).grade} width={46} />
+            <GunSprite kind={draggedGun.kind} grade={draggedGun.grade} width={46} />
           </div>,
           document.body,
         )}
