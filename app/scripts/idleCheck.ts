@@ -576,7 +576,8 @@ try {
           }
         ).__mentalMarket(),
       )
-    assert.equal((await market()).simSpeed, 1) // Existing 2x speed uses simScale(2) = 1.
+    // The fight runs at 1.5x (decisions.md 578): simScale(1.5) = 0.75.
+    assert.equal((await market()).simSpeed, 0.75)
     // 서킷브레이커는 꺼 두었다(IdleEngine.CIRCUIT_ENABLED): 여기서는 켜서 보지 않는다.
     // 앱이 뒤로 가면 서버에 멈춤을 알리고 전투 시계가 선다. 돌아오면 다시 흐른다.
     await page.evaluate(() =>

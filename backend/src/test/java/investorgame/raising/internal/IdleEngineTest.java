@@ -46,6 +46,9 @@ class IdleEngineTest {
     }
   }
 
+  /** The fight's speed on screen (578): IdleEngine.SPEED. */
+  private static final double SPEED = 1.5;
+
   private void start(long wall) {
     engine.view(state);
     state.idle.wall = wall;
@@ -79,7 +82,7 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isZero();
     assertThat(state.idle.nextDamage).isZero();
     assertThat(state.idle.afterNextDamage).isZero();
-    assertThat(state.idle.activeSeconds).isEqualTo(40); // Foreground time still runs at 2x.
+    assertThat(state.idle.activeSeconds).isEqualTo(30); // Foreground time runs at 1.5x (578).
     // Time income is the first wall's times the wall's price level: 4% more per wall, the same
     // rate as the upgrade prices (decisions.md 553).
     assertThat(state.capital).isEqualTo(Math.floor(40 * 1000 * StrictMath.pow(1.04, 50)));
@@ -184,7 +187,7 @@ class IdleEngineTest {
     start(10);
     tick(1000, new IdleHit(10, "bullet", 1000), new IdleHit(10, "meteor", 1000));
     double dps = 1000.0 / 260;
-    assertThat(state.idle.damage).isCloseTo(dps * 2, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(dps * SPEED, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(state.idle.wall).isEqualTo(10);
     for (int i = 0; i < 10; i++) tick(1000);
     double before = state.idle.damage;
@@ -252,7 +255,8 @@ class IdleEngineTest {
         new IdleHit(3, "bullet", 1000));
     // The same number of bullets is accepted on each wall: the fire rate's budget, not three times.
     double bullets = state.idle.damage / 2;
-    assertThat(bullets).isCloseTo(1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(bullets)
+        .isCloseTo(SPEED / 2 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(state.idle.nextDamage).isCloseTo(bullets, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(state.idle.afterNextDamage)
         .isCloseTo(bullets / 2, org.assertj.core.data.Offset.offset(1e-9));
@@ -539,9 +543,9 @@ class IdleEngineTest {
     assertThat(engine.view(state).bossChallenge()).isTrue();
     double waiting = state.idle.damage;
     assertThat(waiting).isEqualTo(IdleEngine.maxHp(50) + 5);
-    // No hit counts during the halt: one real second is two of its four game seconds.
-    tick(1000, new IdleHit(50, "bullet", 1, 100.0, 0));
-    assertThat(state.idle.circuitSeconds).isEqualTo(2);
+    // No hit counts during the halt: two real seconds are three of its four game seconds.
+    tick(2000, new IdleHit(50, "bullet", 1, 100.0, 0));
+    assertThat(state.idle.circuitSeconds).isEqualTo(1);
     assertThat(state.idle.damage).isEqualTo(waiting);
     assertThat(state.idle.wall).isEqualTo(50);
     // Trading resumes: what waited on the boss breaks it, and wall 51 does not halt.
@@ -624,14 +628,14 @@ class IdleEngineTest {
   void circuitStopsClocksAndSurvivesOffline() {
     start(6);
     state.idle.circuitSeconds = 4;
-    tick(1000, new IdleHit(6, "bullet", 1000));
-    assertThat(state.idle.circuitSeconds).isEqualTo(2);
+    tick(2000, new IdleHit(6, "bullet", 1000));
+    assertThat(state.idle.circuitSeconds).isEqualTo(1);
     assertThat(state.idle.activeSeconds).isZero();
     assertThat(state.capital).isZero();
     engine.beat(state, "one", ++sequence, "stop");
     clock.now += 86400000;
     engine.beat(state, "two", 0, "start");
-    assertThat(state.idle.circuitSeconds).isEqualTo(2);
+    assertThat(state.idle.circuitSeconds).isEqualTo(1);
     assertThat(state.idle.damage).isZero();
   }
 
@@ -875,7 +879,7 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isZero();
 
     engine.useActive(state, "barrage");
-    assertThat(engine.view(state).actives().getFirst().readyIn()).isEqualTo(30);
+    assertThat(engine.view(state).actives().getFirst().readyIn()).isEqualTo(40);
     assertThatThrownBy(() -> engine.useActive(state, "barrage"))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
     assertThatThrownBy(() -> engine.useActive(state, "nope"))
@@ -888,8 +892,8 @@ class IdleEngineTest {
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
     assertThat(state.idle.damage).as("the press is spent").isCloseTo(40 * 3 * order, offset(1e-9));
 
-    // The cooldown runs only while the battle runs: 30 real seconds at double speed.
-    for (int i = 0; i < 27; i++) tick(1000);
+    // The cooldown runs only while the battle runs: 40 real seconds at the fight's 1.5x (578).
+    for (int i = 0; i < 37; i++) tick(1000);
     assertThatThrownBy(() -> engine.useActive(state, "barrage"))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
     tick(1000);
@@ -910,8 +914,8 @@ class IdleEngineTest {
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * plain, org.assertj.core.data.Offset.offset(1e-9));
-    // Five real seconds later it is over.
-    for (int i = 0; i < 5; i++) tick(1000);
+    // Seven real seconds later it is over: its ten game seconds at 1.5x (578).
+    for (int i = 0; i < 7; i++) tick(1000);
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
@@ -924,10 +928,12 @@ class IdleEngineTest {
     state.idle.wall = 100;
     state.idle.cats.put("night", 1);
     state.idle.fielded.add("night");
-    // 1.8 s at double speed is one 3.6 s cooldown: a second reported meteor is not credited.
-    // No two cats share a skill (563), so one cat is all a skill ever has.
-    tick(1800, new IdleHit(100, "meteor", 2));
-    assertThat(state.idle.damage).as("one caster, one meteor per cooldown").isEqualTo(4.8);
+    // 2.4 s at the fight's 1.5x (578) is one 3.6 s cooldown: a second reported meteor is not
+    // credited. No two cats share a skill (563), so one cat is all a skill ever has.
+    tick(2400, new IdleHit(100, "meteor", 2));
+    assertThat(state.idle.damage)
+        .as("one caster, one meteor per cooldown")
+        .isCloseTo(4.8, offset(1e-9));
   }
 
   @Test
@@ -996,7 +1002,7 @@ class IdleEngineTest {
     tick(1000, new IdleHit(16, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage)
         .as("half as many bullets as the guns' stats say")
-        .isCloseTo(2.25 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
+        .isCloseTo(2.25 * SPEED / 2 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(engine.view(state).wallDps()).as("what the wall really took lately").isPositive();
     // A forged bullet may claim the strongest gun's critical: here the boss cat's pistol, since
     // a level 6 cat still shoots at 50% x (1 + 0.2 x 5) = 100%.
@@ -1008,7 +1014,9 @@ class IdleEngineTest {
     state.idle.cats.put("sky", 11);
     before = state.idle.damage;
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
-    assertThat(state.idle.damage - before).as("level 11 cat: 150% pistol critical").isEqualTo(6);
+    assertThat(state.idle.damage - before)
+        .as("level 11 cat: 150% pistol critical")
+        .isCloseTo(6, offset(1e-9));
   }
 
   @Test
@@ -1079,14 +1087,14 @@ class IdleEngineTest {
     var cat = engine.view(state).cats().stream().filter(c -> "ocean".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(1);
     assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(10);
-    // Level 1 water: 1.5 times the gun, once per 2.4 s. 1.2 s at double speed is one cooldown.
-    tick(1200, new IdleHit(100, "water", 3, 3 * 1000.0));
+    // Level 1 water: 1.5 times the gun, once per 2.4 s. 1.6 s at 1.5x (578) is one cooldown.
+    tick(1600, new IdleHit(100, "water", 3, 3 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(1.5, offset(1e-9));
     // Cat level 20 is skill level 3: 2.6 times the gun, once per 1.8 s.
     state.idle.cats.put("ocean", 20);
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
-    tick(900, new IdleHit(100, "water", 3, 3 * 1000.0));
+    tick(1200, new IdleHit(100, "water", 3, 3 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2.6, offset(1e-9));
     cat = engine.view(state).cats().stream().filter(c -> "ocean".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(3);
@@ -1102,7 +1110,7 @@ class IdleEngineTest {
     state.idle.fielded.add("night");
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
-    tick(1500, new IdleHit(100, "meteor", 10, 10 * 1000.0));
+    tick(2000, new IdleHit(100, "meteor", 10, 10 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(3 * 4.2, offset(1e-9));
   }
 
@@ -1117,10 +1125,10 @@ class IdleEngineTest {
         .filteredOn(skill -> skill.owned())
         .extracting(skill -> skill.code())
         .containsExactly("fire", "hail");
-    // 1.7 s at double speed is one 3.4 s hail cooldown (two stones at level 1) and one 3 s fire
-    // cooldown.
+    // 2.3 s at 1.5x (578) is 3.45 game seconds: one 3.4 s hail cooldown (two stones at level 1)
+    // and one 3 s fire cooldown.
     tick(
-        1700,
+        2300,
         new IdleHit(100, "hail", 2, 1000.0),
         new IdleHit(100, "fire", 1, 1000.0),
         new IdleHit(100, "wind", 1, 1000.0));
@@ -1130,14 +1138,14 @@ class IdleEngineTest {
     state.idle.fielded.add("tiger");
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
-    tick(1400, new IdleHit(100, "wind", 1, 1000.0));
+    tick(1900, new IdleHit(100, "wind", 1, 1000.0));
     assertThat(state.idle.damage).isCloseTo(1.8, offset(1e-9));
     // A level 5 bomb is one hit of twenty times the gun, once per 3.8 s.
     state.idle.cats.put("silver", 40);
     state.idle.fielded.add("silver");
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
-    tick(1900, new IdleHit(100, "bomb", 1, 1000.0));
+    tick(2600, new IdleHit(100, "bomb", 1, 1000.0));
     assertThat(state.idle.damage).isCloseTo(20, offset(1e-9));
   }
 
