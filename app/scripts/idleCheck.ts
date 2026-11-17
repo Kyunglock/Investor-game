@@ -925,9 +925,12 @@ try {
     await expect(rally.getByRole('img', { name: /불장/ })).toBeVisible()
     await expect(rally).toContainText('×2')
     await expect(rally.getByRole('img', { name: '지속 7초 · 재사용 대기 60초' })).toBeVisible()
-    await rally.getByRole('button', { name: '불장 설명' }).click()
-    await expect(rally).toContainText('사장냥과 고양이의 총이 두 배 빨리 나가요.')
-    await rally.getByRole('button', { name: '불장 설명' }).click()
+    await rally.locator('summary[aria-label="불장 설명"]').click()
+    await expect(rally.locator('details')).toHaveAttribute('open', '')
+    await expect(
+      rally.getByText('사장냥과 고양이의 총이 두 배 빨리 나가요.', { exact: true }),
+    ).toBeVisible()
+    await rally.locator('summary[aria-label="불장 설명"]').click()
     await page.screenshot({ path: `/tmp/idle-skills-${width}.png` })
     await rally.getByTestId('skill-equip').click()
     await expect(rally).toHaveAttribute('data-equipped', 'false')
