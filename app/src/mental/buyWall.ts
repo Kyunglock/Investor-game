@@ -18,11 +18,11 @@ export const BUY_WALL = {
 } as const
 
 /**
- * 자동 전투의 매수 주문 한 장의 피해 (514번): 무기 공격력을 따르지 않고 따로 센다. 바탕 피해 × 그 벽의 물량 배율(매도 물량·매수벽 체력과 같은
- * 배율, 498번) × 매수벽 공격 강화. 서버 IdleEngine.buyOrder와 같다.
+ * 자동 전투의 매수 주문 한 장의 피해 (514·573번): 무기 공격력도, 벽의 깊이(물량 배율)도 따르지 않는다. 바탕 피해 × 매수벽 공격 강화뿐이다.
+ * 서버 IdleEngine.buyOrder와 같다.
  */
-export function idleBuyOrderDamage(threat: number, buyBonus: number) {
-  return BUY_WALL.orderDamage * threat * (1 + buyBonus)
+export function idleBuyOrderDamage(buyBonus: number) {
+  return BUY_WALL.orderDamage * (1 + buyBonus)
 }
 
 /** 매수 티켓은 양쪽에 40%씩, 가운데에 20%. 각 영역 안에서도 위치를 무작위로 정한다. */

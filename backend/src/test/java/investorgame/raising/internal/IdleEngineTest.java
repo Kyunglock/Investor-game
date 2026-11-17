@@ -880,9 +880,9 @@ class IdleEngineTest {
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
     assertThatThrownBy(() -> engine.useActive(state, "nope"))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
-    // Forty buy orders, each at most three times a buy order: 0.75 times the wall's order scale
-    // (514). The weapon is not in it.
-    double order = 0.75 * IdleEngine.threat(100);
+    // Forty buy orders, each at most three times a buy order: 0.75, whatever the wall (514, 573).
+    // Neither the weapon nor the wall's order scale is in it.
+    double order = 0.75;
     tick(1000, new IdleHit(100, "barrage", 50, 50 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(40 * 3 * order, offset(1e-9));
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
@@ -1016,7 +1016,8 @@ class IdleEngineTest {
     start(1);
     state.idle.wall = 100;
     tick(1000);
-    double order = 0.75 * IdleEngine.threat(100);
+    // A deep wall does not make a buy order stronger (573): the order scale is not in it.
+    double order = 0.75;
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
     assertThat(IdleEngine.threat(100)).isEqualTo(5.2);
     // A buy order is capped at its own damage, whatever the screen reports.

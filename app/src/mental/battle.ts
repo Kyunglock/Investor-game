@@ -2398,12 +2398,12 @@ class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 매수 주문 한 장의 피해. 자동 전투는 무기와 따로 센다 (514번): 그 벽의 물량 배율과 매수벽 공격 강화만 따른다. 스테이지는 전처럼 공격력의
-   * 0.75배다.
+   * 매수 주문 한 장의 피해. 자동 전투는 무기와 따로 세고 벽이 깊어져도 커지지 않는다 (514·573번): 매수벽 공격 강화만 따른다. 스테이지는
+   * 전처럼 공격력의 0.75배다.
    */
   private buyOrderDamage() {
     return this.opts.idle
-      ? idleBuyOrderDamage(this.hpScale, this.loadout.buyBonus)
+      ? idleBuyOrderDamage(this.loadout.buyBonus)
       : this.loadout.damage * BUY_WALL.orderDamage * (1 + this.loadout.buyBonus)
   }
 

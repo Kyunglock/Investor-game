@@ -7,10 +7,10 @@ import { drawBadge, TEN } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
 import { TenBonus, type TenCard, TenReveal } from '../mental/TenReveal'
 import { type DrawResult, WeaponReveal } from '../mental/WeaponReveal'
-import { weaponRevealPlan } from '../mental/weaponRevealPlan'
+import { shinyWeapon, weaponRevealPlan } from '../mental/weaponRevealPlan'
 import { CatPortrait as Portrait } from './CatPortrait'
 import { type CatDraw, CatReveal } from './CatReveal'
-import { CAT_ODDS, catRevealPlan } from './catGrade'
+import { CAT_ODDS, catRevealPlan, shinyCat } from './catGrade'
 import { RewardPlacement } from './RewardPlacement'
 import { skillNames } from './skills'
 
@@ -119,6 +119,7 @@ export function IdleGacha({
               color: plan.color,
               power: plan.power,
               sound: plan.sound,
+              shiny: shinyCat(d.grade),
             }
           }),
         })
@@ -175,6 +176,7 @@ export function IdleGacha({
                     color: plan.color,
                     power: plan.power,
                     sound: d.grade,
+                    shiny: shinyWeapon(d.grade),
                   }
                 }),
               }

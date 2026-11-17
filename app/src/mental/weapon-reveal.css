@@ -391,6 +391,185 @@
     transform: none;
   }
 }
+/* 한 장씩 보기 (574번): 상자가 열리면 받은 장을 한 장씩 크게 보여 준다. 누르면 다음 장이다. */
+.ten-single-view {
+  display: flex;
+  min-height: 70dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+.ten-single-count {
+  font-size: 14px;
+  font-weight: 800;
+  color: #d5cee1;
+}
+.ten-single {
+  position: relative;
+  display: flex;
+  width: min(230px, 70vw);
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 12px 20px;
+  border: 2.5px solid var(--card-color);
+  border-radius: 20px;
+  background: radial-gradient(
+    circle at 50% 32%,
+    color-mix(in srgb, var(--card-color) 30%, transparent),
+    #ffffff10 72%
+  );
+  color: inherit;
+  animation: ten-single-in 0.42s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+.ten-single-badge {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--card-color);
+}
+.ten-single-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 130px;
+  filter: drop-shadow(0 0 12px var(--card-color));
+}
+.ten-single-art > * {
+  transform: scale(2);
+}
+.ten-single-art .idle-cat-portrait {
+  width: 62px;
+  height: 62px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #fff8e2, #f3dcae);
+}
+.ten-single-name {
+  font-family: var(--font-game);
+  font-size: 24px;
+  line-height: 1.2;
+}
+.ten-single-note {
+  font-size: 14px;
+  color: #d5cee1;
+}
+.ten-single[data-new="true"] .ten-single-note {
+  color: var(--card-color);
+  font-weight: 800;
+}
+.ten-single-hint {
+  color: #d5cee1;
+  font-size: 13px;
+}
+.ten-single-all {
+  min-height: 40px;
+  padding: 6px 18px;
+  border: 1.5px solid #ffffff55;
+  border-radius: 12px;
+  background: #ffffff14;
+  color: inherit;
+  font-size: 14px;
+}
+@keyframes ten-single-in {
+  from {
+    opacity: 0;
+    transform: rotateY(90deg) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 빛나는 장 (574번): A등급부터는 좋은 것을 뽑았다는 느낌이 들게 테두리가 빛나고, 빛줄기가 훑고 지나간다. */
+.ten-single[data-shiny="true"],
+.ten-card[data-shiny="true"] {
+  overflow: hidden;
+  border-color: #fff3b0;
+  box-shadow:
+    0 0 0 2px var(--card-color),
+    0 0 26px 4px var(--card-color),
+    inset 0 0 22px color-mix(in srgb, var(--card-color) 55%, transparent);
+  animation:
+    ten-single-in 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both,
+    ten-shiny-pulse 1.4s ease-in-out 0.5s infinite alternate;
+}
+.ten-card[data-shiny="true"] {
+  position: relative;
+  box-shadow:
+    0 0 0 1px var(--card-color),
+    0 0 14px 2px var(--card-color);
+  animation:
+    ten-card-flip 0.38s ease-out both,
+    ten-shiny-pulse 1.4s ease-in-out 0.5s infinite alternate;
+}
+.ten-single[data-shiny="true"]::after,
+.ten-card[data-shiny="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -20% -60%;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, #ffffffb0 50%, transparent 58%);
+  animation: ten-shiny-sweep 2.2s ease-in-out 0.4s infinite;
+}
+.ten-single-wow {
+  font-family: var(--font-game);
+  font-size: 20px;
+  color: #fff3b0;
+  text-shadow:
+    0 0 10px var(--card-color),
+    0 2px 0 #0006;
+  animation: ten-shiny-wow 0.7s ease-in-out infinite alternate;
+}
+/* 한 장씩 보는 동안 빛나는 장이면 창 전체에 빛살이 세게 돈다. */
+.ten-reveal[data-phase="cards"][data-shiny="true"] .weapon-reveal-rays {
+  opacity: 0.42;
+  animation-duration: 6s;
+}
+/* 한 번 뽑기도 A등급부터는 그림 뒤에 빛무리가 맥박친다. */
+.weapon-reveal[data-shiny="true"][data-phase="result"] .weapon-reveal-art {
+  animation: reveal-shiny-art 1.3s ease-in-out infinite alternate;
+}
+.weapon-reveal:not(.ten-reveal)[data-shiny="true"][data-phase="result"] .weapon-reveal-rays {
+  opacity: 0.4;
+  animation-duration: 6s;
+}
+@keyframes ten-shiny-pulse {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.22);
+  }
+}
+@keyframes ten-shiny-sweep {
+  0%,
+  35% {
+    transform: translateX(-70%);
+  }
+  75%,
+  100% {
+    transform: translateX(70%);
+  }
+}
+@keyframes ten-shiny-wow {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.12);
+  }
+}
+@keyframes reveal-shiny-art {
+  from {
+    filter: drop-shadow(0 0 14px var(--reveal-color));
+  }
+  to {
+    filter: drop-shadow(0 0 34px var(--reveal-color)) drop-shadow(0 0 10px #fff8);
+  }
+}
 /* 좁은 화면(320px)에서도 네 칸을 지킨다: 틈과 그림을 조금 줄인다. */
 @media (max-width: 360px) {
   .ten-reveal {

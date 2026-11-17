@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { CAT_GRADE_PERCENT, CAT_ODDS, catRevealPlan, sortCats } from './catGrade'
+import { shinyWeapon } from '../mental/weaponRevealPlan'
+import { CAT_GRADE_PERCENT, CAT_ODDS, catRevealPlan, shinyCat, sortCats } from './catGrade'
 
 describe('고양이 등급 (539번)', () => {
   it('뽑기 확률은 합쳐 100%이고 S가 가장 드물다', () => {
     expect(Object.values(CAT_GRADE_PERCENT).reduce((a, b) => a + b, 0)).toBe(100)
     expect(CAT_ODDS).toBe('S 2% · A 10% · B 28% · C 60%')
+  })
+
+  it('A등급부터 뽑기 연출이 빛난다 (574번)', () => {
+    expect((['C', 'B', 'A', 'S'] as const).map(shinyCat)).toEqual([false, false, true, true])
+    expect((['F', 'E', 'D', 'C', 'B'] as const).some(shinyWeapon)).toBe(false)
+    expect((['A', 'S', 'SS', 'SSS', 'SR', 'UR', 'LR'] as const).every(shinyWeapon)).toBe(true)
   })
 
   it('등급이 높을수록 뽑기 연출이 길고 세다', () => {

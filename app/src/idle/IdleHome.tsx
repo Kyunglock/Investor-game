@@ -14,7 +14,6 @@ import { useCountUp } from '../app/useCountUp'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
-import { idleThreat } from '../mental/assault'
 import { idleBuyOrderDamage } from '../mental/buyWall'
 import { sharesOf } from '../mental/shares'
 import { GrowthIcon } from './GrowthIcon'
@@ -63,11 +62,10 @@ const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
 }
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
 
-/** 매수 주문 한 장의 수량 (514번): 무기와 상관없이 그 벽의 물량 배율과 이 강화만 따른다. */
+/** 매수 주문 한 장의 수량 (514·573번): 무기와도 벽의 깊이와도 상관없이 이 강화만 따른다. */
 function buyNote(company: Company, u: Upgrade) {
-  const idle = company.idle
-  if (!idle) return STATS.buy.note
-  const damage = idleBuyOrderDamage(idleThreat(idle.wall, idle.maxHp), u.bonusPercent / 100)
+  if (!company.idle) return STATS.buy.note
+  const damage = idleBuyOrderDamage(u.bonusPercent / 100)
   return `매수 주문 한 장 ${sharesOf(damage).toLocaleString()}주 · 무기와 따로 세요`
 }
 
