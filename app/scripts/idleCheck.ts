@@ -755,15 +755,24 @@ try {
       await page.waitForTimeout(1500)
       moves.length = 0
       retreating = true
-      const flowsLeft = await page.evaluate(() => {
-        const dev = window as unknown as {
-          __mentalBuyWallHit: (n: number) => void
-          __mentalMarket: () => { flows: number }
-        }
-        dev.__mentalBuyWallHit(1e12)
-        return dev.__mentalMarket().flows
-      })
-      assert.equal(flowsLeft, 0, 'no sell order or monster is left when the buy wall falls')
+      // A just-rebuilt wall may still be protected. Only inspect cleanup after a hit actually
+      // breaks it, in the same browser task so the next frame cannot spawn another enemy.
+      await expect
+        .poll(
+          () =>
+            page.evaluate(() => {
+              const dev = window as unknown as {
+                __mentalBuyWallHit: (n: number) => void
+                __mentalMarket: () => { flows: number; buyWall: { breaks: number } }
+              }
+              const before = dev.__mentalMarket().buyWall.breaks
+              dev.__mentalBuyWallHit(1e12)
+              const after = dev.__mentalMarket()
+              return after.buyWall.breaks > before ? after.flows : null
+            }),
+          { timeout: 10000, intervals: [100] },
+        )
+        .toBe(0)
       await expect(page.getByTestId('idle-raid')).toContainText('매수벽 붕괴')
       await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 40')
       assert.deepEqual(moves, ['retreat'])
