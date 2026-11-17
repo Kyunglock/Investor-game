@@ -484,7 +484,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 환생한다 (decisions.md 570번)
+         * 환생한다 (decisions.md 571번)
          * @description 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선(idle.rebirth.gain)을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
          *     고양이·무기·다이아·시즌패스는 그대로이고, 이미 받은 보스 클리어 보상은 다시 주지 않는다. 첫 보스(50번째 벽)를 깨기 전이면 400.
          */
@@ -505,7 +505,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 570번)
+         * 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 571번)
          * @description 값은 그 고양이의 levelCost(지금 레벨 × 5). 가지지 않은 고양이거나 최고 레벨이거나 생선이 모자라면 400.
          */
         post: operations["feedCat"];
@@ -666,7 +666,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 테스트판에서 시즌패스 포인트를 더한다 (decisions.md 529·570번) */
+        /** 테스트판에서 시즌패스 포인트를 더한다 (decisions.md 529·571번) */
         post: operations["addSandboxPassExp"];
         delete?: never;
         options?: never;
@@ -896,7 +896,7 @@ export interface components {
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
             };
-            /** @description 시즌패스 (decisions.md 529·570번). 4주짜리 시즌 동안 미션을 깨서 포인트를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이고 보상에 돈은 없다. 시즌이 끝나면 받지 않은 보상은 사라지고 미션도 처음부터 센다 */
+            /** @description 시즌패스 (decisions.md 529·571번). 4주짜리 시즌 동안 미션을 깨서 포인트를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이고 보상에 돈은 없다. 시즌이 끝나면 받지 않은 보상은 사라지고 미션도 처음부터 센다 */
             pass: {
                 /** @description 시즌 번호 */
                 season: number;
@@ -941,7 +941,7 @@ export interface components {
                     /** @description 이미 받았다 */
                     claimed: boolean;
                 }[];
-                /** @description 포인트를 주는 미션과 진행도 (569번). 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 받고, 끝없이 되풀이된다 */
+                /** @description 포인트를 주는 미션과 진행도 (570번). 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 받고, 끝없이 되풀이된다 */
                 missions: {
                     /** @description wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석) */
                     code: string;
@@ -1007,7 +1007,7 @@ export interface components {
                     money: number;
                 } | null;
             };
-            /** @description 출석 보상 (decisions.md 528·566번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다. 화면은 들어오면 저절로 받는다. 보상은 다이아뿐이라 돈 칸의 값(incomeMinutes·money)은 늘 0·null이다 */
+            /** @description 출석 보상 (decisions.md 528·568번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다. 화면은 들어오면 저절로 받는다. 보상은 다이아뿐이라 돈 칸의 값(incomeMinutes·money)은 늘 0·null이다 */
             attendance: {
                 /** @description 오늘 받을 칸(1부터). 오늘 이미 받았으면 오늘 받은 칸 */
                 today: number;
@@ -1498,7 +1498,7 @@ export interface components {
                 fieldSlots: number;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
-                /** @description 환생 (570번). 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다 */
+                /** @description 환생 (571번). 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다 */
                 rebirth?: {
                     /** @description 환생한 횟수 */
                     count: number;
@@ -1546,7 +1546,7 @@ export interface components {
                     skillNextLevel: number;
                     /**
                      * Format: int64
-                     * @description 생선으로 레벨을 하나 올리는 값 (570번). 아직 없거나 최고 레벨이면 0
+                     * @description 생선으로 레벨을 하나 올리는 값 (571번). 아직 없거나 최고 레벨이면 0
                      */
                     levelCost?: number;
                     /**

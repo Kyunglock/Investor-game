@@ -11,7 +11,7 @@ const SHOWN_MS = 3200
 const RETRY_MS = 15_000
 
 /**
- * 출석 보상 (decisions.md 528·566번). 단추도 출석판도 없다: 그날 처음 들어오면 저절로 받고, 받은 것을 위쪽에 한 줄로 잠깐 알린다. wait이면(자리를
+ * 출석 보상 (decisions.md 528·568번). 단추도 출석판도 없다: 그날 처음 들어오면 저절로 받고, 받은 것을 위쪽에 한 줄로 잠깐 알린다. wait이면(자리를
  * 비운 동안의 수입 알림이 떠 있거나 다른 화면을 보는 중) 그 뒤로 미룬다. 하루에 한 번인지는 서버가 정한다.
  */
 export function IdleAttendance({ company, wait }: { company: Company; wait: boolean }) {

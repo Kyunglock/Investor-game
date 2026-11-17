@@ -8,7 +8,7 @@ import { FishIcon } from './FishIcon'
 import { rebirthBlock } from './rebirth'
 
 /**
- * 환생 (decisions.md 570번). 성장 탭의 맨 아래에 있다. 매도벽 1로 돌아가고 강화와 돈이 처음으로 돌아가는 대신 생선을 받는다. 되돌릴 수 없어서 한 번 더
+ * 환생 (decisions.md 571번). 성장 탭의 맨 아래에 있다. 매도벽 1로 돌아가고 강화와 돈이 처음으로 돌아가는 대신 생선을 받는다. 되돌릴 수 없어서 한 번 더
  * 묻는다.
  */
 export function IdleRebirth({ company }: { company: Company }) {

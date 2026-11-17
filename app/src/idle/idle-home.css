@@ -1011,7 +1011,7 @@
   background: linear-gradient(#ffc98a, #ff9f43);
 }
 
-/* 위 줄의 빠른 단추 (528·567번): 시즌패스. 설정 단추와 나란히 위 줄의 오른쪽 끝에 있다. */
+/* 위 줄의 빠른 단추 (528·569번): 시즌패스. 설정 단추와 나란히 위 줄의 오른쪽 끝에 있다. */
 .idle-quick-button {
   position: relative;
   display: grid;
@@ -1037,7 +1037,7 @@
   height: 11px;
   border-width: 1.5px;
 }
-/* 출석 보상 알림 (565번): 들어오면 저절로 받고, 받은 것을 위 줄 아래에 한 줄로 잠깐 알린다. */
+/* 출석 보상 알림 (566번): 들어오면 저절로 받고, 받은 것을 위 줄 아래에 한 줄로 잠깐 알린다. */
 .idle-attend-toast {
   position: absolute;
   top: calc(max(4px, env(safe-area-inset-top)) + 50px);
@@ -1302,7 +1302,7 @@
 .idle-pass-steps button:disabled {
   opacity: 0.5;
 }
-/* 미션 목록 (569번): 한 줄에 이름·진행도·받을 포인트, 그 아래에 다음 문턱까지의 막대. */
+/* 미션 목록 (570번): 한 줄에 이름·진행도·받을 포인트, 그 아래에 다음 문턱까지의 막대. */
 .idle-pass-missions-title {
   margin: 14px 0 6px;
   font-size: 14px;
@@ -1512,7 +1512,7 @@
   color: #8f7448;
   word-break: keep-all;
 }
-/* 한 줄에 여섯 칸 (567번): 고양이 목록과 줄을 맞춘다. */
+/* 한 줄에 여섯 칸 (568번): 고양이 목록과 줄을 맞춘다. */
 .idle-gear-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -1908,7 +1908,7 @@
   color: #957854;
 }
 
-/* 환생 (570번): 성장 탭 맨 아래의 카드. 생선 수와 환생 단추, 한 번 더 묻는 줄. */
+/* 환생 (571번): 성장 탭 맨 아래의 카드. 생선 수와 환생 단추, 한 번 더 묻는 줄. */
 .idle-fish {
   flex-shrink: 0;
   vertical-align: -0.15em;
@@ -2001,7 +2001,7 @@
   font-size: 13px;
   color: #b0412d;
 }
-/* 생선으로 레벨업 (570번): 고양이 정보 카드 안의 한 줄 단추. */
+/* 생선으로 레벨업 (571번): 고양이 정보 카드 안의 한 줄 단추. */
 .idle-cat-feed {
   grid-column: 1 / -1;
   display: flex;

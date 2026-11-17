@@ -14,7 +14,7 @@ const attendance = (claimable: boolean): Attendance => ({
   lastReward: null,
 })
 
-describe('출석 보상 (528·566번)', () => {
+describe('출석 보상 (528·568번)', () => {
   it('오늘 것을 아직 안 받았으면 들어오자마자 받는다', () => {
     expect(shouldClaim(attendance(true), false)).toBe(true)
     expect(shouldClaim(attendance(false), false)).toBe(false)

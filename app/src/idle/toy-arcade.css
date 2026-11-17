@@ -58,7 +58,7 @@
     0 2px 0 #bd7100,
     inset 0 0 0 2px #ffd34b;
 }
-/* 위 줄 오른쪽 끝의 시즌패스·설정 단추 (566번): 칩과 같은 높이의 작은 파란 키. 누르는 자리는 ::after로 넓힌다. */
+/* 위 줄 오른쪽 끝의 시즌패스·설정 단추 (567번): 칩과 같은 높이의 작은 파란 키. 누르는 자리는 ::after로 넓힌다. */
 .idle-hud .idle-options-open,
 .idle-hud .idle-quick-button {
   flex-shrink: 0;

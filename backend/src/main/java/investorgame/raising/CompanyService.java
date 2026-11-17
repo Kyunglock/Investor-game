@@ -122,10 +122,10 @@ public interface CompanyService {
   /** 매수벽이 무너졌다 (decisions.md 546번): 열 벽 앞으로 돌아간다. 쌓인 피해와 거래 정지는 지운다. */
   CompanyView retreatIdle(UUID sessionId);
 
-  /** 환생한다 (decisions.md 570번): 매도벽 1로 돌아가 전투 강화와 돈이 처음으로 돌아가고 생선을 받는다. 첫 보스를 깨기 전이면 400. */
+  /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈이 처음으로 돌아가고 생선을 받는다. 첫 보스를 깨기 전이면 400. */
   CompanyView rebirth(UUID sessionId);
 
-  /** 생선으로 가진 고양이의 레벨을 하나 올린다 (570번). 생선이 모자라거나 가지지 않은 고양이면 400. */
+  /** 생선으로 가진 고양이의 레벨을 하나 올린다 (571번). 생선이 모자라거나 가지지 않은 고양이면 400. */
   CompanyView feedCat(UUID sessionId, String code);
 
   /**

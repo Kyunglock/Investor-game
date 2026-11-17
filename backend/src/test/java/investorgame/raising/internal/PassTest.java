@@ -15,7 +15,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 시즌패스 (decisions.md 529·570번). 실제 콘텐츠와 application.yml 수치로 돌린다. */
+/** 시즌패스 (decisions.md 529·571번). 실제 콘텐츠와 application.yml 수치로 돌린다. */
 class PassTest {
 
   private static final CompanyProperties PROPERTIES =
@@ -186,7 +186,7 @@ class PassTest {
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(() -> rewards.claimPass(c, 31, random))
         .isInstanceOf(InvalidRequestException.class);
-    // 돈은 주지 않는다 (569번): 2단계도 다이아다.
+    // 돈은 주지 않는다 (570번): 2단계도 다이아다.
     double before = c.capital;
     rewards.claimPass(c, 2, random);
     assertThat(c.capital).isEqualTo(before);
@@ -264,7 +264,7 @@ class PassTest {
   void 단계에_100이_들던_때의_저장은_닿은_단계를_지킨다() throws Exception {
     opened();
     JsonMapper json = JsonMapper.builder().build();
-    // 569번 전: 450으로 4단계에 닿아 1·2단계를 받았다. 스테이지 경험치를 세던 칸도 남아 있다.
+    // 570번 전: 450으로 4단계에 닿아 1·2단계를 받았다. 스테이지 경험치를 세던 칸도 남아 있다.
     CompanyState old =
         json.readValue(
             "{\"capital\":1000,\"passSeason\":1,\"passExp\":450,\"passClaimed\":[1,2],"

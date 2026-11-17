@@ -582,7 +582,7 @@ class CompanyApiTest {
     assertThat(bought.read("$.shop.items[2].left", Integer.class)).isEqualTo(2);
   }
 
-  /** 시즌패스 (decisions.md 529·570번): 미션을 깨면 포인트가 들어오고, 닿지 않은 단계는 받지 못한다. */
+  /** 시즌패스 (decisions.md 529·571번): 미션을 깨면 포인트가 들어오고, 닿지 않은 단계는 받지 못한다. */
   @Test
   void 시즌패스는_미션으로_포인트를_모으고_닿은_단계만_받는다() throws Exception {
     DocumentContext opened =
@@ -620,7 +620,7 @@ class CompanyApiTest {
         .andExpect(status().isBadRequest());
   }
 
-  /** 환생 (decisions.md 570번): 첫 보스를 깨기 전에는 못 하고, 생선이 없으면 고양이 레벨을 올리지 못한다. */
+  /** 환생 (decisions.md 571번): 첫 보스를 깨기 전에는 못 하고, 생선이 없으면 고양이 레벨을 올리지 못한다. */
   @Test
   void 환생은_첫_보스를_깬_뒤에_하고_생선이_없으면_레벨을_못_올린다() throws Exception {
     DocumentContext opened =
