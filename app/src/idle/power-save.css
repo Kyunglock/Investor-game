@@ -1,0 +1,47 @@
+/* 절전 화면 (607번): OLED에서 전기를 덜 쓰게 새까맣게 덮고 글자는 흐리게 적는다. 무엇보다 위에 온다. */
+.power-save {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 24px;
+  border: 0;
+  border-radius: 0;
+  background: #000;
+  color: #6f6a62;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.power-save-title {
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  color: #57524b;
+}
+.power-save-wall {
+  font-size: 30px;
+  color: #a39b8f;
+}
+.power-save-money {
+  font-size: 18px;
+  color: #8a8377;
+}
+.power-save small {
+  font:
+    500 12px "Noto Sans KR",
+    sans-serif;
+  color: #4d4943;
+}
+.power-save em {
+  margin-top: 26px;
+  font-style: normal;
+  font-size: 13px;
+  color: #57524b;
+}
+.power-save em.is-armed {
+  color: #d9c9a8;
+}

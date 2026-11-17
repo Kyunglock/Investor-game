@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { HapticIcon, SoundIcon } from '../app/Icons'
 import { haptic, isHapticOff, setHapticOff } from '../fx/haptics'
 import { isMuted, setMuted, sfx } from '../fx/sound'
+import { usePowerSave } from './powerSave'
 
 /**
  * 설정 (decisions.md 522번): 메인 화면은 매도벽 돌파 화면이라 옵션은 여기에 둔다. 톱니 단추를 누르면 소리·진동을 켜고 끄는 작은 창이 열린다.
@@ -80,7 +81,36 @@ function Panel() {
         <span>진동</span>
         <b className="idle-options-state">{hapticOff ? '꺼짐' : '켜짐'}</b>
       </button>
+      {/* 절전 모드 (607번): 화면을 검게 덮고 전투만 돌린다. 화면을 두 번 누르면 풀린다. */}
+      <button
+        type="button"
+        className="idle-options-toggle"
+        data-testid="power-save-on"
+        onClick={() => usePowerSave.getState().set(true)}
+      >
+        <MoonIcon />
+        <span>절전 모드</span>
+        <b className="idle-options-state">켜기</b>
+      </button>
     </div>
+  )
+}
+
+function MoonIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
+    </svg>
   )
 }
 

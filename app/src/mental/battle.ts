@@ -300,6 +300,8 @@ export interface BattleHandle {
   /** 자동 전투: 액티브 스킬의 연출과 효과를 낸다 (503번). */
   /** left(전투 초)를 주면 이미 돌고 있던 효과를 남은 시간만큼 이어 받는다 (588번). */
   castActive: (code: ActiveCode, left?: number) => void
+  /** 절전 모드 (607번): 켜면 전장을 그리지 않고 초당 fps번만 돈다. 전투와 명중은 그대로 이어진다. 끄면 돌아온다. */
+  setPowerSave: (on: boolean, fps: number) => void
   stop: () => void
 }
 
@@ -2632,6 +2634,9 @@ class BattleScene extends Phaser.Scene {
       arena: { front: this.bg?.frame.name, back: this.bg2?.frame.name },
       boss: this.bossEnemy?.active ? { hp: this.bossEnemy.hp, maxHp: this.bossEnemy.maxHp } : null,
       simSpeed: this.simSpeed,
+      /** 절전 모드 (607번): 전장을 그리고 있는가, 그리고 도는 빈도의 제한(0이면 없다). */
+      drawing: this.cameras.main.visible,
+      fpsLimit: this.game.loop.fpsLimit,
       /** 다음 벽으로 넘어가는 빠르기 (606번): 1이면 보통, 작을수록 빠르다. */
       idlePace: this.idlePace,
       climbed: this.climbed,
@@ -5330,6 +5335,25 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     setSpeed: (speed) => scene.setGameSpeed(speed),
     callIdleRaid: (kind) => scene.callIdleRaid(kind),
     castActive: (code, left) => scene.castActive(code, left),
+    setPowerSave: (on, fps) => {
+      // 그리지 않는다: 카메라를 끄면 전장의 그림을 한 장도 그리지 않는다. 물리와 전투의 셈은 그대로 돈다.
+      scene.cameras?.main?.setVisible(!on)
+      // 도는 빈도를 낮춘다. Phaser는 빈도 제한을 시작할 때만 고르므로 고리를 멈췄다 다시 건다: 쌓인 시간은 그대로 넘어가 전투가 느려지지 않는다.
+      const loop = game.loop as unknown as {
+        fpsLimit: number
+        hasFpsLimit: boolean
+        _limitRate: number
+        callback: Phaser.Types.Core.TimeStepCallback
+        stop: () => void
+        start: (callback: Phaser.Types.Core.TimeStepCallback) => void
+      }
+      if (loop.hasFpsLimit === on) return
+      loop.fpsLimit = on ? fps : 0
+      loop.hasFpsLimit = on
+      loop._limitRate = on ? 1000 / fps : 0
+      loop.stop()
+      loop.start(loop.callback)
+    },
     stop: () => {
       ro.disconnect()
       game.destroy(true)

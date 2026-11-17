@@ -30,6 +30,12 @@ let muted = (() => {
   }
 })()
 
+/** 절전 모드 (607번)에서 잠깐 쉰다: 설정의 소리 값은 그대로다. */
+let hushed = false
+export function setHushed(on: boolean) {
+  hushed = on
+}
+
 export function isMuted(): boolean {
   return muted
 }
@@ -108,7 +114,7 @@ function sample(
   }: { gain?: number; rate?: number; at?: number; every?: number } = {},
 ): boolean {
   const c = ctx()
-  if (!c || muted) return true
+  if (!c || muted || hushed) return true
   const buffer = buffers.get(name)
   if (!buffer) return false
   const now = c.currentTime
@@ -152,7 +158,7 @@ function tone(
   }: { wave?: Wave; gain?: number; at?: number; slide?: number } = {},
 ) {
   const c = ctx()
-  if (!c || muted) {
+  if (!c || muted || hushed) {
     return
   }
   const o = c.createOscillator()
@@ -173,7 +179,7 @@ function tone(
 
 function noise(ms: number, gain = 0.08, at = 0) {
   const c = ctx()
-  if (!c || muted) {
+  if (!c || muted || hushed) {
     return
   }
   const frames = Math.floor((c.sampleRate * ms) / 1000)

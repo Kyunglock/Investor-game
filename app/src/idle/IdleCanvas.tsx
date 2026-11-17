@@ -8,6 +8,7 @@ import type { BattleHandle } from '../mental/battle'
 import { heroOf } from '../mental/hero'
 import type { IdleRaidKind } from '../mental/waves'
 import { idleLoadout } from './loadout'
+import { POWER_SAVE_FPS, usePowerSave } from './powerSave'
 
 /** 전투 화면을 띄우지 못했을 때 스스로 다시 해 보는 횟수와 그 틈. 그래도 안 되면 오류 문구와 "다시 시도"를 보인다. */
 const AUTO_RETRIES = 2
@@ -77,6 +78,10 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     // 액티브 스킬 단추 (decisions.md 503번): 서버가 받아 준 스킬의 효과를 전투가 낸다.
     const activeUsed = (event: Event) =>
       battle.current?.castActive((event as CustomEvent<ActiveCode>).detail)
+    // 절전 모드 (607번): 전장을 그리지 않고 낮은 빈도로 돌린다.
+    const powerSave = (event: Event) =>
+      battle.current?.setPowerSave((event as CustomEvent<boolean>).detail, POWER_SAVE_FPS)
+    window.addEventListener('idle-power-save', powerSave)
     document.addEventListener('visibilitychange', visibility)
     window.addEventListener('idle-app-active', native)
     window.addEventListener('idle-test-raid', raidCalled)
@@ -138,6 +143,8 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
             window.clearTimeout(stall)
             retries.current = 0
             setReady(true)
+            // 절전 모드 (607번)인 채로 전장이 다시 만들어졌으면 그대로 이어 간다.
+            if (usePowerSave.getState().on) battle.current?.setPowerSave(true, POWER_SAVE_FPS)
             // 이미 돌고 있던 효과(불장, 광고 스킬 588번)는 화면을 다시 열어도 남은 시간만큼 이어진다. 서버의 초는 실제 시간이라 전투 초로 바꾼다.
             for (const active of latest.current.company.idle?.actives ?? []) {
               if (active.left > 0)
@@ -174,6 +181,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       window.removeEventListener('idle-app-active', native)
       window.removeEventListener('idle-test-raid', raidCalled)
       window.removeEventListener('idle-active', activeUsed)
+      window.removeEventListener('idle-power-save', powerSave)
       battle.current?.stop()
       battle.current = null
     }
