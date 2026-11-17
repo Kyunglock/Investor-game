@@ -2,6 +2,7 @@ import type { Company } from '@web/api/client'
 import { useRaisingStore } from '@web/features/raising/store'
 import { rebirthIdle } from '@web/features/raising/useIdleBattle'
 import { useState } from 'react'
+import { watchRewardedAd } from '../app/ads'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { FishIcon } from './FishIcon'
@@ -9,7 +10,7 @@ import { rebirthBlock } from './rebirth'
 
 /**
  * 환생 (decisions.md 571번). 성장 탭의 맨 아래에 있다. 매도벽 1로 돌아가고 강화와 돈이 처음으로 돌아가는 대신 생선을 받는다. 되돌릴 수 없어서 한 번 더
- * 묻는다.
+ * 묻는다. 물을 때 "광고 보고 3배 받기"를 고르면 생선을 3배로 받는다 (586번): 횟수 한도는 없다.
  */
 export function IdleRebirth({ company }: { company: Company }) {
   const rebirth = company.idle?.rebirth
@@ -19,12 +20,17 @@ export function IdleRebirth({ company }: { company: Company }) {
   const [error, setError] = useState<string | null>(null)
   if (!rebirth) return null
   const block = rebirthBlock(rebirth)
-  const run = async () => {
+  const run = async (ad: boolean) => {
     if (busy) return
     setBusy(true)
     setError(null)
-    const gain = rebirth.gain
-    const done = await rebirthIdle()
+    // 광고를 끝까지 봤을 때만 3배다. 닫았으면 환생하지 않고 다시 고르게 둔다.
+    if (ad && !(await watchRewardedAd('rebirth'))) {
+      setBusy(false)
+      return
+    }
+    const gain = ad ? rebirth.adGain : rebirth.gain
+    const done = await rebirthIdle(ad)
     setBusy(false)
     setAsking(false)
     if (!done) {
@@ -63,12 +69,30 @@ export function IdleRebirth({ company }: { company: Company }) {
           <span>정말 환생할까요? 되돌릴 수 없어요</span>
           <button
             type="button"
+            className="idle-rebirth-button idle-rebirth-ad"
+            disabled={busy}
+            onClick={() => void run(true)}
+            data-testid="rebirth-ad"
+          >
+            <span className="idle-ad-mark" aria-hidden="true">
+              ▶
+            </span>
+            광고 보고 3배 받기 <FishIcon /> {rebirth.adGain.toLocaleString()}
+          </button>
+          <button
+            type="button"
             className="idle-rebirth-button idle-rebirth-go"
             disabled={busy}
-            onClick={() => void run()}
+            onClick={() => void run(false)}
             data-testid="rebirth-confirm"
           >
-            {busy ? '환생 중…' : '환생하기'}
+            {busy ? (
+              '환생 중…'
+            ) : (
+              <>
+                그냥 환생 <FishIcon /> {rebirth.gain.toLocaleString()}
+              </>
+            )}
           </button>
           <button
             type="button"

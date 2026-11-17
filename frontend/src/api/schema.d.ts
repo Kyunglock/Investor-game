@@ -489,6 +489,7 @@ export interface paths {
          * 환생한다 (decisions.md 571번)
          * @description 매도벽 1로 돌아가고 전투 강화와 돈이 처음으로 돌아간다. 대신 생선(idle.rebirth.gain)을 받는다. 생선은 고양이의 레벨을 올리는 데 쓴다.
          *     고양이·무기·다이아·시즌패스는 그대로이고, 이미 받은 보스 클리어 보상은 다시 주지 않는다. 첫 보스(50번째 벽)를 깨기 전이면 400.
+         *     ad가 참이면 광고를 보고 환생한 것이다 (decisions.md 586번): 생선을 3배(idle.rebirth.adGain)로 받는다. 횟수 한도는 없다. 아직 광고를 붙이지 않아 서버는 이 값을 그대로 믿는다.
          */
         post: operations["rebirth"];
         delete?: never;
@@ -1526,6 +1527,11 @@ export interface components {
                      * @description 이 벽에 서야 환생할 수 있다(첫 보스를 깬 다음 벽)
                      */
                     fromWall: number;
+                    /**
+                     * Format: int64
+                     * @description 광고를 보고 환생하면 받는 생선 (586번). gain의 3배
+                     */
+                    adGain: number;
                 };
                 /** @description 전투력 (538번). 성장 탭이 보여 주는 숫자 하나: 모든 총·스킬의 초당 피해(치명타 포함)와 매수 주문, 매수벽 체력 강화를 묶었다. 벽 번호는 보지 않는다 */
                 power: number;
@@ -2335,7 +2341,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description 광고를 끝까지 봤다. 없으면 거짓 */
+                    ad?: boolean;
+                };
+            };
+        };
         responses: {
             /** @description 환생한 뒤의 회사 */
             200: {

@@ -1168,6 +1168,27 @@ class IdleEngineTest {
         .weapon();
   }
 
+  /** 광고를 보고 환생하면 생선이 3배다 (586번). 횟수 한도는 없고, 첫 보스를 깨기 전에는 광고를 봐도 못 한다. */
+  @Test
+  void 광고를_보고_환생하면_생선을_세_배로_받는다() {
+    CompanyState c = company.open(new HashSeededRandom(3), company.openingCapital());
+    engine.beat(c, "one", 0, "start");
+    c.idle.wall = 50;
+    assertThatThrownBy(() -> engine.rebirth(c, true)).isInstanceOf(InvalidRequestException.class);
+    c.idle.wall = 101;
+    engine.rebirth(c, true);
+    assertThat(c.fish).isEqualTo(60);
+    assertThat(c.idle.wall).isEqualTo(1);
+    // 다음 환생에도 다시 3배를 받는다. 그냥 환생은 1배다.
+    c.idle.wall = 101;
+    engine.rebirth(c, true);
+    assertThat(c.fish).isEqualTo(120);
+    c.idle.wall = 101;
+    engine.rebirth(c, false);
+    assertThat(c.fish).isEqualTo(140);
+    assertThat(c.rebirths).isEqualTo(3);
+  }
+
   @Test
   void 환생하면_처음으로_돌아가고_생선을_받아_고양이_레벨을_올린다() {
     CompanyState c = company.open(new HashSeededRandom(3), company.openingCapital());
@@ -1184,6 +1205,7 @@ class IdleEngineTest {
     c.idle.wall = 301;
     assertThat(engine.rebirthFish(c)).isEqualTo(180);
     assertThat(engine.view(c).rebirth().gain()).isEqualTo(180);
+    assertThat(engine.view(c).rebirth().adGain()).as("광고를 보면 3배 (586번)").isEqualTo(540);
     assertThat(engine.view(c).rebirth().fromWall()).isEqualTo(51);
     // 환생: 벽 1, 강화와 돈은 처음으로. 고양이·무기·다이아·받은 보스 보상은 그대로다.
     c.idle.cats.put("sky", 3);

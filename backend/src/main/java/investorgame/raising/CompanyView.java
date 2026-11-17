@@ -259,8 +259,9 @@ public record CompanyView(
    * @param fish 가진 생선
    * @param gain 지금 환생하면 받는 생선. 아직 할 수 없으면 0
    * @param fromWall 이 벽에 서야 환생할 수 있다(첫 보스를 깬 다음 벽)
+   * @param adGain 광고를 보고 환생하면 받는 생선 (586번): gain의 3배
    */
-  public record Rebirth(int count, long fish, long gain, long fromWall) {}
+  public record Rebirth(int count, long fish, long gain, long fromWall, long adGain) {}
 
   /**
    * 고양이 뽑기에서 나온 한 마리 (517번).

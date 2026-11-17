@@ -393,18 +393,25 @@ class CompanyController {
 
   /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가고 생선을 받는다. */
   @PostMapping("/rebirth")
-  CompanyView rebirth(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+  CompanyView rebirth(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @RequestBody(required = false) RebirthRequest request) {
     UUID sessionId = cookies.requirePlayer(token);
-    CompanyView company = companies.rebirth(sessionId);
+    // 광고를 보고 환생하면 생선이 3배다 (586번).
+    boolean ad = request != null && Boolean.TRUE.equals(request.ad());
+    CompanyView company = companies.rebirth(sessionId, ad);
     PLAY.info(
-        "company-rebirth session={} company={} count={} fish={} ip={}",
+        "company-rebirth session={} company={} count={} fish={} ad={} ip={}",
         sessionId,
         company.companyId(),
         company.idle().rebirth().count(),
         company.idle().rebirth().fish(),
+        ad,
         ClientIp.current());
     return company;
   }
+
+  record RebirthRequest(Boolean ad) {}
 
   /** 생선으로 고양이의 레벨을 하나 올린다 (571번). */
   @PostMapping("/cat/level")

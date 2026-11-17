@@ -968,6 +968,10 @@ class IdleEngine {
   // 환생 (decisions.md 571번): 첫 보스(50번째 벽)를 깬 뒤부터 할 수 있고, 지금 선 벽이 깊을수록 생선을 많이 준다.
   static final long REBIRTH_WALL = 51;
   private static final double REBIRTH_FISH_DIVISOR = 500;
+
+  /** 환생할 때 광고를 보면 생선을 이 배수로 받는다 (586번). 볼 수 있는 횟수에는 한도가 없다. */
+  static final long REBIRTH_AD_MULTIPLIER = 3;
+
   // 생선으로 고양이 레벨을 하나 올리는 값: 지금 레벨 × 이만큼.
   static final long FISH_PER_LEVEL = 5;
 
@@ -984,8 +988,16 @@ class IdleEngine {
    * 보스의 보상은 다시 주지 않는다)은 그대로다. 첫 보스를 깨기 전이면 400.
    */
   void rebirth(CompanyState c) {
+    rebirth(c, false);
+  }
+
+  /**
+   * 광고를 보고 환생하면(ad) 생선을 REBIRTH_AD_MULTIPLIER배로 받는다 (586번). 아직 광고를 붙이지 않아 화면이 보낸 값을 그대로 믿는다: 광고를 붙일
+   * 때(#888) 광고 서버의 확인으로 바꾼다.
+   */
+  void rebirth(CompanyState c, boolean ad) {
     CompanyState.Idle s = state(c);
-    long fish = rebirthFish(c);
+    long fish = rebirthFish(c) * (ad ? REBIRTH_AD_MULTIPLIER : 1);
     if (fish <= 0) {
       throw new InvalidRequestException("환생은 " + (REBIRTH_WALL - 1) + "번째 벽의 보스를 깬 뒤에 할 수 있어요");
     }
@@ -1227,6 +1239,11 @@ class IdleEngine {
                 CompanyView.money(s.offlineEarned),
                 s.offlineCapped),
         power(c),
-        new CompanyView.Rebirth(c.rebirths, c.fish, rebirthFish(c), REBIRTH_WALL));
+        new CompanyView.Rebirth(
+            c.rebirths,
+            c.fish,
+            rebirthFish(c),
+            REBIRTH_WALL,
+            rebirthFish(c) * REBIRTH_AD_MULTIPLIER));
   }
 }

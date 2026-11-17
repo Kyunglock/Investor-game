@@ -660,7 +660,10 @@ class CompanyApiTest {
     assertThat(opened.read("$.idle.rebirth.fish", Long.class)).isZero();
     assertThat(opened.read("$.idle.rebirth.gain", Long.class)).isZero();
     assertThat(opened.read("$.idle.rebirth.fromWall", Long.class)).isEqualTo(51);
+    assertThat(opened.read("$.idle.rebirth.adGain", Long.class)).isZero();
     mvc.perform(post("/api/company/rebirth").cookie(session)).andExpect(status().isBadRequest());
+    // 광고를 봐도 첫 보스를 깨기 전에는 못 한다 (586번).
+    postJson("/api/company/rebirth", "{\"ad\":true}").andExpect(status().isBadRequest());
     postJson("/api/company/cat/level", "{\"code\":\"sky\"}").andExpect(status().isBadRequest());
     postJson("/api/company/cat/level", "{}").andExpect(status().isBadRequest());
   }

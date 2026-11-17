@@ -85,7 +85,7 @@ try {
           { code: 'ram', name: '충차 스킬', owned: false, level: 0 },
         ],
         fieldSlots: 4,
-        rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51 },
+        rebirth: { count: 0, fish: 0, gain: 0, fromWall: 51, adGain: 0 },
         wallDps: 0,
         power: 1038,
         // Real-time income (#803): the HUD shows it under the capital. No offline payout yet.
@@ -133,6 +133,7 @@ try {
     const reportedHits: { wall: number; kind: string; count: number; damage: number }[] = []
     // Calls to the retired retreat address (584): a fallen buy wall no longer moves the fight.
     const moves: string[] = []
+    const rebirths: { ad?: boolean }[] = []
     let catDraws = 0
     const hires: number[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -157,6 +158,14 @@ try {
       const path = new URL(route.request().url()).pathname
       const sent = route.request().postDataJSON()
       if (path.endsWith('/idle/retreat')) moves.push('retreat')
+      // Rebirth (571, 586): the fish it paid, three times as many after an ad.
+      if (path.endsWith('/company/rebirth')) {
+        const rebirth = company.idle.rebirth
+        rebirths.push(sent)
+        rebirth.fish += sent?.ad ? rebirth.adGain : rebirth.gain
+        rebirth.count++
+        rebirth.gain = rebirth.adGain = 0
+      }
       const cat = company.idle.cats.find((c) => c.code === sent?.code)
       if (path.endsWith('/draws')) hires.push(sent.count)
       if (path.endsWith('/cat/draw')) {
@@ -323,6 +332,21 @@ try {
     await expect(page.getByTestId('rebirth')).toBeVisible()
     await expect(page.getByTestId('rebirth-open')).toBeDisabled()
     await expect(page.getByTestId('rebirth-open')).toHaveText('매도벽 51부터 환생할 수 있어요')
+    // 광고 보고 3배 받기 (586번): 환생을 물을 때 고른다. 아직 광고가 없어 누르면 바로 3배로 환생한다.
+    Object.assign(company.idle.rebirth, { gain: 20, adGain: 60 })
+    await expect(page.getByTestId('rebirth-open')).toContainText('20마리 받기')
+    await page.getByTestId('rebirth-open').click()
+    await expect(page.getByTestId('rebirth-confirm')).toContainText('그냥 환생')
+    await expect(page.getByTestId('rebirth-confirm')).toContainText('20')
+    await expect(page.getByTestId('rebirth-ad')).toContainText('광고 보고 3배 받기')
+    await expect(page.getByTestId('rebirth-ad')).toContainText('60')
+    await expect(page.getByTestId('rebirth-ad')).toBeEnabled()
+    await page.screenshot({ path: `/tmp/idle-rebirth-ad-${width}.png` })
+    await page.getByTestId('rebirth-ad').click()
+    await expect(page.getByTestId('rebirth-got')).toContainText('생선 60마리를 받았어요')
+    assert.deepEqual(rebirths, [{ ad: true }])
+    await expect(page.getByTestId('rebirth-fish')).toContainText('60')
+    await expect(page.getByTestId('rebirth-open')).toBeDisabled()
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
     // Growth holds the stats only (decisions.md 530): no tab row, no inventory, no skill list.
     await expect(page.getByRole('tab')).toHaveCount(0)

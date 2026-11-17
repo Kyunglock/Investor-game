@@ -569,9 +569,9 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView rebirth(UUID sessionId) {
+  public CompanyView rebirth(UUID sessionId, boolean ad) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.rebirth(row.state());
+    idle.rebirth(row.state(), ad);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

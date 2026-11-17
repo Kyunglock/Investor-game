@@ -2031,6 +2031,36 @@
   align-items: center;
   gap: 6px;
 }
+/* 광고 보고 3배 받기 (586번): 한 줄을 다 쓰는 노란 단추. */
+.idle-rebirth-button.idle-rebirth-ad {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-color: #ffe9a8;
+  background: linear-gradient(#ffd65c, #f5a623);
+  box-shadow: 0 3px 0 #b3710f;
+  color: #4a2d0c;
+  font-size: 15px;
+}
+.idle-rebirth-button.idle-rebirth-ad:disabled {
+  border-color: #d5dde2;
+  background: #dfe6ea;
+  box-shadow: none;
+  color: #7f8f99;
+}
+.idle-ad-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: #4a2d0c;
+  color: #ffd65c;
+  font-size: 10px;
+  line-height: 1;
+}
 .idle-rebirth-ask > span {
   grid-column: 1 / -1;
   font-size: 13px;

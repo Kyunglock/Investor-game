@@ -125,8 +125,11 @@ public interface CompanyService {
   /** 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 재사용 대기 중이면 400. */
   CompanyView useActive(UUID sessionId, String code);
 
-  /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈이 처음으로 돌아가고 생선을 받는다. 첫 보스를 깨기 전이면 400. */
-  CompanyView rebirth(UUID sessionId);
+  /**
+   * 환생한다 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈이 처음으로 돌아가고 생선을 받는다. 첫 보스를 깨기 전이면 400. ad가 참이면 광고를
+   * 본 것으로 보고 생선을 3배로 준다 (586번).
+   */
+  CompanyView rebirth(UUID sessionId, boolean ad);
 
   /** 생선으로 가진 고양이의 레벨을 하나 올린다 (571번). 생선이 모자라거나 가지지 않은 고양이면 400. */
   CompanyView feedCat(UUID sessionId, String code);
