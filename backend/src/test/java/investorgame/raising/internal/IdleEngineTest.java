@@ -855,10 +855,19 @@ class IdleEngineTest {
     state.idle.wall = 100;
     tick(1000);
     var actives = engine.view(state).actives();
-    // The boss cat's three 고유 스킬 (587), then the three 광고 스킬 (588).
+    // The boss cat's six 고유 스킬 (587, 591), then the three 광고 스킬 (588).
     assertThat(actives)
         .extracting(a -> a.code())
-        .containsExactly("barrage", "rally", "fortify", "boostFire", "boostDamage", "boostBuy");
+        .containsExactly(
+            "barrage",
+            "rally",
+            "fortify",
+            "limitUp",
+            "stopLoss",
+            "averaging",
+            "boostFire",
+            "boostDamage",
+            "boostBuy");
     assertThat(actives).allMatch(a -> a.readyIn() == 0);
     // Without the press, barrage hits are worth nothing.
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
@@ -915,7 +924,10 @@ class IdleEngineTest {
     tick(1000);
     var view = engine.view(state);
     assertThat(view.activeSlots()).isEqualTo(3);
-    assertThat(view.actives()).filteredOn(a -> !a.ad()).allMatch(a -> a.equipped());
+    assertThat(view.actives())
+        .filteredOn(a -> a.equipped())
+        .extracting(a -> a.code())
+        .containsExactly("barrage", "rally", "fortify");
     assertThat(view.actives()).filteredOn(a -> a.ad()).noneMatch(a -> a.equipped());
 
     engine.equipActive(state, "rally", false);
@@ -946,6 +958,67 @@ class IdleEngineTest {
         .hasMessageContaining("꽉 찼다");
   }
 
+  @Test
+  void theThreeNewUniqueSkillsAreEquippedInPlaceOfTheOldOnes() {
+    // 591: 상한가·손절·물타기. A company starts with the first three equipped, so a new one needs a
+    // slot freed.
+    start(1);
+    state.idle.wall = 100;
+    for (int i = 0; i < 3; i++) tick(1000);
+    assertThatThrownBy(() -> engine.useActive(state, "limitUp"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("장착하지 않은");
+    assertThatThrownBy(() -> engine.equipActive(state, "limitUp", true))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("꽉 찼다");
+    for (String code : List.of("barrage", "rally", "fortify")) {
+      engine.equipActive(state, code, false);
+    }
+    for (String code : List.of("limitUp", "stopLoss", "averaging")) {
+      engine.equipActive(state, code, true);
+    }
+
+    // 상한가: a critical hit was already the most a bullet may do, so only the time is kept. Its
+    // twelve game seconds are eight real ones, and the wait is sixty.
+    double bullets = accepted("bullet");
+    engine.useActive(state, "limitUp");
+    var limitUp = engine.view(state).actives().get(3);
+    assertThat(limitUp.name()).isEqualTo("상한가");
+    assertThat(limitUp.seconds()).isEqualTo(8);
+    assertThat(limitUp.left()).isEqualTo(8);
+    assertThat(limitUp.readyIn()).isEqualTo(60);
+    assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
+
+    // 손절: nothing without the press, then one hit of at most 240 buy orders (0.75 each).
+    state.idle.damage = 0;
+    tick(1000, new IdleHit(100, "stoploss", 1, 1e9));
+    assertThat(state.idle.damage).isZero();
+    engine.useActive(state, "stopLoss");
+    assertThat(engine.view(state).actives().get(4).seconds()).isZero();
+    tick(1000, new IdleHit(100, "stoploss", 1, 1e9));
+    assertThat(state.idle.damage).isCloseTo(240 * 0.75, offset(1e-9));
+    tick(1000, new IdleHit(100, "stoploss", 1, 1e9));
+    assertThat(state.idle.damage).as("the press is spent").isCloseTo(240 * 0.75, offset(1e-9));
+    // A smaller hit (less of the buy wall given up) is taken as reported.
+    for (int i = 0; i < 60; i++) tick(1000);
+    state.idle.damage = 0;
+    engine.useActive(state, "stopLoss");
+    tick(1000, new IdleHit(100, "stoploss", 1, 45.0));
+    assertThat(state.idle.damage).isCloseTo(45, offset(1e-9));
+
+    // 물타기: buy orders may hit up to three times as hard for ten real seconds; bullets do not.
+    double buys = accepted("buy");
+    engine.useActive(state, "averaging");
+    assertThat(engine.view(state).actives().get(5).left()).isEqualTo(10);
+    assertThat(accepted("buy")).isCloseTo(3 * buys, offset(1e-9));
+    assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
+    // 매수공격 3배 stacks on it.
+    engine.useActive(state, "boostBuy", true);
+    assertThat(accepted("buy")).isCloseTo(9 * buys, offset(1e-9));
+    for (int i = 0; i < 62; i++) tick(1000);
+    assertThat(accepted("buy")).isCloseTo(buys, offset(1e-9));
+  }
+
   /** What one beat of far too many hits of a kind is accepted for, with fresh credits. */
   private double accepted(String kind) {
     state.idle.damage = 0;
@@ -970,7 +1043,7 @@ class IdleEngineTest {
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("광고");
     engine.useActive(state, "boostDamage", true);
-    var boost = engine.view(state).actives().get(4);
+    var boost = engine.view(state).actives().get(7);
     assertThat(boost.ad()).isTrue();
     assertThat(boost.seconds()).isEqualTo(60);
     assertThat(boost.left()).isEqualTo(60);
@@ -996,7 +1069,7 @@ class IdleEngineTest {
 
     // A minute after the last press everything is back to plain.
     for (int i = 0; i < 62; i++) tick(1000);
-    assertThat(engine.view(state).actives().get(3).left()).isZero();
+    assertThat(engine.view(state).actives().get(6).left()).isZero();
     assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
     assertThat(accepted("buy")).isCloseTo(buys, offset(1e-9));
   }

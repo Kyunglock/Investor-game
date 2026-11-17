@@ -99,7 +99,17 @@ function Barrier() {
 export function ActiveBadge({ code }: { code: ActiveCode }) {
   const id = useId()
   const ad = isBoost(code)
-  const multiplier = ad ? BOOST : code === 'barrage' ? ACTIVES.barrage.shots : ACTIVES.rally.fire
+  const values: Record<ActiveCode, string | null> = {
+    barrage: `×${ACTIVES.barrage.shots}`,
+    rally: `×${ACTIVES.rally.fire}`,
+    fortify: null,
+    limitUp: '100%',
+    stopLoss: `−${ACTIVES.stopLoss.ratio * 100}%`,
+    averaging: `×${ACTIVES.averaging.min}~${ACTIVES.averaging.max}`,
+    boostFire: `×${BOOST}`,
+    boostDamage: `×${BOOST}`,
+    boostBuy: `×${BOOST}`,
+  }
   return (
     <svg className="active-badge" viewBox="0 0 100 100" aria-hidden="true">
       <defs>
@@ -134,15 +144,58 @@ export function ActiveBadge({ code }: { code: ActiveCode }) {
         {(code === 'boostBuy' || code === 'barrage') && <Orders shower={code === 'barrage'} />}
         {(code === 'boostFire' || code === 'rally') && <Bullets fire={code === 'rally'} />}
         {code === 'fortify' && <Barrier />}
+        {code === 'limitUp' && (
+          <>
+            <path
+              d="m42 9 8 15 20-7-5 19 17 9-19 8 4 19-20-8-12 13-5-20-20-2 15-16-8-18 20 6Z"
+              fill="#ffbf48"
+              stroke="#cf6633"
+              strokeWidth="3"
+            />
+            <g transform="translate(8 2) scale(.8)">
+              <Bullets />
+            </g>
+          </>
+        )}
+        {code === 'stopLoss' && (
+          <g stroke="#754b43" strokeWidth="3" strokeLinejoin="round">
+            <path d="M13 29h47v31H13Z" fill="#d49f80" />
+            <path d="M13 44h47M27 29v15m19-15v15M35 44v16" stroke="#fff1d6" />
+            <path d="m40 27-9 12 10 7-9 16" fill="none" stroke="#743928" />
+            <path
+              d="m57 17 8 12 14-8-4 16 12 5-14 7 4 12-15-5-7 10-1-18-11-6 12-8Z"
+              fill="#ffbd50"
+              stroke="#d66b3a"
+            />
+            <path
+              d="M12 11c-10-6-14 9 0 17 14-8 10-23 0-17Z"
+              transform="translate(8 0)"
+              fill="#f17683"
+            />
+          </g>
+        )}
+        {code === 'averaging' && (
+          <>
+            <Orders />
+            <path
+              d="M12 38c-10-6-14 9 0 17 14-8 10-23 0-17Z"
+              transform="translate(2 0)"
+              fill="#ef8b9d"
+              stroke="#97556b"
+              strokeWidth="2"
+            />
+            <path d="M29 41v15m-5-5 5 5 5-5" fill="none" stroke="#92526b" strokeWidth="3" />
+          </>
+        )}
       </g>
-      {code !== 'fortify' && (
+      {values[code] !== null && (
         <text
           x="88"
           y={code === 'barrage' ? 68 : 84}
-          className="active-badge-value"
+          className={`active-badge-value ${code === 'averaging' || code === 'limitUp' || code === 'stopLoss' ? 'is-wide' : ''}`}
           textAnchor="end"
         >
-          ×{multiplier}
+          {values[code]}
         </text>
       )}
       {code === 'barrage' && (
@@ -182,6 +235,8 @@ export function ActiveTime({ seconds, cooldown = false }: { seconds: number; coo
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+        ) : seconds === 0 ? (
+          <path d="m9 1-7 8h5l-1 6 8-9H9l3-5Z" fill="#eda43a" stroke="#77512d" strokeWidth="1" />
         ) : (
           <g stroke="#77512d" strokeWidth="1.5" strokeLinejoin="round">
             <path d="M3 2h10q0 4-4 6 4 2 4 6H3q0-4 4-6-4-2-4-6Z" fill="#fff9df" />
@@ -190,7 +245,7 @@ export function ActiveTime({ seconds, cooldown = false }: { seconds: number; coo
           </g>
         )}
       </svg>
-      {Math.ceil(seconds)}s
+      {seconds > 0 && `${Math.ceil(seconds)}s`}
     </span>
   )
 }

@@ -17,6 +17,7 @@ export type IdleAttackKind =
   | 'bomb'
   | 'barrage'
   | 'buy'
+  | 'stoploss'
 export interface IdleContact {
   wall: number
   kind: IdleAttackKind

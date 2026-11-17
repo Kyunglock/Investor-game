@@ -10,7 +10,7 @@ type Active = NonNullable<NonNullable<Company['idle']>['actives']>[number]
 const seconds = (value: number) => `${Math.round(value).toLocaleString()}초`
 
 /**
- * 스킬 탭 (decisions.md 587번): 사장냥의 고유 스킬(매수세례·불장·방어선 구축)을 보고 장착한다. 위에 장착 칸(셋), 아래에 스킬 목록이 있다.
+ * 스킬 탭 (decisions.md 587번): 사장냥의 고유 스킬(매수세례·불장·방어선 구축, 591번의 상한가·손절·물타기)을 보고 장착한다. 위에 장착 칸(셋), 아래에 스킬 목록이 있다.
  * 장착한 스킬만 전투 화면 오른쪽에 단추가 선다. 맨 아래에는 장착하지 않고 광고를 보면 쓰는 광고 스킬(588번)을 알린다.
  */
 export function IdleSkills({ company }: { company: Company }) {
@@ -39,7 +39,7 @@ export function IdleSkills({ company }: { company: Company }) {
       <span
         className="boss-skill-times"
         role="img"
-        aria-label={`지속 ${seconds(active.seconds)} · 재사용 대기 ${seconds(active.cooldown)}`}
+        aria-label={`${active.seconds > 0 ? `지속 ${seconds(active.seconds)}` : '바로 발동'} · 재사용 대기 ${seconds(active.cooldown)}`}
       >
         <ActiveTime seconds={active.seconds} />
         <ActiveTime seconds={active.cooldown} cooldown />
@@ -49,7 +49,8 @@ export function IdleSkills({ company }: { company: Company }) {
         <b>{active.name}</b>
         <p>{ACTIVE_NOTES[active.code]}</p>
         <p>
-          지속 {seconds(active.seconds)} · 재사용 대기 {seconds(active.cooldown)}
+          {active.seconds > 0 ? `지속 ${seconds(active.seconds)}` : '바로 발동'} · 재사용 대기{' '}
+          {seconds(active.cooldown)}
         </p>
       </details>
     </>

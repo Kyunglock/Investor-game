@@ -80,6 +80,16 @@ export class BuyWall {
     this.retreatLeft = 0
     this.protectionLeft = Math.max(this.protectionLeft, seconds)
   }
+  /**
+   * 손절 (591번): 서 있는 벽의 지금 체력에서 ratio만큼을 버리고 버린 양을 돌려준다. 벽은 무너지지 않고(1은 남는다) 무적 중에도 버린다.
+   * 무너져 있으면 버릴 것이 없다.
+   */
+  sacrifice(ratio: number): number {
+    if (!this.active) return 0
+    const lost = Math.min(this.hp - 1, Math.floor(this.hp * Math.min(1, Math.max(0, ratio))))
+    this.hp -= lost
+    return lost
+  }
   get active() {
     return this.hp > 0
   }
