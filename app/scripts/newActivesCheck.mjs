@@ -107,6 +107,21 @@ try {
   assert.ok(critBullet > plainBullet * 1.3, `limit-up bullet ${critBullet} vs ${plainBullet}`)
   await page.screenshot({ path: '/tmp/new-actives-limitup.png' })
 
+  // 손절의 연출 (592번): 움직임을 줄이지 않은 화면에서는 매수벽 반쪽을 떼어 던지고, 그것이 닿을 때 명중을 알린다.
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.reload()
+  await page.waitForFunction(() => window.__mentalWalls?.().length > 0)
+  await page.waitForTimeout(2500)
+  reset()
+  await cast('stopLoss')
+  await expect
+    .poll(async () => (await market()).buyWall.feedback.tossing, { intervals: [20] })
+    .toBe(true)
+  assert.equal(sent.stoploss, undefined, 'the hit waits for the thrown half to land')
+  await page.screenshot({ path: '/tmp/new-actives-stoploss-toss.png' })
+  await expect.poll(async () => (await market()).buyWall.feedback.tossing).toBe(false)
+  await expect.poll(() => sent.stoploss?.count ?? 0, { timeout: 15000 }).toBe(1)
+
   assert.deepEqual(errors, [])
   console.log(
     `new actives ok: stop loss ${before.hp} -> ${after.hp} (hit ${sent.stoploss?.damage ?? 'sent'}), averaging x${(boostedBuy / plainBuy).toFixed(2)}, limit up x${(critBullet / plainBullet).toFixed(2)}`,

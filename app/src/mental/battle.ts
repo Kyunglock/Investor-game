@@ -759,6 +759,8 @@ class BattleScene extends Phaser.Scene {
   private limitUpUntil = 0
   private averagingUntil = 0
   private stopLossPending = false
+  /** 손절로 떼어 던진 매수벽 반쪽이 닿으면 줄 피해. 날아가는 것이 없으면 null이다. */
+  private stopLossToss: number | null = null
   private reportAs: IdleAttackKind | null = null
   private calledRaid: IdleRaidKind | null = null
   private panicRushClock = 0
@@ -2328,6 +2330,15 @@ class BattleScene extends Phaser.Scene {
       }
     }
     if (this.stopLossPending) this.stopLoss()
+    if (this.stopLossToss !== null) {
+      const target = this.magicTargets().find(this.isSiege)
+      const y = target ? target.y + target.displayHeight / 2 : this.stopY()
+      if (!this.buyWallFx || this.buyWallFx.stepToss(dt, this.view().w / 2, y)) {
+        const damage = this.stopLossToss
+        this.stopLossToss = null
+        this.stopLossLand(damage)
+      }
+    }
     this.buyWallFx?.step(dt, (x, fromY, toY, damage, barrage) => {
       // 매수 주문이 벽에 닿으면 서버에 제 종류로 알린다: 탄의 횟수 예산을 쓰지 않는다 (매수세례 503번, 보통 매수 주문 514번).
       this.reportAs = barrage ? 'barrage' : 'buy'
@@ -2432,13 +2443,13 @@ class BattleScene extends Phaser.Scene {
 
   /**
    * 손절 (591번): 매수벽의 남은 체력 절반을 버리고 그만큼 매도벽을 한 번 친다. 매수벽이 무너져 있거나 칠 벽이 아직 없으면(벽 사이를 달리는 중)
-   * 기다렸다가 친다. 물타기는 붙지 않고 매수공격 3배(588번)는 붙는다(서버도 같다).
+   * 기다렸다가 친다. 물타기는 붙지 않고 매수공격 3배(588번)는 붙는다(서버도 같다). 매수벽의 반쪽을 뚝 떼어 매도벽으로 던지고, 그것이 닿을 때
+   * 피해가 들어간다(592번). 움직임을 줄인 화면에서는 던지지 않고 바로 친다.
    */
   private stopLoss() {
     const wall = this.buyWall
-    if (!wall?.active || this.idleTransition || this.circuit) return
-    const target = this.magicTargets().find(this.isSiege)
-    if (!target) return
+    if (!wall?.active || this.idleTransition || this.circuit || this.stopLossToss !== null) return
+    if (!this.magicTargets().some(this.isSiege)) return
     this.stopLossPending = false
     const lost = wall.sacrifice(ACTIVES.stopLoss.ratio)
     const order = idleBuyOrderDamage(this.loadout.buyBonus) * this.boost('boostBuy')
@@ -2446,10 +2457,23 @@ class BattleScene extends Phaser.Scene {
     const x = this.view().w / 2
     this.buyWallFx?.impact(x, false)
     this.pop(x, this.buyWallY() - 55, `손절 -${shareLabel(lost)}`, '#8fc4ff', 22)
+    if (damage > 0 && this.buyWallFx && !this.reducedMotion) {
+      this.buyWallFx.tear()
+      this.stopLossToss = damage
+      haptic.medium()
+    } else if (damage > 0) this.stopLossLand(damage)
     this.drawBuyWall()
-    if (damage <= 0) return
+  }
+
+  /** 손절의 한 방이 매도벽에 닿는다. 날아가는 사이에 벽이 무너졌으면 칠 것이 없다. */
+  private stopLossLand(damage: number) {
+    const target = this.magicTargets().find(this.isSiege)
+    if (!target) return
+    const x = this.view().w / 2
     const y = target.y + target.displayHeight / 2
-    this.glow(x, y, 0x8fc4ff, 90, 320)
+    this.glow(x, y, 0x8fc4ff, 150, 420)
+    this.glow(x, y, 0xffffff, 70, 220)
+    if (!this.reducedMotion) this.cameras.main.shake(260, 0.008)
     this.reportAs = 'stoploss'
     this.hit(target, damage, -Math.PI / 2, 'crit')
     this.reportAs = null
