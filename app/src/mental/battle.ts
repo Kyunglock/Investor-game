@@ -256,8 +256,8 @@ export interface BattleOptions {
   onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number, depth: number) => void
   /** 자동 전투의 몬스터 습격 알림 (500번). */
   onIdleRaid?: (text: string, color: string) => void
-  /** 자동 전투에서 고양이를 꾹 눌렀다 (605번): 그 고양이의 정보를 띄운다. code는 고양이의 코드, 사장냥은 'boss'. */
-  onCatHold?: (code: string) => void
+  /** 자동 전투에서 고양이를 눌렀다: 그 고양이의 정보를 띄운다. code는 고양이의 코드, 사장냥은 'boss'. */
+  onCatSelect?: (code: string) => void
   /** 자동 전투의 매수벽이 무너졌다: 알림을 띄운다. 벽은 그대로다 (584번, 전에는 열 벽 앞으로 돌아갔다). */
   onBuyWallBreak?: () => void
 
@@ -1152,7 +1152,7 @@ class BattleScene extends Phaser.Scene {
       this.drawBuyWall()
       // 고양이 밑의 이름표와 꾹 눌러 정보 보기 (605번).
       this.dressTags()
-      this.watchCatHold()
+      this.watchCatInfo()
       // 자동 전투는 쌓인 벽 앞에서 시작하고, 기존 스테이지는 첫 카드 선택 뒤 벽까지 전진한다.
       if (this.opts.idle) {
         this.idleWall = this.opts.idle().wall
@@ -4852,14 +4852,16 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  /** 꾹 누르기 (605번): 자동 전투에서 고양이를 누르고 있으면 그 고양이의 정보를 띄운다. */
-  private watchCatHold() {
-    if (!this.opts.idle || !this.opts.onCatHold) return
+  /** 탭과 꾹 누르기를 지원하되, 끌거나 밖에서 놓으면 정보창을 열지 않는다. */
+  private watchCatInfo() {
+    if (!this.opts.idle || !this.opts.onCatSelect) return
     let timer: Phaser.Time.TimerEvent | null = null
     let from = { x: 0, y: 0 }
+    let selected: { code: string; pointerId: number } | null = null
     const cancel = () => {
       timer?.remove()
       timer = null
+      selected = null
     }
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       cancel()
@@ -4874,20 +4876,35 @@ class BattleScene extends Phaser.Scene {
       from = { x: pointer.x, y: pointer.y }
       const code = at === 0 ? 'boss' : this.mateGun(at - 1)?.tag?.code
       if (!code) return
+      selected = { code, pointerId: pointer.id }
       // 화면의 실제 시간으로 잰다: 배속과 상관없다.
       timer = this.time.addEvent({
         delay: HOLD_MS * this.time.timeScale,
         callback: () => {
           timer = null
+          selected = null
           haptic.light()
-          this.opts.onCatHold?.(code)
+          this.opts.onCatSelect?.(code)
         },
       })
     })
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (timer && Math.hypot(pointer.x - from.x, pointer.y - from.y) > HOLD_SLOP) cancel()
+      if (
+        selected?.pointerId === pointer.id &&
+        Math.hypot(pointer.x - from.x, pointer.y - from.y) > HOLD_SLOP
+      )
+        cancel()
     })
-    this.input.on('pointerup', cancel)
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (selected?.pointerId !== pointer.id) return
+      const code = selected.code
+      const moved = Math.hypot(pointer.x - from.x, pointer.y - from.y) > HOLD_SLOP
+      cancel()
+      if (!moved) {
+        haptic.light()
+        this.opts.onCatSelect?.(code)
+      }
+    })
     this.input.on('pointerupoutside', cancel)
   }
 

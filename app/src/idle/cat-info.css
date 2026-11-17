@@ -1,4 +1,4 @@
-/* 고양이 정보 (605번): 전투 화면에서 고양이를 꾹 누르면 뜨는 작은 창. 등급이 높을수록 테두리가 화려하다. */
+/* 고양이 정보 (605번): 전투 화면에서 고양이를 누르면 뜨는 작은 창. 등급이 높을수록 테두리가 화려하다. */
 .cat-info-veil {
   position: absolute;
   inset: 0;
@@ -9,7 +9,10 @@
   background: #2a1b1055;
 }
 .cat-info-card {
-  width: min(100%, 320px);
+  width: min(100%, 340px);
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 14px;
   border: 2px solid #c9a36a;
   border-radius: 18px;
@@ -42,8 +45,11 @@
 }
 .cat-info-face {
   flex: none;
-  width: 56px;
-  height: 56px;
+  width: 76px;
+  height: 76px;
+  padding: 5px;
+  border-radius: 20px;
+  background: #f5e9d2;
 }
 .cat-info-card header b {
   display: block;
@@ -119,4 +125,47 @@
   background: #fff3d8;
   color: #6b4720;
   font-size: 13px;
+}
+
+.cat-info-skills {
+  margin: 14px 0;
+}
+.cat-info-skills h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.cat-info-skill {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px;
+  margin-top: 6px;
+  border: 1px solid #e7d7bc;
+  border-radius: 12px;
+  background: #fffdf7;
+}
+.cat-info-skill-text {
+  min-width: 0;
+}
+.cat-info-skill-title {
+  font-size: 14px;
+}
+.cat-info-skill-level {
+  color: #957348;
+  font-size: 11px;
+}
+.cat-info-skill p,
+.cat-info-next,
+.cat-info-empty {
+  margin: 5px 0 0;
+  font:
+    400 11px / 1.6 "Noto Sans KR",
+    sans-serif;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.cat-info-skill .cat-info-growth,
+.cat-info-next,
+.cat-info-empty {
+  color: #8f7448;
 }

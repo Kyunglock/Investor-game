@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { sfx } from '../fx/sound'
 import { DEFAULT_WEAPON, heroOf } from '../mental/hero'
 import { CatPortrait, catTrait } from './CatPortrait'
-import { skillNames } from './skills'
+import { SkillBadge } from './SkillBadge'
+import { SKILLS } from './skills'
 import './cat-info.css'
 
 /**
- * 고양이 정보 (decisions.md 605번): 전투 화면에서 고양이를 꾹 누르면 뜬다. 등급·레벨·총의 세기·고유 스킬·든 무기를 보여 준다. 사장냥('boss')도
+ * 고양이 정보 (decisions.md 605번): 전투 화면에서 고양이를 누르면 뜬다. 등급·레벨·총의 세기·고유 스킬·든 무기를 보여 준다. 사장냥('boss')도
  * 같다. 바깥을 누르거나 닫기를 누르면 닫힌다. 고양이·무기 탭으로 가는 단추가 있다.
  */
 export function CatInfoCard({
@@ -85,17 +86,37 @@ export function CatInfoCard({
               {held.name} {held.gradeName}
             </dd>
           </div>
-          {cat && (
-            <div>
-              <dt>고유 스킬</dt>
-              <dd>
-                {cat.skills.length > 0
-                  ? `${skillNames(cat)} Lv.${cat.skillLevel}`
-                  : '없음 · A등급부터 있어요'}
-              </dd>
-            </div>
-          )}
         </dl>
+        <section className="cat-info-skills" aria-label="고유 스킬">
+          <h3>고유 스킬</h3>
+          {cat && cat.skills.length > 0 ? (
+            <>
+              {cat.skills.map((own) => (
+                <div className="cat-info-skill" key={own.code} data-testid="cat-info-skill">
+                  <SkillBadge skill={own.code} level={cat.skillLevel} size={40} />
+                  <div className="cat-info-skill-text">
+                    <b className="cat-info-skill-title">
+                      {own.name} <small className="cat-info-skill-level">Lv.{cat.skillLevel}</small>
+                    </b>
+                    <p>{SKILLS[own.code].does}</p>
+                    <p className="cat-info-growth">{SKILLS[own.code].grows}</p>
+                  </div>
+                </div>
+              ))}
+              <p className="cat-info-next">
+                {cat.skillNextLevel > 0
+                  ? `고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1}`
+                  : '스킬 최고 레벨이에요'}
+              </p>
+            </>
+          ) : (
+            <p className="cat-info-empty">
+              {cat
+                ? '고유 스킬은 A등급 고양이부터 있어요.'
+                : '사장냥은 고유 스킬 없이 장착한 무기로 싸워요.'}
+            </p>
+          )}
+        </section>
         <footer>
           <button
             type="button"
