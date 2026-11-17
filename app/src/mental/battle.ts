@@ -95,13 +95,13 @@ import { CAT_GUN, catGunAim, catGunPose, catShotAngle, catShoulder } from './cat
 import { CAT_SCALE, mateModel } from './catModels'
 import { catRunFrame } from './catRun'
 import {
+  type CatNameplate,
   type CatTag,
   catAt,
   dressTag,
   HOLD_MS,
   HOLD_SLOP,
   makeTag,
-  tagStyle,
   tagText,
 } from './catTag'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
@@ -384,7 +384,7 @@ interface MagicCaster {
  */
 interface Mate {
   /** 밑에 적는 이름표 (605번): 등급과 이름. */
-  tag: Phaser.GameObjects.Text
+  tag: CatNameplate
   magicMark: Phaser.GameObjects.Text
   /** 자동 전투 (557번): 이 고양이의 스킬 그림. 마법 표식(✦) 대신 머리 위에 뜬다. */
   skillMarks: Phaser.GameObjects.Image[]
@@ -4831,7 +4831,7 @@ class BattleScene extends Phaser.Scene {
   /** 사장냥의 이름표 (605번). 자동 전투에서만 선다. */
   private static readonly TAG_NAME = '사장냥'
 
-  private heroTag: Phaser.GameObjects.Text | null = null
+  private heroTag: CatNameplate | null = null
   private tagsDressed = ''
 
   /** 이름표에 등급과 이름을 입힌다 (605번): 자동 전투에서 고양이마다 밑에 적는다. */
@@ -4847,13 +4847,8 @@ class BattleScene extends Phaser.Scene {
     this.tagsDressed = key
     for (const [i, text] of [this.heroTag, ...this.mates.map((m) => m.tag)].entries()) {
       const tag = tags[i]
-      dressTag(text, tag)
-      // 이웃 이름표와 겹치지 않게, 고양이 사이의 간격에 맞춰 글자를 줄인다(좁은 화면, 긴 이름).
-      if (tag) {
-        const room = this.mates.length > 0 ? Math.abs(this.standX(1) - this.standX(0)) - 3 : 999
-        for (let size = tagStyle(tag).size; text.width > room && size > 8; size--)
-          text.setFontSize(size - 1)
-      }
+      const room = this.mates.length > 0 ? Math.abs(this.standX(1) - this.standX(0)) - 4 : 999
+      dressTag(text, tag, room)
     }
   }
 
