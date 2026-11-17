@@ -7,6 +7,7 @@ import {
   idleBuyOrderDamage,
   pushedByCollapse,
 } from './buyWall'
+import { SHARES_PER_HP, sharesOf } from './shares'
 
 describe('매수 티켓의 좌우 분포', () => {
   it('왼쪽·오른쪽에 각각 40%, 중앙에 20%를 배치하고 영역 안에서도 위치가 달라진다', () => {
@@ -144,9 +145,10 @@ describe('매수벽 붕괴 밀어내기 (#699)', () => {
 })
 
 describe('자동 전투의 매수 주문 피해 (514·573번)', () => {
-  it('무기와도 벽의 깊이와도 따로 센다: 바탕 0.75 × 매수벽 공격 강화', () => {
+  it('무기와도 벽의 깊이와도 따로 센다: 바탕 0.75 + 매수벽 공격 강화가 더한 수량', () => {
     expect(idleBuyOrderDamage(0)).toBe(0.75)
-    // 매수벽 공격 강화 +30%.
-    expect(idleBuyOrderDamage(0.3)).toBeCloseTo(0.75 * 1.3)
+    // 매수벽 공격 강화는 %가 아니라 더하는 값이다 (577번): 10단계 +100주.
+    expect(idleBuyOrderDamage(100 / SHARES_PER_HP)).toBeCloseTo(0.75 + 100 / 150)
+    expect(sharesOf(idleBuyOrderDamage(1000 / SHARES_PER_HP))).toBe(1113)
   })
 })

@@ -56,12 +56,15 @@ try {
           maxLevel: 0,
         },
         {
+          // 매수벽 공격은 %가 아니라 수량으로 오른다 (577번): 한 단계에 10주.
           kind: 'buy',
-          level: 0,
+          level: 12,
           price: 1000000,
           priceGrowthPercent: 10,
           bonusPercent: 0,
-          nextBonusPercent: 10,
+          nextBonusPercent: 0,
+          bonusShares: 120,
+          nextBonusShares: 130,
           maxLevel: 0,
         },
       ],
@@ -312,6 +315,10 @@ try {
     await expect(stat('fire').getByRole('button')).toHaveText('MAX')
     await expect(stat('hp')).toContainText('매수벽 체력')
     await expect(stat('buy')).toContainText('매수벽 공격')
+    // %가 아니라 수량으로 적는다 (577번): 바탕 한 장 113주에 120주를 얹었다.
+    await expect(stat('buy')).toContainText('+120주 → +130주')
+    await expect(stat('buy')).toContainText('매수 주문 한 장 233주')
+    await expect(stat('buy')).not.toContainText('%')
     await expect(stat('crit')).toHaveCount(0)
     // 환생 (571번): 성장 탭 맨 아래. 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
     await expect(page.getByTestId('rebirth')).toBeVisible()

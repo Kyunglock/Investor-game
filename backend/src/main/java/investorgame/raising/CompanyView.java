@@ -388,6 +388,9 @@ public record CompanyView(
    * @param priceGrowthPercent 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버)
    * @param bonusPercent 지금 단계의 효과(%): 공격력은 그만큼 오르고, 연사는 쏘는 빠르기가 그만큼 오르고, 체력은 최대 멘탈이 그만큼 오른다
    * @param nextBonusPercent 다음 단계의 효과(%)
+   * @param bonusShares 매수벽 공격(buy)만: 지금 단계에 매수 주문 한 장이 는 수량(주, 577번). buy는 %로 오르지 않아 bonusPercent가
+   *     0이다. 다른 강화는 0
+   * @param nextBonusShares 다음 단계의 그 수량
    * @param maxLevel 살 수 있는 마지막 단계(487번). 0이면 끝없이 산다
    */
   public record BattleUpgrade(
@@ -397,6 +400,8 @@ public record CompanyView(
       int priceGrowthPercent,
       int bonusPercent,
       int nextBonusPercent,
+      int bonusShares,
+      int nextBonusShares,
       int maxLevel) {}
 
   /**

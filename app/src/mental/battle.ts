@@ -2402,7 +2402,7 @@ class BattleScene extends Phaser.Scene {
   private buyOrderDamage() {
     return this.opts.idle
       ? idleBuyOrderDamage(this.loadout.buyBonus)
-      : this.loadout.damage * BUY_WALL.orderDamage * (1 + this.loadout.buyBonus)
+      : this.loadout.damage * (BUY_WALL.orderDamage + this.loadout.buyBonus)
   }
 
   private launchBuyOrders(count: number) {

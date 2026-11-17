@@ -634,7 +634,7 @@ class IdleEngine {
                 / COOLDOWNS[skill][level];
       }
     }
-    total += BUY_ORDER_DAMAGE * POWER_BUY_ORDERS * buyUp(c);
+    total += buyOrder(c) * POWER_BUY_ORDERS;
     double hpUp = 0;
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
       if ("hp".equals(u.kind())) hpUp = u.bonusPercent() / 100.0;
@@ -663,19 +663,24 @@ class IdleEngine {
         .doubleValue();
   }
 
+  // Matches the app's mental/shares.ts SHARES_PER_HP: shares shown per point of damage.
+  static final double SHARES_PER_HP = 150;
+
   /**
-   * One buy order's damage (514, 573). Neither the weapon nor the wall's depth is in it: only the
-   * buy wall attack upgrade raises it.
+   * One buy order's damage (514, 573, 577). Neither the weapon nor the wall's depth is in it: only
+   * the buy wall attack upgrade raises it, by a fixed number of shares a level and not by a
+   * percentage.
    */
   private double buyOrder(CompanyState c) {
-    return BUY_ORDER_DAMAGE * buyUp(c);
+    return BUY_ORDER_DAMAGE + buyUp(c);
   }
 
+  /** The damage the buy wall attack upgrade has added to one buy order. */
   private double buyUp(CompanyState c) {
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
-      if ("buy".equals(u.kind())) return 1 + u.bonusPercent() / 100.0;
+      if ("buy".equals(u.kind())) return u.bonusShares() / SHARES_PER_HP;
     }
-    return 1;
+    return 0;
   }
 
   /**

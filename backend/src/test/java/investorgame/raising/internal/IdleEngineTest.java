@@ -1029,11 +1029,12 @@ class IdleEngineTest {
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
-    // Only the buy upgrade raises it.
-    double before = buyBonus();
+    // Only the buy upgrade raises it, by a fixed ten shares a level and not by a percentage (577):
+    // ten levels add a hundred shares to the 112.5 of one order.
+    assertThat(buyBonus()).isZero();
     company.mental.buyUpgrade(state, "buy", 10);
-    double up = (1 + buyBonus() / 100) / (1 + before / 100);
-    assertThat(up).isGreaterThan(1);
+    assertThat(buyBonus()).isEqualTo(100);
+    double up = (order + 100 / 150.0) / order;
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order * up, offset(1e-9));
@@ -1053,12 +1054,12 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isLessThan(30 * order * up);
   }
 
-  private double buyBonus() {
+  private int buyBonus() {
     return company.mental.upgradeViews(state).stream()
         .filter(u -> "buy".equals(u.kind()))
         .findFirst()
         .orElseThrow()
-        .bonusPercent();
+        .bonusShares();
   }
 
   @Test

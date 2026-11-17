@@ -15,7 +15,7 @@ import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
 import { idleBuyOrderDamage } from '../mental/buyWall'
-import { sharesOf } from '../mental/shares'
+import { SHARES_PER_HP, sharesOf } from '../mental/shares'
 import { GrowthIcon } from './GrowthIcon'
 import { IdleActives } from './IdleActives'
 import { IdleAttendance } from './IdleAttendance'
@@ -65,7 +65,7 @@ const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
 /** 매수 주문 한 장의 수량 (514·573번): 무기와도 벽의 깊이와도 상관없이 이 강화만 따른다. */
 function buyNote(company: Company, u: Upgrade) {
   if (!company.idle) return STATS.buy.note
-  const damage = idleBuyOrderDamage(u.bonusPercent / 100)
+  const damage = idleBuyOrderDamage((u.bonusShares ?? 0) / SHARES_PER_HP)
   return `매수 주문 한 장 ${sharesOf(damage).toLocaleString()}주 · 무기와 따로 세요`
 }
 
@@ -435,8 +435,12 @@ function IdleStats({ company }: { company: Company }) {
               <p aria-live="polite" aria-atomic="true">
                 {receipt?.kind === u.kind ? (
                   <span key={receipt.id} className="idle-upgrade-gain" data-testid="upgrade-gain">
-                    강화 완료! Lv.+{receipt.levels} · +{Number(receipt.bonus.toFixed(2))}%
+                    강화 완료! Lv.+{receipt.levels} · +{Number(receipt.bonus.toFixed(2))}
+                    {receipt.kind === 'buy' ? '주' : '%'}
                   </span>
+                ) : u.kind === 'buy' ? (
+                  // 매수벽 공격은 %가 아니라 수량으로 오른다 (577번).
+                  `+${(u.bonusShares ?? 0).toLocaleString()}주 → +${((u.bonusShares ?? 0) + ((u.nextBonusShares ?? 0) - (u.bonusShares ?? 0)) * levels).toLocaleString()}주`
                 ) : full ? (
                   `+${u.bonusPercent}% · 최대`
                 ) : (
@@ -466,7 +470,10 @@ function IdleStats({ company }: { company: Company }) {
                       kind: u.kind,
                       id: ++sequence.current,
                       levels: after.level - u.level,
-                      bonus: after.bonusPercent - u.bonusPercent,
+                      bonus:
+                        u.kind === 'buy'
+                          ? (after.bonusShares ?? 0) - (u.bonusShares ?? 0)
+                          : after.bonusPercent - u.bonusPercent,
                     })
                     sfx.levelUp()
                     haptic.success()

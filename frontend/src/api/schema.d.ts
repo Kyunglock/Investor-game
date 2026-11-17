@@ -1634,10 +1634,14 @@ export interface components {
                 price: number;
                 /** @description 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버) */
                 priceGrowthPercent: number;
-                /** @description 지금 단계의 효과(%) */
+                /** @description 지금 단계의 효과(%). buy는 0이다 (577번) */
                 bonusPercent: number;
                 /** @description 다음 단계의 효과(%) */
                 nextBonusPercent: number;
+                /** @description buy(매수벽 공격)만: 지금 단계에 매수 주문 한 장이 는 수량(주, 577번). buy는 %로 오르지 않아 bonusPercent가 0이다. 다른 강화는 0 */
+                bonusShares?: number;
+                /** @description 다음 단계의 그 수량(주) */
+                nextBonusShares?: number;
                 /** @description 살 수 있는 마지막 단계 (487번). 0이면 끝없이 산다 */
                 maxLevel: number;
             }[];

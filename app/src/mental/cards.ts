@@ -7,6 +7,7 @@ import {
   meteorStats,
   waterStats,
 } from './magic'
+import { SHARES_PER_HP } from './shares'
 /**
  * 멘탈 카드 (decisions.md 328·330·377·392·393번). 처음 한 장, 그리고 레벨이 오를 때마다 한 장을 고른다. 효과는 한 판 안의 화면 규칙이라 앱이 가진다.
  *
@@ -218,7 +219,7 @@ export interface Loadout {
   mates: number
   /** 소환 순서대로 마법을 해금한 동료 수. 각성 카드 한 장에 한 마리. */
   awakenedMates: number
-  /** 매수벽 공격 강화 (495번): 매수 주문의 공격력에 1 + 이만큼을 곱한다. */
+  /** 매수벽 공격 강화 (495·577번): 매수 주문 한 장의 피해에 이만큼을 더한다. %가 아니다. */
   buyBonus: number
   /** 고양이가 따로 든 총 (488번), 줄 선 차례대로. 없는 자리의 고양이는 사장냥과 같은 총을 쏜다. */
   mateGuns: MateGun[]
@@ -277,6 +278,8 @@ export function loadoutOf(
   upgrades: ReadonlyArray<{
     kind: 'damage' | 'fire' | 'hp' | 'buy'
     bonusPercent: number
+    /** 매수벽 공격(buy)만: 매수 주문 한 장이 는 수량(주, 577번) */
+    bonusShares?: number
   }> = [],
 ): Loadout {
   const bonus = (kind: 'damage' | 'fire' | 'hp' | 'buy') =>
@@ -290,7 +293,8 @@ export function loadoutOf(
     bulletSpeed: weapon.bulletSpeed,
     // 체력 강화(410번)는 최대 멘탈을 그만큼 늘린다. 판은 가득 찬 채로 시작한다.
     maxMental: Math.round(BASE_LOADOUT.maxMental * (1 + bonus('hp'))),
-    buyBonus: bonus('buy'),
+    // 매수벽 공격은 %가 아니라 수량으로 오른다 (577번): 는 수량을 피해로 바꿔 더한다.
+    buyBonus: (upgrades.find((u) => u.kind === 'buy')?.bonusShares ?? 0) / SHARES_PER_HP,
   }
 }
 
