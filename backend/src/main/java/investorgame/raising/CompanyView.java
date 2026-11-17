@@ -98,7 +98,7 @@ public record CompanyView(
    * 시즌패스의 미션 (570번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다.
    *
    * @param code wall·boss·upgrade·draw·merge·attend
-   * @param title 화면에 적는 글: "매도벽 100개 통과"처럼 다음에 닿을 수가 들어 있다
+   * @param title 화면에 적는 글: "매도벽 최고 기록 100개 돌파"처럼 다음에 닿을 수가 들어 있다
    * @param count 이번 시즌에 센 수
    * @param target 다음에 포인트를 받는 수
    * @param every 포인트를 받는 간격

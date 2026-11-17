@@ -658,7 +658,7 @@ class CompanyApiTest {
     assertThat(opened.read("$.pass.secondsLeft", Long.class)).isPositive();
     List<String> missions = opened.read("$.pass.missions[*].code");
     assertThat(missions).containsExactly("wall", "boss", "upgrade", "draw", "merge", "attend");
-    assertThat(opened.read("$.pass.missions[0].title", String.class)).isEqualTo("매도벽 50개 통과");
+    assertThat(opened.read("$.pass.missions[0].title", String.class)).isEqualTo("매도벽 최고 기록 50개 돌파");
     postJson("/api/company/pass/claim", "{\"step\":1}").andExpect(status().isBadRequest());
     mvc.perform(post("/api/company/pass/claim").cookie(session)).andExpect(status().isBadRequest());
     // 출석 미션: 하루에 100포인트. 한 단계에는 300이 든다.

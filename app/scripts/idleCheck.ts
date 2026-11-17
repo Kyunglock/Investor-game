@@ -338,7 +338,7 @@ try {
     await page.getByTestId('idle-pass').click()
     await expect(page.getByTestId('pass-mission')).toHaveCount(6)
     await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText(
-      '매도벽 100개 통과',
+      '매도벽 최고 기록 100개 돌파',
     )
     await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('73/100')
     await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('30P')

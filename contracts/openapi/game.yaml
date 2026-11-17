@@ -994,7 +994,7 @@ components:
                 required: [code, title, count, target, every, points, earned, ready]
                 properties:
                   code: { type: string, description: wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석) }
-                  title: { type: string, description: 화면에 적는 글. "매도벽 100개 통과"처럼 다음에 닿을 수가 들어 있다 }
+                  title: { type: string, description: 화면에 적는 글. "매도벽 최고 기록 100개 돌파"처럼 다음에 닿을 수가 들어 있다 }
                   count: { type: integer, format: int64, description: 이번 시즌에 센 수 }
                   target: { type: integer, format: int64, description: 다음에 포인트를 받는 수 }
                   every: { type: integer, description: 포인트를 받는 간격 }

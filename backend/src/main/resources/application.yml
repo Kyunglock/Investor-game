@@ -174,7 +174,7 @@ raising:
         ten-diamonds: 300
         last-diamonds: 500
       missions:
-        - { code: wall, title: "매도벽 {n}개 통과", every: 50, points: 30 }
+        - { code: wall, title: "매도벽 최고 기록 {n}개 돌파", every: 50, points: 30 }
         - { code: boss, title: "보스 {n}번 처치", every: 1, points: 30 }
         - { code: upgrade, title: "강화 {n}번", every: 50, points: 30 }
         - { code: draw, title: "고양이·무기 뽑기 {n}번", every: 10, points: 30 }

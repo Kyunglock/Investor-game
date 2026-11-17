@@ -93,7 +93,7 @@ class PassTest {
     assertThat(rewards.passView(c).missions())
         .extracting(m -> m.code())
         .containsExactly("wall", "boss", "upgrade", "draw", "merge", "attend");
-    assertThat(mission(c, "wall").title()).isEqualTo("매도벽 50개 통과");
+    assertThat(mission(c, "wall").title()).isEqualTo("매도벽 최고 기록 50개 돌파");
     assertThat(mission(c, "wall").target()).isEqualTo(50);
     assertThat(mission(c, "wall").points()).isEqualTo(30);
     assertThatThrownBy(() -> rewards.claimPassMission(c, null))
@@ -151,7 +151,7 @@ class PassTest {
     assertThat(mission(c, "wall").ready()).as("벽 하나로는 아직 없다").isZero();
     engine.pass.progress(c, "wall", 49, idle.todayDate());
     assertThat(mission(c, "wall").ready()).as("쉰 번째 벽").isEqualTo(30);
-    assertThat(mission(c, "wall").title()).isEqualTo("매도벽 100개 통과");
+    assertThat(mission(c, "wall").title()).isEqualTo("매도벽 최고 기록 100개 돌파");
     // 보스는 한 번에 30.
     engine.pass.progress(c, "boss", 1, idle.todayDate());
     rewards.claimPassMission(c, null);
@@ -165,6 +165,35 @@ class PassTest {
     rewards.addPassExp(c, 100_000);
     assertThat(c.passExp).isEqualTo(9000);
     assertThat(rewards.passView(c).step()).isEqualTo(30);
+  }
+
+  @Test
+  void 벽_미션은_최고_기록을_넘긴_벽만_센다() {
+    CompanyState c = opened();
+    idle.beat(c, "one", 0, "start");
+    c.idle.wall = 50;
+    c.idle.damage = IdleEngine.maxHp(50) - 1;
+    clock.now += 1000;
+    idle.beat(c, "one", 1, "tick", List.of(new IdleHit(50, "bullet", 1)));
+    assertThat(c.idle.wall).isEqualTo(51);
+    assertThat(c.idle.best).isEqualTo(50);
+    assertThat(mission(c, "wall").count()).isEqualTo(1);
+    // 환생하면 첫 벽으로 돌아가지만 기록은 남는다 (596번): 전에 깬 벽을 다시 부수는 것은 세지 않는다.
+    idle.rebirth(c);
+    assertThat(c.idle.wall).isEqualTo(1);
+    c.idle.damage = IdleEngine.maxHp(1) - 1;
+    clock.now += 1000;
+    idle.beat(c, "one", 2, "tick", List.of(new IdleHit(1, "bullet", 1)));
+    assertThat(c.idle.wall).isEqualTo(2);
+    assertThat(c.idle.best).isEqualTo(50);
+    assertThat(mission(c, "wall").count()).as("다시 부순 벽은 세지 않는다").isEqualTo(1);
+    // 기록을 넘기면 다시 센다.
+    c.idle.wall = 51;
+    c.idle.damage = IdleEngine.maxHp(51) - 1;
+    clock.now += 1000;
+    idle.beat(c, "one", 3, "tick", List.of(new IdleHit(51, "bullet", 1)));
+    assertThat(c.idle.best).isEqualTo(51);
+    assertThat(mission(c, "wall").count()).isEqualTo(2);
   }
 
   @Test

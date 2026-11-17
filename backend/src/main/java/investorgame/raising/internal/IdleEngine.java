@@ -992,8 +992,12 @@ class IdleEngine {
     // (532): the screen broke it at that hit and kept shooting.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
       earned += reward(c);
-      // 시즌패스 미션 (570번): 통과한 벽을 센다.
-      engine.pass.progress(c, "wall", 1, todayDate());
+      // 시즌패스 미션 (570번): 통과한 벽을 센다. 최고 기록을 넘긴 벽만 센다 (596번): 환생한 뒤 전에 깬 벽을 다시 부수는 것은 세지 않는다.
+      s.best = Math.max(s.best, Math.max(s.wall - 1, s.bossCleared));
+      if (s.wall > s.best) {
+        s.best = s.wall;
+        engine.pass.progress(c, "wall", 1, todayDate());
+      }
       double left = Math.max(0, s.damage - maxHp(s.wall));
       // 보스 클리어 보상 (549번): 벽 보상과 따로, 그 보스를 처음 깼을 때 한 번.
       if (bossWall(s.wall) && s.wall > s.bossCleared) {

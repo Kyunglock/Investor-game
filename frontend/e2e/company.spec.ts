@@ -377,7 +377,7 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
   ])
   expect(opened.pass.missions.every((mission) => mission.count === 0)).toBe(true)
   expect(opened.pass.missions[0]).toMatchObject({
-    title: '매도벽 50개 통과',
+    title: '매도벽 최고 기록 50개 돌파',
     target: 50,
     points: 30,
   })
