@@ -126,7 +126,7 @@ export function CatInfoCard({
             }}
             data-testid="cat-info-manage"
           >
-            고양이·무기 탭에서 보기
+            고양이·무기 관리
           </button>
           <button type="button" onClick={() => setCode(null)} data-testid="cat-info-close">
             닫기
