@@ -259,7 +259,11 @@ export function IdleHome({
               aria-label="환생"
               title="환생"
               data-testid="rebirth-shortcut"
-              onClick={() => go('rebirth')}
+              onClick={(event) => {
+                // 터치 환경에서도 시트를 닫으면 이 버튼으로 포커스를 돌린다.
+                event.currentTarget.focus()
+                go('rebirth')
+              }}
             >
               <img src={rebirthIcon} alt="" width={48} height={48} />
             </button>
