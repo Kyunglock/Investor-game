@@ -847,13 +847,10 @@ export function bakeOrders(scene: Phaser.Scene, hpScale = 1, redraw = false) {
       c.restore()
     })
   }
-  // 벽 뒤 판: 블록 사이를 잇는 옅은 접지 그림자.
+  // 벽 뒤 판: 블록 사이를 잇는 옅은 접지 그림자. 위아래 끝의 선은 없앴다 (583번).
   bake(scene, 'wall-band', 64, 32, (c) => {
     c.fillStyle = '#416fa426'
     c.fillRect(0, 0, 64, 32)
-    c.fillStyle = '#78aee4'
-    c.fillRect(0, 0, 64, 2)
-    c.fillRect(0, 30, 64, 2)
   })
   // 파편: 푸른색 매도벽 조각과 흰 먼지.
   bake(scene, 'chip', 6, 5, (c) => {

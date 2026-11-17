@@ -192,18 +192,7 @@ export class BuyWallFx {
           }
         }
       }
-      // 블록 하단(y + 32)을 덮지 않도록 체력 막대를 5px 아래에 둔다.
-      g.fillStyle(0x4f2837, 0.7).fillRoundedRect(left + 5, y + 37, width - 10, 4, 2)
-      const hpWidth = ((width - 10) * wall.hp) / wall.maxHp
-      if (hpWidth > 0) {
-        g.fillStyle(0xffdc87).fillRoundedRect(
-          left + 5,
-          y + 37,
-          hpWidth,
-          4,
-          Math.min(2, hpWidth / 2),
-        )
-      }
+      // 벽 밑의 체력 막대는 없앴다 (583번): 남은 수량은 벽 위의 숫자와 절반에서 금 가는 그림이 알린다.
       this.title.setText(shareLabel(wall.hp)).setPosition(left + width / 2, top + height * 0.58)
     } else {
       this.surface.setVisible(false)
