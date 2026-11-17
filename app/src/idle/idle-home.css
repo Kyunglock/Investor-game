@@ -964,7 +964,7 @@
   opacity: 0.5;
 }
 
-/* 액티브 스킬 단추 (decisions.md 503번): 오른쪽 가장자리에 세로로. 대기 중이면 어두운 막이 위에서부터 걷힌다. */
+/* 액티브 스킬 단추 (decisions.md 503번): 오른쪽 가장자리에 세로로. 남은 시간은 원형 음영이 시계 방향으로 걷히며 나타낸다. */
 .idle-actives {
   position: absolute;
   right: 6px;
@@ -978,18 +978,14 @@
   overflow: hidden;
   display: grid;
   justify-items: center;
-  width: 66px;
-  padding: 0 0 3px;
-  border: 1px solid #ac7bc2;
-  border-radius: 15px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
   background: #f6e6ff;
   box-shadow: 0 3px 0 #9162aa;
   color: #59346c;
-}
-.idle-actives .idle-active-note {
-  display: grid;
-  place-items: center;
-  min-height: 16px;
 }
 .idle-actives button:disabled .active-badge {
   filter: saturate(0.4) brightness(0.85);
@@ -998,10 +994,10 @@
   outline: 3px solid #237bd2;
   outline-offset: 3px;
 }
-.idle-actives i {
+.idle-actives .idle-active-shade {
   position: absolute;
-  inset: 0 0 auto;
-  background: #2b23404d;
+  inset: 0;
+  border-radius: 50%;
   pointer-events: none;
 }
 .idle-actives.idle-actives-ad {
@@ -1022,12 +1018,24 @@
 .idle-actives-ad button[data-on] .active-badge {
   filter: none;
 }
-.idle-actives button[data-on] .idle-active-note {
-  color: #28733c;
-}
 .idle-active-pending {
-  font-size: 14px;
-  line-height: 1;
+  position: absolute;
+  inset: 13px;
+  border: 3px solid #fff7e580;
+  border-top-color: #fff7e5;
+  border-radius: 50%;
+  animation: idle-active-spin 0.8s linear infinite;
+  pointer-events: none;
+}
+@keyframes idle-active-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-active-pending {
+    animation: none;
+  }
 }
 /* 광고를 불러오지 못했을 때의 알림 (589번). */
 .idle-ad-notice {
@@ -1078,7 +1086,7 @@
 }
 .boss-skill-slot-icon {
   display: block;
-  width: 58px;
+  width: 48px;
 }
 .boss-skill-list {
   display: grid;
@@ -1103,7 +1111,7 @@
 .boss-skill-art {
   display: block;
   width: 100%;
-  max-width: 120px;
+  max-width: 72px;
   align-self: center;
 }
 .boss-skill-times {

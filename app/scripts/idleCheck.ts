@@ -904,7 +904,7 @@ try {
       assert(left && right && left.x + left.width < right.x, 'ad skills left, unique skills right')
       assert(left.x >= 0 && right.x + right.width <= width, 'skill buttons stay on screen')
     }
-    // 광고 스킬은 아직 광고 없이 바로 눌린다 (586·588번): 광고를 본 것으로 쓰고, 남은 시간이 단추에 뜬다.
+    // 광고 스킬은 아직 광고 없이 바로 눌린다 (586·588번): 광고를 본 것으로 쓰고, 남은 시간은 숫자 없이 원형 음영으로 보인다.
     const boost = page.locator('[data-testid=idle-ad-active][data-code=boostDamage]')
     await expect(boost).toBeEnabled()
     await expect(boost).toHaveAccessibleName(/공격력 3배.*광고 보고 쓰기/)
@@ -914,7 +914,11 @@ try {
     // The banner is not checked here: a monster raid's notice uses the same strip and may replace it.
     await expect.poll(() => usedActives).toEqual([{ code: 'boostDamage', ad: true }])
     await expect(boost).toHaveAccessibleName('공격력 3배 · 60초 남았어요')
-    await expect(boost).toContainText('60s')
+    await expect(boost).not.toContainText('60s')
+    await expect(boost.locator('.idle-active-shade')).toBeVisible()
+    await expect(boost).toHaveCSS('border-radius', '50%')
+    const boostSize = await boost.boundingBox()
+    assert(boostSize && boostSize.width === 48 && boostSize.height === 48, 'compact round skill')
     await expect(boost).toBeDisabled()
     await expect(page.locator('[data-testid=idle-ad-active][data-code=boostFire]')).toBeEnabled()
     await page.screenshot({ path: `/tmp/idle-actives-${width}.png` })
