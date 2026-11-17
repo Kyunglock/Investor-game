@@ -370,9 +370,9 @@ try {
     await expect(stat('fire').getByRole('button')).toHaveText('MAX')
     await expect(stat('hp')).toContainText('매수벽 체력')
     await expect(stat('buy')).toContainText('매수벽 공격')
-    // %가 아니라 수량으로 적는다 (579번): 바탕 한 장 113주에 120주를 얹었다.
+    // %가 아니라 수량으로 적는다 (579번): 바탕 한 장 225주(594번)에 120주를 얹었다.
     await expect(stat('buy')).toContainText('+120주 → +130주')
-    await expect(stat('buy')).toContainText('매수 주문 한 장 233주')
+    await expect(stat('buy')).toContainText('매수 주문 한 장 345주')
     await expect(stat('buy')).not.toContainText('%')
     await expect(stat('crit')).toHaveCount(0)
     // 환생 (571번): 성장 탭 맨 아래. 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
