@@ -6,6 +6,7 @@ import { AD_UNAVAILABLE, watchRewardedAd } from '../app/ads'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { ACTIVE_HINTS } from '../mental/actives'
+import { ActiveBadge, ActiveTime } from './ActiveBadge'
 
 type Active = NonNullable<NonNullable<Company['idle']>['actives']>[number]
 
@@ -53,7 +54,6 @@ export function IdleActives({ company, connected }: { company: Company; connecte
     const wait = Math.ceil(active.readyIn)
     // 효과가 도는 동안에는 남은 시간을 적는다 (588번).
     const left = active.ad ? Math.ceil(active.left) : 0
-    const note = left > 0 ? `${left}초 남음` : wait > 0 ? `${wait}초` : ACTIVE_HINTS[active.code]
     return (
       <button
         key={active.code}
@@ -70,15 +70,23 @@ export function IdleActives({ company, connected }: { company: Company; connecte
               ? `${active.name} · ${wait}초 뒤에 쓸 수 있어요`
               : `${active.name} · ${ACTIVE_HINTS[active.code]}${active.ad ? ' · 광고 보고 쓰기' : ''}`
         }
+        title={`${active.name} · ${ACTIVE_HINTS[active.code]}${active.ad ? ' · 광고 보고 쓰기' : ''}`}
+        aria-busy={pending === active.code}
         onClick={() => void use(active)}
       >
-        {active.ad && (
-          <em className="idle-active-ad" aria-hidden="true">
-            ▶ 광고
-          </em>
-        )}
-        <b>{active.name}</b>
-        <small className="idle-active-note">{note}</small>
+        <ActiveBadge code={active.code} />
+        <span className="idle-active-note">
+          {pending === active.code ? (
+            <span className="idle-active-pending" aria-hidden="true">
+              …
+            </span>
+          ) : (
+            <ActiveTime
+              seconds={left > 0 ? left : wait > 0 ? wait : active.seconds}
+              cooldown={wait > 0 && left === 0}
+            />
+          )}
+        </span>
         {wait > 0 && left === 0 && (
           <i
             aria-hidden="true"
