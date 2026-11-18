@@ -161,7 +161,7 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
           모두 받기 <small className="idle-pass-all-count">{pass.claimable}개</small>
         </button>
       )}
-      {/* 미션 (570·572번): 깨면 포인트를 눌러서 받는다. 문턱에 닿으면 다음 문턱으로 넘어가며 되풀이된다. */}
+      {/* 미션 (570·572번): 깨면 포인트를 눌러서 받는다. 받으면 다음 문턱으로 넘어가며 되풀이된다. */}
       <h4 className="idle-pass-missions-title">미션 · 깨고 눌러서 포인트를 받아요</h4>
       <ul className="idle-pass-missions" data-testid="pass-missions">
         {pass.missions.map((mission) => {
@@ -194,7 +194,7 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
                 aria-label={`${mission.title} 진행도`}
                 aria-valuemin={0}
                 aria-valuemax={mission.target}
-                aria-valuenow={mission.count}
+                aria-valuenow={progress.have}
               >
                 <i style={{ width: `${progress.ratio * 100}%` }} />
               </div>

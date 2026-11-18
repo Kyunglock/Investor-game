@@ -117,7 +117,7 @@ public record CompanyProperties(
    * 시즌패스의 미션 (570번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다. 끝없이 되풀이된다.
    *
    * @param code wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)
-   * @param title 화면에 적는 글. {n}은 다음에 닿을 수다
+   * @param title 화면에 적는 글. {n}은 다음에 닿을 수(받을 포인트가 있으면 닿은 수)다
    * @param every 포인트를 받는 간격
    * @param points 한 번에 받는 포인트
    */

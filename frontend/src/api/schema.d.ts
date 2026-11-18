@@ -973,7 +973,7 @@ export interface components {
                 missions: {
                     /** @description wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석) */
                     code: string;
-                    /** @description 화면에 적는 글. "매도벽 최고 기록 100개 돌파"처럼 다음에 닿을 수가 들어 있다 */
+                    /** @description 화면에 적는 글. "매도벽 최고 기록 100개 돌파"처럼 target이 들어 있다 */
                     title: string;
                     /**
                      * Format: int64
@@ -982,12 +982,12 @@ export interface components {
                     count: number;
                     /**
                      * Format: int64
-                     * @description 다음에 포인트를 받는 수
+                     * @description 다음에 포인트를 받는 수. 받을 포인트(ready)가 있으면 이미 닿은 마지막 문턱이다
                      */
                     target: number;
                     /** @description 포인트를 받는 간격 */
                     every: number;
-                    /** @description target에 닿으면 받는 포인트 */
+                    /** @description 문턱 하나에 받는 포인트 */
                     points: number;
                     /**
                      * Format: int64
