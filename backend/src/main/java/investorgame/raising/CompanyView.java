@@ -27,6 +27,7 @@ public record CompanyView(
     String opening,
     java.math.BigDecimal capital,
     Diamonds diamonds,
+    AdDraws adDraws,
     String grade,
     Long nextGradeCapital,
     Upgrade upgrade,
@@ -50,6 +51,9 @@ public record CompanyView(
     Idle idle,
     boolean sandbox,
     boolean sandboxInfinite) {
+
+  /** 광고 뽑기: 종류별 하루 한도와 남은 수, 다음 한국 자정(ms). */
+  public record AdDraws(int dailyLimit, int catLeft, int weaponLeft, long resetsAt) {}
 
   /**
    * 다이아 (decisions.md 526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. 멘탈 보호 스테이지의 별과 EX 디펜스로 얻는다.

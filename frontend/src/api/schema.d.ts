@@ -445,9 +445,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 다이아로 무기를 뽑는다. 한 번 100, 10연차는 1,000에 열한 개 (decisions.md 366·517·526번)
+         * 다이아 또는 광고로 무기 하나를 뽑는다
          * @description 등급은 F 450·E 260·D 150·C 80·B 40·A 17·S 3의 가중치로, 종류는 등급에 따라 정한다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
-         *     결과는 armory.lastDraw에, 한꺼번에 뽑은 것은 armory.lastDraws에 차례대로 담긴다. count가 10이면 10연차다(diamonds.tenDraw에 diamonds.tenCount개). 다이아가 모자라면 하나도 뽑지 않고 400.
+         *     결과는 armory.lastDraw와 lastDraws에 담긴다. ad가 참이면 무료이며 세션별 하루 3회까지다(한국 자정 갱신). 광고가 아니면 다이아를 사용한다.
          */
         post: operations["drawWeapon"];
         delete?: never;
@@ -487,10 +487,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 다이아로 고양이를 뽑는다. 한 번 100, 10연차는 1,000에 열한 마리 (decisions.md 488·493·517·526번)
+         * 다이아 또는 광고로 고양이 한 마리를 뽑는다
          * @description 무기 뽑기와 같은 값이다. 동료 고양이는 39종(사장냥 포함 총 40종)이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
          *     이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 나온 고양이는 idle.lastDraws에 차례대로 담긴다.
-         *     다이아가 모자라면 하나도 뽑지 않고 400.
+         *     ad가 참이면 무료이며 고양이 광고 뽑기는 세션별 하루 3회까지다(한국 자정 갱신). 광고가 아니면 다이아를 사용하고, 부족하면 400.
          */
         post: operations["drawCat"];
         delete?: never;
@@ -812,6 +812,19 @@ export interface components {
             opening?: string | null;
             /** @description 자본. 자동 전투의 물가(decisions.md 505번)로 int64를 넘게 커진다. 소수 없는 수다 */
             capital: number;
+            adDraws?: {
+                /** @description 종류별 하루 광고 뽑기 한도 */
+                dailyLimit: number;
+                /** @description 오늘 남은 고양이 광고 뽑기 */
+                catLeft: number;
+                /** @description 오늘 남은 무기 광고 뽑기 */
+                weaponLeft: number;
+                /**
+                 * Format: int64
+                 * @description 다음 한국 자정의 epoch 밀리초
+                 */
+                resetsAt: number;
+            };
             /** @description 다이아 (decisions.md 526번). 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. 채용권과 뽑기권을 대신한다. 멘탈 보호 스테이지의 별과 EX 디펜스로 얻는다 */
             diamonds: {
                 /**
@@ -2329,8 +2342,17 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    /** @description 한꺼번에 뽑을 수(10연속 */
-                    count?: number;
+                    /**
+                     * @description 한 번에 하나만 뽑는다
+                     * @default 1
+                     * @enum {integer}
+                     */
+                    count?: 1;
+                    /**
+                     * @description 광고 완료 후 무료 뽑기. 고양이와 무기 각각 하루 3회까지
+                     * @default false
+                     */
+                    ad?: boolean;
                 };
             };
         };
@@ -2391,8 +2413,17 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    /** @description 한꺼번에 뽑을 수(10연속 */
-                    count?: number;
+                    /**
+                     * @description 한 번에 하나만 뽑는다
+                     * @default 1
+                     * @enum {integer}
+                     */
+                    count?: 1;
+                    /**
+                     * @description 광고 완료 후 무료 뽑기. 고양이와 무기 각각 하루 3회까지
+                     * @default false
+                     */
+                    ad?: boolean;
                 };
             };
         };

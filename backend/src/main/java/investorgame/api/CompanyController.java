@@ -331,14 +331,16 @@ class CompanyController {
 
   record BattleUpgradeRequest(@NotBlank String kind, @Positive Integer levels) {}
 
-  /** 무기 뽑기권 한 장에 무기 하나, 본문의 count개를 한꺼번에(10연속, 517번). 본문이 없으면 하나 (decisions.md 366번). */
+  /** 다이아 또는 광고로 무기 하나를 뽑는다. */
   @PostMapping("/weapon/draw")
   CompanyView drawWeapon(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody(required = false) DrawCountRequest request) {
     UUID sessionId = cookies.requirePlayer(token);
     int count = DrawCountRequest.countOf(request);
-    CompanyView company = companies.drawWeapon(sessionId, count);
+    CompanyView company =
+        companies.drawWeapon(
+            sessionId, count, request != null && Boolean.TRUE.equals(request.ad()));
     PLAY.info(
         "company-weapon-draw session={} company={} count={} ip={}",
         sessionId,
@@ -348,8 +350,8 @@ class CompanyController {
     return company;
   }
 
-  /** 뽑기 수 (517번): 1 또는 10연속. 없으면 1. */
-  record DrawCountRequest(@Min(1) @Max(10) Integer count) {
+  /** 한 번에 하나. ad는 보상형 광고를 끝까지 본 경우에만 참이다. */
+  record DrawCountRequest(@Min(1) @Max(1) Integer count, Boolean ad) {
     static int countOf(DrawCountRequest request) {
       return request == null || request.count() == null ? 1 : request.count();
     }
@@ -363,14 +365,15 @@ class CompanyController {
     return companies.mergeWeapon(cookies.requirePlayer(token), request.kind(), request.grade());
   }
 
-  /** 뽑기권 한 장에 고양이 한 마리, 본문의 count마리를 한꺼번에(10연속, 517번). 본문이 없으면 한 마리 (decisions.md 488·493번). */
+  /** 다이아 또는 광고로 고양이 한 마리를 뽑는다. */
   @PostMapping("/cat/draw")
   CompanyView drawCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody(required = false) DrawCountRequest request) {
     UUID sessionId = cookies.requirePlayer(token);
     int count = DrawCountRequest.countOf(request);
-    CompanyView company = companies.drawCat(sessionId, count);
+    CompanyView company =
+        companies.drawCat(sessionId, count, request != null && Boolean.TRUE.equals(request.ad()));
     PLAY.info(
         "company-cat-draw session={} company={} count={} ip={}",
         sessionId,

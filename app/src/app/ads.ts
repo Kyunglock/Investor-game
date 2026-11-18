@@ -8,7 +8,7 @@ import { Capacitor } from '@capacitor/core'
  *
  * 광고를 띄울 수 없는 곳(브라우저로 연 화면, 광고 플러그인이 없는 예전 앱)에서는 광고 없이 'rewarded'를 돌려준다: 광고 SDK는 앱에만 있다.
  */
-export type AdPlacement = 'rebirth' | 'active'
+export type AdPlacement = 'rebirth' | 'active' | 'cat-draw' | 'weapon-draw'
 export type AdResult = 'rewarded' | 'closed' | 'unavailable'
 
 /** 광고를 불러오지 못했을 때 화면에 띄우는 말. */

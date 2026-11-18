@@ -182,10 +182,65 @@ class CompanyApiTest {
   }
 
   @Test
+  void 광고_뽑기는_종류별_하루_세번이고_다이아를_쓰지_않는다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    String id = opened.read("$.companyId", String.class);
+    assertThat(opened.read("$.adDraws.catLeft", Integer.class)).isEqualTo(3);
+    for (String kind : List.of("cat", "weapon")) {
+      for (int i = 0; i < 3; i++) {
+        postJson("/api/company/" + kind + "/draw", "{\"ad\":true}")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.diamonds.amount").value(1000))
+            .andExpect(jsonPath("$.adDraws." + kind + "Left").value(2 - i));
+      }
+      postJson("/api/company/" + kind + "/draw", "{\"ad\":true}")
+          .andExpect(status().isBadRequest());
+      postJson("/api/company/" + kind + "/draw", "{\"count\":10,\"ad\":true}")
+          .andExpect(status().isBadRequest());
+    }
+    postJson("/api/company/cat/draw", "{\"ad\":false}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.diamonds.amount").value(900))
+        .andExpect(jsonPath("$.adDraws.catLeft").value(0));
+    // 회사를 새로 만들어도 같은 세션의 광고 횟수는 그대로다.
+    jdbc.sql("DELETE FROM raising_company WHERE id = CAST(:id AS uuid)").param("id", id).update();
+    mvc.perform(post("/api/company").cookie(session))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.adDraws.catLeft").value(0));
+    postJson("/api/company/cat/draw", "{\"ad\":true}").andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void 동시에_광고_뽑기를_요청해도_세번만_지급한다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
+    try (var pool = java.util.concurrent.Executors.newFixedThreadPool(6)) {
+      var requests =
+          java.util.stream.IntStream.range(0, 6)
+              .<java.util.concurrent.Callable<Integer>>mapToObj(
+                  i ->
+                      () ->
+                          postJson("/api/company/cat/draw", "{\"ad\":true}")
+                              .andReturn()
+                              .getResponse()
+                              .getStatus())
+              .toList();
+      var results = pool.invokeAll(requests);
+      int success = 0;
+      for (var result : results) {
+        int status = result.get();
+        assertThat(status).isIn(200, 400);
+        if (status == 200) success++;
+      }
+      assertThat(success).isEqualTo(3);
+    }
+  }
+
+  @Test
   void 다이아로_무기를_뽑고_다_쓰면_400이다() throws Exception {
     DocumentContext opened =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
-    // 새 회사는 다이아 1,000으로 시작한다 (526번): 10연차 한 번이다.
+    // 새 회사는 다이아 1,000으로 시작한다.
     assertThat(opened.read("$.diamonds.amount", Long.class)).isEqualTo(1000);
     assertThat(opened.read("$.diamonds.draw", Long.class)).isEqualTo(100);
     assertThat(opened.read("$.diamonds.tenDraw", Long.class)).isEqualTo(1000);
@@ -198,7 +253,7 @@ class CompanyApiTest {
     // 한 번에 100.
     DocumentContext one = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
     assertThat(one.read("$.diamonds.amount", Long.class)).isEqualTo(900);
-    // 10연차는 1,000이 있어야 한다: 모자라면 하나도 뽑지 않는다(무기도 고양이도).
+    // 연속 뽑기는 잔액과 관계없이 거절한다.
     postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isBadRequest());
     postJson("/api/company/cat/draw", "{\"count\":10}").andExpect(status().isBadRequest());
     jdbc.sql(
@@ -206,17 +261,16 @@ class CompanyApiTest {
                 + " WHERE id = CAST(:id AS uuid)")
         .param("id", opened.read("$.companyId", String.class))
         .update();
-    DocumentContext drawn =
-        json(postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isOk()));
+    postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isBadRequest());
+    DocumentContext drawn = one;
+    for (int i = 0; i < 10; i++) {
+      drawn = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
+    }
     assertThat(drawn.read("$.diamonds.amount", Long.class)).isZero();
-    List<Object> ten = drawn.read("$.armory.lastDraws[*]");
-    assertThat(ten).as("10연차는 열한 개").hasSize(11);
-    assertThat(drawn.read("$.armory.lastDraw.grade", String.class))
-        .isIn("F", "E", "D", "C", "B", "A", "S");
+    List<Object> last = drawn.read("$.armory.lastDraws[*]");
+    assertThat(last).hasSize(1);
     List<Integer> counts = drawn.read("$.weapons[*].count");
-    assertThat(counts.stream().mapToInt(Integer::intValue).sum())
-        .as("처음 권총 하나 + 뽑은 수")
-        .isEqualTo(1 + 1 + 11);
+    assertThat(counts.stream().mapToInt(Integer::intValue).sum()).isEqualTo(12);
     postJson("/api/company/weapon/draw", "").andExpect(status().isBadRequest());
     // 모자란 합성: 뽑기 운에 따라 같은 무기 둘이 나올 수 있으니(그러면 합성이 된다) 하나도 없는 종류·등급을 고른다.
     List<java.util.Map<String, Object>> weapons = drawn.read("$.weapons[*]");

@@ -54,15 +54,12 @@ interface RaisingState {
     kind: 'damage' | 'fire' | 'hp' | 'buy',
     levels?: number,
   ) => Promise<Company | null>
-  /**
-   * 다이아로 무기를 뽑는다 (decisions.md 366·526번). count가 없으면 하나(결과는 company.armory.lastDraw), 10이면 10연차로
-   * diamonds.tenCount개가 company.armory.lastDraws에 담긴다 (517번).
-   */
-  drawWeapon: (count?: number) => Promise<void>
+  /** 무기 하나를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. */
+  drawWeapon: (ad?: boolean) => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
-  /** 다이아로 고양이를 뽑는다 (decisions.md 488·526번). count가 10이면 10연차다. 받은 회사(실패면 null)를 돌려준다. */
-  drawCat: (count?: number) => Promise<Company | null>
+  /** 고양이 하나를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. */
+  drawCat: (ad?: boolean) => Promise<Company | null>
   /** 액티브 스킬을 쓴다 (decisions.md 503번). 서버가 받아 줬으면 true. 전투를 멈추지 않게 busy를 켜지 않는다. */
   /** ad: 광고를 끝까지 본 뒤에 쓴다 (588번). 광고 스킬은 ad가 참이어야 서버가 받아 준다. */
   useActive: (code: ActiveCode, ad?: boolean) => Promise<boolean>
@@ -240,7 +237,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       return res?.data ?? null
     },
 
-    drawWeapon: (count = 1) => change(api.POST('/api/company/weapon/draw', { body: { count } })),
+    drawWeapon: (ad = false) =>
+      change(api.POST('/api/company/weapon/draw', { body: { count: 1, ad } })),
 
     mergeWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon/merge', { body: { kind, grade } })),
@@ -301,8 +299,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     },
     equipActive: (code, equipped) =>
       change(api.POST('/api/company/idle/active/equip', { body: { code, equipped } })),
-    drawCat: async (count = 1) => {
-      const res = await safely(api.POST('/api/company/cat/draw', { body: { count } }))
+    drawCat: async (ad = false) => {
+      const res = await safely(api.POST('/api/company/cat/draw', { body: { count: 1, ad } }))
       set({ company: res?.data ?? get().company, error: reason(res?.error) })
       return res?.data ?? null
     },
