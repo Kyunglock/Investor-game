@@ -1,0 +1,147 @@
+.boss-reward {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+.boss-reward-summary {
+  position: absolute;
+  top: 27%;
+  left: 50%;
+  width: min(310px, calc(100% - 32px));
+  text-align: center;
+  transform: translateX(-50%);
+  color: #fff8d9;
+  filter: drop-shadow(0 3px 0 #79401b) drop-shadow(0 5px 12px #68350b66);
+  animation: boss-reward-reveal 2.6s both;
+}
+.boss-reward-caption {
+  display: block;
+  color: #ffdd69;
+  font:
+    900 12px "Noto Sans KR",
+    sans-serif;
+  letter-spacing: 0.18em;
+}
+.boss-reward-summary > strong {
+  display: block;
+  margin: 3px 0 16px;
+  font-size: clamp(23px, 7vw, 30px);
+  -webkit-text-stroke: 1px #855024;
+}
+.boss-reward-prizes {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.boss-reward-prize {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 2px solid #ffe7a2;
+  border-radius: 17px;
+  background: linear-gradient(#fff7db, #ffe6a0);
+  box-shadow:
+    inset 0 2px 0 #fff,
+    0 3px 0 #ad702e;
+  color: #75451b;
+  text-align: left;
+}
+.boss-reward-prize.is-diamond {
+  border-color: #bff5ff;
+  background: linear-gradient(#f0fdff, #c4efff);
+  box-shadow:
+    inset 0 2px 0 #fff,
+    0 3px 0 #398bb4;
+  color: #22628e;
+}
+.boss-reward-prize small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.8;
+}
+.boss-reward-prize b {
+  display: block;
+  font-size: 18px;
+  white-space: nowrap;
+}
+.boss-reward-symbol {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+}
+.boss-reward-coin {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #fff0a0;
+  background: radial-gradient(circle at 30% 25%, #fffac7, #ffdb46 45%, #ed9e19);
+  box-shadow:
+    inset 0 0 0 2px #d79120,
+    0 3px 0 #ba7213;
+  color: #aa6014;
+  font:
+    900 20px "Noto Sans KR",
+    sans-serif;
+  text-shadow: 0 1px #fff2aa;
+}
+.boss-reward .idle-icon {
+  width: 100%;
+  height: 100%;
+  color: #0b9dde;
+  fill: #78e5ff;
+  stroke-width: 1.4px;
+  filter: drop-shadow(0 2px 0 #2264b4) drop-shadow(0 0 4px #c0f9ff);
+}
+.boss-reward-particle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  opacity: 0;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 2px 3px #6d3b2540);
+}
+.boss-reward-particle .boss-reward-coin {
+  font-size: 14px;
+}
+@keyframes boss-reward-reveal {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.65);
+  }
+  10% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+  17%,
+  45% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  65%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px) scale(0.96);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-reward-summary {
+    animation: none;
+    transform: translateX(-50%);
+  }
+  .boss-reward-particle {
+    display: none;
+  }
+}
+
+[data-reward-target="diamond"] {
+  display: inline-flex;
+}
