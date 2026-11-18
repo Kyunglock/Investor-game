@@ -33,7 +33,7 @@ export function CatReveal({
   /** 다이아가 한 번 더 뽑을 만큼 남았다 */
   canAgain: boolean
   onClose: () => void
-  repeat: RepeatDraw
+  repeat?: RepeatDraw
   useAction?: ReactNode
   onAgain: () => void
 }) {
@@ -189,14 +189,16 @@ export function CatReveal({
                 )}
               </p>
               {useAction}
-              <DrawAgain
-                kind="cat"
-                price={price}
-                canAgain={canAgain}
-                onAgain={onAgain}
-                onClose={onClose}
-                repeat={repeat}
-              />
+              {repeat && (
+                <DrawAgain
+                  kind="cat"
+                  price={price}
+                  canAgain={canAgain}
+                  onAgain={onAgain}
+                  onClose={onClose}
+                  repeat={repeat}
+                />
+              )}
             </section>
           )
         )}

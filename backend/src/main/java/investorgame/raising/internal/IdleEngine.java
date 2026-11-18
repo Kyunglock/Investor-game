@@ -816,16 +816,20 @@ class IdleEngine {
       c.skillGuideSeen = true;
       return;
     }
-    if ("skip".equals(action) || "claim".equals(action)) {
-      tutorialCat(c);
-      tutorialWeapon(c);
-      c.tutorialStep = 8;
+    if ("start".equals(action)) {
+      if (c.tutorialStep == null || c.tutorialStep >= 8) {
+        if (!c.tutorialCatClaimed || !c.tutorialWeaponClaimed) c.tutorialStep = -1;
+      }
       return;
     }
-    if (!"next".equals(action)) throw new InvalidRequestException("없는 안내 동작이에요");
+    if (!List.of("next", "draw-cat", "draw-weapon").contains(action)) {
+      throw new InvalidRequestException("없는 안내 동작이에요");
+    }
     int step = c.tutorialStep == null ? 8 : c.tutorialStep;
     if (expected < step) return;
     if (expected != step || step >= 8) throw new InvalidRequestException("안내 단계를 다시 확인해 주세요");
+    String required = step == 2 ? "draw-cat" : step == 4 ? "draw-weapon" : "next";
+    if (!required.equals(action)) throw new InvalidRequestException("안내된 뽑기를 먼저 완료해 주세요");
     boolean ready =
         switch (step) {
           case 0 -> Math.max(s.best, s.wall - 1) >= 1;
@@ -845,7 +849,8 @@ class IdleEngine {
 
   private void tutorialCat(CompanyState c) {
     if (c.tutorialCatClaimed) return;
-    state(c).cats.merge("night", 1, Integer::sum);
+    int level = state(c).cats.merge("night", 1, Integer::sum);
+    state(c).lastDraws = List.of(new CompanyState.Pulled("night", null, level, level == 1));
     c.tutorialCatClaimed = true;
   }
 
@@ -859,6 +864,9 @@ class IdleEngine {
             .orElse(null);
     if (owned == null) c.weapons.add(new CompanyState.Weapon("smg", "B"));
     else owned.count++;
+    c.lastWeaponDraw = new CompanyState.Weapon("smg", "B");
+    c.lastWeaponDrawNew = owned == null;
+    c.lastWeaponDraws = List.of(new CompanyState.Pulled("smg", "B", 0, owned == null));
     c.tutorialWeaponClaimed = true;
   }
 

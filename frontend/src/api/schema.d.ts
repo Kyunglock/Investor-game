@@ -1452,7 +1452,7 @@ export interface components {
             sandboxInfinite?: boolean;
             idle?: {
                 onboarding?: {
-                    /** @description 0~7 진행 중. 8은 완료 또는 기존 유저 */
+                    /** @description -1은 환영. 0~7 진행 중. 8은 완료 또는 기존 유저 */
                     step: number;
                     catClaimed: boolean;
                     weaponClaimed: boolean;
@@ -2104,7 +2104,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    action: "next" | "skip" | "claim" | "skills";
+                    action: "next" | "draw-cat" | "draw-weapon" | "start" | "skills";
                     step: number;
                 };
             };

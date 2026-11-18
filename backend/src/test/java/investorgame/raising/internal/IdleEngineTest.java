@@ -33,7 +33,9 @@ class IdleEngineTest {
   @Test
   void onboardingResumesAndOnlyGrantsEachGiftOnce() {
     CompanyState c = company.open(new HashSeededRandom(3), company.openingCapital());
-    assertThat(engine.view(c).onboarding().step()).isZero();
+    assertThat(engine.view(c).onboarding().step()).isEqualTo(-1);
+    engine.tutorial(c, "next", -1);
+    long diamonds = c.diamonds;
     assertThatThrownBy(() -> engine.tutorial(c, "next", 0))
         .isInstanceOf(InvalidRequestException.class);
     c.idle.wall = 2;
@@ -42,8 +44,8 @@ class IdleEngineTest {
         .isInstanceOf(InvalidRequestException.class);
     c.battleLevels.put("damage", 1);
     engine.tutorial(c, "next", 1);
-    engine.tutorial(c, "next", 2);
-    engine.tutorial(c, "next", 2); // lost response retry
+    engine.tutorial(c, "draw-cat", 2);
+    engine.tutorial(c, "draw-cat", 2); // lost response retry
     assertThat(c.idle.cats.get("night")).isEqualTo(1);
     assertThat(
             engine.view(c).cats().stream()
@@ -59,15 +61,16 @@ class IdleEngineTest {
         .isInstanceOf(InvalidRequestException.class);
     engine.fieldCat(resumed, "night", true);
     engine.tutorial(resumed, "next", 3);
-    engine.tutorial(resumed, "next", 4);
+    engine.tutorial(resumed, "draw-weapon", 4);
     assertThatThrownBy(() -> engine.tutorial(resumed, "next", 5))
         .isInstanceOf(InvalidRequestException.class);
     engine.equipCat(resumed, "night", "smg", "B");
     engine.tutorial(resumed, "next", 5);
     engine.tutorial(resumed, "next", 6);
     engine.tutorial(resumed, "next", 7);
-    engine.tutorial(resumed, "skip", 0);
-    engine.tutorial(resumed, "claim", 8);
+    engine.tutorial(resumed, "draw-cat", 2);
+    engine.tutorial(resumed, "draw-weapon", 4);
+    assertThat(resumed.diamonds).isEqualTo(diamonds);
     assertThat(resumed.idle.cats.get("night")).isEqualTo(1);
     assertThat(
             resumed.weapons.stream()
@@ -83,19 +86,28 @@ class IdleEngineTest {
   }
 
   @Test
-  void legacyPlayersAreNotForcedAndSkipStillGrantsTheGifts() {
+  void legacyPlayersOptInAndCannotSkipOrClaimWithoutDrawing() {
     assertThat(engine.view(state).onboarding().step()).isEqualTo(8);
-    engine.tutorial(state, "claim", 8);
-    engine.tutorial(state, "claim", 8);
+    engine.tutorial(state, "start", 8);
+    assertThat(engine.view(state).onboarding().step()).isEqualTo(-1);
+    for (String action : List.of("skip", "claim", "draw-cat", "draw-weapon")) {
+      assertThatThrownBy(() -> engine.tutorial(state, action, -1))
+          .isInstanceOf(InvalidRequestException.class);
+    }
+    state.tutorialStep = 2;
+    assertThatThrownBy(() -> engine.tutorial(state, "next", 2))
+        .isInstanceOf(InvalidRequestException.class);
+    engine.tutorial(state, "draw-cat", 2);
     assertThat(state.idle.cats.get("night")).isEqualTo(1);
-    assertThat(
-            state.weapons.stream().filter(w -> w.grade.equals("B")).findFirst().orElseThrow().count)
-        .isEqualTo(1);
-    CompanyState fresh = company.open(new HashSeededRandom(3), 100);
-    engine.tutorial(fresh, "skip", 0);
-    assertThat(engine.view(fresh).onboarding().step()).isEqualTo(8);
-    assertThat(fresh.idle.cats.get("night")).isEqualTo(1);
-    assertThat(fresh.tutorialWeaponClaimed).isTrue();
+    assertThat(state.idle.fielded).doesNotContain("night");
+    assertThat(state.idle.lastDraws.getFirst().kind).isEqualTo("night");
+    state.tutorialStep = 4;
+    assertThatThrownBy(() -> engine.tutorial(state, "next", 4))
+        .isInstanceOf(InvalidRequestException.class);
+    engine.tutorial(state, "draw-weapon", 4);
+    assertThat(state.lastWeaponDraw.kind).isEqualTo("smg");
+    assertThat(state.lastWeaponDraw.grade).isEqualTo("B");
+    assertThat(state.idle.catWeapons).doesNotContainKey("night");
   }
 
   @Test
@@ -122,7 +134,8 @@ class IdleEngineTest {
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(() -> engine.useActive(state, "boostFire", true))
         .isInstanceOf(InvalidRequestException.class);
-    engine.tutorial(state, "claim", 8);
+    state.tutorialStep = 2;
+    engine.tutorial(state, "draw-cat", 2);
     engine.fieldCat(state, "night", true);
     assertThat(
             engine.view(state).skills().stream()
