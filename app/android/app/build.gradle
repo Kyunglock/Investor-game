@@ -10,10 +10,10 @@ if (!(admobAppId ==~ /ca-app-pub-\d+~\d+/)) {
 }
 
 android {
-    namespace = "com.kyunglock.investorgame"
+    namespace = "com.kwaklabs.maedobyeok"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId testApp ? "com.kyunglock.investorgame.test" : "com.kyunglock.investorgame"
+        applicationId testApp ? "com.kwaklabs.maedobyeok.test" : "com.kwaklabs.maedobyeok"
         // 테스트판은 이름과 아이콘(보라 바탕에 TEST 띠)이 달라 홈 화면에서 본 앱과 구분된다.
         manifestPlaceholders = [
             appLabel    : testApp ? "[테스트] 매도벽 돌파냥" : "@string/app_name",
