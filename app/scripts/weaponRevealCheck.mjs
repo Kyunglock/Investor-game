@@ -103,7 +103,7 @@ try {
       await expect(page.getByTestId('weapon-drawn')).toContainText('합성 재료 +1')
       await page.waitForTimeout(2400)
       await expect(page.getByTestId('weapon-drawn')).toBeVisible()
-      await expect(page.getByTestId('weapon-reveal-again')).toHaveCount(0)
+      await expect(page.getByTestId('weapon-reveal-again')).toBeDisabled()
       await page.keyboard.press('Escape')
       await expect(page.getByTestId('weapon-reveal')).toHaveCount(0)
       await expect(page.getByTestId('idle-menu')).toBeVisible()

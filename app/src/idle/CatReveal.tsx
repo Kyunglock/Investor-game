@@ -1,11 +1,11 @@
 import type { Company } from '@web/api/client'
-import { DiamondPrice } from '@web/features/raising/DiamondIcon'
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { CatPortrait, catTrait } from './CatPortrait'
 import { catRevealPlan, shinyCat } from './catGrade'
+import { DrawAgain, type RepeatDraw } from './DrawAgain'
 import { SkillBadge } from './SkillBadge'
 import { skillNames } from './skills'
 import '../mental/weapon-reveal.css'
@@ -24,6 +24,7 @@ export function CatReveal({
   onClose,
   onAgain,
   useAction,
+  repeat,
 }: {
   result: CatDraw | null
   /** 한 번 더 뽑는 다이아 값 (526번) */
@@ -31,6 +32,7 @@ export function CatReveal({
   /** 다이아가 한 번 더 뽑을 만큼 남았다 */
   canAgain: boolean
   onClose: () => void
+  repeat: RepeatDraw
   useAction?: ReactNode
   onAgain: () => void
 }) {
@@ -182,19 +184,14 @@ export function CatReveal({
                 )}
               </p>
               {useAction}
-              <div className="weapon-reveal-actions">
-                <button type="button" onClick={onClose} data-testid="cat-reveal-close">
-                  닫기
-                </button>
-                {canAgain && (
-                  <button type="button" onClick={onAgain} data-testid="cat-reveal-again">
-                    한 번 더 뽑기{' '}
-                    <small>
-                      <DiamondPrice amount={price} />
-                    </small>
-                  </button>
-                )}
-              </div>
+              <DrawAgain
+                kind="cat"
+                price={price}
+                canAgain={canAgain}
+                onAgain={onAgain}
+                onClose={onClose}
+                repeat={repeat}
+              />
             </section>
           )
         )}

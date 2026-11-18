@@ -736,3 +736,21 @@
   font-style: normal;
   pointer-events: none;
 }
+
+/* 무료 반복을 먼저, 다이아 지출은 명시적으로 구분한다 (#924). */
+.weapon-reveal-actions.draw-repeat-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.draw-repeat-actions .draw-repeat-ad {
+  grid-column: 1 / -1;
+  background: #a7ee71;
+  color: #193512;
+}
+.weapon-reveal-actions.draw-repeat-actions button:last-child {
+  background: #ffffff12;
+  color: #fff5dc;
+}
+.draw-repeat-actions button:disabled {
+  opacity: 0.5;
+}
