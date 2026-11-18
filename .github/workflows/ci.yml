@@ -134,6 +134,7 @@ jobs:
           APP_URL=http://localhost:5182/app/ node ../app/scripts/dashCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/battleTextCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/sandboxLayoutCheck.mjs
+          APP_URL=http://localhost:5182/app/ node ../app/scripts/drawInfoCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/labelCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/gearMergeCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/adDrawCheck.mjs
