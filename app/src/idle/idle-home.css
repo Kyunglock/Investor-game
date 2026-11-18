@@ -1861,6 +1861,64 @@
     sans-serif;
   color: #8f7448;
 }
+/* 합칠 수 있는 무기 (#918): 나눈 두 칸을 한 상자로 붙여 그린다. 한 칸을 집어 옆 칸에 놓으면 합쳐진다. 수는 상자에 한 번만 적는다. */
+.idle-gear-pair {
+  position: relative;
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #e0a94a;
+  border-radius: 9px;
+  background: #fffaf0;
+}
+.idle-gear-pair .idle-gear-cell {
+  justify-content: center;
+  min-height: 68px;
+  padding: 13px 1px 14px;
+  border-color: transparent;
+  background: transparent;
+}
+.idle-gear-pair .idle-gear-cell + .idle-gear-cell .idle-gear-grade {
+  display: none;
+}
+.idle-gear-pair::before {
+  content: "+";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -58%);
+  font:
+    800 14px / 1 "Noto Sans KR",
+    sans-serif;
+  color: #c98a1e;
+  pointer-events: none;
+}
+.idle-gear-pair-tag {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font:
+    800 8.5px / 13px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+  color: #b06a00;
+  pointer-events: none;
+}
+.idle-gear-pair-note {
+  position: absolute;
+  right: 2px;
+  bottom: 3px;
+  left: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  font:
+    700 8.5px / 1.25 "Noto Sans KR",
+    sans-serif;
+  color: #8a5a20;
+  pointer-events: none;
+}
 .idle-gear-held {
   display: block;
   font-weight: 800;

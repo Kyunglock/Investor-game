@@ -6,6 +6,7 @@ import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import {
   BOSS_NAME,
+  freeCopies,
   type GearCell,
   GRADE_BADGE,
   gearCells,
@@ -148,6 +149,64 @@ export function CatGear({
       ? `눌러 비교 · 집어서 끌어 고양이에 장착 · 같은 무기에 합성 (${need}개)`
       : '눌러 비교 · 집어서 끌어 고양이에게 장착'
   const merges = mergeable(company)
+  const gearCell = (cell: GearCell) => {
+    const w = cell.weapon
+    const held = mine(cell)
+    const taken = cell.holder !== null && !held
+    const target = drag ? accepts(drag.item, cell) : false
+    const state = drag
+      ? drag.item.key === cell.key
+        ? 'is-source'
+        : target
+          ? drag.over === `gear:${cell.key}`
+            ? 'is-target is-over'
+            : 'is-target'
+          : 'is-off'
+      : ''
+    return (
+      <button
+        type="button"
+        className={`idle-gear-cell ${state}`}
+        data-testid="cat-weapon"
+        data-gear-cell={cell.key}
+        data-loadout-target={`gear:${cell.key}`}
+        data-kind={w.kind}
+        data-grade={w.grade}
+        data-holder={cell.holder ? (cell.holder.code ?? 'boss') : undefined}
+        data-target={target || undefined}
+        aria-pressed={held}
+        aria-label={
+          cell.holder
+            ? `${w.name} ${w.gradeName} · ${cell.holder.name} 장착 중`
+            : cell.pair
+              ? `${w.name} ${w.gradeName} · 모두 ${freeCopies(company, w)}개 · 눌러서 비교 · 옆 칸에 끌어 놓으면 합성`
+              : `${w.name} ${w.gradeName} ${cell.stack}개 · 눌러서 비교`
+        }
+        disabled={taken || (busy && !held)}
+        onClick={(event) => {
+          if (consumeClick(event.detail)) return
+          if (!held) setPicked(w)
+        }}
+        onPointerDown={cell.holder || busy ? undefined : down(cell)}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <GunSprite kind={w.kind} grade={w.grade} width={40} className="idle-gear-art" />
+        <i className={`idle-grade idle-gear-grade ${GRADE_BADGE[w.grade]}`}>{w.gradeName}</i>
+        {!cell.pair && cell.stack > 1 && <em className="idle-gear-count">×{cell.stack}</em>}
+        {cell.holder && (
+          <span className="idle-gear-holder">
+            <Portrait code={cell.holder.code ?? undefined} />
+          </span>
+        )}
+        {!cell.pair && (
+          <small className="idle-gear-name">
+            {cell.holder && <b className="idle-gear-held">장착 중</b>}
+            {cell.holder ? cell.holder.name : w.name}
+          </small>
+        )}
+      </button>
+    )
+  }
   return (
     <div
       className="idle-gear"
@@ -161,64 +220,21 @@ export function CatGear({
         className={`idle-gear-grid ${drag ? 'is-dragging' : ''}`}
         aria-label={`${wearer?.name ?? BOSS_NAME} 장비`}
       >
-        {cells.map((cell) => {
-          const w = cell.weapon
-          const held = mine(cell)
-          const taken = cell.holder !== null && !held
-          const target = drag ? accepts(drag.item, cell) : false
-          const state = drag
-            ? drag.item.key === cell.key
-              ? 'is-source'
-              : target
-                ? drag.over === `gear:${cell.key}`
-                  ? 'is-target is-over'
-                  : 'is-target'
-                : 'is-off'
-            : ''
-          return (
-            <li key={cell.key}>
-              <button
-                type="button"
-                className={`idle-gear-cell ${state}`}
-                data-testid="cat-weapon"
-                data-gear-cell={cell.key}
-                data-loadout-target={`gear:${cell.key}`}
-                data-kind={w.kind}
-                data-grade={w.grade}
-                data-holder={cell.holder ? (cell.holder.code ?? 'boss') : undefined}
-                data-target={target || undefined}
-                aria-pressed={held}
-                aria-label={
-                  cell.holder
-                    ? `${w.name} ${w.gradeName} · ${cell.holder.name} 장착 중`
-                    : `${w.name} ${w.gradeName} ${cell.stack}개 · 눌러서 비교`
-                }
-                disabled={taken || (busy && !held)}
-                onClick={(event) => {
-                  if (consumeClick(event.detail)) return
-                  if (!held) setPicked(w)
-                }}
-                onPointerDown={cell.holder || busy ? undefined : down(cell)}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                <GunSprite kind={w.kind} grade={w.grade} width={40} className="idle-gear-art" />
-                <i className={`idle-grade idle-gear-grade ${GRADE_BADGE[w.grade]}`}>
-                  {w.gradeName}
-                </i>
-                {cell.stack > 1 && <em className="idle-gear-count">×{cell.stack}</em>}
-                {cell.holder && (
-                  <span className="idle-gear-holder">
-                    <Portrait code={cell.holder.code ?? undefined} />
-                  </span>
-                )}
-                <small className="idle-gear-name">
-                  {cell.holder && <b className="idle-gear-held">장착 중</b>}
-                  {cell.holder ? cell.holder.name : w.name}
-                </small>
-              </button>
+        {cells.map((cell, i) =>
+          cell.pair === 'last' ? null : cell.pair === 'first' ? (
+            // 합칠 수 있는 무기 (#918): 두 칸을 한 상자로 붙이고 모두 몇 자루인지 한 번만 적는다.
+            <li key={cell.key} className="idle-gear-pair" data-testid="gear-pair">
+              {gearCell(cell)}
+              {gearCell(cells[i + 1])}
+              <em className="idle-gear-pair-tag">합성 가능</em>
+              <small className="idle-gear-pair-note" data-testid="gear-pair-count">
+                {cell.weapon.name} ×{freeCopies(company, cell.weapon)}
+              </small>
             </li>
-          )
-        })}
+          ) : (
+            <li key={cell.key}>{gearCell(cell)}</li>
+          ),
+        )}
       </ul>
       {picked && (
         <div className="loadout-compare" data-testid="gear-compare">
