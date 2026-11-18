@@ -39,8 +39,9 @@ export function useLoadoutDrag<T>(
       setDrag(null)
     }
     const targetAt = (item: T, x: number, y: number) => {
-      const target = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-loadout-target]')
-        ?.dataset.loadoutTarget
+      const element = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-loadout-target]')
+      if (document.body.dataset.tutorialDragLock && !element?.dataset.tutorialDrop) return null
+      const target = element?.dataset.loadoutTarget
       return target && latest.current.accepts(item, target) ? target : null
     }
     const move = (e: PointerEvent) => {
@@ -52,6 +53,7 @@ export function useLoadoutDrag<T>(
         if (
           e.pointerType !== 'mouse' &&
           !latest.current.options.anyDirection &&
+          !document.body.dataset.tutorialDragLock &&
           Math.abs(e.clientX - p.x) <= Math.abs(e.clientY - p.y)
         )
           return cancel()

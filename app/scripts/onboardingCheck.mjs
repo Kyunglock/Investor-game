@@ -147,11 +147,11 @@ try {
           type: 'touchStart',
           touchPoints: [{ x: f.x + f.width / 2, y: f.y + f.height / 2 }],
         })
-        await expect(page.locator('.idle-gear-ghost')).toBeVisible()
         await cdp.send('Input.dispatchTouchEvent', {
           type: 'touchMove',
           touchPoints: [{ x: t.x + t.width / 2, y: t.y + t.height / 2 }],
         })
+        await expect(page.locator('.idle-gear-ghost')).toBeVisible()
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
         await cdp.detach()
       } else {
@@ -178,6 +178,25 @@ try {
     await expect(guide).toHaveAttribute('data-step', '1')
     const nav = (name) => page.locator(`[data-tutorial-menu="${name}"]`).last()
     const target = page.getByTestId('tutorial-focus')
+    const locked = async (step) => {
+      await expect(page.locator('body')).toHaveAttribute('data-tutorial-drag-lock', 'true')
+      const sheet = page.getByTestId('idle-menu')
+      const before = await sheet.evaluate((el) => el.scrollTop)
+      await nav('growth').click()
+      const settings = await page.getByTestId('idle-options').boundingBox()
+      await page.mouse.click(settings.x + settings.width / 2, settings.y + settings.height / 2)
+      await expect(page.locator('.idle-options-panel')).toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await expect(guide).toHaveAttribute('data-step', String(step))
+      await expect(sheet).toBeVisible()
+      await page.mouse.move(width / 2, 400)
+      await page.mouse.wheel(0, 500)
+      await page.waitForTimeout(150)
+      assert.equal(await sheet.evaluate((el) => el.scrollTop), before)
+      await page.keyboard.press('PageDown')
+      await page.keyboard.press('Tab')
+      assert.equal(await sheet.evaluate((el) => el.scrollTop), before)
+    }
     await expect(target).toHaveAttribute('data-target', '[data-tutorial-menu="growth"]')
     await nav('growth').click()
     await expect(target).toHaveAttribute(
@@ -210,6 +229,7 @@ try {
       '[data-loadout-target^="slot:empty"]',
     )
     await expect(page.locator('.tutorial-shade mask rect[fill=black]')).toHaveCount(2)
+    await locked(3)
     await page.screenshot({ path: `/tmp/tutorial-drag-cat-${width}.png` })
     await drag(
       page.locator('[data-testid=cat][data-code=night]'),
@@ -238,12 +258,14 @@ try {
       'data-target',
       '[data-testid="gun-slot"][data-code="night"]',
     )
+    await locked(5)
     await page.screenshot({ path: `/tmp/tutorial-drag-weapon-${width}.png` })
     await drag(
       page.locator('[data-testid=cat-weapon][data-grade=B]:not([data-holder])'),
       page.locator('[data-testid=gun-slot][data-code=night]'),
     )
     await expect(guide).toHaveAttribute('data-step', '6')
+    await expect(page.locator('body')).not.toHaveAttribute('data-tutorial-drag-lock', 'true')
     await guide.getByRole('button', { name: '메테오 확인했어요' }).click()
     await guide.getByRole('button', { name: '안내 마치기' }).click()
     await expect(guide).toHaveCount(0)

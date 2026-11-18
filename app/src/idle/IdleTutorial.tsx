@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { tutorialReady } from './onboarding'
 import { tutorialTargets, useTutorialFocus } from './tutorialFocus'
+import { useTutorialDragGuard } from './useTutorialDragGuard'
 import './onboarding-guide.css'
 
 /** 기존 버튼에 스포트라이트를 비추는 코치마크. 실제 행동이 완료되면 서버에 다음 단계를 저장한다. */
@@ -35,6 +36,7 @@ export function IdleTutorial({
   const skillGuide = step >= 8 && !!progress?.skillsUnlocked && !progress.skillGuideSeen
   const active = !!progress && (step < 8 || skillGuide)
   const focus = useTutorialFocus(tutorialTargets(step, menu, skillUse), active)
+  useTutorialDragGuard(focus?.drop ? focus.target : undefined, focus?.drop?.target)
   const ready = tutorialReady(company, step)
   const advance = () => useRaisingStore.getState().tutorial('next', progress?.step ?? 8)
   useEffect(() => {

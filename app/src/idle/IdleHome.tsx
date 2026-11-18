@@ -150,6 +150,7 @@ export function IdleHome({
     if (menu === 'battle' || menu === 'company') return
     const previous = useAppUi.getState().modalBack
     useAppUi.getState().setModalBack(() => {
+      if (document.body.dataset.tutorialDragLock) return
       if (useAppUi.getState().sheet?.kind === 'weapons') useAppUi.getState().closeSheet()
       setMenu('battle')
     })
