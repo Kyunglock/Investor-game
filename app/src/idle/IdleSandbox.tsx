@@ -33,11 +33,12 @@ const WEAPON_GRADES: WeaponGrade[] = [
 ]
 
 /**
- * 테스트판의 입구 (decisions.md 499번): 주소에 `?test=1`이 붙어 있을 때만 열린다. 테스트판 APK가 그 주소를 띄우고, 브라우저에서도 그 주소로 들어갈
- * 수 있다. 보통 앱과 웹에는 입구가 보이지 않는다. 화면이 뜰 때 한 번 읽는다.
+ * 테스트판의 입구 (decisions.md 499·624번): 테스트판으로 만든 화면(`VITE_APP_TEST=1`, 화면을 담은 테스트판 APK)이거나 주소에
+ * `?test=1`이 붙어 있을 때만 열린다(브라우저, 주소를 띄우는 APK). 보통 앱과 웹에는 입구가 보이지 않는다. 화면이 뜰 때 한 번 읽는다.
  */
 export const SANDBOX_ENTRY =
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('test') === '1'
+  import.meta.env.VITE_APP_TEST === '1' ||
+  (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('test') === '1')
 
 /**
  * 테스트판 (decisions.md 499번). 입구(SANDBOX_ENTRY)가 열려 있으면 코드 창이 뜨고, 닫아도 머리띠 아래의 "테스트판" 단추로 다시 연다. 테스트판
