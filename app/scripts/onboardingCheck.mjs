@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
+import { checkRevealViewport } from './revealViewportCheck.mjs'
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -221,6 +222,7 @@ try {
     await expect(page.getByTestId('cat-reveal')).toBeVisible()
     await expect(guide).toBeHidden()
     await expect(page.getByTestId('cat-drawn')).toContainText('밤냥')
+    await checkRevealViewport(page, 'cat', true)
     await page.getByRole('button', { name: '밤냥 출전시키러 가기' }).click()
     await expect(guide).toHaveAttribute('data-step', '3')
     await expect(target).toHaveAttribute('data-target', '[data-testid="cat"][data-code="night"]')
@@ -244,6 +246,7 @@ try {
     await expect(page.getByTestId('weapon-reveal')).toBeVisible()
     await expect(guide).toBeHidden()
     await expect(page.getByTestId('weapon-drawn')).toContainText('기관단총')
+    await checkRevealViewport(page, 'weapon', true)
     await page.getByRole('button', { name: '밤냥에게 무기 끌어놓기' }).click()
     await expect(guide).toHaveAttribute('data-step', '5')
     await refresh()

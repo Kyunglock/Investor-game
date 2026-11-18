@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdirSync } from 'node:fs'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
+import { checkRevealViewport } from './revealViewportCheck.mjs'
 
 mkdirSync('/tmp/weapon-shots', { recursive: true })
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined })
@@ -51,12 +52,18 @@ try {
         },
       }
       let calls = 0
+      let releaseReject
       let reject = true
       await page.route(/\/api\/(company|sessions)(\/|$|\?)/, async (route) => {
         if (route.request().url().endsWith('/weapon/draw')) {
           calls++
           await new Promise((resolve) => setTimeout(resolve, 200))
-          if (reject) return route.fulfill({ status: 400, json: { message: '뽑기 실패 테스트' } })
+          if (reject) {
+            await new Promise((resolve) => {
+              releaseReject = resolve
+            })
+            return route.fulfill({ status: 400, json: { message: '뽑기 실패 테스트' } })
+          }
           company = {
             ...company,
             diamonds: {
@@ -84,6 +91,8 @@ try {
       await page.getByTestId('weapon-draw').click()
       await expect(page.getByTestId('weapon-reveal')).toBeVisible()
       await expect(page.getByTestId('weapon-reveal')).not.toHaveAttribute('data-grade', /.+/)
+      await expect.poll(() => Boolean(releaseReject)).toBe(true)
+      releaseReject()
       await expect(page.getByTestId('weapon-reveal')).toHaveCount(0)
       await expect(page.getByTestId('weapon-draw')).toBeEnabled()
       reject = false
@@ -93,6 +102,7 @@ try {
       await expect(page.getByTestId('weapon-drawn')).toBeVisible()
       await expect(page.getByTestId('weapon-drawn')).toContainText('NEW!')
       await expect(page.getByTestId('weapon-drawn')).toContainText('공격력 ×4')
+      await checkRevealViewport(page, 'weapon')
       await page.waitForTimeout(450)
       await page.screenshot({ path: `/tmp/weapon-shots/${width}-${grade}-result.png` })
       const bounds = await page.getByTestId('weapon-reveal-again').boundingBox()
