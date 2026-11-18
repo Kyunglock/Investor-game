@@ -120,6 +120,7 @@ import {
   DamagePool,
   damageLabel,
   scatterOffset,
+  wallNumberSpot,
 } from './damageNumbers'
 import {
   crossOrders,
@@ -137,7 +138,7 @@ import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres
 import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
 import { BULLET_W, bulletHitbox } from './hitbox'
 import { idlePierceHits, idlePierceReach } from './idlePierce'
-import { IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
+import { IDLE_WALL_TOP, IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
   densest,
   type EarthStats,
@@ -1620,10 +1621,11 @@ class BattleScene extends Phaser.Scene {
     e.hp = hp
     e.maxHp = hp
     ;(e.body as Phaser.Physics.Arcade.Body).setImmovable(true)
+    // 자동 전투의 남은 물량은 뒤 벽의 글자처럼 피해 숫자(깊이 8)보다 위에 둔다 (#914).
     const label = this.add
       .text(0, 0, '', { ...WALL_LABEL_STYLE })
       .setOrigin(0.5)
-      .setDepth(2.6)
+      .setDepth(this.opts.idle ? 8.5 : 2.6)
     const shares = cellShares(hp, hp)
     label.setText(this.cellLabel(shares))
     e.cell = { wall, row, col, label, shares, crack: 0, weak }
@@ -1763,7 +1765,9 @@ class BattleScene extends Phaser.Scene {
     this.chips?.explode(this.fx(28), e.x, e.y)
     this.ring(e.x, e.y, 0xffdf9e, Math.min(150, e.displayWidth * 0.6), 300)
     this.glow(e.x, e.y, 0xffefc4, 65, 160, 0.65)
-    this.fill(e.x, e.y, cellShares(e.maxHp, e.maxHp), '#bfe0ff')
+    // 자동 전투에서는 벽 아래에 띄운다: 벽 자리에는 곧 다음 벽의 남은 물량이 선다 (#914).
+    const fillY = this.opts.idle ? e.y + this.layerHeight() / 2 + 36 : e.y
+    this.fill(e.x, fillY, cellShares(e.maxHp, e.maxHp), '#bfe0ff')
     // 적 풀은 돌려 쓰니 부서진 칸은 벽에서 바로 뺀다(같은 객체가 물량으로 다시 나올 수 있다).
     c.wall.cells = c.wall.cells.filter((o) => o !== e)
     c.wall.left = c.wall.cells.length
@@ -1818,9 +1822,17 @@ class BattleScene extends Phaser.Scene {
     // 벽 하나를 통째로 무너뜨리면 경험치를 한 번에 더 준다 (#700).
     const moved = this.idleMoved
     this.idleMoved = false
+    // 자동 전투는 벽 위가 남은 물량과 피해 숫자로 차 있다: 격파 알림은 비어 있는 전장 가운데에 띄운다 (#914).
+    const noteY = this.opts.idle ? (this.stopY() + this.buyWallY()) / 2 : wall.y - 36
     if (!moved) {
       const breakXp = wallBreakXp(xpToNext(this.level))
-      this.pop(this.view().w / 2, wall.y - 72, `EXP +${breakXp}`, '#7be0c3', 22)
+      this.pop(
+        this.view().w / 2,
+        noteY + (this.opts.idle ? 34 : -36),
+        `EXP +${breakXp}`,
+        '#7be0c3',
+        22,
+      )
       this.gainXp(breakXp)
     }
     this.sinceBreak = 0
@@ -1836,7 +1848,7 @@ class BattleScene extends Phaser.Scene {
     const centerX = this.view().w / 2
     this.ring(centerX, burstY, 0xffe5a3, lane.width * 0.75, 380)
     // 부순 것이 아니라 물러난 벽에는 격파를 적지 않는다 (546번).
-    if (!moved) this.pop(centerX, burstY - 24, '매도벽 격파!', '#ffe5a3', 28)
+    if (!moved) this.pop(centerX, noteY, '매도벽 격파!', '#ffe5a3', 28)
     for (let i = 0; i < 7; i++) {
       const x = lane.left + ((i + 0.5) * lane.width) / 7
       // 중앙부터 바깥으로 짧게 연쇄 폭발. 벽이 교체되어도 좌표는 고정한다.
@@ -3087,12 +3099,19 @@ class BattleScene extends Phaser.Scene {
    * 글자 크기는 하나로 두고 종류별 크기는 배율로만 바꿔, 글자나 색이 바뀔 때만 한 번 다시 그린다.
    */
   private damageNumber(e: Enemy, amount: number, kind: DamageKind) {
+    if (this.opts.idle && e.cell) {
+      this.damageNumberAt(e, e.x, e.y, amount, kind, e.hp <= 0, true)
+      return
+    }
     // 머리 위: 충돌 원 반지름(텍스처 px)에 지금 크기를 곱한다. 부푼 투기·큰 보스도 머리 위에 뜬다.
     const r = UNITS[e.kind].r * DPR * Math.abs(e.scaleY)
     this.damageNumberAt(e, e.x, e.y - r - 10, amount, kind, e.hp <= 0)
   }
 
-  /** 데미지 숫자를 owner(같은 것끼리 합친다)의 (ox, oy) 자리에 띄운다. 적이 아닌 것(자동 전투의 뒤 벽, 520번)도 쓴다. */
+  /**
+   * 데미지 숫자를 owner(같은 것끼리 합친다)의 (ox, oy) 자리에 띄운다. 적이 아닌 것(자동 전투의 뒤 벽, 520번)도 쓴다. onWall이면 (ox, oy)는
+   * 자동 전투의 매도벽 가운데이고, 숫자는 남은 물량 글자의 양옆으로 비켜 뜬다 (#914).
+   */
   private damageNumberAt(
     owner: object,
     ox: number,
@@ -3100,6 +3119,7 @@ class BattleScene extends Phaser.Scene {
     amount: number,
     kind: DamageKind,
     killing = false,
+    onWall = false,
   ) {
     if (amount <= 0) return
     const style = DAMAGE_STYLE[kind]
@@ -3126,9 +3146,13 @@ class BattleScene extends Phaser.Scene {
     stats.shown[kind]++
     this.tweens.killTweensOf(t)
     const { w } = this.view()
+    const lane = this.lane()
     const { dx, dy } = scatterOffset(n)
-    const x = Phaser.Math.Clamp(ox + dx, 16, w - 16)
-    const y = oy + dy
+    const spot = onWall
+      ? wallNumberSpot(n, lane.left, lane.width, oy, IDLE_WALL_TOP + style.rise + 14)
+      : { x: ox + dx, y: oy + dy }
+    const x = Phaser.Math.Clamp(spot.x, 16, w - 16)
+    const y = spot.y
     const big = kind === 'crit' ? 1.7 : 1.3
     t.setPosition(x, y)
       .setAlpha(1)
@@ -4714,9 +4738,11 @@ class BattleScene extends Phaser.Scene {
         this.damageNumberAt(
           this.pierceOwners[hit.behind - 1],
           layer.x,
-          layer.top - 4,
+          layer.y,
           hit.damage,
           crit ? 'crit' : 'bullet',
+          false,
+          true,
         )
       })
     }
