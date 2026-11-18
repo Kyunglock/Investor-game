@@ -2268,7 +2268,12 @@
   color: #553a27;
   font-size: 14px;
 }
+/* 생선 그림(svg)은 블록이라 그냥 두면 글자와 줄이 갈린다 (#920): 광고 단추처럼 한 줄로 늘어놓는다. */
 .idle-rebirth-button.idle-rebirth-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   border-color: #bfe9ff;
   background: linear-gradient(#58bdf5, #1f86d6);
   box-shadow: 0 3px 0 #135b99;
