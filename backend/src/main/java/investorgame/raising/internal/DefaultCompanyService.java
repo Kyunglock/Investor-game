@@ -601,6 +601,15 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView tutorial(UUID sessionId, String action, int step) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    idle.tutorial(row.state(), action, step);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView equipActive(UUID sessionId, String code, boolean equipped) {
     CompanyRepository.Row row = lockActive(sessionId);
     idle.equipActive(row.state(), code, equipped);

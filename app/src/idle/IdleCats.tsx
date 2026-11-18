@@ -369,6 +369,7 @@ export function IdleCats({
             type="button"
             className="idle-cat-gun"
             data-testid="cat-gun"
+            disabled={(company.idle?.onboarding?.step ?? 8) < 5}
             onClick={() => {
               sfx.tap()
               setGearOpen(!gearOpen)
@@ -383,7 +384,11 @@ export function IdleCats({
               </small>
             </span>
             <em className="idle-gun-open">
-              {gearOpen ? '고양이 목록 ▾' : '무기 변경 ▸'}
+              {(company.idle?.onboarding?.step ?? 8) < 5
+                ? '무기 안내 후 해금'
+                : gearOpen
+                  ? '고양이 목록 ▾'
+                  : '무기 변경 ▸'}
               {canMerge && (
                 <i className="idle-gun-dot" role="img" aria-label="합칠 수 있는 무기 있음" />
               )}

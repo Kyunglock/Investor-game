@@ -30,6 +30,117 @@ class IdleEngineTest {
   private final CompanyState state = new CompanyState();
   private long sequence;
 
+  @Test
+  void onboardingResumesAndOnlyGrantsEachGiftOnce() {
+    CompanyState c = company.open(new HashSeededRandom(3), company.openingCapital());
+    assertThat(engine.view(c).onboarding().step()).isZero();
+    assertThatThrownBy(() -> engine.tutorial(c, "next", 0))
+        .isInstanceOf(InvalidRequestException.class);
+    c.idle.wall = 2;
+    engine.tutorial(c, "next", 0);
+    assertThatThrownBy(() -> engine.tutorial(c, "next", 1))
+        .isInstanceOf(InvalidRequestException.class);
+    c.battleLevels.put("damage", 1);
+    engine.tutorial(c, "next", 1);
+    engine.tutorial(c, "next", 2);
+    engine.tutorial(c, "next", 2); // lost response retry
+    assertThat(c.idle.cats.get("night")).isEqualTo(1);
+    assertThat(
+            engine.view(c).cats().stream()
+                .filter(cat -> cat.code().equals("night"))
+                .findFirst()
+                .orElseThrow()
+                .grade())
+        .isEqualTo("A");
+    JsonMapper json = JsonMapper.builder().build();
+    CompanyState resumed = json.readValue(json.writeValueAsString(c), CompanyState.class);
+    assertThat(engine.view(resumed).onboarding().step()).isEqualTo(3);
+    assertThatThrownBy(() -> engine.tutorial(resumed, "next", 3))
+        .isInstanceOf(InvalidRequestException.class);
+    engine.fieldCat(resumed, "night", true);
+    engine.tutorial(resumed, "next", 3);
+    engine.tutorial(resumed, "next", 4);
+    assertThatThrownBy(() -> engine.tutorial(resumed, "next", 5))
+        .isInstanceOf(InvalidRequestException.class);
+    engine.equipCat(resumed, "night", "smg", "B");
+    engine.tutorial(resumed, "next", 5);
+    engine.tutorial(resumed, "next", 6);
+    engine.tutorial(resumed, "next", 7);
+    engine.tutorial(resumed, "skip", 0);
+    engine.tutorial(resumed, "claim", 8);
+    assertThat(resumed.idle.cats.get("night")).isEqualTo(1);
+    assertThat(
+            resumed.weapons.stream()
+                .filter(w -> w.grade.equals("B"))
+                .findFirst()
+                .orElseThrow()
+                .count)
+        .isEqualTo(1);
+    resumed.idle.wall = 101;
+    engine.rebirth(resumed);
+    assertThat(engine.view(resumed).onboarding().step()).isEqualTo(8);
+    assertThat(engine.view(resumed).onboarding().skillsUnlocked()).isTrue();
+  }
+
+  @Test
+  void legacyPlayersAreNotForcedAndSkipStillGrantsTheGifts() {
+    assertThat(engine.view(state).onboarding().step()).isEqualTo(8);
+    engine.tutorial(state, "claim", 8);
+    engine.tutorial(state, "claim", 8);
+    assertThat(state.idle.cats.get("night")).isEqualTo(1);
+    assertThat(
+            state.weapons.stream().filter(w -> w.grade.equals("B")).findFirst().orElseThrow().count)
+        .isEqualTo(1);
+    CompanyState fresh = company.open(new HashSeededRandom(3), 100);
+    engine.tutorial(fresh, "skip", 0);
+    assertThat(engine.view(fresh).onboarding().step()).isEqualTo(8);
+    assertThat(fresh.idle.cats.get("night")).isEqualTo(1);
+    assertThat(fresh.tutorialWeaponClaimed).isTrue();
+  }
+
+  @Test
+  void legacyUnlockedPlayersSkipTheGuideButLaterUnlocksStillGetIt() {
+    CompanyState veteran = new CompanyState();
+    veteran.idle = new CompanyState.Idle();
+    veteran.idle.wall = 101;
+    assertThat(engine.view(veteran).onboarding().skillGuideSeen()).isTrue();
+    assertThat(engine.view(veteran).onboarding().step()).isEqualTo(8);
+    CompanyState newcomer = new CompanyState();
+    assertThat(engine.view(newcomer).onboarding().skillGuideSeen()).isFalse();
+    newcomer.idle.wall = 101;
+    assertThat(engine.view(newcomer).onboarding().skillsUnlocked()).isTrue();
+    assertThat(engine.view(newcomer).onboarding().skillGuideSeen()).isFalse();
+  }
+
+  @Test
+  void activeSkillsRequireClearingWall100ButCatMeteorDoesNot() {
+    start(100);
+    assertThat(engine.view(state).onboarding().skillsUnlocked()).isFalse();
+    assertThatThrownBy(() -> engine.useActive(state, "barrage"))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.equipActive(state, "rally", false))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.useActive(state, "boostFire", true))
+        .isInstanceOf(InvalidRequestException.class);
+    engine.tutorial(state, "claim", 8);
+    engine.fieldCat(state, "night", true);
+    assertThat(
+            engine.view(state).skills().stream()
+                .filter(skill -> skill.code().equals("meteor"))
+                .findFirst()
+                .orElseThrow()
+                .owned())
+        .isTrue();
+    state.idle.wall = 101;
+    assertThat(engine.view(state).onboarding().skillsUnlocked()).isTrue();
+    engine.equipActive(state, "rally", true);
+    engine.useActive(state, "rally");
+    engine.tutorial(state, "skills", 8);
+    assertThat(engine.view(state).onboarding().skillGuideSeen()).isTrue();
+    engine.rebirth(state);
+    assertThat(engine.view(state).onboarding().skillsUnlocked()).isTrue();
+  }
+
   static class MutableClock extends Clock {
     long now = 10000;
 
@@ -909,6 +1020,7 @@ class IdleEngineTest {
   @Test
   void activeSkillsArePressedAndWaitOutTheirCooldown() {
     start(1);
+    state.idle.best = 100; // 스킬 해금 이후의 사용·대기시간 검사.
     state.idle.wall = 100;
     tick(1000);
     var actives = engine.view(state).actives();
@@ -955,6 +1067,7 @@ class IdleEngineTest {
   @Test
   void rallyDoublesTheBulletBudgetWhileItBurns() {
     start(1);
+    state.idle.best = 100; // 스킬 해금 이후의 사용·대기시간 검사.
     state.idle.wall = 100;
     for (int i = 0; i < 3; i++) tick(1000);
     state.idle.hitCredits = new double[18];
@@ -978,6 +1091,7 @@ class IdleEngineTest {
   void onlyEquippedUniqueSkillsCanBeUsedAndThreeFitTheSlots() {
     // 587: a save from before equipping has all three equipped.
     start(1);
+    state.idle.best = 100; // 스킬 해금 이후의 사용·대기시간 검사.
     tick(1000);
     var view = engine.view(state);
     assertThat(view.activeSlots()).isEqualTo(3);
@@ -1020,6 +1134,7 @@ class IdleEngineTest {
     // 591: 상한가·손절·물타기. A company starts with the first three equipped, so a new one needs a
     // slot freed.
     start(1);
+    state.idle.best = 100; // 스킬 해금 이후의 사용·대기시간 검사.
     state.idle.wall = 100;
     for (int i = 0; i < 3; i++) tick(1000);
     assertThatThrownBy(() -> engine.useActive(state, "limitUp"))
@@ -1087,6 +1202,7 @@ class IdleEngineTest {
   @Test
   void adSkillChoiceUnlocksExactlyAfterThreeMinutes() {
     start(1);
+    state.idle.best = 100; // 스킬 해금 이후의 사용·대기시간 검사.
     tick(1000);
     for (String chosen : List.of("boostFire", "boostDamage", "boostBuy")) {
       double pressedAt = state.idle.activeSeconds;
@@ -1110,6 +1226,7 @@ class IdleEngineTest {
     // 588: 공격속도·공격력·매수공격 3배. They need the ad, are never equipped, and last 180 real
     // seconds (270 game seconds at 1.5x) with a 180 second cooldown.
     start(1);
+    state.idle.best = 100; // 스킬 해금 이후의 사용·대기시간 검사.
     state.idle.wall = 100;
     for (int i = 0; i < 3; i++) tick(1000);
     double bullets = accepted("bullet");

@@ -32,9 +32,11 @@ import { IdleRebirth } from './IdleRebirth'
 import { IdleSandbox } from './IdleSandbox'
 import { IdleShop } from './IdleShop'
 import { IdleSkills } from './IdleSkills'
+import { IdleTutorial } from './IdleTutorial'
 import { IdleIcon } from './icons'
 import { MenuIcon } from './MenuIcon'
 import { OfflineIncome } from './OfflineIncome'
+import { tutorialMenuLocked } from './onboarding'
 import { PowerSaveScreen } from './PowerSaveScreen'
 import { freeLeft } from './shop'
 import './idle-home.css'
@@ -98,6 +100,8 @@ export function IdleHome({
   onBattle: () => void
   office: ReactNode
 }) {
+  const [skillUse, setSkillUse] = useState(false)
+  const [replay, setReplay] = useState<number | null>(null)
   const [ownMenu, setMenu] = useState<Menu>('battle')
   // 전투에서 "무기 바꾸기"로 오면(Windows) 고양이·무기 탭이 사장냥의 장비 목록으로 열린다 (530·560번). 닫거나 다른 데로 가면 그 요청을 지운다.
   const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
@@ -117,10 +121,11 @@ export function IdleHome({
   const wearer = weaponsAsked ? null : ownWearer
   // 고양이·무기 탭이 장비 목록을 펴고 있는가 (560번). 아래 메뉴로 들어오면 고양이 목록부터 보인다.
   const [ownGear, setGear] = useState(false)
-  const gear = weaponsAsked || ownGear
+  const gear = (weaponsAsked || ownGear) && (company.idle?.onboarding?.step ?? 8) >= 5
   // 상점이 처음 보일 뽑기: 장비 목록에서 오면 무기 뽑기다.
   const [shopKind, setShopKind] = useState<'cat' | 'weapon'>('cat')
   const go = (next: Menu) => {
+    if (tutorialMenuLocked(company, next)) return
     if (weaponsAsked) useAppUi.getState().closeSheet()
     setMenu(next)
   }
@@ -171,13 +176,27 @@ export function IdleHome({
       {menus.map((item) => (
         <button
           key={item.key}
+          data-tutorial-menu={item.key}
           type="button"
           className={activeMenu === item.key ? 'on' : ''}
+          disabled={tutorialMenuLocked(company, item.key)}
+          title={
+            tutorialMenuLocked(company, item.key)
+              ? item.key === 'skills'
+                ? '100 매도벽 돌파 시 해금'
+                : '첫 출근 안내를 진행하면 열려요'
+              : undefined
+          }
           aria-current={activeMenu === item.key ? 'page' : undefined}
           onClick={() => navigate(item.key)}
         >
           <MenuIcon name={item.key} />
           <span>{item.label}</span>
+          {tutorialMenuLocked(company, item.key) && (
+            <small className="tutorial-lock">
+              {item.key === 'skills' ? '100벽 돌파' : '안내 후 해금'}
+            </small>
+          )}
           {item.key === 'growth' && affordable && (
             <i className="idle-dot" role="img" aria-label="강화 가능" />
           )}
@@ -207,6 +226,23 @@ export function IdleHome({
         </button>
       ))}
     </nav>
+  )
+  const tutorial = () => (
+    <IdleTutorial
+      company={company}
+      replay={replay}
+      onReplay={setReplay}
+      menu={menu}
+      skillUse={skillUse}
+      onSkillUse={() => setSkillUse(true)}
+      onGo={(next, openGear) => {
+        if (next === 'cats') {
+          setWearer('night')
+          setGear(!!openGear)
+        }
+        go(next)
+      }}
+    />
   )
   return (
     <section
@@ -264,7 +300,13 @@ export function IdleHome({
             </div>
             {/* 시즌패스와 설정은 위 줄의 오른쪽 끝에 둔다 (567번): 전투 공간과 아래 메뉴 사이의 단추 줄을 없앴다. */}
             <IdlePass company={company} />
-            <IdleOptions />
+            <IdleOptions
+              company={company}
+              onTutorial={() => {
+                setReplay(0)
+                go('battle')
+              }}
+            />
             {COMPANY_ENABLED && (
               <button type="button" aria-label="회사 메뉴" onClick={onManage}>
                 ☰
@@ -291,7 +333,10 @@ export function IdleHome({
           {/* 출석 보상은 들어오면 저절로 받는다 (566번): 단추가 없다. */}
           <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
           <IdleSandbox company={company} />
-          <IdleActives company={company} connected={connected} />
+          {idle?.onboarding?.skillsUnlocked !== false && (
+            <IdleActives company={company} connected={connected} />
+          )}
+          {menu === 'battle' && tutorial()}
           {/* 전투 화면에서 고양이를 꾹 누르면 그 고양이의 정보가 뜬다 (605번). */}
           <CatInfoCard
             company={company}
@@ -321,6 +366,7 @@ export function IdleHome({
           className={`idle-sheet ${menu === 'cats' ? 'loadout-sheet' : ''}`}
           footer={nav}
         >
+          {tutorial()}
           {menu === 'rebirth' && <IdleRebirth company={company} />}
           {menu === 'growth' && <IdleGrowth company={company} />}
           {menu === 'cats' && (

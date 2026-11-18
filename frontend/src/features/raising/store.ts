@@ -65,6 +65,7 @@ interface RaisingState {
   useActive: (code: ActiveCode, ad?: boolean) => Promise<boolean>
   /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). 세 개까지. */
   equipActive: (code: UniqueActiveCode, equipped: boolean) => Promise<void>
+  tutorial: (action: 'next' | 'skip' | 'claim' | 'skills', step: number) => Promise<void>
   /** 코드를 넣고 테스트판에 들어간다 (decisions.md 499번). 안 되면 까닭을, 되면 null을 돌려준다. */
   enterSandbox: (code: string) => Promise<string | null>
   /** 테스트판에서 나와 본 게임의 회사를 다시 읽는다. */
@@ -297,6 +298,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       set({ company: res.data })
       return true
     },
+    tutorial: (action, step) =>
+      change(api.POST('/api/company/idle/tutorial', { body: { action, step } })),
     equipActive: (code, equipped) =>
       change(api.POST('/api/company/idle/active/equip', { body: { code, equipped } })),
     drawCat: async (ad = false) => {

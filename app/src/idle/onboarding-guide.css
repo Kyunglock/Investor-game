@@ -1,0 +1,104 @@
+/* 기존 UI에서 해당 버튼만 밝게 남기는 스포트라이트. 터치는 원래 버튼으로 전달한다. */
+.tutorial-focus {
+  position: fixed;
+  z-index: 59;
+  pointer-events: none;
+  border: 3px solid #ffe17d;
+  border-radius: 12px;
+  box-shadow: 0 0 18px #ffcf56;
+}
+.idle-tutorial {
+  position: fixed;
+  z-index: 60;
+  padding: 9px 12px 5px;
+  border-radius: 12px;
+  background: #fff9e9;
+  color: #553a27;
+  font-family: var(--font-game);
+  box-shadow: 0 3px 12px #10234333;
+}
+.idle-tutorial small {
+  font-size: 11px;
+  color: #805925;
+}
+.idle-tutorial p {
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 2px 0;
+  word-break: keep-all;
+}
+.tutorial-tail {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #fff9e9;
+  transform: rotate(45deg);
+}
+.idle-tutorial[data-side="above"] .tutorial-tail {
+  bottom: -6px;
+}
+.idle-tutorial[data-side="below"] .tutorial-tail {
+  top: -6px;
+}
+.tutorial-coach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.tutorial-coach-actions button {
+  min-height: 36px;
+  padding: 5px 8px;
+  font-size: 12px;
+  color: #315f0d;
+  text-decoration: underline;
+}
+.tutorial-coach-actions .tutorial-skip {
+  margin-left: auto;
+  color: #806d53;
+  font-size: 11px;
+}
+.tutorial-coach-actions button:disabled {
+  opacity: 0.5;
+}
+.idle-nav button:disabled {
+  opacity: 0.6;
+}
+.idle-nav .tutorial-lock {
+  font-size: 9px;
+  line-height: 1.1;
+}
+/* 포커스 안내 중에도 설정은 언제든 열 수 있다. */
+body:has([data-tutorial-layer]) .idle-hud {
+  z-index: 61;
+}
+body:has([data-tutorial-layer]) .idle-hud:has(.idle-options-panel) {
+  z-index: 63;
+}
+
+.tutorial-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  pointer-events: none;
+}
+.tutorial-drop-label {
+  position: fixed;
+  z-index: 59;
+  color: #fff0ae;
+  font-size: 12px;
+  pointer-events: none;
+  text-shadow: 0 1px 3px #14243e;
+}
+body:has(.idle-gear-ghost) .idle-tutorial {
+  pointer-events: none;
+  opacity: 0.45;
+}
+body:has(.idle-options-panel) [data-tutorial-layer] {
+  visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-drag-dot {
+    display: none;
+  }
+}

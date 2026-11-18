@@ -429,6 +429,12 @@ class IdleEngine {
       c.idle.catSkills = true;
     }
     seat(c.idle);
+    c.idle.best = Math.max(c.idle.best, Math.max(c.idle.wall - 1, c.idle.bossCleared));
+    if (!c.onboardingInitialized) {
+      // 이미 해금 조건을 달성한 기존 유저에게 새 안내를 강제하지 않는다.
+      c.skillGuideSeen = c.tutorialStep == null && c.idle.best >= 100;
+      c.onboardingInitialized = true;
+    }
     return c.idle;
   }
 
@@ -743,6 +749,7 @@ class IdleEngine {
    */
   void useActive(CompanyState c, String code, boolean ad) {
     CompanyState.Idle s = state(c);
+    if (!skillsUnlocked(c)) throw new InvalidRequestException("100 매도벽 돌파 시 해금돼요");
     int at = ACTIVES.indexOf(code);
     if (at < 0) throw new InvalidRequestException("없는 스킬이다: " + code);
     if (at < UNIQUE && !equipped(s).contains(code)) {
@@ -782,6 +789,7 @@ class IdleEngine {
    */
   void equipActive(CompanyState c, String code, boolean equip) {
     CompanyState.Idle s = state(c);
+    if (!skillsUnlocked(c)) throw new InvalidRequestException("100 매도벽 돌파 시 해금돼요");
     int at = ACTIVES.indexOf(code);
     if (at < 0 || at >= UNIQUE) throw new InvalidRequestException("장착할 수 없는 스킬이다: " + code);
     List<String> slots = equipped(s);
@@ -793,6 +801,65 @@ class IdleEngine {
       }
       slots.add(code);
     }
+  }
+
+  boolean skillsUnlocked(CompanyState c) {
+    CompanyState.Idle s = state(c);
+    return Math.max(s.best, Math.max(s.wall - 1, s.bossCleared)) >= 100;
+  }
+
+  /** 단계 번호는 재전송 키이기도 하다. 보상과 단계 변경은 회사 행 잠금 안에서 함께 저장한다. */
+  void tutorial(CompanyState c, String action, int expected) {
+    CompanyState.Idle s = state(c);
+    if ("skills".equals(action)) {
+      if (!skillsUnlocked(c)) throw new InvalidRequestException("100 매도벽 돌파 시 해금돼요");
+      c.skillGuideSeen = true;
+      return;
+    }
+    if ("skip".equals(action) || "claim".equals(action)) {
+      tutorialCat(c);
+      tutorialWeapon(c);
+      c.tutorialStep = 8;
+      return;
+    }
+    if (!"next".equals(action)) throw new InvalidRequestException("없는 안내 동작이에요");
+    int step = c.tutorialStep == null ? 8 : c.tutorialStep;
+    if (expected < step) return;
+    if (expected != step || step >= 8) throw new InvalidRequestException("안내 단계를 다시 확인해 주세요");
+    boolean ready =
+        switch (step) {
+          case 0 -> Math.max(s.best, s.wall - 1) >= 1;
+          case 1 -> c.battleLevels.getOrDefault("damage", 0) > 0;
+          case 3 -> s.fielded.contains("night");
+          case 5 ->
+              s.catWeapons.containsKey("night")
+                  && "smg".equals(s.catWeapons.get("night").kind)
+                  && "B".equals(s.catWeapons.get("night").grade);
+          default -> true;
+        };
+    if (!ready) throw new InvalidRequestException("안내된 행동을 먼저 완료해 주세요");
+    if (step == 2) tutorialCat(c);
+    if (step == 4) tutorialWeapon(c);
+    c.tutorialStep = step + 1;
+  }
+
+  private void tutorialCat(CompanyState c) {
+    if (c.tutorialCatClaimed) return;
+    state(c).cats.merge("night", 1, Integer::sum);
+    c.tutorialCatClaimed = true;
+  }
+
+  private void tutorialWeapon(CompanyState c) {
+    if (c.tutorialWeaponClaimed) return;
+    engine.mental.initWeapons(c);
+    CompanyState.Weapon owned =
+        c.weapons.stream()
+            .filter(w -> "smg".equals(w.kind) && "B".equals(w.grade))
+            .findFirst()
+            .orElse(null);
+    if (owned == null) c.weapons.add(new CompanyState.Weapon("smg", "B"));
+    else owned.count++;
+    c.tutorialWeaponClaimed = true;
   }
 
   /** Whether an ad skill's boost counts for a beat that starts at this active time (588). */
@@ -1469,6 +1536,12 @@ class IdleEngine {
             rebirthFish(c),
             rebirthWall(c),
             rebirthFish(c) * REBIRTH_AD_MULTIPLIER,
-            engine.mental.fishUpgradeViews(c)));
+            engine.mental.fishUpgradeViews(c)),
+        new CompanyView.Onboarding(
+            c.tutorialStep == null ? 8 : c.tutorialStep,
+            c.tutorialCatClaimed,
+            c.tutorialWeaponClaimed,
+            skillsUnlocked(c),
+            c.skillGuideSeen));
   }
 }

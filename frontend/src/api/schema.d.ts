@@ -241,6 +241,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/idle/tutorial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 첫 출근 안내 진행 및 계정당 한 번의 동료·무기 선물 */
+        post: operations["advanceIdleTutorial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/idle/active": {
         parameters: {
             query?: never;
@@ -1434,6 +1451,15 @@ export interface components {
             /** @description 테스트판의 무한 지갑이 켜져 있다. 자본과 다이아가 떨어지지 않는다 */
             sandboxInfinite?: boolean;
             idle?: {
+                onboarding?: {
+                    /** @description 0~7 진행 중. 8은 완료 또는 기존 유저 */
+                    step: number;
+                    catClaimed: boolean;
+                    weaponClaimed: boolean;
+                    /** @description 최고 돌파 기록 100 이상. 환생 후에도 유지 */
+                    skillsUnlocked: boolean;
+                    skillGuideSeen: boolean;
+                };
                 /** @description 회사의 수입 (523번). 화면에서 흐르는 실제 1초에 버는 돈이고, 접속해 있는 동안과 자리를 비운 동안이 같다 */
                 income: {
                     /** @description 회사의 초당 수입 = (매도벽 돌파의 시간 수입 + 직원 초당 수입의 합) × (1 + 멘탈 보호 보너스) */
@@ -2054,6 +2080,37 @@ export interface operations {
         };
         responses: {
             /** @description 결과를 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    advanceIdleTutorial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "next" | "skip" | "claim" | "skills";
+                    step: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 안내 진행과 보상을 저장한 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -128,6 +128,8 @@ public interface CompanyService {
   /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). 세 개까지. 광고 스킬이거나 칸이 꽉 찼으면 400. */
   CompanyView equipActive(UUID sessionId, String code, boolean equipped);
 
+  CompanyView tutorial(UUID sessionId, String action, int step);
+
   /**
    * 환생한다 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈이 처음으로 돌아가고 생선을 받는다. 첫 보스를 깨기 전이면 400. ad가 참이면 광고를
    * 본 것으로 보고 생선을 3배로 준다 (586번).

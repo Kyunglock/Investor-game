@@ -32,11 +32,16 @@ export function Sheet({
         dismiss()
       }
       if (event.key !== 'Tab' || !root) return
-      const controls = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'summary, button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), [tabindex="0"]',
+      const controls = [
+        ...Array.from(
+          root.querySelectorAll<HTMLElement>(
+            'summary, button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), [tabindex="0"]',
+          ),
         ),
-      ).filter((element) => element.getClientRects().length > 0)
+        ...document.querySelectorAll<HTMLElement>(
+          '[data-testid="idle-tutorial"] button:not(:disabled)',
+        ),
+      ].filter((element) => element.getClientRects().length > 0)
       const first = controls[0]
       const last = controls.at(-1)
       if (!first) {
