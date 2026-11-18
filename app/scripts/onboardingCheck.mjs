@@ -197,6 +197,16 @@ try {
     assert.equal(c.idle.onboarding.weaponClaimed, true)
     await refresh()
     await expect(guide).toHaveCount(0)
+    c.idle.onboarding.catClaimed = false
+    c.idle.onboarding.weaponClaimed = false
+    await refresh()
+    await expect(guide).toHaveCount(0)
+    await page.getByTestId('idle-options').click()
+    await page.getByRole('button', { name: '첫 출근 선물 받기 · 밤냥 + 기관단총' }).click()
+    assert.equal(c.idle.onboarding.catClaimed, true)
+    await expect(
+      page.getByRole('button', { name: '첫 출근 선물 받기 · 밤냥 + 기관단총' }),
+    ).toHaveCount(0)
     assert.deepEqual(errors, [])
     await page.close()
   }

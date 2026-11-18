@@ -234,6 +234,7 @@ export function IdleHome({
       replay={replay}
       onReplay={setReplay}
       inSheet={inSheet}
+      inSkills={menu === 'skills'}
       onGo={(next, openGear) => {
         if (next === 'cats') {
           setWearer('night')

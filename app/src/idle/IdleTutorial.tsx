@@ -11,12 +11,14 @@ export function IdleTutorial({
   onReplay,
   onGo,
   inSheet,
+  inSkills,
 }: {
   company: Company
   replay: number | null
   onReplay: (step: number | null) => void
   onGo: (menu: 'battle' | 'growth' | 'cats' | 'skills', gear?: boolean) => void
   inSheet: boolean
+  inSkills: boolean
 }) {
   const progress = company.idle?.onboarding
   const busy = useRaisingStore((s) => s.busy)
@@ -33,7 +35,7 @@ export function IdleTutorial({
   const [title, text] = skillGuide
     ? [
         '스킬 해금!',
-        !inSheet
+        !inSkills
           ? '100 매도벽 돌파! 이제 사장냥이 직접 쓰는 스킬을 장착할 수 있어요.'
           : !equipped
             ? '스킬 목록에서 원하는 스킬을 골라 장착해 주세요. 최대 3개까지 장착할 수 있어요.'
@@ -46,7 +48,7 @@ export function IdleTutorial({
       return
     }
     if (skillGuide) {
-      if (!inSheet || !equipped) {
+      if (!inSkills || !equipped) {
         onGo('skills')
       } else {
         onGo('battle')
@@ -68,7 +70,7 @@ export function IdleTutorial({
         ? '다시 보기 마치기'
         : '다음 안내'
       : skillGuide
-        ? !inSheet || !equipped
+        ? !inSkills || !equipped
           ? '스킬 장착하러 가기'
           : '돌파 화면에서 사용하기'
         : !ready

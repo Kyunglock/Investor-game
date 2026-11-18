@@ -78,3 +78,8 @@
   outline: 3px solid #f4b528;
   outline-offset: -3px;
 }
+
+/* 안내 도중에도 설정의 소리·진동·절전 버튼을 가리지 않는다. */
+.idle-hud:has(.idle-options-panel) {
+  z-index: 6;
+}
