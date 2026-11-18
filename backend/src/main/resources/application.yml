@@ -19,6 +19,10 @@ management:
 admin:
   token: ${ADMIN_TOKEN:}
 
+# 세션 쿠키를 실어 API를 부를 수 있는 다른 출처. 쉼표로 여러 개 (예: http://localhost:3000,https://app.kwaklabs.com). 비우면 막힌다
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+
 game:
   days-per-month: 30
   days-per-year: 360
