@@ -878,7 +878,8 @@ try {
       await page.screenshot({ path: '/tmp/idle-boss.png' })
       // Clearing the boss pays its own reward, told once (549).
       Object.assign(company.idle, { bossReward: { wall: 50, diamonds: 100, money: 123_000_000 } })
-      await expect(page.getByTestId('idle-raid')).toContainText('보스 50 클리어! 다이아 +100')
+      await expect(page.getByTestId('boss-reward')).toContainText('보스 50 클리어!')
+      await expect(page.getByTestId('boss-reward')).toContainText('+100')
       await page.screenshot({ path: '/tmp/idle-boss-reward.png' })
       // The buy wall falls: every enemy is gone and the fight stays at its wall (584). It used to
       // go ten walls back (546).

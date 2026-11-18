@@ -18,6 +18,7 @@ import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
 import { idleBuyOrderDamage } from '../mental/buyWall'
 import { SHARES_PER_HP, sharesOf } from '../mental/shares'
+import { BossReward } from './BossReward'
 import { CatInfoCard } from './CatInfoCard'
 import { FishIcon } from './FishIcon'
 import { GrowthIcon } from './GrowthIcon'
@@ -214,6 +215,7 @@ export function IdleHome({
       aria-label={managing ? '회사' : '무한 매도벽 돌파'}
     >
       <IdleCanvas company={company} connected={connected} />
+      <BossReward company={company} hidden={managing} />
       {managing ? (
         <div className="idle-office">{office}</div>
       ) : (
@@ -224,7 +226,9 @@ export function IdleHome({
               role="status"
               aria-label={`보유 자본 ${money(company.capital)}`}
             >
-              <span className="idle-coin">₩</span>
+              <span className="idle-coin" data-reward-target="money">
+                ₩
+              </span>
               <span className="idle-cash-lines">
                 {/* 테스트판의 지갑은 떨어지지 않는다 (499번). */}
                 <b>{company.sandboxInfinite ? '∞' : money(capital)}</b>
@@ -253,7 +257,9 @@ export function IdleHome({
               aria-label={`다이아 ${company.diamonds.amount.toLocaleString()}개`}
               data-testid="idle-diamonds"
             >
-              <IdleIcon name="diamond" />
+              <span data-reward-target="diamond">
+                <IdleIcon name="diamond" />
+              </span>
               {company.sandboxInfinite ? '∞' : diamondText(company.diamonds.amount)}
             </div>
             {/* 시즌패스와 설정은 위 줄의 오른쪽 끝에 둔다 (567번): 전투 공간과 아래 메뉴 사이의 단추 줄을 없앴다. */}
