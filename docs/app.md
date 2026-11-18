@@ -49,7 +49,7 @@
 
 | 방식 | 언제 | 설정 | 서버 |
 |---|---|---|---|
-| **화면 담기** (기본, decisions.md 624번) | `CAP_SERVER_URL`이 없을 때 | `pnpm build:bundled`(`vite build --mode bundled`)의 `app/dist`를 앱 안에 담는다. 앱의 출처는 `https://localhost`이고 서버로는 API만 간다: `VITE_API_BASE`(기본 `app/.env.bundled`의 운영 서버, CI는 저장소 변수 `APP_API_BASE`). 화면을 바꾸면 앱을 다시 내야 한다 | 다른 출처에서 부르므로 CORS와 쿠키를 열어야 한다: 환경 변수 `API_CORS_ORIGINS=https://localhost`, `SESSION_COOKIE_SAME_SITE=None`. **없으면 세션 쿠키가 오가지 않아 켤 때마다 새 회사가 생긴다** |
+| **화면 담기** (기본, decisions.md 624번) | `CAP_SERVER_URL`이 없을 때 | `pnpm build:bundled`(`vite build --mode bundled`)의 `app/dist`를 앱 안에 담는다. 앱의 출처는 `https://localhost`이고 서버로는 API만 간다: `VITE_API_BASE`(기본 `app/.env.bundled`의 운영 서버, CI는 저장소 변수 `APP_API_BASE`). 화면을 바꾸면 앱을 다시 내야 한다 | 다른 출처에서 부르므로 CORS와 쿠키를 열어야 한다: 환경 변수 `API_CORS_ORIGINS=https://localhost,https://game.kwaklabs.com`, `SESSION_COOKIE_SAME_SITE=None`. 웹의 출처도 함께 적는다(624번: 출처를 두면 목록에 없는 출처의 요청이 막히는데, nginx 뒤에서는 웹 자신의 POST도 다른 출처로 보일 수 있다). **없으면 세션 쿠키가 오가지 않아 켤 때마다 새 회사가 생긴다** |
 | **주소 띄우기** | `CAP_SERVER_URL`(Run workflow의 `server_url`)에 주소 | 화면을 담지 않고 그 주소를 WebView에 띄운다. 내 개발 서버로 볼 때 쓴다 | 손댈 것 없다. API와 세션 쿠키가 그 주소와 같은 출처다 |
 
 - 담는 화면은 뿌리(`/`)에서, 웹에 배포하는 화면(`pnpm build`)은 `/app/`에서 열린다(`vite.config.ts`의 `base`). 담는 화면이 `/app/`을 가리키면 앱에서 흰 화면이 되므로 Android 워크플로가 막는다.

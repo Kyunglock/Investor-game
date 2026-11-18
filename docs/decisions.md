@@ -2581,7 +2581,9 @@ S는 절반으로 내려가지만 여전히 A의 1.74배이고 관통 넷이 따
 - **기본을 화면 담기로** 바꾼다: `capacitor.config.ts`는 `CAP_SERVER_URL`이 없으면 `dist`를 앱에 담고, Android 워크플로도 아무것도 넣지 않으면 담는다. 화면은 앱 안의 `https://localhost`에서 열리고 서버로는 API만 간다. 주소 띄우기는 `server_url` 입력으로만 남긴다(저장소 변수 `APP_SERVER_URL`은 더 읽지 않는다).
 - **담는 빌드는 `pnpm build:bundled`**(`vite build --mode bundled`): `base`가 `/`이고 API 주소는 `app/.env.bundled`의 운영 서버다(CI는 `APP_API_BASE`가 있으면 그것). 웹에 배포하는 `pnpm build`는 그대로 `/app/`이다. 309번에서 `base: '/app/'`를 넣은 뒤로 담는 방식은 파일을 `/app/assets/`에서 찾아 흰 화면이었는데, CI가 주소 띄우기로만 만들어 드러나지 않았다. 워크플로가 담는 화면에 `/app/` 경로가 남아 있으면 멈춘다.
 - **테스트판 APK**(499번)는 주소에 `?test=1`을 붙일 수 없으므로 `VITE_APP_TEST=1`로 다시 만든 화면을 담는다. 브라우저의 `?test=1`은 그대로다.
-- **서버(사용자가 할 일)**: 운영 서버에 `API_CORS_ORIGINS=https://localhost`, `SESSION_COOKIE_SAME_SITE=None`. 이것 없이 새 앱을 깔면 세션 쿠키가 오가지 않아 켤 때마다 새 회사가 생긴다. 웹은 같은 출처라 영향이 없다.
+- **서버(사용자가 할 일)**: 운영 서버에 `API_CORS_ORIGINS=https://localhost,https://game.kwaklabs.com`, `SESSION_COOKIE_SAME_SITE=None`. 이것 없이 새 앱을 깔면 세션 쿠키가 오가지 않아 켤 때마다 새 회사가 생긴다. 웹은 같은 출처라 영향이 없다.
+- **웹의 출처도 함께 적는다**: 출처를 하나라도 두면 스프링이 `/api`의 다른 출처 요청을 검사해, 목록에 없는 출처의 요청을 403으로 막는다. 운영 서버는 nginx 뒤에 있어 스프링이 요청을 http로 보면 웹 자신의 POST(`Origin: https://game.kwaklabs.com`)도 다른 출처로 보일 수 있다. nginx 설정은 저장소 밖이라 확인하지 못했으므로 웹의 출처를 목록에 넣어 둔다.
+- (보안) `SameSite=None`이면 다른 사이트의 요청에도 쿠키가 붙는다. 상태를 바꾸는 API는 모두 POST이고, 목록에 없는 출처의 POST는 위의 검사가 막는다. 결제·계정을 붙이기 전에 세션을 헤더 토큰으로 옮기면(iOS에도 필요) 쿠키를 다시 Lax로 돌릴 수 있다.
 - (알려 둘 것) 화면을 고치면 웹 배포로는 앱에 닿지 않는다: AAB를 다시 올린다. 예전 화면을 담은 앱이 남으므로 API를 깨는 변경은 조심한다. 낮은 버전에 업데이트를 권하는 장치는 넣지 않았다.
 - (알려 둘 것) iOS의 WebView는 다른 출처의 쿠키를 막는다. iOS를 낼 때 세션을 네이티브 HTTP나 헤더 토큰으로 보내는 일이 남는다.
 
