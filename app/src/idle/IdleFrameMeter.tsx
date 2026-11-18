@@ -5,7 +5,7 @@ import { FrameMeter, type FrameStats, frameLevel } from './frameMeter'
 const REFRESH_MS = 500
 
 /**
- * 프레임 표시 (decisions.md 543번): 테스트판에서만 돌파 화면 왼쪽에 뜬다. 지금 FPS, 최근 10초의 가장 긴 프레임, 끊긴 프레임 수. 누르면 다시
+ * 프레임 표시 (decisions.md 543번): 테스트판에서만 테스트판 단추 옆에 뜬다. 지금 FPS, 최근 10초의 가장 긴 프레임, 끊긴 프레임 수. 누르면 다시
  * 센다. 프레임마다 하는 일은 시각 하나를 적는 것뿐이다.
  */
 export function IdleFrameMeter() {

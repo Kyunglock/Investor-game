@@ -81,16 +81,21 @@ function Panel() {
         <span>진동</span>
         <b className="idle-options-state">{hapticOff ? '꺼짐' : '켜짐'}</b>
       </button>
-      {/* 절전 모드 (607번): 화면을 검게 덮고 전투만 돌린다. 화면을 두 번 누르면 풀린다. */}
+      {/*
+        절전 모드 (607번): 화면을 검게 덮고 전투만 돌린다. 화면을 두 번 누르면 풀린다. 켜면 이 창이 덮이므로 여기서는 늘 꺼진 상태다: 소리·진동처럼
+        상태("꺼짐")를 적는다 (#920).
+      */}
       <button
         type="button"
-        className="idle-options-toggle"
+        className="idle-options-toggle idle-options-off"
+        aria-pressed={false}
+        aria-label="절전 모드 켜기"
         data-testid="power-save-on"
         onClick={() => usePowerSave.getState().set(true)}
       >
         <MoonIcon />
         <span>절전 모드</span>
-        <b className="idle-options-state">켜기</b>
+        <b className="idle-options-state">꺼짐</b>
       </button>
     </div>
   )

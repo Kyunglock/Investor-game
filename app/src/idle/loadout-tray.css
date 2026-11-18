@@ -25,9 +25,12 @@
   border-radius: 8px;
   background: #fff9e9;
 }
-/* 고양이·무기 탭은 화면을 가득 채운다 (569번). 출전 칸은 스크롤해도 위에 붙어 있다. */
+/*
+ * 고양이·무기 탭은 머리띠 아래를 가득 채운다 (569번, #920): 머리띠(top max(4px, 안전 영역) + 높이 42px)의 자본·매도벽·다이아는 가리지 않는다.
+ * 출전 칸은 스크롤해도 위에 붙어 있다.
+ */
 .idle-sheet.loadout-sheet > button:first-child {
-  flex: 0 0 max(4px, env(safe-area-inset-top));
+  flex: 0 0 calc(max(4px, env(safe-area-inset-top)) + 46px);
 }
 .idle-sheet.loadout-sheet > section {
   flex: 1 1 auto;

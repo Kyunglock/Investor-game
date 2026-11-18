@@ -279,6 +279,10 @@
 .idle-buy:disabled small {
   color: #fff;
 }
+/* 못 누르는 10연차의 덤 딱지(+1)도 단추처럼 흐리게 한다 (#920). */
+.idle-buy:disabled .ten-bonus {
+  background: #7b8594;
+}
 .idle-buy:not(:disabled):active {
   transform: translateY(2px);
   box-shadow: inset 0 2px 0 #edffc5;

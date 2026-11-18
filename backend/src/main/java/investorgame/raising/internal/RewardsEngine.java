@@ -276,12 +276,14 @@ class RewardsEngine {
     int missionsReady =
         (int) rule.missions().stream().filter(m -> engine.pass.ready(c, m) > 0).count();
     // 미션 (570번): 이번 시즌에 센 수와 다음에 닿을 수, 그때 받는 포인트. 닿은 문턱의 포인트는 눌러서 받는다 (572번).
+    // 받을 포인트가 있는 동안에는 닿은 문턱을 가리킨다 (#912): 다음 문턱을 적으면 덜 한 미션을 받는 것처럼 보인다.
     List<CompanyView.PassMission> missions =
         rule.missions().stream()
             .map(
                 m -> {
                   long count = c.passMissions.getOrDefault(m.code(), 0L);
-                  long target = (count / m.every() + 1) * m.every();
+                  long ready = engine.pass.ready(c, m);
+                  long target = (count / m.every() + (ready > 0 ? 0 : 1)) * m.every();
                   return new CompanyView.PassMission(
                       m.code(),
                       m.title().replace("{n}", String.format("%,d", target)),
@@ -290,7 +292,7 @@ class RewardsEngine {
                       m.every(),
                       m.points(),
                       c.passMissionTaken.getOrDefault(m.code(), 0L) * m.points(),
-                      engine.pass.ready(c, m));
+                      ready);
                 })
             .toList();
     List<CompanyView.PassReward> last =
