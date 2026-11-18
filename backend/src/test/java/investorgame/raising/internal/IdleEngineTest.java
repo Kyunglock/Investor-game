@@ -99,6 +99,20 @@ class IdleEngineTest {
   }
 
   @Test
+  void legacyUnlockedPlayersSkipTheGuideButLaterUnlocksStillGetIt() {
+    CompanyState veteran = new CompanyState();
+    veteran.idle = new CompanyState.Idle();
+    veteran.idle.wall = 101;
+    assertThat(engine.view(veteran).onboarding().skillGuideSeen()).isTrue();
+    assertThat(engine.view(veteran).onboarding().step()).isEqualTo(8);
+    CompanyState newcomer = new CompanyState();
+    assertThat(engine.view(newcomer).onboarding().skillGuideSeen()).isFalse();
+    newcomer.idle.wall = 101;
+    assertThat(engine.view(newcomer).onboarding().skillsUnlocked()).isTrue();
+    assertThat(engine.view(newcomer).onboarding().skillGuideSeen()).isFalse();
+  }
+
+  @Test
   void activeSkillsRequireClearingWall100ButCatMeteorDoesNot() {
     start(100);
     assertThat(engine.view(state).onboarding().skillsUnlocked()).isFalse();

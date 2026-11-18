@@ -28,6 +28,7 @@ class CompanyState {
   boolean tutorialCatClaimed;
   boolean tutorialWeaponClaimed;
   boolean skillGuideSeen;
+  boolean onboardingInitialized;
 
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
   static class Idle {

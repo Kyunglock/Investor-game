@@ -430,6 +430,11 @@ class IdleEngine {
     }
     seat(c.idle);
     c.idle.best = Math.max(c.idle.best, Math.max(c.idle.wall - 1, c.idle.bossCleared));
+    if (!c.onboardingInitialized) {
+      // 이미 해금 조건을 달성한 기존 유저에게 새 안내를 강제하지 않는다.
+      c.skillGuideSeen = c.tutorialStep == null && c.idle.best >= 100;
+      c.onboardingInitialized = true;
+    }
     return c.idle;
   }
 
