@@ -10,8 +10,9 @@
   border: 0;
   color: #fff5dc;
   background: radial-gradient(ellipse at 50% 42%, #33304d, #11121e 75%);
+  overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
 }
 .weapon-reveal::backdrop {
   background: #0a0b16ed;
@@ -21,7 +22,10 @@
   isolation: isolate;
   min-height: 100%;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
+  /* 회전하는 빛살이 결과 창의 스크롤 영역을 넓히지 않게 한다. */
+  overflow: clip;
 }
 .weapon-reveal-rays {
   position: absolute;
@@ -233,6 +237,12 @@
   }
   .weapon-reveal-art {
     min-height: 105px;
+  }
+  .weapon-reveal-result {
+    padding: 6px 0;
+  }
+  .weapon-reveal-actions {
+    margin-top: 12px;
   }
   .weapon-reveal-result h2 {
     font-size: 25px;

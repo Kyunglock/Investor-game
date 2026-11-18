@@ -10,7 +10,7 @@
   inset: auto;
   min-height: 0;
   overflow: hidden;
-  border-inline: 3px solid #2378df;
+  border-inline: 0;
 }
 .idle-home > .idle-office {
   grid-column: 1;

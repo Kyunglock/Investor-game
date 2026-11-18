@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
+import { checkRevealViewport } from './revealViewportCheck.mjs'
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -165,19 +166,33 @@ try {
     await expect(guide).toHaveAttribute('data-step', '-1')
     await expect(guide).toContainText('환영해요')
     await expect(guide.getByRole('button', { name: '건너뛰기' })).toHaveCount(0)
+    if (width === 390) {
+      c.idle.wall = 2
+      c.idle.cleared = 1
+    }
     await guide.getByRole('button', { name: '함께 시작하기' }).click()
     await expect(guide).toHaveAttribute('data-step', '0')
     await expect(page.getByRole('button', { name: '성장', exact: false }).first()).toBeDisabled()
     await expect(page.getByTestId('idle-active')).toHaveCount(0)
     await page.locator('[data-testid=idle-canvas] canvas').waitFor()
     await expect(page.getByTestId('loading')).toHaveCount(0, { timeout: 30000 })
+    await expect(page.locator('.tutorial-focus, .tutorial-shade')).toHaveCount(0)
+    const canvas = page.getByTestId('idle-canvas')
+    await expect(canvas).toHaveCSS('border-left-width', '0px')
+    await expect(canvas).toHaveCSS('border-right-width', '0px')
+    if (width === 320)
+      await expect(guide.getByRole('button', { name: '첫 매도벽 돌파를 기다려요' })).toBeDisabled()
     await page.screenshot({ path: `/tmp/tutorial-existing-${width}.png` })
     c.idle.wall = 2
     c.idle.cleared = 1
     await refresh()
+    await page.waitForTimeout(400)
+    await expect(guide).toHaveAttribute('data-step', '0')
+    await expect(guide).toContainText('첫 매도벽을 돌파했어요')
+    await guide.getByRole('button', { name: '첫 돌파 확인했어요' }).click()
     await expect(guide).toHaveAttribute('data-step', '1')
     const nav = (name) => page.locator(`[data-tutorial-menu="${name}"]`).last()
-    const target = page.getByTestId('tutorial-focus')
+    const target = guide
     const locked = async (step) => {
       await expect(page.locator('body')).toHaveAttribute('data-tutorial-drag-lock', 'true')
       const sheet = page.getByTestId('idle-menu')
@@ -203,13 +218,6 @@ try {
       'data-target',
       '[data-testid="idle-stat"][data-kind="damage"] .idle-buy',
     )
-    await expect
-      .poll(async () => {
-        const a = await target.boundingBox(),
-          b = await page.locator('[data-testid=idle-stat][data-kind=damage] button').boundingBox()
-        return a && b ? Math.abs(a.y - (b.y - 5)) : 100
-      })
-      .toBeLessThan(2)
     await page.screenshot({ path: `/tmp/tutorial-focus-growth-${width}.png` })
     await page.locator('[data-testid=idle-stat][data-kind=damage] button').click()
     await expect(guide).toHaveAttribute('data-step', '2')
@@ -221,14 +229,14 @@ try {
     await expect(page.getByTestId('cat-reveal')).toBeVisible()
     await expect(guide).toBeHidden()
     await expect(page.getByTestId('cat-drawn')).toContainText('밤냥')
+    await checkRevealViewport(page, 'cat', true)
     await page.getByRole('button', { name: '밤냥 출전시키러 가기' }).click()
     await expect(guide).toHaveAttribute('data-step', '3')
     await expect(target).toHaveAttribute('data-target', '[data-testid="cat"][data-code="night"]')
-    await expect(page.getByTestId('tutorial-drop-focus')).toHaveAttribute(
-      'data-target',
-      '[data-loadout-target^="slot:empty"]',
-    )
-    await expect(page.locator('.tutorial-shade mask rect[fill=black]')).toHaveCount(2)
+    await expect(guide).toHaveAttribute('data-drop-target', '[data-loadout-target^="slot:empty"]')
+    await expect(
+      page.locator('.tutorial-focus, .tutorial-shade, [data-tutorial-layer] rect'),
+    ).toHaveCount(0)
     await locked(3)
     await page.screenshot({ path: `/tmp/tutorial-drag-cat-${width}.png` })
     await drag(
@@ -244,6 +252,7 @@ try {
     await expect(page.getByTestId('weapon-reveal')).toBeVisible()
     await expect(guide).toBeHidden()
     await expect(page.getByTestId('weapon-drawn')).toContainText('기관단총')
+    await checkRevealViewport(page, 'weapon', true)
     await page.getByRole('button', { name: '밤냥에게 무기 끌어놓기' }).click()
     await expect(guide).toHaveAttribute('data-step', '5')
     await refresh()
@@ -254,8 +263,8 @@ try {
       'data-target',
       '[data-testid="cat-weapon"][data-grade="B"]:not([data-holder])',
     )
-    await expect(page.getByTestId('tutorial-drop-focus')).toHaveAttribute(
-      'data-target',
+    await expect(guide).toHaveAttribute(
+      'data-drop-target',
       '[data-testid="gun-slot"][data-code="night"]',
     )
     await locked(5)

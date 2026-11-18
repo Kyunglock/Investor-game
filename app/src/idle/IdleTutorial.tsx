@@ -1,13 +1,13 @@
 import type { Company } from '@web/api/client'
 import { useRaisingStore } from '@web/features/raising/store'
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { tutorialReady } from './onboarding'
 import { tutorialTargets, useTutorialFocus } from './tutorialFocus'
 import { useTutorialDragGuard } from './useTutorialDragGuard'
 import './onboarding-guide.css'
 
-/** 기존 버튼에 스포트라이트를 비추는 코치마크. 실제 행동이 완료되면 서버에 다음 단계를 저장한다. */
+/** 기존 UI 옆의 짧은 안내. 첫 돌파는 확인 후, 직접 조작하는 단계는 행동 완료 후 이어간다. */
 export function IdleTutorial({
   company,
   replay,
@@ -25,7 +25,6 @@ export function IdleTutorial({
   skillUse: boolean
   onSkillUse: () => void
 }) {
-  const maskId = useId()
   const progress = company.idle?.onboarding
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
@@ -43,7 +42,7 @@ export function IdleTutorial({
     if (
       replay !== null ||
       !progress ||
-      ![0, 1, 3, 5].includes(step) ||
+      ![1, 3, 5].includes(step) ||
       !ready ||
       busy ||
       attempted.current === step
@@ -97,13 +96,17 @@ export function IdleTutorial({
         : '다음 안내'
       : step === -1
         ? '함께 시작하기'
-        : step === 6 && menu === 'battle'
-          ? '메테오 확인했어요'
-          : step === 7
-            ? '안내 마치기'
-            : skillGuide && menu === 'skills' && !skillUse
-              ? '사용 위치 보기'
-              : null
+        : step === 0
+          ? ready
+            ? '첫 돌파 확인했어요'
+            : '첫 매도벽 돌파를 기다려요'
+          : step === 6 && menu === 'battle'
+            ? '메테오 확인했어요'
+            : step === 7
+              ? '안내 마치기'
+              : skillGuide && menu === 'skills' && !skillUse
+                ? '사용 위치 보기'
+                : null
   const drop = focus.drop
   const fromX = focus.left + focus.width / 2
   const fromY = focus.top - 8
@@ -123,75 +126,47 @@ export function IdleTutorial({
   }
   return createPortal(
     <div data-tutorial-layer="true">
-      <svg className="tutorial-shade" aria-hidden="true" width={innerWidth} height={innerHeight}>
-        <defs>
-          <mask id={maskId}>
-            <rect width="100%" height="100%" fill="white" />
-            {[focus, ...(drop ? [drop] : [])].map((box) => (
-              <rect
-                key={box.target}
-                x={box.left}
-                y={box.top}
-                width={box.width}
-                height={box.height}
-                rx="12"
-                fill="black"
-              />
-            ))}
-          </mask>
-        </defs>
-        <rect width="100%" height="100%" fill="#101e36ad" mask={`url(#${maskId})`} />
-        {drop && (
-          <>
-            <path d={path} fill="none" stroke="#ffe17d" strokeWidth="3" strokeDasharray="5 5" />
-            <path
-              d={`M ${toX - 6} ${toY + 8} L ${toX} ${toY} L ${toX + 6} ${toY + 8}`}
-              fill="none"
-              stroke="#ffe17d"
-              strokeWidth="3"
-            />
-            <circle
-              className="tutorial-drag-dot"
-              r="6"
-              fill="#fff9e9"
-              stroke="#c78b28"
-              strokeWidth="2"
-            >
-              <animateMotion dur="1.8s" repeatCount="indefinite" path={path} />
-            </circle>
-          </>
-        )}
-      </svg>
-      <div
-        className="tutorial-focus"
-        data-testid="tutorial-focus"
-        data-target={focus.target}
-        aria-hidden="true"
-        style={{ left: focus.left, top: focus.top, width: focus.width, height: focus.height }}
-      />
       {drop && (
-        <>
-          <div
-            className="tutorial-focus"
-            data-testid="tutorial-drop-focus"
-            data-target={drop.target}
-            aria-hidden="true"
-            style={{ left: drop.left, top: drop.top, width: drop.width, height: drop.height }}
+        <svg
+          className="tutorial-drag-path"
+          aria-hidden="true"
+          width={innerWidth}
+          height={innerHeight}
+        >
+          <path d={path} fill="none" stroke="#ffe17d" strokeWidth="3" strokeDasharray="5 5" />
+          <path
+            d={`M ${toX - 6} ${toY + 8} L ${toX} ${toY} L ${toX + 6} ${toY + 8}`}
+            fill="none"
+            stroke="#ffe17d"
+            strokeWidth="3"
           />
-          <small
-            className="tutorial-drop-label"
-            aria-hidden="true"
-            style={{ left: Math.max(8, drop.left), top: drop.top - 22 }}
+          <circle
+            className="tutorial-drag-dot"
+            r="6"
+            fill="#fff9e9"
+            stroke="#c78b28"
+            strokeWidth="2"
           >
-            여기에 놓기
-          </small>
-        </>
+            <animateMotion dur="1.8s" repeatCount="indefinite" path={path} />
+          </circle>
+        </svg>
+      )}
+      {drop && (
+        <small
+          className="tutorial-drop-label"
+          aria-hidden="true"
+          style={{ left: Math.max(8, drop.left), top: drop.top - 22 }}
+        >
+          여기에 놓기
+        </small>
       )}
       <aside
         ref={bubble}
         className="idle-tutorial"
         data-testid="idle-tutorial"
         data-step={step}
+        data-target={focus.target}
+        data-drop-target={drop?.target}
         data-side={above ? 'above' : 'below'}
         aria-label="첫 출근 안내"
         style={{ left, top, width }}
@@ -208,11 +183,19 @@ export function IdleTutorial({
         <small>
           {replay !== null ? '다시 보기' : skillGuide ? '스킬 해금' : `${step + 2} / 9`}
         </small>
-        <p aria-live="polite">{focus.text}</p>
+        <p aria-live="polite">
+          {step === 0 && ready
+            ? '첫 매도벽을 돌파했어요! 확인하고 공격력 강화를 배워봐요.'
+            : focus.text}
+        </p>
         {error && <p role="alert">{error}</p>}
         <div className="tutorial-coach-actions">
           {action && (
-            <button type="button" disabled={busy} onClick={next}>
+            <button
+              type="button"
+              disabled={busy || (replay === null && step === 0 && !ready)}
+              onClick={next}
+            >
               {action}
             </button>
           )}

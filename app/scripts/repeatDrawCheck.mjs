@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
+import { checkRevealViewport } from './revealViewportCheck.mjs'
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -104,6 +105,7 @@ try {
       const result = page.getByTestId(`${kind}-reveal`)
       await expect(page.getByTestId(`${kind}-reveal-ad`)).toContainText('2 / 3')
       await expect(page.getByTestId(`${kind}-reveal-again`)).toContainText('다이아로 뽑기')
+      await checkRevealViewport(page, kind)
       for (const outcome of ['closed', 'unavailable']) {
         await page.evaluate((value) => {
           window.adResult = value
