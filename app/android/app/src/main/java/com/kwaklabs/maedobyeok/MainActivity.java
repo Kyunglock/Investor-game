@@ -1,4 +1,4 @@
-package com.kyunglock.investorgame;
+package com.kwaklabs.maedobyeok;
 
 import android.os.Bundle;
 import android.webkit.WebView;

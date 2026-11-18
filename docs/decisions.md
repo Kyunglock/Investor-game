@@ -2629,3 +2629,14 @@ S는 절반으로 내려가지만 여전히 A의 1.74배이고 관통 넷이 따
 - 보상별 수령 플래그와 단계 검증은 유지한다. 재전송·재접속·환생으로 중복 지급하지 않으며 기존 진행 중인 계정은 현재 단계에서 이어간다.
 
 검증: 환영·즉시 수령/건너뛰기 거절·무료 확정 결과·중복 지급 방지·재접속 서버 테스트와 320/390px 상점 뽑기 연출→터치/마우스 드래그→완료 브라우저 검증.
+
+### 627. 앱 ID를 com.kwaklabs.maedobyeok로 바꾼다 (306·499번 고침, 2026-11-18)
+
+Play Console에 만든 앱의 패키지 이름이 `com.kwaklabs.maedobyeok`인데, 빌드한 AAB의 앱 ID는 `com.kyunglock.investorgame`였다. Play는 앱마다 패키지 이름이 하나로 고정돼 다른 이름의 AAB를 받지 않는다. 사용자: "방법 1로 진행해줘"(앱 코드 쪽을 Play에 맞춘다).
+
+- 앱 ID·`namespace`·Capacitor `appId`·`strings.xml`의 `package_name`·`custom_url_scheme`을 `com.kwaklabs.maedobyeok`로, 테스트판은 `com.kwaklabs.maedobyeok.test`로 바꾼다. `MainActivity`도 같은 패키지 폴더로 옮긴다.
+- 아직 Play로 설치한 사람이 없어 지금 바꾸는 비용이 가장 적다. 도메인(`kwaklabs.com`)과 게임 이름에 맞는 이름이다.
+- (알려 둘 것) 폰에 이미 깐 디버그·테스트판 APK와는 다른 앱이 된다: 새 앱으로 깔리고 WebView 쿠키도 따로라 새 회사로 시작한다. 예전 앱은 지워도 된다.
+- (알려 둘 것) AdMob 실제 ID를 넣을 때 AdMob 콘솔의 앱도 새 패키지 이름으로 연결한다. 서명 키는 그대로다.
+
+검증: 저장소에 옛 이름이 결정 기록 밖에 남지 않음을 확인했다. APK·AAB 빌드는 CI의 Android 워크플로에서 확인한다(이 환경에는 안드로이드 SDK가 없다).
