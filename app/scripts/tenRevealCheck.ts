@@ -89,7 +89,8 @@ try {
       if (reducedMotion === 'no-preference') {
         // 뒷면으로 나와 뜸을 들인 뒤 열린다 (576번): 보통 장은 금방, A등급 0.5초, S등급 1초.
         const shownAt = Date.now()
-        await expect(single).toHaveAttribute('data-open', 'false')
+        // 보통 장은 0.22초 만에 열려, 느린 기계에서는 앞의 확인을 하는 사이에 이미 열려 있다. 뒷면은 빛나는 장에서만 본다.
+        if (shiny) await expect(single).toHaveAttribute('data-open', 'false')
         if (process.env.OUT && grade === 'S') {
           await page.waitForTimeout(600)
           await page.screenshot({ path: `${process.env.OUT}/ten-S-back.png` })
