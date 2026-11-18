@@ -83,7 +83,15 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
-import { BUY_WALL, BuyWall, buyOrderX, idleBuyOrderDamage, pushedByCollapse } from './buyWall'
+import {
+  BUY_WALL,
+  BuyLossNote,
+  BuyWall,
+  buyOrderX,
+  idleBuyOrderDamage,
+  noteX,
+  pushedByCollapse,
+} from './buyWall'
 import { BuyWallFx } from './buyWallFx'
 import {
   awakenedMateCount,
@@ -687,6 +695,9 @@ class BattleScene extends Phaser.Scene {
   private impacts: Phaser.GameObjects.Image[] = []
   private impactIndex = 0
   private pops: Phaser.GameObjects.Text[] = []
+  /** 매수벽이 깎인 양 (#915): 따로 둔 글자 하나에 합쳐 적는다. */
+  private buyLossText: Phaser.GameObjects.Text | null = null
+  private buyLoss = new BuyLossNote()
   private popIndex = 0
   /** 데미지 숫자 풀(391번): 보통 숫자(종류마다 글자 색, 잉크 윤곽)와 치명타(금빛 글자·빨간 윤곽). */
   private damage!: DamagePool<DamageText>
@@ -1112,22 +1123,21 @@ class BattleScene extends Phaser.Scene {
       )
     }
     // 알림 글자(멘탈 ±·투기 진압! 같은 말)는 데미지 숫자보다 위에 둔다.
-    for (let i = 0; i < 16; i++) {
-      this.pops.push(
-        this.add
-          .text(0, 0, '', {
-            fontFamily: '"Gowun Dodum", sans-serif',
-            fontSize: '20px',
-            color: '#ffffff',
-            stroke: INK,
-            strokeThickness: 5,
-            resolution: DPR,
-          })
-          .setOrigin(0.5)
-          .setDepth(9)
-          .setVisible(false),
-      )
-    }
+    const popText = () =>
+      this.add
+        .text(0, 0, '', {
+          fontFamily: '"Gowun Dodum", sans-serif',
+          fontSize: '20px',
+          color: '#ffffff',
+          stroke: INK,
+          strokeThickness: 5,
+          resolution: DPR,
+        })
+        .setOrigin(0.5)
+        .setDepth(9)
+        .setVisible(false)
+    for (let i = 0; i < 16; i++) this.pops.push(popText())
+    this.buyLossText = popText()
     const damageText = (fill: string, stroke: string, thickness: number) =>
       Object.assign(
         this.add
@@ -3072,8 +3082,14 @@ class BattleScene extends Phaser.Scene {
 
   // ── 전투
 
-  private pop(x: number, y: number, text: string, color = '#ffffff', size = 20) {
-    const t = this.pops[this.popIndex++ % this.pops.length]
+  private pop(
+    x: number,
+    y: number,
+    text: string,
+    color = '#ffffff',
+    size = 20,
+    t = this.pops[this.popIndex++ % this.pops.length],
+  ) {
     this.tweens.killTweensOf(t)
     t.setText(text)
       .setColor(color)
@@ -3433,7 +3449,16 @@ class BattleScene extends Phaser.Scene {
     if (!broken && this.buyWall.hp === before) return
     this.buyWallFx?.impact(x, broken)
     const lost = broken ? before : before - this.buyWall.hp
-    this.pop(x, this.buyWallY() - 55, `매수 -${shareLabel(lost)}`, '#ffb278', 20)
+    // 한꺼번에 닿은 물량은 한 글자로 합치고, 화면 끝에서 잘리지 않게 안쪽으로 묶는다 (#915).
+    const note = this.buyLossText
+    if (note) {
+      const merged = this.buyLoss.add(lost, this.time.now)
+      const label = `매수 -${shareLabel(this.buyLoss.total)}`
+      if (merged && note.visible) note.setText(label)
+      else this.pop(x, this.buyWallY() - 55, label, '#ffb278', 20, note)
+      // 처음 뜰 때 1.3배로 커졌다 줄어든다: 가장 클 때의 폭으로 잰다.
+      note.setX(noteX(note.x, note.width * 1.3, this.view().w))
+    }
     if (broken && this.opts.idle) {
       this.pop(this.view().w / 2, this.buyWallY() - 84, '매수벽 붕괴!', '#ff8a5c', 22)
     }

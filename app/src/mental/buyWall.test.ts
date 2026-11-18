@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   assaultBonusPercent,
+  BUY_LOSS_MERGE_MS,
   BUY_WALL,
+  BuyLossNote,
   BuyWall,
   buyOrderX,
   idleBuyOrderDamage,
+  noteX,
   pushedByCollapse,
 } from './buyWall'
 import { SHARES_PER_HP, sharesOf } from './shares'
@@ -180,5 +183,26 @@ describe('자동 전투의 매수 주문 피해 (514·573번)', () => {
     expect(wall.hit(wall.maxHp)).toBe(true)
     wall.recover(50)
     expect(wall.active).toBe(false)
+  })
+})
+
+describe('매수벽이 깎인 양을 알리는 글자 (#915)', () => {
+  it('한꺼번에 닿은 물량은 한 글자로 합치고, 시간이 지나면 새 글자로 띄운다', () => {
+    const note = new BuyLossNote()
+    expect(note.add(3, 1000)).toBe(false)
+    expect(note.add(2, 1040)).toBe(true)
+    expect(note.add(1, 1000 + BUY_LOSS_MERGE_MS - 1)).toBe(true)
+    expect(note.total).toBe(6)
+    // 합치는 시간은 처음 뜬 때부터 센다: 계속 맞아도 글자 하나가 끝없이 불어나지 않는다.
+    expect(note.add(4, 1000 + BUY_LOSS_MERGE_MS)).toBe(false)
+    expect(note.total).toBe(4)
+  })
+
+  it('글자는 화면 양 끝에서 잘리지 않게 안쪽으로 묶인다', () => {
+    // 폭 100인 글자: 가운데가 58~262 사이에 있어야 320 화면에서 여백 8을 남긴다.
+    expect(noteX(20, 100, 320)).toBe(58)
+    expect(noteX(-40, 100, 320)).toBe(58)
+    expect(noteX(310, 100, 320)).toBe(262)
+    expect(noteX(160, 100, 320)).toBe(160)
   })
 })
