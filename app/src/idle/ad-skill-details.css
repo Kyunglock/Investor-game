@@ -1,0 +1,49 @@
+.ad-skill-details {
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 20px;
+  border: 3px solid #d79839;
+  border-radius: 22px;
+  background: #fff7df;
+  color: #60401f;
+  text-align: center;
+  box-shadow: 0 8px 0 #55340a55;
+}
+.ad-skill-details::backdrop {
+  background: #1c193cb3;
+}
+.ad-skill-details-icon {
+  width: 76px;
+  margin: 0 auto 8px;
+}
+.ad-skill-details h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
+.ad-skill-details p {
+  margin: 12px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.ad-skill-details button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 2px solid #bb841f;
+  border-radius: 12px;
+  background: #fff;
+  font-weight: 700;
+}
+.ad-skill-details button[data-testid="ad-skill-confirm"] {
+  background: #ffda69;
+}
+.ad-skill-details button:disabled {
+  opacity: 0.55;
+}
+.ad-skill-details button:focus-visible {
+  outline: 3px solid #2179c6;
+  outline-offset: 2px;
+}
