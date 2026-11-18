@@ -1,4 +1,4 @@
-# PRD: 증권사 육성 (Investor Game)
+# PRD: 매도벽 돌파냥
 
 > 상태: v0.2 (증권사 육성 구조로 개정, 2026-11-05. 옛 "투자자 인생 시뮬레이터"는 #292에서, 3분 육성 판은 decisions.md 228번에서 코드를 지웠다)
 > 표기: **(확정)** = 사용자가 정한 것, **(제안)** = 확인받지 않은 초기안. 게임 설계의 원본은 [증권사 육성 설계](./superpowers/specs/2026-11-05-brokerage-raising-design.md)(0~1절, 4절 이후. 3분 육성 이야기는 옛 설계)와 [투자 원칙 장치·단서 기사 설계](./superpowers/specs/2026-11-05-investment-principles-design.md)(단서 기사·형광펜·꼬드김), 구현하며 정한 것은 [decisions.md](./decisions.md) 197번부터다. 지금 흐름은 228번부터다.

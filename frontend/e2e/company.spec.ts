@@ -25,7 +25,7 @@ async function companyOf(response: APIResponse): Promise<Company> {
 
 test('첫 화면은 게임 이름과 앱 화면으로 가는 게임 시작을 보인다', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: '흔들리지 않는 고양이' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '매도벽 돌파냥' })).toBeVisible()
   const start = page.getByRole('link', { name: '게임 시작' })
   await expect(start).toBeVisible()
   await expect(start).toHaveAttribute('href', '/app/')

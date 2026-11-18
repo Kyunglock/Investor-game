@@ -16,7 +16,7 @@ android {
         applicationId testApp ? "com.kyunglock.investorgame.test" : "com.kyunglock.investorgame"
         // 테스트판은 이름과 아이콘(보라 바탕에 TEST 띠)이 달라 홈 화면에서 본 앱과 구분된다.
         manifestPlaceholders = [
-            appLabel    : testApp ? "[테스트] 고양이" : "@string/app_name",
+            appLabel    : testApp ? "[테스트] 매도벽 돌파냥" : "@string/app_name",
             appIcon     : testApp ? "@drawable/ic_launcher_test" : "@mipmap/ic_launcher",
             appRoundIcon: testApp ? "@drawable/ic_launcher_test" : "@mipmap/ic_launcher_round",
             admobAppId  : admobAppId,

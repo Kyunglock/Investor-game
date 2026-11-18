@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Investor Game API
+  title: 매도벽 돌파냥 API
   version: 0.3.0
   description: |
     클라이언트와 서버의 계약. 통합 담당만 수정한다 (architecture.md 8절).
