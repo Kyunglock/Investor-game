@@ -294,9 +294,6 @@ export function IdleCats({
               type="button"
               className="idle-cat-field"
               data-testid="cat-field"
-              data-tutorial-target={
-                (company.idle?.onboarding?.step === 3 && cat?.code === 'night') || undefined
-              }
               aria-pressed={cat.fielded}
               disabled={busy}
               onClick={() => {
@@ -373,9 +370,6 @@ export function IdleCats({
             className="idle-cat-gun"
             data-testid="cat-gun"
             disabled={(company.idle?.onboarding?.step ?? 8) < 5}
-            data-tutorial-target={
-              (company.idle?.onboarding?.step === 5 && cat?.code === 'night') || undefined
-            }
             onClick={() => {
               sfx.tap()
               setGearOpen(!gearOpen)
@@ -436,9 +430,6 @@ export function IdleCats({
                       type="button"
                       className={`idle-cat-cell ${c.level > 0 ? 'owned' : ''} ${c.fielded ? 'fielded' : ''} ${picked === c.code ? 'is-picked' : ''}`}
                       data-testid="cat"
-                      data-tutorial-target={
-                        (company.idle?.onboarding?.step === 3 && c.code === 'night') || undefined
-                      }
                       data-code={c.code}
                       data-grade={c.grade}
                       disabled={c.level < 1}

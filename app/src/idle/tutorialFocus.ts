@@ -1,0 +1,206 @@
+import { useLayoutEffect, useState } from 'react'
+
+export type FocusTarget = { selector: string; text: string; battle?: boolean; drop?: string }
+export type FocusBox = { left: number; top: number; width: number; height: number; target: string }
+
+/** 화면을 복제하지 않고 실제 버튼의 위치를 따라간다. 시트 스크롤과 열림 애니메이션도 반영한다. */
+export function useTutorialFocus(targets: FocusTarget[], active: boolean) {
+  const key = JSON.stringify(targets)
+  const [focus, setFocus] = useState<
+    (FocusBox & { text: string; battle?: boolean; drop?: FocusBox }) | null
+  >(null)
+  useLayoutEffect(() => {
+    if (!active) {
+      setFocus(null)
+      return
+    }
+    const choices = JSON.parse(key) as FocusTarget[]
+    let frame = 0
+    let scrolled: Element | null = null
+    const measure = () => {
+      let found: HTMLElement | undefined
+      let choice: FocusTarget | undefined
+      for (const candidate of choices) {
+        found = [...document.querySelectorAll<HTMLElement>(candidate.selector)]
+          .reverse()
+          .find((el) => el.getClientRects().length > 0)
+        if (found) {
+          choice = candidate
+          break
+        }
+      }
+      if (!found || !choice) {
+        setFocus(null)
+        return
+      }
+      if (scrolled !== found && found.closest('[role="dialog"]')) {
+        scrolled = found
+        found.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' })
+      }
+      const rect = found.getBoundingClientRect()
+      const left = choice.battle ? 12 : Math.max(4, rect.left - 5)
+      const top = choice.battle ? 58 : Math.max(4, rect.top - 5)
+      const right = choice.battle ? innerWidth - 12 : Math.min(innerWidth - 4, rect.right + 5)
+      const bottom = choice.battle ? innerHeight - 100 : Math.min(innerHeight - 4, rect.bottom + 5)
+      const dropElement = choice.drop
+        ? [...document.querySelectorAll<HTMLElement>(choice.drop)].find(
+            (el) => el.getClientRects().length > 0,
+          )
+        : null
+      const dropRect = dropElement?.getBoundingClientRect()
+      const drop =
+        dropRect && choice.drop
+          ? {
+              left: dropRect.left - 5,
+              top: dropRect.top - 5,
+              width: dropRect.width + 10,
+              height: dropRect.height + 10,
+              target: choice.drop,
+            }
+          : undefined
+      const next = {
+        left,
+        top,
+        width: Math.max(1, right - left),
+        height: Math.max(1, bottom - top),
+        text: choice.text,
+        target: choice.selector,
+        battle: choice.battle,
+        drop,
+      }
+      setFocus((old) => (JSON.stringify(old) === JSON.stringify(next) ? old : next))
+    }
+    const schedule = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(measure)
+    }
+    const observer = new MutationObserver((mutations) => {
+      if (
+        mutations.some(
+          (mutation) =>
+            !(
+              mutation.target instanceof Element && mutation.target.closest('[data-tutorial-layer]')
+            ),
+        )
+      )
+        schedule()
+    })
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['class', 'data-code', 'data-grade', 'aria-pressed', 'disabled'],
+    })
+    window.addEventListener('resize', schedule)
+    document.addEventListener('scroll', schedule, true)
+    document.addEventListener('animationend', schedule, true)
+    // 시트가 올라오는 동안에는 목표의 좌표도 움직인다.
+    let animationFrame = 0
+    const until = performance.now() + 450
+    const trackAnimation = () => {
+      measure()
+      if (performance.now() < until) animationFrame = requestAnimationFrame(trackAnimation)
+    }
+    trackAnimation()
+    return () => {
+      cancelAnimationFrame(frame)
+      cancelAnimationFrame(animationFrame)
+      observer.disconnect()
+      window.removeEventListener('resize', schedule)
+      document.removeEventListener('scroll', schedule, true)
+      document.removeEventListener('animationend', schedule, true)
+    }
+  }, [key, active])
+  return focus
+}
+
+export function tutorialTargets(step: number, menu: string, skillUse: boolean): FocusTarget[] {
+  const nav = (name: string, text: string) => ({ selector: `[data-tutorial-menu="${name}"]`, text })
+  const night = {
+    selector: '[data-testid="cat"][data-code="night"], [data-testid="cat-slot"][data-code="night"]',
+    text: '밤냥을 눌러 선택해 주세요.',
+  }
+  switch (step) {
+    case 0:
+      return [
+        {
+          selector: '[data-testid="idle-wall-number"]',
+          text: '사장냥은 자동으로 공격해요. 첫 매도벽이 깨지는 걸 지켜봐요!',
+        },
+      ]
+    case 1:
+      return menu === 'growth'
+        ? [
+            {
+              selector: '[data-testid="idle-stat"][data-kind="damage"] .idle-buy',
+              text: '이 버튼을 눌러 공격력을 한 번 강화해 주세요.',
+            },
+          ]
+        : [nav('growth', '성장을 눌러 공격력을 올려봐요.')]
+    case 2:
+      return [nav('cats', '첫 동료 선물! 메테오 마법을 쓰는 A등급 밤냥이에요.')]
+    case 3:
+      return menu === 'cats'
+        ? [
+            {
+              selector: '[data-testid="cat"][data-code="night"]',
+              drop: '[data-loadout-target^="slot:empty"]',
+              text: '밤냥을 꾹 누른 채 빈 출전 칸으로 끌어 놓으세요.',
+            },
+          ]
+        : [nav('cats', '고양이·무기를 눌러 밤냥을 출전시켜요.')]
+    case 4:
+      return [
+        {
+          selector: '[data-testid="cat-gun"]',
+          text: '밤냥의 첫 무기, B등급 기관단총을 선물할게요.',
+        },
+        nav('cats', 'B등급 기관단총을 받아 밤냥에게 장착해 봐요.'),
+      ]
+    case 5:
+      return menu === 'cats'
+        ? [
+            {
+              selector: '[data-testid="cat-weapon"][data-grade="B"]:not([data-holder])',
+              drop: '[data-testid="gun-slot"][data-code="night"]',
+              text: '기관단총을 꾹 누른 채 밤냥 아래 무기 칸으로 끌어 놓으세요.',
+            },
+            {
+              selector: '[data-testid="gun-slot"][data-code="night"]',
+              text: '밤냥 아래 무기 칸을 눌러 무기 목록을 열어주세요.',
+            },
+            night,
+          ]
+        : [nav('cats', '고양이·무기에서 밤냥의 무기를 바꿔봐요.')]
+    case 6:
+      return menu === 'battle'
+        ? [
+            {
+              selector: '.idle-canvas',
+              text: '밤냥은 메테오를 자동으로 써요. 함께 싸우는 모습을 확인해 봐요!',
+              battle: true,
+            },
+          ]
+        : [nav('battle', '돌파로 돌아가 자동 메테오를 확인해 봐요.')]
+    case 7:
+      return [nav('battle', '첫 팀 완성! 직접 쓰는 스킬은 100 매도벽 돌파 후 열려요.')]
+    default:
+      return skillUse
+        ? menu === 'battle'
+          ? [
+              {
+                selector: '[data-testid="idle-active"]',
+                text: '이 스킬 버튼을 직접 눌러보세요. 사용 후에는 잠시 기다려야 해요.',
+              },
+            ]
+          : [nav('battle', '돌파 화면에서 장착한 스킬을 직접 사용해 봐요.')]
+        : menu === 'skills'
+          ? [
+              {
+                selector: '.boss-skill-loadout',
+                text: '스킬은 여기 최대 3개까지 장착해요. 아래 목록에서 바꿀 수 있어요.',
+              },
+            ]
+          : [nav('skills', '100 매도벽 돌파! 스킬 메뉴를 눌러보세요.')]
+  }
+}

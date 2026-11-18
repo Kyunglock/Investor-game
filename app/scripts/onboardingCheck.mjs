@@ -136,6 +136,31 @@ try {
     await page.goto(process.env.APP_URL ?? 'http://localhost:5187/app/', {
       waitUntil: 'domcontentloaded',
     })
+    const drag = async (from, to) => {
+      await from.scrollIntoViewIfNeeded()
+      const f = await from.boundingBox(),
+        t = await to.boundingBox()
+      assert.ok(f && t)
+      if (width === 320) {
+        const cdp = await page.context().newCDPSession(page)
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [{ x: f.x + f.width / 2, y: f.y + f.height / 2 }],
+        })
+        await expect(page.locator('.idle-gear-ghost')).toBeVisible()
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: t.x + t.width / 2, y: t.y + t.height / 2 }],
+        })
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+        await cdp.detach()
+      } else {
+        await page.mouse.move(f.x + f.width / 2, f.y + f.height / 2)
+        await page.mouse.down()
+        await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 8 })
+        await page.mouse.up()
+      }
+    }
     const guide = page.getByTestId('idle-tutorial')
     await expect(guide).toHaveAttribute('data-step', '0')
     await expect(page.getByRole('button', { name: '성장', exact: false }).first()).toBeDisabled()
@@ -146,41 +171,82 @@ try {
     c.idle.wall = 2
     c.idle.cleared = 1
     await refresh()
-    await guide.getByRole('button', { name: '다음', exact: true }).click()
-    await guide.getByRole('button', { name: '성장 메뉴 열기' }).click()
+    await expect(guide).toHaveAttribute('data-step', '1')
+    const nav = (name) => page.locator(`[data-tutorial-menu="${name}"]`).last()
+    const target = page.getByTestId('tutorial-focus')
+    await expect(target).toHaveAttribute('data-target', '[data-tutorial-menu="growth"]')
+    await nav('growth').click()
+    await expect(target).toHaveAttribute(
+      'data-target',
+      '[data-testid="idle-stat"][data-kind="damage"] .idle-buy',
+    )
+    await expect
+      .poll(async () => {
+        const a = await target.boundingBox(),
+          b = await page.locator('[data-testid=idle-stat][data-kind=damage] button').boundingBox()
+        return a && b ? Math.abs(a.y - (b.y - 5)) : 100
+      })
+      .toBeLessThan(2)
+    await page.screenshot({ path: `/tmp/tutorial-focus-growth-${width}.png` })
     await page.locator('[data-testid=idle-stat][data-kind=damage] button').click()
-    await guide.getByRole('button', { name: '다음', exact: true }).click()
-    await guide.getByRole('button', { name: 'A등급 밤냥 받기' }).click()
-    await guide.getByRole('button', { name: '밤냥 출전하러 가기' }).click()
-    await page.getByTestId('cat-field').click()
-    await guide.getByRole('button', { name: '다음', exact: true }).click()
-    await guide.getByRole('button', { name: 'B등급 기관단총 받기' }).click()
-    await guide.getByRole('button', { name: '밤냥 무기 목록 열기' }).click()
-    await page.locator('[data-testid=cat-weapon][data-grade=B]').click()
-    await page.getByTestId('gear-equip').click()
-    await expect(guide.getByRole('button', { name: '다음', exact: true })).toBeVisible()
-    await page.screenshot({ path: `/tmp/tutorial-equip-${width}.png` })
+    await expect(guide).toHaveAttribute('data-step', '2')
+    await guide.getByRole('button', { name: '밤냥 받기', exact: true }).click()
+    await expect(guide).toHaveAttribute('data-step', '3')
+    await nav('cats').click()
+    await expect(target).toHaveAttribute('data-target', '[data-testid="cat"][data-code="night"]')
+    await expect(page.getByTestId('tutorial-drop-focus')).toHaveAttribute(
+      'data-target',
+      '[data-loadout-target^="slot:empty"]',
+    )
+    await expect(page.locator('.tutorial-shade mask rect[fill=black]')).toHaveCount(2)
+    await page.screenshot({ path: `/tmp/tutorial-drag-cat-${width}.png` })
+    await drag(
+      page.locator('[data-testid=cat][data-code=night]'),
+      page.locator('[data-loadout-target="slot:empty0"]'),
+    )
+    await expect(guide).toHaveAttribute('data-step', '4')
+    await guide.getByRole('button', { name: '기관단총 받기', exact: true }).click()
+    await expect(guide).toHaveAttribute('data-step', '5')
     await refresh()
     await expect(guide).toHaveAttribute('data-step', '5')
-    await guide.getByRole('button', { name: '다음', exact: true }).click()
-    await guide.getByRole('button', { name: '다음', exact: true }).click()
-    await guide.getByRole('button', { name: '돌파 시작!' }).click()
+    await nav('cats').click()
+    await page.locator('[data-testid=gun-slot][data-code=night]').click()
+    await expect(target).toHaveAttribute(
+      'data-target',
+      '[data-testid="cat-weapon"][data-grade="B"]:not([data-holder])',
+    )
+    await expect(page.getByTestId('tutorial-drop-focus')).toHaveAttribute(
+      'data-target',
+      '[data-testid="gun-slot"][data-code="night"]',
+    )
+    await page.screenshot({ path: `/tmp/tutorial-drag-weapon-${width}.png` })
+    await drag(
+      page.locator('[data-testid=cat-weapon][data-grade=B]:not([data-holder])'),
+      page.locator('[data-testid=gun-slot][data-code=night]'),
+    )
+    await expect(guide).toHaveAttribute('data-step', '6')
+    await guide.getByRole('button', { name: '메테오 확인했어요' }).click()
+    await guide.getByRole('button', { name: '안내 마치기' }).click()
     await expect(guide).toHaveCount(0)
-    await expect(page.getByRole('button', { name: '스킬', exact: false }).first()).toBeDisabled()
+    await expect(nav('skills')).toBeDisabled()
     c.idle.wall = 101
     c.idle.onboarding.skillsUnlocked = true
     await refresh()
-    await expect(guide).toContainText('스킬 해금!')
-    await guide.getByRole('button', { name: '스킬 장착하러 가기' }).click()
-    await guide.getByRole('button', { name: '돌파 화면에서 사용하기' }).click()
+    await expect(guide).toContainText('100 매도벽 돌파!')
+    await nav('skills').click()
+    await guide.getByRole('button', { name: '사용 위치 보기' }).click()
+    await nav('battle').click()
+    await expect(target).toHaveAttribute('data-target', '[data-testid="idle-active"]')
+    await page.getByTestId('idle-active').click()
     await expect(guide).toHaveCount(0)
-    await expect(page.getByTestId('idle-active')).toBeVisible()
     await page.getByTestId('idle-options').click()
     await page.getByRole('button', { name: '첫 출근 안내 다시 보기' }).click()
     await expect(guide).toContainText('다시 보기')
     await guide.getByRole('button', { name: '닫기', exact: true }).click()
     assert.equal(c.idle.onboarding.step, 8)
     assert.equal(c.weapons.length, 2)
+    c.idle.wall = 1
+    c.idle.cleared = 0
     c.idle.onboarding = {
       step: 0,
       catClaimed: false,
@@ -190,7 +256,7 @@ try {
     }
     await refresh()
     await guide.getByRole('button', { name: '건너뛰기', exact: true }).click()
-    await expect(guide).toContainText('밤냥과 기관단총은 그대로 받아요')
+    await expect(guide).toContainText('건너뛰어도 밤냥과 기관단총은 받아요')
     await guide.getByRole('button', { name: '선물 받고 건너뛰기' }).click()
     await expect(guide).toHaveCount(0)
     assert.equal(c.idle.onboarding.catClaimed, true)

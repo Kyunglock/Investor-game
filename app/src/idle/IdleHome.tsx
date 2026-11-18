@@ -100,6 +100,7 @@ export function IdleHome({
   onBattle: () => void
   office: ReactNode
 }) {
+  const [skillUse, setSkillUse] = useState(false)
   const [replay, setReplay] = useState<number | null>(null)
   const [ownMenu, setMenu] = useState<Menu>('battle')
   // 전투에서 "무기 바꾸기"로 오면(Windows) 고양이·무기 탭이 사장냥의 장비 목록으로 열린다 (530·560번). 닫거나 다른 데로 가면 그 요청을 지운다.
@@ -175,6 +176,7 @@ export function IdleHome({
       {menus.map((item) => (
         <button
           key={item.key}
+          data-tutorial-menu={item.key}
           type="button"
           className={activeMenu === item.key ? 'on' : ''}
           disabled={tutorialMenuLocked(company, item.key)}
@@ -184,9 +186,6 @@ export function IdleHome({
                 ? '100 매도벽 돌파 시 해금'
                 : '첫 출근 안내를 진행하면 열려요'
               : undefined
-          }
-          data-tutorial-target={
-            (company.idle?.onboarding?.step === 1 && item.key === 'growth') || undefined
           }
           aria-current={activeMenu === item.key ? 'page' : undefined}
           onClick={() => navigate(item.key)}
@@ -228,13 +227,14 @@ export function IdleHome({
       ))}
     </nav>
   )
-  const tutorial = (inSheet: boolean) => (
+  const tutorial = () => (
     <IdleTutorial
       company={company}
       replay={replay}
       onReplay={setReplay}
-      inSheet={inSheet}
-      inSkills={menu === 'skills'}
+      menu={menu}
+      skillUse={skillUse}
+      onSkillUse={() => setSkillUse(true)}
       onGo={(next, openGear) => {
         if (next === 'cats') {
           setWearer('night')
@@ -336,7 +336,7 @@ export function IdleHome({
           {idle?.onboarding?.skillsUnlocked !== false && (
             <IdleActives company={company} connected={connected} />
           )}
-          {menu === 'battle' && tutorial(false)}
+          {menu === 'battle' && tutorial()}
           {/* 전투 화면에서 고양이를 꾹 누르면 그 고양이의 정보가 뜬다 (605번). */}
           <CatInfoCard
             company={company}
@@ -366,7 +366,7 @@ export function IdleHome({
           className={`idle-sheet ${menu === 'cats' ? 'loadout-sheet' : ''}`}
           footer={nav}
         >
-          {tutorial(true)}
+          {tutorial()}
           {menu === 'rebirth' && <IdleRebirth company={company} />}
           {menu === 'growth' && <IdleGrowth company={company} />}
           {menu === 'cats' && (
@@ -615,9 +615,6 @@ function IdleStats({ company }: { company: Company }) {
             key={u.kind}
             data-testid="idle-stat"
             data-kind={u.kind}
-            data-tutorial-target={
-              (company.idle?.onboarding?.step === 1 && u.kind === 'damage') || undefined
-            }
             data-upgraded={receipt?.kind === u.kind || undefined}
           >
             {receipt?.kind === u.kind && (
