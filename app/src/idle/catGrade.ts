@@ -34,6 +34,19 @@ export function catRevealPlan(grade: CatGrade, isNew: boolean) {
   return plans[Math.min(plans.length - 1, Math.max(0, at) + (isNew ? 1 : 0))]
 }
 
+/**
+ * 10연차에서 알림과 '팀 편성하기'가 가리킬 한 마리 (#911): 등급이 가장 높은 고양이. 같은 등급이면 이번에 처음 얻은 고양이, 그래도 같으면 먼저
+ * 나온 고양이다. isNew는 그 고양이가 이번 뽑기에서 처음 나왔는가다(같은 고양이가 또 나온 장은 isNew가 아니다).
+ */
+export function bestDraw<T extends { code: string; grade: CatGrade; isNew: boolean }>(
+  draws: readonly T[],
+): { code: T['code']; isNew: boolean } | null {
+  const fresh = (d: T) => draws.some((other) => other.code === d.code && other.isNew)
+  const rank = (d: T) => CAT_GRADES.indexOf(d.grade) * 2 + (fresh(d) ? 0 : 1)
+  const best = draws.reduce<T | null>((a, b) => (a && rank(a) <= rank(b) ? a : b), null)
+  return best && { code: best.code, isNew: fresh(best) }
+}
+
 /** 빛나는 등급 (574번): A등급부터는 좋은 것을 뽑았다는 느낌이 들게 뽑기 연출이 빛난다. */
 export function shinyCat(grade: CatGrade): boolean {
   return grade === 'A' || grade === 'S'

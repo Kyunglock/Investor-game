@@ -10,7 +10,7 @@ import { type DrawResult, WeaponReveal } from '../mental/WeaponReveal'
 import { shinyWeapon, weaponRevealPlan } from '../mental/weaponRevealPlan'
 import { CatPortrait as Portrait } from './CatPortrait'
 import { type CatDraw, CatReveal } from './CatReveal'
-import { CAT_ODDS, catRevealPlan, shinyCat } from './catGrade'
+import { bestDraw, CAT_ODDS, catRevealPlan, shinyCat } from './catGrade'
 import { RewardPlacement } from './RewardPlacement'
 import { ShopIcon } from './ShopIcon'
 import { skillNames } from './skills'
@@ -125,10 +125,12 @@ export function IdleGacha({
             }
           }),
         })
-        const last = cats.find((c) => c.code === draws[draws.length - 1].code)
-        if (last) {
-          setDrawn({ cat: last, isNew: draws.some((d) => d.code === last.code && d.isNew) })
-          onCat(last.code)
+        // 알림과 '팀 편성하기'는 마지막 장이 아니라 가장 좋은 고양이를 가리킨다 (#911).
+        const best = bestDraw(draws)
+        const cat = cats.find((c) => c.code === best?.code)
+        if (best && cat) {
+          setDrawn({ cat, isNew: best.isNew })
+          onCat(cat.code)
         }
       },
       () => setTen(null),
