@@ -126,19 +126,13 @@ export function IdleGacha({
       () => setGunReveal(null),
     )
   const badge = drawBadge(company)
-  const short = '다이아가 모자라요 · 출석·시즌패스·상점에서 얻어요'
   const note =
-    kind === 'cat'
-      ? drawn
-        ? drawn.isNew
-          ? `${drawn.cat.grade} 등급 ${drawn.cat.name} 합류!${drawn.cat.skills.length > 0 ? ` 고유 스킬 ${skillNames(drawn.cat)}` : ''}`
-          : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}%${drawn.cat.skills.length > 0 ? ` · ${skillNames(drawn.cat)} Lv.${drawn.cat.skillLevel}` : ''}`
-        : canOne
-          ? `${CAT_ODDS} · 또 나오면 레벨 업`
-          : short
-      : canOne
-        ? 'F~A 등급이 나와요 · S부터는 합쳐서 얻어요'
-        : short
+    kind === 'cat' ? `${CAT_ODDS} · 또 나오면 레벨 업` : 'F~A 등급이 나와요 · S부터는 합쳐서 얻어요'
+  const resultNote = drawn
+    ? drawn.isNew
+      ? `${drawn.cat.grade} 등급 ${drawn.cat.name} 합류!${drawn.cat.skills.length > 0 ? ` 고유 스킬 ${skillNames(drawn.cat)}` : ''}`
+      : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}%${drawn.cat.skills.length > 0 ? ` · ${skillNames(drawn.cat)} Lv.${drawn.cat.skillLevel}` : ''}`
+    : null
   return (
     <>
       <section className="idle-gacha" data-testid="cat-gacha" data-kind={kind}>
@@ -199,6 +193,11 @@ export function IdleGacha({
           </div>
           <p>{kind === 'cat' ? '새로운 동료를 만나보세요!' : '나만의 무기를 찾아보세요!'}</p>
         </div>
+        {kind === 'cat' && resultNote && (
+          <p className="idle-gacha-note" role="status">
+            {resultNote}
+          </p>
+        )}
         <div className="idle-gacha-row">
           <small className="idle-gacha-note" data-testid="draw-note">
             {note}
@@ -214,6 +213,7 @@ export function IdleGacha({
             <small>
               <DiamondPrice amount={diamonds.draw} />
             </small>
+            {!canOne && <small data-testid="draw-paid-short">다이아 부족</small>}
           </button>
           <button
             type="button"
@@ -229,6 +229,12 @@ export function IdleGacha({
           </button>
         </div>
       </section>
+
+      <p className="idle-gacha-note" data-testid="draw-ad-status">
+        {canAd
+          ? `광고로 무료 뽑기 가능 · 오늘 ${adLeft}회 남음`
+          : '오늘 광고 뽑기 완료 · 한국 시간 자정에 다시 만나요'}
+      </p>
       <p className="idle-gacha-note">광고 뽑기는 고양이·무기 각각 하루 3회 · 한국 시간 자정 갱신</p>
       {error && <p role="alert">{error}</p>}
       {catReveal && (
