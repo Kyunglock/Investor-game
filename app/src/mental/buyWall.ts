@@ -90,6 +90,10 @@ export class BuyWall {
     this.hp -= lost
     return lost
   }
+  /** 서킷브레이커 (#913): 서 있는 벽의 깎인 체력을 amount만큼 되채운다. 무너진 벽은 재건을 기다린다. */
+  recover(amount: number) {
+    if (this.active) this.hp = Math.min(this.maxHp, this.hp + Math.max(0, amount))
+  }
   get active() {
     return this.hp > 0
   }

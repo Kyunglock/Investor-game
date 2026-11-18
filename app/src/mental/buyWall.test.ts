@@ -168,4 +168,17 @@ describe('자동 전투의 매수 주문 피해 (514·573번)', () => {
     wall.hp = 0
     expect(wall.sacrifice(0.5)).toBe(0)
   })
+
+  it('서킷브레이커는 서 있는 벽의 깎인 체력만 되채운다 (#913)', () => {
+    const wall = new BuyWall(200, () => 0.5)
+    wall.hit(60)
+    wall.recover(20)
+    expect(wall.hp).toBe(60)
+    wall.recover(1000)
+    expect(wall.hp).toBe(wall.maxHp)
+    // 무너진 벽은 되살리지 않는다: 재건 시간을 그대로 기다린다.
+    expect(wall.hit(wall.maxHp)).toBe(true)
+    wall.recover(50)
+    expect(wall.active).toBe(false)
+  })
 })

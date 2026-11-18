@@ -9,7 +9,6 @@ export class CircuitBreakerFx {
   private ink: Phaser.GameObjects.Graphics
   private title: Phaser.GameObjects.Text
   private orders: Phaser.GameObjects.Text
-  private recovery: Phaser.GameObjects.Text
   constructor(scene: Phaser.Scene) {
     this.ink = scene.add.graphics()
     const text = (size: number, color: string) =>
@@ -25,22 +24,18 @@ export class CircuitBreakerFx {
         .setOrigin(0.5)
     this.title = text(23, '#ffe17b')
     this.orders = text(13, '#ffffff')
-    this.recovery = text(16, '#18594c')
-    this.recovery.setStroke('#fff3d5', 3)
-    this.root = scene.add
-      .container(0, 0, [this.ink, this.title, this.orders, this.recovery])
-      .setDepth(35)
+    this.root = scene.add.container(0, 0, [this.ink, this.title, this.orders]).setDepth(35)
     // 캔버스에서 처음 쓰는 한글 서브셋도 로드한 뒤 다시 그린다.
     void document.fonts
-      .load('23px "Jua"', '서킷브레이커 거래 정지 멘탈 회복 충전 완료 0123456789')
+      .load('23px "Jua"', '서킷브레이커 거래 정지 · 매수벽 멘탈 회복 충전 완료 +,주 0123456789')
       .then(() => {
-        if (this.root.active)
-          for (const label of [this.title, this.orders, this.recovery]) label.updateText()
+        if (this.root.active) for (const label of [this.title, this.orders]) label.updateText()
       })
       .catch(() => {
         /* 준비된 한글 대체 글꼴을 유지한다. */
       })
   }
+  /** note는 정지 동안 차는 것(매수벽·멘탈 회복)을 알리는 말이다. 고양이 줄을 가리지 않게 차단벽의 둘째 줄에 함께 적는다 (#913). */
   draw(
     c: CircuitBreaker,
     w: number,
@@ -49,6 +44,7 @@ export class CircuitBreakerFx {
     playerY: number,
     reduced: boolean,
     barrier: BarrierLane,
+    note: string,
   ) {
     const g = this.ink.clear()
     const cx = barrier.left + barrier.width / 2
@@ -94,7 +90,7 @@ export class CircuitBreakerFx {
     this.orders
       .setPosition(Math.round(cx), y + 11)
       .setAlpha(alpha)
-      .setText('거래 정지')
+      .setText(note ? `거래 정지 · ${note}` : '거래 정지')
     for (const [label, size] of [
       [this.title, 23],
       [this.orders, 13],
@@ -110,14 +106,6 @@ export class CircuitBreakerFx {
       56 + pulse * 38,
       20 + pulse * 14,
     )
-    this.recovery
-      .setPosition(
-        Math.round(Math.max(80, Math.min(w - 80, playerX))),
-        Math.min(h - 24, playerY + 47),
-      )
-      .setText(
-        c.recovery > 0 ? `멘탈 회복 +${Math.round(c.recovery * c.progress)}` : '멘탈 충전 완료',
-      )
   }
   destroy() {
     this.root.destroy(true)

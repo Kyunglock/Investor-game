@@ -2562,7 +2562,9 @@ class BattleScene extends Phaser.Scene {
         ? Math.min(CIRCUIT_BREAKER.seconds - CIRCUIT_BREAKER.openSeconds, c.elapsed + dt)
         : c.elapsed + dt
     const recovered = c.step(Math.max(0, target - c.elapsed))
-    this.mental = Math.min(this.loadout.maxMental, this.mental + recovered)
+    // 자동 전투에는 멘탈이 없다: 매도 물량을 받아 내는 매수벽이 그 몫을 되채운다 (#913).
+    if (this.opts.idle) this.buyWall?.recover(recovered)
+    else this.mental = Math.min(this.loadout.maxMental, this.mental + recovered)
     this.marketStats.recovered += recovered
     const { w, h } = this.view()
     const wall = this.circuitWall
@@ -2603,7 +2605,17 @@ class BattleScene extends Phaser.Scene {
         e.cell?.label.setAlpha(1)
       }
     }
-    this.circuitFx?.draw(c, w, h, this.player.x, this.player.y, this.reducedMotion, barrier)
+    const gained = Math.round(c.recovery * c.progress)
+    const note = this.opts.idle
+      ? !this.buyWall?.active
+        ? ''
+        : c.recovery > 0
+          ? `매수벽 회복 +${shareLabel(gained)}`
+          : '매수벽 충전 완료'
+      : c.recovery > 0
+        ? `멘탈 회복 +${gained}`
+        : '멘탈 충전 완료'
+    this.circuitFx?.draw(c, w, h, this.player.x, this.player.y, this.reducedMotion, barrier, note)
     this.player.setTexture('hero-idle')
     this.poseGun(this.player, this.aim, 0)
     for (const [i, mate] of this.mates.entries()) {
@@ -5038,7 +5050,11 @@ class BattleScene extends Phaser.Scene {
       this.walls.some((wall) => !wall.broken && (this.opts.idle || wall.arrived))
     ) {
       this.circuitIndex++
-      this.circuit = new CircuitBreaker(this.mental, this.loadout.maxMental)
+      // 무너져 재건을 기다리는 매수벽은 되채울 것이 없다.
+      const held = this.opts.idle && this.buyWall?.active ? this.buyWall : null
+      this.circuit = held
+        ? new CircuitBreaker(held.hp, held.maxHp)
+        : new CircuitBreaker(this.mental, this.loadout.maxMental)
       this.circuitWall = this.walls.find((wall) => !wall.broken) ?? null
       if (this.circuitWall) {
         // 다음 벽의 기존 체력은 유지하고, 쌓이는 조각이 보이도록 세 층으로 다시 쌓는다.
