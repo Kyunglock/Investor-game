@@ -21,7 +21,8 @@ export function sortCats<T extends { level: number; grade: CatGrade }>(cats: rea
 export const CAT_ODDS = CAT_GRADES.map((g) => `${g} ${CAT_GRADE_PERCENT[g]}%`).join(' · ')
 
 /**
- * 뽑기 연출의 세기: 등급이 높을수록 뜸이 길고 빛이 세다. 무기 뽑기의 D·B·A·S 등급 연출과 같다. 처음 얻은 고양이는 한 단계 위로 보여 준다.
+ * 뽑기 연출의 세기: 등급이 높을수록 뜸이 길고 빛이 세다. 무기 뽑기의 D·B·A·S 등급 연출과 같다. 처음 얻은 고양이는 뜸·빛·소리를 한 단계 위로
+ * 보여 준다. 색은 등급의 색 그대로다 (#917): 처음 얻었다고 윗등급 색을 쓰면 카드에 적힌 등급과 테두리 색이 어긋난다.
  */
 export function catRevealPlan(grade: CatGrade, isNew: boolean) {
   const plans = [
@@ -31,7 +32,11 @@ export function catRevealPlan(grade: CatGrade, isNew: boolean) {
     { charge: 2100, power: 3, color: '#ffdd75', sound: 'S' as const },
   ]
   const at = ['C', 'B', 'A', 'S'].indexOf(grade)
-  return plans[Math.min(plans.length - 1, Math.max(0, at) + (isNew ? 1 : 0))]
+  const own = plans[Math.max(0, at)]
+  return {
+    ...plans[Math.min(plans.length - 1, Math.max(0, at) + (isNew ? 1 : 0))],
+    color: own.color,
+  }
 }
 
 /**

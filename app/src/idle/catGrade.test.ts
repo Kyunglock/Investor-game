@@ -35,9 +35,16 @@ describe('고양이 등급 (539번)', () => {
     expect(catRevealPlan('C', false)).toMatchObject({ power: 1, sound: 'D' })
   })
 
-  it('처음 얻은 고양이는 한 단계 위의 연출로 나온다', () => {
-    expect(catRevealPlan('C', true)).toEqual(catRevealPlan('B', false))
+  it('처음 얻은 고양이는 뜸·빛·소리가 한 단계 위다', () => {
+    const { color: _, ...strength } = catRevealPlan('B', false)
+    expect(catRevealPlan('C', true)).toMatchObject(strength)
     expect(catRevealPlan('S', true)).toEqual(catRevealPlan('S', false))
+  })
+
+  it('카드의 색은 등급으로만 정한다: 처음 얻었어도 윗등급 색을 쓰지 않는다 (#917)', () => {
+    const colors = (['C', 'B', 'A', 'S'] as const).map((g) => catRevealPlan(g, false).color)
+    expect(new Set(colors).size).toBe(4)
+    expect((['C', 'B', 'A', 'S'] as const).map((g) => catRevealPlan(g, true).color)).toEqual(colors)
   })
 
   it('10연차의 알림과 팀 편성은 마지막 장이 아니라 등급이 가장 높은 고양이를 가리킨다 (#911)', () => {

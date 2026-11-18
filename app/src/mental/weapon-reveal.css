@@ -377,9 +377,27 @@
   color: #d5cee1;
   white-space: nowrap;
 }
+/* 처음 얻은 장은 색이 아니라 NEW! 딱지로 알린다 (#917). */
 .ten-card[data-new="true"] .ten-card-note {
-  color: var(--card-color);
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--card-color);
+  color: #272236;
   font-weight: 800;
+}
+/* 결과에서 바로 쓰러 가는 보조 단추 (#917): 닫기·한 번 더처럼 테두리가 있어 누를 수 있어 보인다. */
+.ten-reveal-use {
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 8px 22px;
+  border: 1.5px solid var(--reveal-color);
+  border-radius: 999px;
+  background: #ffffff12;
+  color: #fff5dc;
+  font-weight: 700;
+}
+.ten-reveal-use + .weapon-reveal-actions {
+  margin-top: 12px;
 }
 @keyframes ten-card-flip {
   from {

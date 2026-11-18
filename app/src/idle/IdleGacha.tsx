@@ -312,12 +312,14 @@ export function IdleGacha({
             onUse ? (
               <button
                 type="button"
+                className="ten-reveal-use"
+                data-testid={`${ten.kind}-ten-use`}
                 onClick={() => {
                   setTen(null)
                   onUse(ten.kind, drawn?.cat.code ?? null)
                 }}
               >
-                {ten.kind === 'cat' ? '팀 편성하기' : '무기 장착·합성하기'}
+                {ten.kind === 'cat' ? '팀 편성하기' : '무기 장착·합성하기'} ▸
               </button>
             ) : undefined
           }
