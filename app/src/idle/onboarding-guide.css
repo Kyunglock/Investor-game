@@ -102,3 +102,8 @@ body:has(.idle-options-panel) [data-tutorial-layer] {
     display: none;
   }
 }
+
+/* 뽑기 연출이 끝나면 실제 드래그 안내로 이어진다. */
+body:has(.weapon-reveal) [data-tutorial-layer] {
+  display: none;
+}

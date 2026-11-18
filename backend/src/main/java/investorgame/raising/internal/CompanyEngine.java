@@ -146,7 +146,7 @@ class CompanyEngine {
   /** 사장의 사재로 첫 회사를 차린다. 직원은 없고, 채용권으로 뽑는다 (decisions.md 228·312번). */
   CompanyState open(SeededRandom random, long capital) {
     CompanyState company = new CompanyState();
-    company.tutorialStep = 0;
+    company.tutorialStep = -1;
     company.capital = Math.max(0, capital);
     company.diamonds = properties.diamonds().start();
     company.diamondsReady = true;

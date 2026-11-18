@@ -28,7 +28,6 @@ export function IdleTutorial({
   const progress = company.idle?.onboarding
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
-  const [confirmSkip, setConfirmSkip] = useState(false)
   const attempted = useRef<number | null>(null)
   const bubble = useRef<HTMLElement>(null)
   const [height, setHeight] = useState(110)
@@ -94,17 +93,15 @@ export function IdleTutorial({
       ? step === 7
         ? '다시 보기 마치기'
         : '다음 안내'
-      : step === 2
-        ? '밤냥 받기'
-        : step === 4
-          ? '기관단총 받기'
-          : step === 6 && menu === 'battle'
-            ? '메테오 확인했어요'
-            : step === 7
-              ? '안내 마치기'
-              : skillGuide && menu === 'skills' && !skillUse
-                ? '사용 위치 보기'
-                : null
+      : step === -1
+        ? '함께 시작하기'
+        : step === 6 && menu === 'battle'
+          ? '메테오 확인했어요'
+          : step === 7
+            ? '안내 마치기'
+            : skillGuide && menu === 'skills' && !skillUse
+              ? '사용 위치 보기'
+              : null
   const drop = focus.drop
   const fromX = focus.left + focus.width / 2
   const fromY = focus.top - 8
@@ -207,63 +204,40 @@ export function IdleTutorial({
           />
         )}
         <small>
-          {replay !== null ? '다시 보기' : skillGuide ? '스킬 해금' : `${step + 1} / 8`}
+          {replay !== null ? '다시 보기' : skillGuide ? '스킬 해금' : `${step + 2} / 9`}
         </small>
-        <p aria-live="polite">
-          {confirmSkip
-            ? '건너뛰어도 밤냥과 기관단총은 받아요. 설정에서 안내를 다시 볼 수 있어요.'
-            : focus.text}
-        </p>
+        <p aria-live="polite">{focus.text}</p>
         {error && <p role="alert">{error}</p>}
         <div className="tutorial-coach-actions">
-          {confirmSkip ? (
-            <>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  void useRaisingStore.getState().tutorial('skip', progress.step)
-                  setConfirmSkip(false)
-                }}
-              >
-                선물 받고 건너뛰기
-              </button>
-              <button type="button" onClick={() => setConfirmSkip(false)}>
-                계속 보기
-              </button>
-            </>
-          ) : (
-            <>
-              {action && (
-                <button type="button" disabled={busy} onClick={next}>
-                  {action}
-                </button>
-              )}
-              {error && !action && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    attempted.current = null
-                    void advance()
-                  }}
-                >
-                  다시 시도
-                </button>
-              )}
-              <button
-                type="button"
-                className="tutorial-skip"
-                disabled={busy}
-                onClick={() => {
-                  if (replay !== null) onReplay(null)
-                  else if (skillGuide) void useRaisingStore.getState().tutorial('skills', 8)
-                  else setConfirmSkip(true)
-                }}
-              >
-                {replay !== null ? '닫기' : skillGuide ? '안내 닫기' : '건너뛰기'}
-              </button>
-            </>
+          {action && (
+            <button type="button" disabled={busy} onClick={next}>
+              {action}
+            </button>
+          )}
+          {error && !action && [0, 1, 3, 5].includes(step) && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                attempted.current = null
+                void advance()
+              }}
+            >
+              다시 시도
+            </button>
+          )}
+          {(replay !== null || skillGuide) && (
+            <button
+              type="button"
+              className="tutorial-skip"
+              disabled={busy}
+              onClick={() => {
+                if (replay !== null) onReplay(null)
+                else void useRaisingStore.getState().tutorial('skills', 8)
+              }}
+            >
+              안내 닫기
+            </button>
           )}
         </div>
       </aside>

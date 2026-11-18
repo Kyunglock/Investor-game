@@ -242,8 +242,8 @@ paths:
               type: object
               required: [action, step]
               properties:
-                action: { type: string, enum: [next, skip, claim, skills] }
-                step: { type: integer, minimum: 0, maximum: 8 }
+                action: { type: string, enum: [next, draw-cat, draw-weapon, start, skills] }
+                step: { type: integer, minimum: -1, maximum: 8 }
       responses:
         '200':
           description: 안내 진행과 보상을 저장한 회사
@@ -1438,7 +1438,7 @@ components:
               type: object
               required: [step, catClaimed, weaponClaimed, skillsUnlocked, skillGuideSeen]
               properties:
-                step: { type: integer, minimum: 0, maximum: 8, description: 0~7 진행 중. 8은 완료 또는 기존 유저 }
+                step: { type: integer, minimum: -1, maximum: 8, description: -1은 환영. 0~7 진행 중. 8은 완료 또는 기존 유저 }
                 catClaimed: { type: boolean }
                 weaponClaimed: { type: boolean }
                 skillsUnlocked: { type: boolean, description: 최고 돌파 기록 100 이상. 환생 후에도 유지 }

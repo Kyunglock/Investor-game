@@ -110,23 +110,21 @@ class CompanyApiTest {
   }
 
   @Test
-  void 첫_출근_선물은_건너뛰고_재접속해도_한번만_받는다() throws Exception {
+  void 첫_출근은_환영부터_시작하고_건너뛰기와_즉시수령을_허용하지_않는다() throws Exception {
     mvc.perform(post("/api/company").cookie(session))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.idle.onboarding.step").value(0));
-    for (int i = 0; i < 2; i++) {
-      postJson("/api/company/idle/tutorial", "{\"action\":\"skip\",\"step\":0}")
-          .andExpect(status().isOk())
-          .andExpect(jsonPath("$.idle.onboarding.step").value(8))
-          .andExpect(jsonPath("$.idle.onboarding.catClaimed").value(true))
-          .andExpect(jsonPath("$.idle.onboarding.weaponClaimed").value(true));
+        .andExpect(jsonPath("$.idle.onboarding.step").value(-1));
+    for (String action : List.of("skip", "claim", "draw-cat", "draw-weapon")) {
+      postJson("/api/company/idle/tutorial", "{\"action\":\"" + action + "\",\"step\":-1}")
+          .andExpect(status().isBadRequest());
     }
-    DocumentContext saved =
-        json(mvc.perform(get("/api/company").cookie(session)).andExpect(status().isOk()));
-    List<Integer> levels = saved.read("$.idle.cats[?(@.code == 'night')].level");
-    assertThat(levels).containsExactly(1);
-    List<Integer> counts = saved.read("$.weapons[?(@.grade == 'B')].count");
-    assertThat(counts).containsExactly(1);
+    postJson("/api/company/idle/tutorial", "{\"action\":\"next\",\"step\":-1}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.idle.onboarding.step").value(0));
+    mvc.perform(get("/api/company").cookie(session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.idle.onboarding.catClaimed").value(false))
+        .andExpect(jsonPath("$.idle.onboarding.weaponClaimed").value(false));
   }
 
   /** 고유 스킬 장착 (587번)과 광고 스킬 (588번). */

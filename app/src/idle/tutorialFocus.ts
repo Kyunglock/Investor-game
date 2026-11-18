@@ -121,6 +121,14 @@ export function tutorialTargets(step: number, menu: string, skillUse: boolean): 
     text: '밤냥을 눌러 선택해 주세요.',
   }
   switch (step) {
+    case -1:
+      return [
+        {
+          selector: '.idle-canvas',
+          battle: true,
+          text: '매도벽 돌파냥에 오신 걸 환영해요! 사장냥과 함께 매도벽을 깨고, 든든한 동료를 만나볼까요?',
+        },
+      ]
     case 0:
       return [
         {
@@ -138,7 +146,15 @@ export function tutorialTargets(step: number, menu: string, skillUse: boolean): 
           ]
         : [nav('growth', '성장을 눌러 공격력을 올려봐요.')]
     case 2:
-      return [nav('cats', '첫 동료 선물! 메테오 마법을 쓰는 A등급 밤냥이에요.')]
+      return menu === 'shop'
+        ? [
+            {
+              selector: '[data-testid="cat-draw"]',
+              text: '무료 1회 뽑기를 눌러요. 첫 동료는 메테오 마법을 쓰는 A등급 밤냥이에요!',
+            },
+            { selector: '[data-testid="draw-kind-cat"]', text: '고양이 뽑기를 선택해 주세요.' },
+          ]
+        : [nav('shop', '상점에서 첫 고양이를 무료로 뽑아봐요!')]
     case 3:
       return menu === 'cats'
         ? [
@@ -150,13 +166,18 @@ export function tutorialTargets(step: number, menu: string, skillUse: boolean): 
           ]
         : [nav('cats', '고양이·무기를 눌러 밤냥을 출전시켜요.')]
     case 4:
-      return [
-        {
-          selector: '[data-testid="cat-gun"]',
-          text: '밤냥의 첫 무기, B등급 기관단총을 선물할게요.',
-        },
-        nav('cats', 'B등급 기관단총을 받아 밤냥에게 장착해 봐요.'),
-      ]
+      return menu === 'shop'
+        ? [
+            {
+              selector: '[data-testid="weapon-draw"]',
+              text: '무료 1회 뽑기를 눌러 밤냥의 B등급 기관단총을 뽑아봐요!',
+            },
+            {
+              selector: '[data-testid="draw-kind-weapon"]',
+              text: '이번에는 무기 뽑기를 선택해 주세요.',
+            },
+          ]
+        : [nav('shop', '상점에서 밤냥에게 줄 첫 무기를 무료로 뽑아봐요!')]
     case 5:
       return menu === 'cats'
         ? [

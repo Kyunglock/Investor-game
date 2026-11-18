@@ -32,7 +32,7 @@ export function WeaponReveal({
   /** 다이아가 한 번 더 뽑을 만큼 남았다 */
   canAgain: boolean
   onClose: () => void
-  repeat: RepeatDraw
+  repeat?: RepeatDraw
   useAction?: ReactNode
   onAgain: () => void
 }) {
@@ -161,14 +161,16 @@ export function WeaponReveal({
                 {WEAPON_EFFECTS[result.draw.kind].desc}
               </p>
               {useAction}
-              <DrawAgain
-                kind="weapon"
-                price={price}
-                canAgain={canAgain}
-                onAgain={onAgain}
-                onClose={onClose}
-                repeat={repeat}
-              />
+              {repeat && (
+                <DrawAgain
+                  kind="weapon"
+                  price={price}
+                  canAgain={canAgain}
+                  onAgain={onAgain}
+                  onClose={onClose}
+                  repeat={repeat}
+                />
+              )}
             </section>
           )
         )}

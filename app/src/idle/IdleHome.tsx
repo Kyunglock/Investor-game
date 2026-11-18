@@ -303,7 +303,7 @@ export function IdleHome({
             <IdleOptions
               company={company}
               onTutorial={() => {
-                setReplay(0)
+                setReplay(-1)
                 go('battle')
               }}
             />

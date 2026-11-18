@@ -77,9 +77,9 @@ function Panel({ company, onTutorial }: { company?: Company; onTutorial: () => v
               type="button"
               className="idle-options-toggle"
               disabled={busy}
-              onClick={() => void useRaisingStore.getState().tutorial('claim', progress.step)}
+              onClick={() => void useRaisingStore.getState().tutorial('start', progress.step)}
             >
-              첫 출근 선물 받기 · 밤냥 + 기관단총
+              무료 첫 뽑기 안내 시작
             </button>
           )}
           {error && <p role="alert">{error}</p>}
