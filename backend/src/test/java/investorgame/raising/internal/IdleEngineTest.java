@@ -688,6 +688,63 @@ class IdleEngineTest {
     assertThat(engine.view(state).lastDraws()).hasSize(1);
   }
 
+  private static final List<String> GRADES = List.of("C", "B", "A", "S");
+
+  @Test
+  void 십연차로_빈_출전_칸을_채울_때는_등급이_높은_고양이부터_세운다() {
+    int reordered = 0;
+    for (long seed = 1; seed <= 40; seed++) {
+      CompanyState fresh = new CompanyState();
+      engine.view(fresh);
+      fresh.diamonds = 1000;
+      engine.drawCats(fresh, new HashSeededRandom(seed), 10);
+      var view = engine.view(fresh);
+      var owned = view.cats().stream().filter(cat -> cat.level() > 0).toList();
+      var fielded = owned.stream().filter(cat -> cat.fielded()).toList();
+      assertThat(fielded).as("seed %d", seed).hasSize(Math.min(4, owned.size()));
+      int weakest = fielded.stream().mapToInt(cat -> GRADES.indexOf(cat.grade())).min().orElse(0);
+      assertThat(owned.stream().filter(cat -> !cat.fielded()))
+          .as("seed %d: 대기석에 출전한 고양이보다 등급이 높은 고양이가 없다", seed)
+          .allMatch(cat -> GRADES.indexOf(cat.grade()) <= weakest);
+      // 칸 번호순으로도 등급이 높은 고양이가 앞에 선다.
+      var seated =
+          fielded.stream().sorted(java.util.Comparator.comparing(cat -> cat.slot())).toList();
+      assertThat(seated.stream().map(cat -> GRADES.indexOf(cat.grade())).toList())
+          .as("seed %d", seed)
+          .isSortedAccordingTo(java.util.Comparator.reverseOrder());
+      var firstFour =
+          view.lastDraws().stream().map(d -> d.code()).distinct().limit(4).sorted().toList();
+      if (!firstFour.equals(fielded.stream().map(cat -> cat.code()).sorted().toList())) {
+        reordered++;
+      }
+    }
+    assertThat(reordered).as("뽑힌 차례대로 채웠다면 달랐을 판이 있어야 검사가 된다").isPositive();
+  }
+
+  @Test
+  void 십연차는_이미_출전해_있던_고양이를_밀어내지_않는다() {
+    start(1);
+    for (String code : List.of("sky", "mint", "lilac")) {
+      state.idle.cats.put(code, 1);
+      engine.fieldCat(state, code, true);
+    }
+    state.diamonds = 1000;
+    engine.drawCats(state, new HashSeededRandom(11), 10);
+    var view = engine.view(state);
+    assertThat(view.cats().stream().filter(cat -> cat.fielded()).map(cat -> cat.code()))
+        .hasSize(4)
+        .contains("sky", "mint", "lilac");
+    var joined =
+        view.lastDraws().stream().filter(d -> d.isNew()).map(d -> d.code()).distinct().toList();
+    var best = joined.stream().mapToInt(code -> GRADES.indexOf(IdleEngine.catGrade(code))).max();
+    assertThat(
+            view.cats().stream()
+                .filter(cat -> cat.fielded() && joined.contains(cat.code()))
+                .map(cat -> GRADES.indexOf(cat.grade())))
+        .as("남은 한 칸에는 이번에 처음 얻은 고양이 가운데 등급이 가장 높은 고양이가 선다")
+        .containsExactly(best.orElseThrow());
+  }
+
   @Test
   void expandedRosterPreservesOwnedCatsAndEveryNewCompanionCanFight() {
     start(1);
