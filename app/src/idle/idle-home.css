@@ -964,22 +964,51 @@
   opacity: 0.5;
 }
 
+/* 스킬 단추 열의 자리 (#916): 평소에는 전장 높이의 44%쯤(메뉴 높이의 몫 37px을 더한다)에서 시작하고, 세로가 짧은 화면에서는 세 단추가
+   매수벽 위에서 끝나도록 올린다. 매수벽의 위 끝은 전장 아래에서 118px + 벽 높이(길 폭의 6분의 1, 길은 화면 폭 - 72px)이고 그 위로 8px을
+   띄운다(battle.ts의 playerY·buyWallY, buyWallFx.ts의 벽 높이와 같아야 한다). */
+.idle-home {
+  --idle-active-size: 48px;
+  --idle-active-gap: 8px;
+  --idle-actives-top: min(
+    calc(44% + 37px),
+    calc(
+      100% -
+      126px -
+      (100vw - 72px) /
+      6 -
+      3 *
+      var(--idle-active-size) -
+      2 *
+      var(--idle-active-gap)
+    )
+  );
+}
+/* 세로가 아주 짧으면 단추를 줄여 매도벽과 매수벽 사이에 넣는다. */
+@media (max-height: 640px) {
+  .idle-home {
+    --idle-active-size: 40px;
+    --idle-active-gap: 6px;
+  }
+}
 /* 액티브 스킬 단추 (decisions.md 503번): 오른쪽 가장자리에 세로로. 남은 시간은 원형 음영이 시계 방향으로 걷히며 나타낸다. */
 .idle-actives {
   position: absolute;
+  /* 전장(메뉴 위의 칸)을 기준으로 자리를 잡는다. 끝 줄을 적지 않으면 화면 맨 아래까지가 기준이 된다. */
+  grid-row: 1 / 2;
   right: 6px;
-  top: 44%;
+  top: var(--idle-actives-top);
   z-index: 2;
   display: grid;
-  gap: 8px;
+  gap: var(--idle-active-gap);
 }
 .idle-actives button {
   position: relative;
   overflow: hidden;
   display: grid;
   justify-items: center;
-  width: 48px;
-  height: 48px;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -2355,11 +2384,12 @@
 .idle-rebirth-shortcut {
   position: absolute;
   z-index: 2;
-  /* 광고 스킬 줄(.idle-actives-ad: top 44%, left 6px) 바로 위 (605번): 단추 48px에 그 줄의 간격 8px만큼 띄운다. */
-  top: calc(44% - 56px);
+  /* 광고 스킬 줄(.idle-actives-ad, left 6px) 바로 위 (605번): 단추 하나에 그 줄의 간격만큼 띄운다. */
+  grid-row: 1 / 2;
+  top: calc(var(--idle-actives-top) - var(--idle-active-size) - var(--idle-active-gap));
   left: 6px;
-  width: 48px;
-  height: 48px;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
   padding: 0;
   border: 0;
   border-radius: 50%;
