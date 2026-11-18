@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:bundled": "tsc -b && vite build --mode bundled",
     "preview": "vite preview",
     "check": "biome check .",
     "format": "biome check --write .",
     "test": "vitest run",
-    "sync": "pnpm build && cap sync android",
+    "sync": "pnpm build:bundled && cap sync android",
     "apk": "pnpm sync && cd android && ./gradlew assembleDebug --console=plain",
     "open": "cap open android",
     "assets": "node scripts/appAssets.ts && pnpm dlx @capacitor/assets generate --android --assetPath assets --iconBackgroundColor '#ff571c' --iconBackgroundColorDark '#ff571c' --splashBackgroundColor '#fff3df' --splashBackgroundColorDark '#fff3df'"
