@@ -754,3 +754,27 @@
 .draw-repeat-actions button:disabled {
   opacity: 0.5;
 }
+
+/* 결과가 길어져도 반복·닫기는 화면 아래에서 바로 누른다. */
+.weapon-reveal-actions.draw-repeat-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 8px 0;
+  background: #171724;
+  border-radius: 12px;
+}
+@media (max-height: 700px) {
+  .cat-reveal:has(.draw-repeat-actions) .cat-reveal-art .idle-cat-portrait {
+    width: 110px;
+    height: 110px;
+  }
+  .weapon-reveal-actions.draw-repeat-actions {
+    margin-top: 12px;
+    gap: 6px;
+  }
+  .draw-repeat-actions button {
+    min-height: 44px;
+    padding: 6px;
+  }
+}
