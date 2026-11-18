@@ -1,5 +1,6 @@
 import type { Company } from '@web/api/client'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
@@ -63,11 +64,17 @@ export function IdleCats({
   // 인벤토리: 가진 고양이를 등급순으로 먼저, 없는 고양이를 등급순으로 뒤에.
   const sorted = sortCats(idle?.cats ?? [])
   const cat = (idle?.cats ?? []).find((c) => c.code === picked && c.level > 0) ?? null
+  const full = fielded.length >= (idle?.fieldSlots ?? 0)
+  // 교체 (#910): 출전 칸이 다 찼을 때 쉬는 고양이를 세우려면 뺄 고양이를 출전 칸에서 고른다. 사장냥은 출전 칸이 아니라 고를 수 없다.
+  // 누구를 세우려는지 적어 둔다: 밖에서 다른 고양이를 골라 주거나 교체가 끝나 그 고양이가 출전하면 저절로 풀린다.
+  const [swapFor, setSwapFor] = useState<CatCode | null>(null)
+  const swapping = cat !== null && !cat.fielded && full && swapFor === cat.code
   const gun = cat
     ? (company.weapons?.find((w) => same(w, cat.weapon)) ?? DEFAULT_WEAPON)
     : hero.weapon
   const pick = (code: CatCode | null) => {
     sfx.tap()
+    setSwapFor(null)
     setPicked(code)
   }
   const place = async (code: CatCode, target: string) => {
@@ -151,10 +158,16 @@ export function IdleCats({
     <>
       <div className="loadout-team">
         <p className="idle-subtitle idle-team-line">
-          <span>
-            출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 윗줄은 고양이, 아랫줄은 그 고양이의
-            무기
-          </span>
+          {swapping ? (
+            <span className="idle-swap-hint" role="status" data-testid="swap-hint">
+              {cat.name} 대신 뺄 고양이를 누르세요 · 사장냥은 못 빼요
+            </span>
+          ) : (
+            <span>
+              출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 윗줄은 고양이, 아랫줄은 그 고양이의
+              무기
+            </span>
+          )}
         </p>
         {/* 출전 칸 (569번): 다섯 칸 두 줄. 윗줄은 고양이 칸, 아랫줄은 바로 위 고양이가 드는 무기 칸이다. 이름은 적지 않는다. */}
         <ul className="idle-cat-field-row" aria-label="출전 칸">
@@ -177,17 +190,18 @@ export function IdleCats({
               {c ? (
                 <button
                   type="button"
-                  className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''} ${drag?.item === c.code ? 'is-lifted' : ''} ${drag ? 'is-drop-ready' : ''} ${drag?.over === `slot:${c.code}` ? 'is-drop-over' : ''}`}
+                  className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''} ${drag?.item === c.code ? 'is-lifted' : ''} ${drag || swapping ? 'is-drop-ready' : ''} ${drag?.over === `slot:${c.code}` ? 'is-drop-over' : ''}`}
                   data-testid="cat-slot"
                   data-loadout-target={`slot:${c.code}`}
                   data-code={c.code}
-                  aria-label={`출전 ${i + 1}번 ${c.name} · 꾹 눌러 끌어서 자리 옮기기`}
+                  aria-label={`출전 ${i + 1}번 ${c.name} · ${swapping ? '눌러서 교체' : '꾹 눌러 끌어서 자리 옮기기'}`}
                   // 출전 중인 고양이도 집어 다른 칸에 놓아 자리를 옮긴다 (599번).
                   onPointerDown={busy ? undefined : down(c.code)}
                   onContextMenu={(e) => e.preventDefault()}
                   onClick={(event) => {
                     if (consumeClick(event.detail)) return
-                    if (!gearOpen && cat && !cat.fielded) void place(cat.code, `slot:${c.code}`)
+                    if ((swapping || !gearOpen) && cat && !cat.fielded)
+                      void place(cat.code, `slot:${c.code}`)
                     else pick(c.code)
                   }}
                 >
@@ -262,24 +276,33 @@ export function IdleCats({
                 : '늘 맨 앞에서 싸워요 · 출전은 뺄 수 없어요 · 무기는 바꾸거나 뺄 수 있어요'}
             </small>
           </div>
-          {cat ? (
+          {cat && !cat.fielded && full ? (
+            <button
+              type="button"
+              className="idle-cat-field"
+              data-testid="cat-swap"
+              disabled={busy}
+              onClick={() => {
+                sfx.tap()
+                setSwapFor(swapping ? null : cat.code)
+              }}
+            >
+              {swapping ? '취소' : '교체'}
+            </button>
+          ) : cat ? (
             <button
               type="button"
               className="idle-cat-field"
               data-testid="cat-field"
               aria-pressed={cat.fielded}
-              disabled={busy || (!cat.fielded && fielded.length >= (idle?.fieldSlots ?? 0))}
+              disabled={busy}
               onClick={() => {
                 sfx.tap()
                 haptic.light()
                 void useRaisingStore.getState().fieldCat(cat.code, !cat.fielded)
               }}
             >
-              {cat.fielded
-                ? '출전 중'
-                : fielded.length >= (idle?.fieldSlots ?? 0)
-                  ? '칸 없음'
-                  : '출전'}
+              {cat.fielded ? '출전 중' : '출전'}
             </button>
           ) : (
             <span className="idle-cat-field idle-cat-always">늘 출전</span>

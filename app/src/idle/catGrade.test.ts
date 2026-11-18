@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { cardSuspense } from '../mental/TenReveal'
 import { shinyWeapon } from '../mental/weaponRevealPlan'
-import { CAT_GRADE_PERCENT, CAT_ODDS, catRevealPlan, shinyCat, sortCats } from './catGrade'
+import {
+  bestDraw,
+  CAT_GRADE_PERCENT,
+  CAT_ODDS,
+  catRevealPlan,
+  shinyCat,
+  sortCats,
+} from './catGrade'
 
 describe('고양이 등급 (539번)', () => {
   it('뽑기 확률은 합쳐 100%이고 S가 가장 드물다', () => {
@@ -28,9 +35,39 @@ describe('고양이 등급 (539번)', () => {
     expect(catRevealPlan('C', false)).toMatchObject({ power: 1, sound: 'D' })
   })
 
-  it('처음 얻은 고양이는 한 단계 위의 연출로 나온다', () => {
-    expect(catRevealPlan('C', true)).toEqual(catRevealPlan('B', false))
+  it('처음 얻은 고양이는 뜸·빛·소리가 한 단계 위다', () => {
+    const { color: _, ...strength } = catRevealPlan('B', false)
+    expect(catRevealPlan('C', true)).toMatchObject(strength)
     expect(catRevealPlan('S', true)).toEqual(catRevealPlan('S', false))
+  })
+
+  it('카드의 색은 등급으로만 정한다: 처음 얻었어도 윗등급 색을 쓰지 않는다 (#917)', () => {
+    const colors = (['C', 'B', 'A', 'S'] as const).map((g) => catRevealPlan(g, false).color)
+    expect(new Set(colors).size).toBe(4)
+    expect((['C', 'B', 'A', 'S'] as const).map((g) => catRevealPlan(g, true).color)).toEqual(colors)
+  })
+
+  it('10연차의 알림과 팀 편성은 마지막 장이 아니라 등급이 가장 높은 고양이를 가리킨다 (#911)', () => {
+    const draw = (code: string, grade: 'C' | 'B' | 'A' | 'S', isNew = false) => ({
+      code,
+      grade,
+      isNew,
+    })
+    expect(
+      bestDraw([draw('sky', 'C', true), draw('star', 'S', true), draw('petrol', 'C', true)]),
+    ).toEqual({ code: 'star', isNew: true })
+    // 같은 등급이면 이번에 처음 얻은 고양이가 먼저다. 같은 고양이가 또 나온 장이 뒤에 있어도 처음 얻은 것으로 친다.
+    expect(
+      bestDraw([
+        draw('cloud', 'B'),
+        draw('peach', 'B', true),
+        draw('peach', 'B'),
+        draw('sky', 'C'),
+      ]),
+    ).toEqual({ code: 'peach', isNew: true })
+    // 그래도 같으면 먼저 나온 고양이다.
+    expect(bestDraw([draw('sky', 'C'), draw('mint', 'C')])).toEqual({ code: 'sky', isNew: false })
+    expect(bestDraw([])).toBeNull()
   })
 
   it('인벤토리는 가진 고양이를 등급순(S→C)으로 먼저, 없는 고양이를 등급순으로 뒤에 둔다', () => {

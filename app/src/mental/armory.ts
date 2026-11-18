@@ -85,8 +85,8 @@ export function mergeable(company: Company): Weapon[] {
 }
 
 /**
- * 장비 목록의 한 칸 (530번): 누가 든 것은 한 칸에 하나씩, 아무도 들지 않은 것은 합칠 수(mergeCount)만큼까지 칸을 나눠 보이고 나머지는 마지막
- * 칸의 수(stack)에 묶는다. 그래야 같은 무기를 끌어 같은 무기 위에 놓을 수 있다.
+ * 장비 목록의 한 칸 (530번, #918): 누가 든 것은 한 칸에 하나씩이다. 아무도 들지 않은 것은 한 칸에 수(stack)로 묶는다. 합칠 수 있을 때만 두
+ * 칸(한 자루, 나머지)으로 나눈다: 같은 무기를 끌어 같은 무기 위에 놓으려면 칸이 둘이어야 한다. 화면은 그 두 칸을 한 상자로 붙여 그린다.
  */
 export interface GearCell {
   key: string
@@ -95,10 +95,11 @@ export interface GearCell {
   holder: Holder | null
   /** 이 칸이 뜻하는 개수. */
   stack: number
+  /** 합칠 수 있어 둘로 나눈 칸의 앞·뒤. 나누지 않았으면 없다. */
+  pair?: 'first' | 'last'
 }
 
 export function gearCells(company: Company): GearCell[] {
-  const split = Math.max(2, company.armory?.mergeCount ?? 2)
   return weaponsOf(company).flatMap((weapon) => {
     const id = `${weapon.kind}-${weapon.grade}`
     const held: GearCell[] = holdersOf(company, weapon).map((holder) => ({
@@ -108,13 +109,15 @@ export function gearCells(company: Company): GearCell[] {
       stack: 1,
     }))
     const free = freeCopies(company, weapon)
-    const shown = Math.min(free, split)
-    const spare: GearCell[] = Array.from({ length: shown }, (_, i) => ({
-      key: `${id}-${i}`,
-      weapon,
-      holder: null,
-      stack: i === shown - 1 ? free - shown + 1 : 1,
-    }))
+    const spare: GearCell[] =
+      free > 1 && mergeBlock(company, weapon) === null
+        ? [
+            { key: `${id}-0`, weapon, holder: null, stack: 1, pair: 'first' },
+            { key: `${id}-1`, weapon, holder: null, stack: free - 1, pair: 'last' },
+          ]
+        : free > 0
+          ? [{ key: `${id}-0`, weapon, holder: null, stack: free }]
+          : []
     return [...held, ...spare]
   })
 }

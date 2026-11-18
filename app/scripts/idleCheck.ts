@@ -579,8 +579,10 @@ try {
     await pickCat('night')
     await expect(detail).toHaveAttribute('data-code', 'night')
     await expect(detail.getByTestId('cat-grade')).toHaveText('A')
-    await expect(detail.getByTestId('cat-field')).toBeDisabled()
-    await expect(detail.getByTestId('cat-field')).toHaveText('칸 없음')
+    // With the team full its button offers a swap instead of a dead "칸 없음" (#910).
+    await expect(detail.getByTestId('cat-field')).toHaveCount(0)
+    await expect(detail.getByTestId('cat-swap')).toHaveText('교체')
+    await expect(detail.getByTestId('cat-swap')).toBeEnabled()
     await expect(detail).toContainText('치명타 피해 +25%')
     await expect.poll(mates).toBe(4)
     // The last approved companion is visible below the fold and uses its own portrait/texture.

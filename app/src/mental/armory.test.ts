@@ -99,9 +99,34 @@ describe('장비 목록 (530번)', () => {
     expect(gearCells(c).reduce((sum, cell) => sum + cell.stack, 0)).toBe(8)
   })
 
-  it('셋을 합치는 회사면 남은 것을 세 칸까지 나눈다', () => {
-    const c = company([['F', 6]], 'F', {}, 3)
-    expect(gearCells(c).map((cell) => cell.stack)).toEqual([1, 1, 1, 3])
+  it('합칠 수 있는 무기만 두 칸(한 자루, 나머지)으로 나누고, 못 합치는 무기는 한 칸에 수로 묶는다 (#918)', () => {
+    const cells = (c: Company) => gearCells(c).map((cell) => [cell.stack, cell.pair])
+    // 셋을 합치는 회사: 사장냥이 하나 든 여섯 자루는 남은 다섯이 두 칸이다.
+    expect(cells(company([['F', 6]], 'F', {}, 3))).toEqual([
+      [1, undefined],
+      [1, 'first'],
+      [4, 'last'],
+    ])
+    // 남은 것이 합칠 수에 모자라면 나누지 않는다.
+    expect(cells(company([['F', 3]], 'F', {}, 3))).toEqual([
+      [1, undefined],
+      [2, undefined],
+    ])
+    // 가장 높은 등급은 더 못 합치니 나누지 않는다.
+    expect(
+      cells(
+        company(
+          [
+            ['F', 1],
+            ['LR', 3],
+          ],
+          'F',
+        ),
+      ),
+    ).toEqual([
+      [3, undefined],
+      [1, undefined],
+    ])
   })
 
   it('무기 전에 차린 회사는 사장냥이 든 권총 한 칸이다', () => {
