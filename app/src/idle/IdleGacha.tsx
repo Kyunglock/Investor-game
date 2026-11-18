@@ -243,6 +243,14 @@ export function IdleGacha({
           result={catReveal.result}
           price={diamonds.draw}
           canAgain={canOne}
+          repeat={{
+            left: adLeft,
+            limit: company.adDraws?.dailyLimit ?? 3,
+            watching,
+            busy,
+            error,
+            onAd: () => void drawCat(true),
+          }}
           useAction={
             catReveal.result && onUse ? (
               <RewardPlacement
@@ -255,7 +263,9 @@ export function IdleGacha({
               />
             ) : undefined
           }
-          onClose={() => setCatReveal(null)}
+          onClose={() => {
+            if (!watching && !busy) setCatReveal(null)
+          }}
           onAgain={() => void drawCat()}
         />
       )}
@@ -265,6 +275,14 @@ export function IdleGacha({
           result={gunReveal.result}
           price={diamonds.draw}
           canAgain={canOne}
+          repeat={{
+            left: adLeft,
+            limit: company.adDraws?.dailyLimit ?? 3,
+            watching,
+            busy,
+            error,
+            onAd: () => void drawWeapon(true),
+          }}
           useAction={
             gunReveal.result && onUse ? (
               <RewardPlacement
@@ -277,7 +295,9 @@ export function IdleGacha({
               />
             ) : undefined
           }
-          onClose={() => setGunReveal(null)}
+          onClose={() => {
+            if (!watching && !busy) setGunReveal(null)
+          }}
           onAgain={() => void drawWeapon()}
         />
       )}

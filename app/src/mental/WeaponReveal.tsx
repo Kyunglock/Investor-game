@@ -1,10 +1,10 @@
 import type { Company } from '@web/api/client'
-import { DiamondPrice } from '@web/features/raising/DiamondIcon'
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalBack } from '../app/useModalBack'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { DrawAgain, type RepeatDraw } from '../idle/DrawAgain'
 import { GunSprite } from './GunSprite'
 import type { Weapon } from './hero'
 import { FIRE_STYLE_NAMES, SHOT_WEIGHT, WEAPON_EFFECTS } from './weaponEffects'
@@ -24,6 +24,7 @@ export function WeaponReveal({
   onClose,
   onAgain,
   useAction,
+  repeat,
 }: {
   result: DrawResult | null
   /** 한 번 더 뽑는 다이아 값 (526번) */
@@ -31,6 +32,7 @@ export function WeaponReveal({
   /** 다이아가 한 번 더 뽑을 만큼 남았다 */
   canAgain: boolean
   onClose: () => void
+  repeat: RepeatDraw
   useAction?: ReactNode
   onAgain: () => void
 }) {
@@ -159,19 +161,14 @@ export function WeaponReveal({
                 {WEAPON_EFFECTS[result.draw.kind].desc}
               </p>
               {useAction}
-              <div className="weapon-reveal-actions">
-                <button type="button" onClick={onClose} data-testid="weapon-reveal-close">
-                  닫기
-                </button>
-                {canAgain && (
-                  <button type="button" onClick={onAgain} data-testid="weapon-reveal-again">
-                    한 번 더 뽑기{' '}
-                    <small>
-                      <DiamondPrice amount={price} />
-                    </small>
-                  </button>
-                )}
-              </div>
+              <DrawAgain
+                kind="weapon"
+                price={price}
+                canAgain={canAgain}
+                onAgain={onAgain}
+                onClose={onClose}
+                repeat={repeat}
+              />
             </section>
           )
         )}
