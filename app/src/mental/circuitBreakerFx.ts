@@ -107,6 +107,10 @@ export class CircuitBreakerFx {
       20 + pulse * 14,
     )
   }
+  /** 차단벽의 둘째 줄에 적힌 말(화면 검사가 읽는다). */
+  get caption() {
+    return this.orders.text
+  }
   destroy() {
     this.root.destroy(true)
   }

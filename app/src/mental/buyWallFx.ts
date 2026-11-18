@@ -109,6 +109,8 @@ export class BuyWallFx {
       fortifySecondsLeft: this.fortifyLeft,
       fortified: this.fortifyLeft > 0 && this.surface.visible,
       label: this.title.text,
+      /** 서 있는 벽의 위 끝(px). */
+      top: this.surface.y,
       tossing: this.tossing,
       hitLeft: this.hitLeft,
       breakLeft: this.breakLeft,

@@ -2725,13 +2725,31 @@ class BattleScene extends Phaser.Scene {
             playerY: this.player.y,
             wallY: this.buyWallY(),
             feedback: this.buyWallFx?.inspect(),
+            /** 지금 떠 있는 "매수 -N주" (#915): 글자와 좌우 끝(px). */
+            lossNote: this.buyLossText?.visible
+              ? {
+                  text: this.buyLossText.text,
+                  left: this.buyLossText.x - this.buyLossText.displayWidth / 2,
+                  right: this.buyLossText.x + this.buyLossText.displayWidth / 2,
+                }
+              : null,
           }
         : null,
+      /** 지금 떠 있는 데미지 숫자의 자리 (#914). onWall은 매도벽(맨 앞 벽의 칸과 뒤 벽)에 뜬 숫자다. */
+      numbers: [...this.damage.slots, ...this.crits.slots]
+        .filter((slot) => slot.item.visible && slot.owner)
+        .map((slot) => ({
+          x: slot.item.x,
+          y: slot.item.y,
+          onWall:
+            this.pierceOwners.includes(slot.owner as object) || Boolean((slot.owner as Enemy).cell),
+        })),
       circuit: this.circuit
         ? {
             elapsed: this.circuit.elapsed,
             assembled: this.circuit.assembled,
             barrier: this.circuitBarrier(),
+            caption: this.circuitFx?.caption ?? '',
             queuedBuy: this.buyWallFx?.queuedOrders ?? 0,
             queuedSell: this.circuitSellQueue.size,
           }
@@ -3116,7 +3134,7 @@ class BattleScene extends Phaser.Scene {
    */
   private damageNumber(e: Enemy, amount: number, kind: DamageKind) {
     if (this.opts.idle && e.cell) {
-      this.damageNumberAt(e, e.x, e.y, amount, kind, e.hp <= 0, true)
+      this.damageNumberAt(e, e.x, e.y, amount, kind, e.hp <= 0, 0)
       return
     }
     // 머리 위: 충돌 원 반지름(텍스처 px)에 지금 크기를 곱한다. 부푼 투기·큰 보스도 머리 위에 뜬다.
@@ -3125,8 +3143,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 데미지 숫자를 owner(같은 것끼리 합친다)의 (ox, oy) 자리에 띄운다. 적이 아닌 것(자동 전투의 뒤 벽, 520번)도 쓴다. onWall이면 (ox, oy)는
-   * 자동 전투의 매도벽 가운데이고, 숫자는 남은 물량 글자의 양옆으로 비켜 뜬다 (#914).
+   * 데미지 숫자를 owner(같은 것끼리 합친다)의 (ox, oy) 자리에 띄운다. 적이 아닌 것(자동 전투의 뒤 벽, 520번)도 쓴다. wallDepth를 주면
+   * (ox, oy)는 자동 전투의 매도벽(0은 맨 앞, 1·2는 뒤 벽) 가운데이고, 숫자는 남은 물량 글자의 양옆으로 비켜 뜬다 (#914).
    */
   private damageNumberAt(
     owner: object,
@@ -3135,7 +3153,7 @@ class BattleScene extends Phaser.Scene {
     amount: number,
     kind: DamageKind,
     killing = false,
-    onWall = false,
+    wallDepth = -1,
   ) {
     if (amount <= 0) return
     const style = DAMAGE_STYLE[kind]
@@ -3164,9 +3182,17 @@ class BattleScene extends Phaser.Scene {
     const { w } = this.view()
     const lane = this.lane()
     const { dx, dy } = scatterOffset(n)
-    const spot = onWall
-      ? wallNumberSpot(n, lane.left, lane.width, oy, IDLE_WALL_TOP + style.rise + 14)
-      : { x: ox + dx, y: oy + dy }
+    // 앞뒤 벽과 치명타는 서로 반대쪽에서 시작한다: 한 번에 뚫고 간 총알의 숫자가 한쪽에 줄지어 서지 않게.
+    const spot =
+      wallDepth >= 0
+        ? wallNumberSpot(
+            n + wallDepth + (kind === 'crit' ? 1 : 0),
+            lane.left,
+            lane.width,
+            oy,
+            IDLE_WALL_TOP + style.rise + 14,
+          )
+        : { x: ox + dx, y: oy + dy }
     const x = Phaser.Math.Clamp(spot.x, 16, w - 16)
     const y = spot.y
     const big = kind === 'crit' ? 1.7 : 1.3
@@ -4767,7 +4793,7 @@ class BattleScene extends Phaser.Scene {
           hit.damage,
           crit ? 'crit' : 'bullet',
           false,
-          true,
+          hit.behind,
         )
       })
     }
@@ -5398,7 +5424,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
       __mentalAutopilot?: (on: boolean) => void
       __mentalSpeed?: (k: number) => void
       __mentalWalls?: () => ReturnType<BattleScene['inspectWalls']>
-      __mentalBuyWallHit?: (damage: number) => void
+      __mentalBuyWallHit?: (damage: number, x?: number) => void
       __mentalMarket?: () => ReturnType<BattleScene['inspectMarket']>
     }
     dev.__mentalDamage = scene.damageStats
@@ -5409,7 +5435,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     dev.__mentalSpeed = (k) => scene.setSimSpeed(k)
     dev.__mentalWalls = () => scene.inspectWalls()
     dev.__mentalMarket = () => scene.inspectMarket()
-    dev.__mentalBuyWallHit = (damage) => scene.hitBuyWall(damage, parent.clientWidth / 2)
+    dev.__mentalBuyWallHit = (damage, x = parent.clientWidth / 2) => scene.hitBuyWall(damage, x)
     dev.__mentalMagic = (levels) => scene.applyLoadout({ ...scene.loadout, ...levels })
     dev.__mentalMates = (mates) => scene.applyLoadout({ ...scene.loadout, mates })
   }
