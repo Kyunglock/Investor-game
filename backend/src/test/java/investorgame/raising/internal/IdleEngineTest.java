@@ -1630,15 +1630,15 @@ class IdleEngineTest {
     assertThatThrownBy(() -> engine.rebirth(c, true)).isInstanceOf(InvalidRequestException.class);
     c.idle.wall = 101;
     engine.rebirth(c, true);
-    assertThat(c.fish).isEqualTo(30);
+    assertThat(c.fish).isEqualTo(60);
     assertThat(c.idle.wall).isEqualTo(1);
     // 다음 환생에도 다시 3배를 받는다. 그냥 환생은 1배다.
     c.idle.wall = 101;
     engine.rebirth(c, true);
-    assertThat(c.fish).isEqualTo(60);
+    assertThat(c.fish).isEqualTo(120);
     c.idle.wall = 101;
     engine.rebirth(c, false);
-    assertThat(c.fish).isEqualTo(70);
+    assertThat(c.fish).isEqualTo(140);
     assertThat(c.rebirths).isEqualTo(3);
   }
 
@@ -1650,15 +1650,15 @@ class IdleEngineTest {
     c.idle.wall = 50;
     assertThat(engine.rebirthFish(c)).isZero();
     assertThatThrownBy(() -> engine.rebirth(c)).isInstanceOf(InvalidRequestException.class);
-    // 진행한 만큼 비례해서 받는다 (600번): 깬 벽 열 개마다 한 마리.
+    // 진행한 만큼 비례해서 받는다 (600번): 깬 벽 다섯 개마다 한 마리 (625번).
     c.idle.wall = 51;
-    assertThat(engine.rebirthFish(c)).isEqualTo(5);
-    c.idle.wall = 101;
     assertThat(engine.rebirthFish(c)).isEqualTo(10);
+    c.idle.wall = 101;
+    assertThat(engine.rebirthFish(c)).isEqualTo(20);
     c.idle.wall = 301;
-    assertThat(engine.rebirthFish(c)).isEqualTo(30);
-    assertThat(engine.view(c).rebirth().gain()).isEqualTo(30);
-    assertThat(engine.view(c).rebirth().adGain()).as("광고를 보면 3배 (586번)").isEqualTo(90);
+    assertThat(engine.rebirthFish(c)).isEqualTo(60);
+    assertThat(engine.view(c).rebirth().gain()).isEqualTo(60);
+    assertThat(engine.view(c).rebirth().adGain()).as("광고를 보면 3배 (586번)").isEqualTo(180);
     assertThat(engine.view(c).rebirth().fromWall()).isEqualTo(51);
     // 환생: 벽 1, 강화와 돈은 처음으로. 고양이·무기·다이아·받은 보스 보상은 그대로다.
     c.idle.cats.put("sky", 3);
@@ -1674,22 +1674,22 @@ class IdleEngineTest {
     assertThat(c.idle.epoch).as("화면이 새 벽으로 안다").isEqualTo(epoch + 1);
     assertThat(c.capital).isEqualTo((double) company.openingCapital());
     assertThat(c.battleLevels).isEmpty();
-    assertThat(c.fish).isEqualTo(30);
+    assertThat(c.fish).isEqualTo(60);
     assertThat(c.rebirths).isEqualTo(1);
     assertThat(c.diamonds).isEqualTo(777);
     assertThat(c.idle.cats.get("sky")).isEqualTo(3);
     assertThat(c.idle.bossCleared).isEqualTo(300);
     assertThat(engine.view(c).rebirth().count()).isEqualTo(1);
     assertThat(engine.view(c).rebirth().gain()).isZero();
-    // 한 번 환생한 뒤에는 첫 보스를 다시 깨지 않아도 깬 벽만큼 받는다 (603번): 벽 열 개를 깨면 한 마리.
-    assertThat(engine.view(c).rebirth().fromWall()).isEqualTo(11);
-    c.idle.wall = 10;
+    // 한 번 환생한 뒤에는 첫 보스를 다시 깨지 않아도 깬 벽만큼 받는다 (603번): 벽 다섯 개를 깨면 한 마리.
+    assertThat(engine.view(c).rebirth().fromWall()).isEqualTo(6);
+    c.idle.wall = 5;
     assertThat(engine.rebirthFish(c)).isZero();
     assertThatThrownBy(() -> engine.rebirth(c)).isInstanceOf(InvalidRequestException.class);
     c.idle.wall = 31;
-    assertThat(engine.rebirthFish(c)).isEqualTo(3);
+    assertThat(engine.rebirthFish(c)).isEqualTo(6);
     engine.rebirth(c);
-    assertThat(c.fish).isEqualTo(33);
+    assertThat(c.fish).isEqualTo(66);
     assertThat(c.rebirths).isEqualTo(2);
     c.fish = 30;
     c.rebirths = 1;
@@ -1700,15 +1700,15 @@ class IdleEngineTest {
     engine.buyFishUpgrade(c, "damage");
     assertThat(c.fish).isEqualTo(27);
     assertThat(fishUpgrade(c, "damage").level()).isEqualTo(2);
-    assertThat(fishUpgrade(c, "damage").bonus()).isEqualTo(2);
-    assertThat(fishUpgrade(c, "damage").nextBonus()).isEqualTo(3);
+    assertThat(fishUpgrade(c, "damage").bonus()).isEqualTo(6);
+    assertThat(fishUpgrade(c, "damage").nextBonus()).isEqualTo(9);
     assertThat(fishUpgrade(c, "damage").cost()).isEqualTo(3);
-    assertThat(upgrade(c, "damage").bonusPercent()).as("전투 강화의 효과에 더한다").isEqualTo(2);
+    assertThat(upgrade(c, "damage").bonusPercent()).as("전투 강화의 효과에 더한다").isEqualTo(6);
     assertThat(upgrade(c, "damage").level()).as("전투 강화의 단계는 그대로다").isZero();
     engine.buyFishUpgrade(c, "hp");
     engine.buyFishUpgrade(c, "buy");
-    assertThat(upgrade(c, "hp").bonusPercent()).isEqualTo(1);
-    assertThat(upgrade(c, "buy").bonusShares()).isEqualTo(10);
+    assertThat(upgrade(c, "hp").bonusPercent()).isEqualTo(3);
+    assertThat(upgrade(c, "buy").bonusShares()).isEqualTo(30);
     assertThat(upgrade(c, "fire").bonusPercent()).as("공격 속도는 영구 강화가 없다").isZero();
     assertThat(c.fish).isEqualTo(25);
     assertThat(c.idle.cats.get("sky")).isEqualTo(3);
@@ -1716,7 +1716,7 @@ class IdleEngineTest {
     c.idle.wall = 51;
     engine.rebirth(c);
     assertThat(c.fishLevels).containsEntry("damage", 2).containsEntry("hp", 1);
-    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(2);
+    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(6);
     // 없는 강화와 생선이 모자랄 때는 400.
     assertThatThrownBy(() -> engine.buyFishUpgrade(c, "fire"))
         .isInstanceOf(InvalidRequestException.class);

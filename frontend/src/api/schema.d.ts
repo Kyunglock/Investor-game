@@ -1594,7 +1594,7 @@ export interface components {
                     gain: number;
                     /**
                      * Format: int64
-                     * @description 이 벽에 서야 환생할 수 있다. 첫 환생은 첫 보스를 깬 다음 벽(51)이고 그 뒤로는 생선 한 마리가 나오는 벽(11
+                     * @description 이 벽에 서야 환생할 수 있다. 첫 환생은 첫 보스를 깬 다음 벽(51)이고 그 뒤로는 생선 한 마리가 나오는 벽(6
                      */
                     fromWall: number;
                     /**
