@@ -469,11 +469,10 @@ try {
     const pickCat = (code: string) => page.locator(`[data-testid=cat][data-code=${code}]`).click()
     await toShop()
     const diamonds = company.diamonds.amount
-    // The draw buttons carry their diamond prices, and the ten-pull shows its bonus (+1).
+    // The draw buttons carry their diamond prices, and ads replace the ten-pull.
     await expect(page.getByTestId('cat-draw')).toContainText('다이아 100개')
-    await expect(page.getByTestId('cat-draw-ten')).toContainText('10연차')
-    await expect(page.getByTestId('cat-draw-ten')).toContainText('다이아 1,000개')
-    await expect(page.getByTestId('cat-draw-ten').getByTestId('ten-bonus')).toHaveText('+1')
+    await expect(page.getByTestId('cat-draw-ten')).toHaveCount(0)
+    await expect(page.getByTestId('cat-draw-ad')).toContainText('광고로 1회 뽑기')
     // The odds by grade are written under the draw (539).
     await expect(page.getByTestId('draw-note')).toContainText('S 2% · A 10% · B 28% · C 60%')
     // The draw opens the same reveal as the weapon draw (decisions.md 508).

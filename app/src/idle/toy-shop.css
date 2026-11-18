@@ -144,7 +144,7 @@
   min-height: 58px;
   font-size: 17px;
 }
-.idle-shop .idle-gacha-row .idle-buy:not(.idle-buy-ten):not(:disabled) {
+.idle-shop .idle-gacha-row .idle-buy:not(.idle-buy-ad):not(:disabled) {
   border-color: #e9c88a;
   background: linear-gradient(#fffdf0, #ffe2a5);
   box-shadow:
@@ -198,7 +198,7 @@
 .idle-shop .idle-shop-item .idle-stat-info small {
   overflow-wrap: anywhere;
 }
-.idle-shop .idle-gacha-row .idle-buy:not(.idle-buy-ten):not(:disabled) small {
+.idle-shop .idle-gacha-row .idle-buy:not(.idle-buy-ad):not(:disabled) small {
   color: #77532a;
 }
 .idle-shop .idle-shop-got {

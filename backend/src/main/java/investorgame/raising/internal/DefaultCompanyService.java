@@ -172,6 +172,16 @@ class DefaultCompanyService implements CompanyService {
         c.diamonds, rule.draw(), rule.tenDraw(), rule.tenCount(), rule.hire());
   }
 
+  private CompanyView.AdDraws adDrawsView(UUID sessionId) {
+    RaisingMemory memory = memories.find(sessionId);
+    var today = idle.todayDate();
+    return new CompanyView.AdDraws(
+        RaisingMemory.AD_DRAW_LIMIT,
+        memory.adDrawLeft(true, today.toString()),
+        memory.adDrawLeft(false, today.toString()),
+        IdleEngine.startOf(today.plusDays(1)));
+  }
+
   private CompanyView.Upgrade upgradeView(CompanyState c) {
     String to = engine.nextGrade(c);
     Long needed = engine.upgradeNeeded(c);
@@ -375,6 +385,7 @@ class DefaultCompanyService implements CompanyService {
         c.opening,
         CompanyView.money(c.capital),
         diamondsView(c),
+        adDrawsView(row.sessionId()),
         grade,
         next,
         upgradeView(c),
@@ -527,10 +538,21 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView drawWeapon(UUID sessionId, int count) {
+  public CompanyView drawWeapon(UUID sessionId, int count, boolean ad) {
+    if (count != 1) throw new InvalidRequestException("한 번에 하나만 뽑을 수 있어요");
+    // 회사 차리기와 같은 순서로 잠근다. 회사·환생을 바꿔도 세션의 일일 횟수는 유지한다.
+    RaisingMemory memory = ad ? memories.lock(sessionId) : null;
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.mental.drawWeapons(row.state(), new HashSeededRandom(row.seed()), count);
-    rewards.drew(row.state(), engine.diamonds().items(count));
+    if (ad) {
+      memory.useAdDraw(false, idle.today());
+      engine.mental.initWeapons(row.state());
+      row.state().lastWeaponDraws =
+          List.of(engine.mental.drawOne(row.state(), new HashSeededRandom(row.seed())));
+      memories.save(sessionId, memory);
+    } else {
+      engine.mental.drawWeapons(row.state(), new HashSeededRandom(row.seed()), 1);
+    }
+    rewards.drew(row.state(), 1);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -549,10 +571,20 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView drawCat(UUID sessionId, int count) {
+  public CompanyView drawCat(UUID sessionId, int count, boolean ad) {
+    if (count != 1) throw new InvalidRequestException("한 번에 하나만 뽑을 수 있어요");
+    // 회사 차리기와 같은 순서로 잠근다. 회사·환생을 바꿔도 세션의 일일 횟수는 유지한다.
+    RaisingMemory memory = ad ? memories.lock(sessionId) : null;
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.drawCats(row.state(), new HashSeededRandom(row.seed()), count);
-    rewards.drew(row.state(), engine.diamonds().items(count));
+    if (ad) {
+      memory.useAdDraw(true, idle.today());
+      CompanyState.Pulled pulled = idle.grantCat(row.state(), new HashSeededRandom(row.seed()));
+      row.state().idle.lastDraws = List.of(pulled);
+      memories.save(sessionId, memory);
+    } else {
+      idle.drawCats(row.state(), new HashSeededRandom(row.seed()), 1);
+    }
+    rewards.drew(row.state(), 1);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

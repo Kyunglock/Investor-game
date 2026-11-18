@@ -18,4 +18,28 @@ class RaisingMemory {
 
   /** 판 회사 수. */
   int sales;
+
+  static final int AD_DRAW_LIMIT = 3;
+  String adDrawDay;
+  int catAdDraws;
+  int weaponAdDraws;
+
+  int adDrawLeft(boolean cat, String today) {
+    return today.equals(adDrawDay)
+        ? Math.max(0, AD_DRAW_LIMIT - (cat ? catAdDraws : weaponAdDraws))
+        : AD_DRAW_LIMIT;
+  }
+
+  void useAdDraw(boolean cat, String today) {
+    if (adDrawLeft(cat, today) == 0) {
+      throw new investorgame.common.error.InvalidRequestException("오늘의 광고 뽑기를 모두 사용했어요");
+    }
+    if (!today.equals(adDrawDay)) {
+      adDrawDay = today;
+      catAdDraws = 0;
+      weaponAdDraws = 0;
+    }
+    if (cat) catAdDraws++;
+    else weaponAdDraws++;
+  }
 }

@@ -159,6 +159,7 @@ export const company = {
   opening: null,
   capital: 412_500_000,
   // 다이아 (526번): 직원·고양이·무기 뽑기에 쓴다. 10연차 한 번과 한 번 뽑기 두 번이 되는 수다.
+  adDraws: { dailyLimit: 3, catLeft: 3, weaponLeft: 3, resetsAt: 1795042800000 },
   diamonds: { amount: 1200, draw: 100, tenDraw: 1000, tenCount: 11, hire: 100 },
   grade: 'E',
   nextGradeCapital: 600_000_000,

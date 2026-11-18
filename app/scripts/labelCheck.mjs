@@ -1,4 +1,4 @@
-// 자잘한 표기 (#920): 설정 창의 세 줄이 모두 상태를 적고, 환생 확인 단추가 한 줄이고, 고양이·무기 시트가 머리띠 아래에서 멈추고, 못 누르는 10연차의 덤 딱지가 흐리다.
+// 자잘한 표기 (#920): 설정 창의 세 줄이 모두 상태를 적고, 환생 확인 단추가 한 줄이고, 고양이·무기 시트가 머리띠 아래에서 멈추고, 광고 뽑기에 남은 횟수가 보인다.
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
@@ -15,12 +15,6 @@ const cats = [
   ['night', '밤냥'],
   ['snow', '눈꽃냥'],
 ]
-/** 배경색의 붉은 기: 빨강이 초록·파랑보다 얼마나 센가. 회색이면 0에 가깝다. */
-const redness = (locator) =>
-  locator.evaluate((el) => {
-    const [r, g, b] = getComputedStyle(el).backgroundColor.match(/\d+/g).map(Number)
-    return r - Math.max(g, b)
-  })
 try {
   for (const [width, height] of [
     [390, 844],
@@ -61,7 +55,7 @@ try {
         rebirth: { count: 0, fish: 0, gain: 5, fromWall: 51, adGain: 15, upgrades: [] },
       },
     }
-    // 다이아가 10연차 값(1,000)에 모자라다.
+    // 다이아가 없어도 광고 뽑기는 가능하다.
     company.diamonds.amount = 5
     const page = await browser.newPage({ viewport: { width, height } })
     const errors = []
@@ -132,19 +126,10 @@ try {
     assert.ok(reach.left <= 1, `${width}: 시트 안을 끝까지 내릴 수 있다`)
     assert.ok(reach.last <= reach.box + 1, `${width}: 마지막 줄이 시트 안에 보인다`)
 
-    // 못 누르는 10연차의 덤 딱지는 흐리고, 누를 수 있으면 빨갛다.
     await menu('상점')
-    const ten = page.getByTestId('cat-draw-ten')
-    await expect(ten).toBeDisabled()
-    assert.ok(
-      (await redness(ten.getByTestId('ten-bonus'))) < 20,
-      `${width}: 회색 단추의 딱지는 흐리다`,
-    )
-    company.diamonds.amount = 5000
-    await open()
-    await menu('상점')
-    await expect(ten).toBeEnabled()
-    assert.ok((await redness(ten.getByTestId('ten-bonus'))) > 80, `${width}: 누를 수 있으면 빨갛다`)
+    await expect(page.getByTestId('cat-draw-ten')).toHaveCount(0)
+    await expect(page.getByTestId('cat-draw-ad')).toBeEnabled()
+    await expect(page.getByTestId('cat-draw-ad')).toContainText('오늘 3 / 3회 남음')
 
     assert.deepEqual(errors, [])
     await page.close()

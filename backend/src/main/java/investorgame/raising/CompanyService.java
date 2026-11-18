@@ -110,17 +110,14 @@ public interface CompanyService {
    */
   CompanyView buyBattleUpgrade(UUID sessionId, String kind, int levels);
 
-  /** 무기 뽑기권 count장으로 무기 count개를 뽑는다 (decisions.md 366·517번). 뽑기권이 모자라면 하나도 뽑지 않고 400. */
-  CompanyView drawWeapon(UUID sessionId, int count);
+  /** 무기 1회 뽑기. 다이아를 쓰거나 종류별 하루 3회의 광고 보상을 받는다. count는 1만 허용한다. */
+  CompanyView drawWeapon(UUID sessionId, int count, boolean ad);
 
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). 모자라거나 가장 높은 등급이면 400. */
   CompanyView mergeWeapon(UUID sessionId, String kind, String grade);
 
-  /**
-   * 고양이 뽑기 (decisions.md 488·493·517번): 뽑기권 한 장에 한 마리, count마리를 한꺼번에. 이미 가진 고양이면 레벨이 오른다. 뽑기권이 모자라면
-   * 하나도 뽑지 않고 400.
-   */
-  CompanyView drawCat(UUID sessionId, int count);
+  /** 고양이 1회 뽑기. 다이아 또는 하루 3회의 광고 보상. 이미 가진 고양이면 레벨이 오른다. */
+  CompanyView drawCat(UUID sessionId, int count, boolean ad);
 
   /**
    * 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 재사용 대기 중이면 400. 고유 스킬은 장착한 것만 쓰고 (587번), 광고 스킬은 광고를 본
