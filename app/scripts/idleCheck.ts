@@ -983,13 +983,14 @@ try {
       const gap = left.y - (rebirth.y + rebirth.height)
       assert(gap >= 0 && gap <= 12, `rebirth is right above the ad skills: ${gap}`)
     }
-    // 광고 스킬은 아직 광고 없이 바로 눌린다 (586·588번): 광고를 본 것으로 쓰고, 남은 시간은 숫자 없이 원형 음영으로 보인다.
+    // 광고 스킬은 설명을 먼저 확인하고 별도 버튼으로 실행한다. 브라우저는 기존 광고 완료 대체 동작을 쓴다.
     const boost = page.locator('[data-testid=idle-ad-active][data-code=boostDamage]')
     await expect(boost).toBeEnabled()
-    await expect(boost).toHaveAccessibleName(/공격력 3배.*광고 보고 3분 사용/)
+    await expect(boost).toHaveAccessibleName(/공격력 3배.*광고 효과 자세히 보기/)
     await expect(boost).toContainText('×3')
     await expect(boost.locator('.active-badge')).toBeVisible()
     await boost.click()
+    await page.getByTestId('ad-skill-confirm').click()
     // The banner is not checked here: a monster raid's notice uses the same strip and may replace it.
     await expect.poll(() => usedActives).toEqual([{ code: 'boostDamage', ad: true }])
     await expect(boost).toHaveAccessibleName('공격력 3배 · 180초 남았어요')
@@ -998,9 +999,15 @@ try {
     await expect(boost).toHaveCSS('border-radius', '50%')
     const boostSize = await boost.boundingBox()
     assert(boostSize && boostSize.width === 48 && boostSize.height === 48, 'compact round skill')
-    await expect(boost).toBeDisabled()
-    await expect(page.locator('[data-testid=idle-ad-active][data-code=boostFire]')).toBeDisabled()
-    await expect(page.locator('[data-testid=idle-ad-active][data-code=boostBuy]')).toBeDisabled()
+    await expect(boost).toBeEnabled()
+    await expect(page.locator('[data-testid=idle-ad-active][data-code=boostFire]')).toHaveAttribute(
+      'aria-label',
+      /다른 광고 스킬 사용 중/,
+    )
+    await expect(page.locator('[data-testid=idle-ad-active][data-code=boostBuy]')).toHaveAttribute(
+      'aria-label',
+      /다른 광고 스킬 사용 중/,
+    )
     await page.screenshot({ path: `/tmp/idle-actives-${width}.png` })
     // 스킬 탭 (587번): 장착 칸 셋과 스킬 목록. 빼면 전투 화면의 단추가 사라지고, 다시 장착하면 돌아온다.
     await nav.getByRole('button', { name: '스킬', exact: true }).click()
