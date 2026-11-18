@@ -255,7 +255,15 @@ public record CompanyView(
       Income income,
       Offline offline,
       double power,
-      Rebirth rebirth) {}
+      Rebirth rebirth,
+      Onboarding onboarding) {}
+
+  public record Onboarding(
+      int step,
+      boolean catClaimed,
+      boolean weaponClaimed,
+      boolean skillsUnlocked,
+      boolean skillGuideSeen) {}
 
   /**
    * 환생 (decisions.md 571번): 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다. 생선은 영구 강화에 쓴다 (600번).

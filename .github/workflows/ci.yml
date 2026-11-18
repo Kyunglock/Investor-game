@@ -121,6 +121,7 @@ jobs:
             exit 1
           fi
           APP_URL=http://localhost:5182/app/ node ../app/scripts/idleCheck.ts
+          APP_URL=http://localhost:5182/app/ node ../app/scripts/onboardingCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/modalBackCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/loadoutCheck.ts
           APP_URL=http://localhost:5182/app/ node ../app/scripts/upgradeCheck.ts

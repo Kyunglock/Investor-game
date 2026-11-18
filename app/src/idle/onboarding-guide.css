@@ -1,0 +1,80 @@
+/* 기존 전투와 시트 위에 안내만 더한다. 메뉴, 장비 조작, 전투 배치는 유지한다. */
+.idle-tutorial {
+  border: 2px solid #d4ac67;
+  border-radius: 16px;
+  background: #fff9e9;
+  padding: 10px 12px;
+  color: #553a27;
+  box-shadow: 0 3px 0 #986d3433;
+  font-family: var(--font-game);
+}
+.idle-tutorial.in-battle {
+  position: absolute;
+  z-index: 5;
+  top: clamp(170px, 36dvh, 320px);
+  left: 12px;
+  right: 12px;
+  max-width: 440px;
+  margin: auto;
+}
+.idle-tutorial.in-sheet {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  margin-bottom: 12px;
+}
+.idle-tutorial-copy {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.idle-tutorial-copy > .idle-cat-portrait {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+}
+.idle-tutorial-copy strong {
+  display: block;
+  font-size: 16px;
+}
+.idle-tutorial-copy small {
+  font-size: 11px;
+  color: #805925;
+}
+.idle-tutorial p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 3px 0;
+  word-break: keep-all;
+}
+.idle-tutorial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.idle-tutorial-actions button {
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.idle-tutorial-actions button:first-child {
+  background: #e5f4c3;
+  border: 1px solid #a6be72;
+  flex: 1;
+}
+.idle-tutorial-actions button:disabled {
+  opacity: 0.6;
+}
+.idle-nav button:disabled {
+  opacity: 0.6;
+}
+.idle-nav .tutorial-lock {
+  font-size: 9px;
+  line-height: 1.1;
+}
+[data-tutorial-target="true"] {
+  outline: 3px solid #f4b528;
+  outline-offset: -3px;
+}

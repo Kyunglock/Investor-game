@@ -1,3 +1,5 @@
+import type { Company } from '@web/api/client'
+import { useRaisingStore } from '@web/features/raising/store'
 import { useEffect, useRef, useState } from 'react'
 import { HapticIcon, SoundIcon } from '../app/Icons'
 import { haptic, isHapticOff, setHapticOff } from '../fx/haptics'
@@ -8,7 +10,13 @@ import { usePowerSave } from './powerSave'
  * 설정 (decisions.md 522번): 메인 화면은 매도벽 돌파 화면이라 옵션은 여기에 둔다. 톱니 단추를 누르면 소리·진동을 켜고 끄는 작은 창이 열린다.
  * 값은 열 때마다 저장된 것을 읽는다(다른 화면의 소리 단추로 바꿨을 수 있다).
  */
-export function IdleOptions() {
+export function IdleOptions({
+  company,
+  onTutorial,
+}: {
+  company?: Company
+  onTutorial?: () => void
+}) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -38,16 +46,45 @@ export function IdleOptions() {
       >
         <GearIcon />
       </button>
-      {open && <Panel />}
+      {open && (
+        <Panel
+          company={company}
+          onTutorial={() => {
+            setOpen(false)
+            onTutorial?.()
+          }}
+        />
+      )}
     </div>
   )
 }
 
-function Panel() {
+function Panel({ company, onTutorial }: { company?: Company; onTutorial: () => void }) {
+  const busy = useRaisingStore((s) => s.busy)
+  const error = useRaisingStore((s) => s.error)
+  const progress = company?.idle?.onboarding
   const [muted, setMutedState] = useState(isMuted)
   const [hapticOff, setHapticOffState] = useState(isHapticOff)
   return (
     <div className="idle-options-panel">
+      {progress && (
+        <>
+          <button type="button" className="idle-options-toggle" onClick={onTutorial}>
+            첫 출근 안내 다시 보기
+          </button>
+          {progress.step >= 8 && (!progress.catClaimed || !progress.weaponClaimed) && (
+            <button
+              type="button"
+              className="idle-options-toggle"
+              disabled={busy}
+              onClick={() => void useRaisingStore.getState().tutorial('claim', progress.step)}
+            >
+              첫 출근 선물 받기 · 밤냥 + 기관단총
+            </button>
+          )}
+          {error && <p role="alert">{error}</p>}
+        </>
+      )}
       <button
         type="button"
         className={`idle-options-toggle ${muted ? 'idle-options-off' : ''}`}

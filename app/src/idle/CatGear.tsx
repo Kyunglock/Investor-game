@@ -168,6 +168,9 @@ export function CatGear({
         type="button"
         className={`idle-gear-cell ${state}`}
         data-testid="cat-weapon"
+        data-tutorial-target={
+          (company.idle?.onboarding?.step === 5 && w.grade === 'B') || undefined
+        }
         data-gear-cell={cell.key}
         data-loadout-target={`gear:${cell.key}`}
         data-kind={w.kind}

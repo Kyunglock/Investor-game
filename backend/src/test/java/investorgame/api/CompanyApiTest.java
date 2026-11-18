@@ -109,6 +109,26 @@ class CompanyApiTest {
     }
   }
 
+  @Test
+  void 첫_출근_선물은_건너뛰고_재접속해도_한번만_받는다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.idle.onboarding.step").value(0));
+    for (int i = 0; i < 2; i++) {
+      postJson("/api/company/idle/tutorial", "{\"action\":\"skip\",\"step\":0}")
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.idle.onboarding.step").value(8))
+          .andExpect(jsonPath("$.idle.onboarding.catClaimed").value(true))
+          .andExpect(jsonPath("$.idle.onboarding.weaponClaimed").value(true));
+    }
+    DocumentContext saved =
+        json(mvc.perform(get("/api/company").cookie(session)).andExpect(status().isOk()));
+    List<Integer> levels = saved.read("$.idle.cats[?(@.code == 'night')].level");
+    assertThat(levels).containsExactly(1);
+    List<Integer> counts = saved.read("$.weapons[?(@.grade == 'B')].count");
+    assertThat(counts).containsExactly(1);
+  }
+
   /** 고유 스킬 장착 (587번)과 광고 스킬 (588번). */
   @Test
   void 고유_스킬은_장착한_것만_쓰고_광고_스킬은_광고를_본_뒤에_쓴다() throws Exception {
@@ -126,6 +146,15 @@ class CompanyApiTest {
         .andExpect(jsonPath("$.idle.actives[6].code").value("boostFire"))
         .andExpect(jsonPath("$.idle.actives[6].equipped").value(false))
         .andExpect(jsonPath("$.idle.actives[6].ad").value(true));
+    // 100벽을 아직 돌파하지 않은 계정은 서버에서도 차단한다.
+    postJson("/api/company/idle/active", "{\"code\":\"rally\"}").andExpect(status().isBadRequest());
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{idle}', '{\"best\":100}'::jsonb) WHERE id = CAST(:id AS uuid)")
+        .param(
+            "id",
+            json(mvc.perform(get("/api/company").cookie(session)))
+                .read("$.companyId", String.class))
+        .update();
     // 뺀 고유 스킬은 쓸 수 없다. 광고 스킬은 장착할 수 없다.
     postJson("/api/company/idle/active/equip", "{\"code\":\"rally\",\"equipped\":false}")
         .andExpect(status().isOk())

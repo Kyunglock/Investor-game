@@ -230,6 +230,29 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Company' }
+  /api/company/idle/tutorial:
+    post:
+      operationId: advanceIdleTutorial
+      summary: 첫 출근 안내 진행 및 계정당 한 번의 동료·무기 선물
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, step]
+              properties:
+                action: { type: string, enum: [next, skip, claim, skills] }
+                step: { type: integer, minimum: 0, maximum: 8 }
+      responses:
+        '200':
+          description: 안내 진행과 보상을 저장한 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/idle/active:
     post:
       operationId: useIdleActive
@@ -1411,6 +1434,15 @@ components:
           type: object
           required: [wall, hp, maxHp, dps, earned, boss, skills, cats, fieldSlots, wallDps, income, power]
           properties:
+            onboarding:
+              type: object
+              required: [step, catClaimed, weaponClaimed, skillsUnlocked, skillGuideSeen]
+              properties:
+                step: { type: integer, minimum: 0, maximum: 8, description: 0~7 진행 중. 8은 완료 또는 기존 유저 }
+                catClaimed: { type: boolean }
+                weaponClaimed: { type: boolean }
+                skillsUnlocked: { type: boolean, description: 최고 돌파 기록 100 이상. 환생 후에도 유지 }
+                skillGuideSeen: { type: boolean }
             income:
               type: object
               description: 회사의 수입 (523번). 화면에서 흐르는 실제 1초에 버는 돈이고, 접속해 있는 동안과 자리를 비운 동안이 같다

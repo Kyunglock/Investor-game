@@ -22,6 +22,13 @@ class CompanyState {
 
   Idle idle;
 
+  /** null은 기존 유저: 강제 안내 없음. 회사는 계정당 하나이며 환생해도 이 상태는 유지한다. */
+  Integer tutorialStep;
+
+  boolean tutorialCatClaimed;
+  boolean tutorialWeaponClaimed;
+  boolean skillGuideSeen;
+
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
   static class Idle {
     long wall = 1;

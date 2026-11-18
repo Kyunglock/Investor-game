@@ -294,6 +294,9 @@ export function IdleCats({
               type="button"
               className="idle-cat-field"
               data-testid="cat-field"
+              data-tutorial-target={
+                (company.idle?.onboarding?.step === 3 && cat?.code === 'night') || undefined
+              }
               aria-pressed={cat.fielded}
               disabled={busy}
               onClick={() => {
@@ -369,6 +372,10 @@ export function IdleCats({
             type="button"
             className="idle-cat-gun"
             data-testid="cat-gun"
+            disabled={(company.idle?.onboarding?.step ?? 8) < 5}
+            data-tutorial-target={
+              (company.idle?.onboarding?.step === 5 && cat?.code === 'night') || undefined
+            }
             onClick={() => {
               sfx.tap()
               setGearOpen(!gearOpen)
@@ -383,7 +390,11 @@ export function IdleCats({
               </small>
             </span>
             <em className="idle-gun-open">
-              {gearOpen ? '고양이 목록 ▾' : '무기 변경 ▸'}
+              {(company.idle?.onboarding?.step ?? 8) < 5
+                ? '무기 안내 후 해금'
+                : gearOpen
+                  ? '고양이 목록 ▾'
+                  : '무기 변경 ▸'}
               {canMerge && (
                 <i className="idle-gun-dot" role="img" aria-label="합칠 수 있는 무기 있음" />
               )}
@@ -425,6 +436,9 @@ export function IdleCats({
                       type="button"
                       className={`idle-cat-cell ${c.level > 0 ? 'owned' : ''} ${c.fielded ? 'fielded' : ''} ${picked === c.code ? 'is-picked' : ''}`}
                       data-testid="cat"
+                      data-tutorial-target={
+                        (company.idle?.onboarding?.step === 3 && c.code === 'night') || undefined
+                      }
                       data-code={c.code}
                       data-grade={c.grade}
                       disabled={c.level < 1}
