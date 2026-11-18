@@ -52,13 +52,20 @@ export function focusStep(pass: Pass): number {
 
 /**
  * 미션의 진행도 (570번): 다음 문턱까지 "73/100". 문턱이 되풀이되므로 센 수는 그대로 적고, 막대는 지난 문턱부터 다음 문턱까지의 비율이다.
+ * 받을 포인트가 있으면 서버가 닿은 문턱을 준다 (#912): 그 문턱을 넘겨 센 수는 문턱까지만 적어 "10/10"과 가득 찬 막대가 된다.
  */
-export function missionProgress(mission: PassMission): { text: string; ratio: number } {
+export function missionProgress(mission: PassMission): {
+  have: number
+  text: string
+  ratio: number
+} {
   const every = Math.max(1, mission.every)
   const from = mission.target - every
+  const have = Math.min(mission.count, mission.target)
   return {
-    text: `${mission.count.toLocaleString()}/${mission.target.toLocaleString()}`,
-    ratio: Math.max(0, Math.min(1, (mission.count - from) / every)),
+    have,
+    text: `${have.toLocaleString()}/${mission.target.toLocaleString()}`,
+    ratio: Math.max(0, Math.min(1, (have - from) / every)),
   }
 }
 

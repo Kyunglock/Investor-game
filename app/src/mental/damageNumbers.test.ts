@@ -7,6 +7,7 @@ import {
   MERGE_MS,
   scatterOffset,
   shownDamage,
+  wallNumberSpot,
 } from './damageNumbers'
 
 describe('데미지 숫자 (decisions.md 391번)', () => {
@@ -98,5 +99,29 @@ describe('데미지 숫자 (decisions.md 391번)', () => {
       expect(Math.abs(s.dx)).toBeLessThanOrEqual(16)
       expect(Math.abs(s.dy)).toBeLessThanOrEqual(12)
     }
+  })
+
+  it('매도벽의 숫자는 가운데의 남은 물량을 비켜 양옆으로 번갈아 뜬다 (#914)', () => {
+    const left = 33
+    const width = 324
+    const center = left + width / 2
+    const spots = [0, 1, 2, 3, 4, 5, 6].map((n) => wallNumberSpot(n, left, width, 200, 100))
+    for (const [n, spot] of spots.entries()) {
+      // 남은 물량 글자가 서는 가운데(폭의 4분의 1 안쪽)에는 숫자의 중심이 오지 않고, 벽 밖으로도 나가지 않는다.
+      expect(Math.abs(spot.x - center)).toBeGreaterThan(width / 4)
+      expect(spot.x).toBeGreaterThan(left)
+      expect(spot.x).toBeLessThan(left + width)
+      expect(Math.sign(spot.x - center)).toBe(n % 2 === 0 ? -1 : 1)
+      expect(Math.abs(spot.y - 200)).toBeLessThanOrEqual(12)
+    }
+    // 같은 쪽에 잇달아 뜨는 숫자는 자리가 다르다.
+    expect(spots[0]).not.toEqual(spots[2])
+    expect(spots[2]).not.toEqual(spots[4])
+  })
+
+  it('맨 위 벽의 숫자는 머리띠 쪽으로 올라가지 않게 낮춰 띄운다 (#914)', () => {
+    expect(wallNumberSpot(0, 33, 324, 90, 108).y).toBe(108)
+    expect(wallNumberSpot(1, 33, 324, 90, 108).y).toBe(108)
+    expect(wallNumberSpot(0, 33, 324, 200, 108).y).toBe(200)
   })
 })

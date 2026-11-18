@@ -91,6 +91,29 @@ export function scatterOffset(n: number): { dx: number; dy: number } {
   return { dx, dy }
 }
 
+/** 벽 가운데에서 벌어지는 거리(벽 폭에 대한 비율)와 세로 어긋남(px). 가운데의 남은 물량 글자는 폭의 4분의 1 안쪽에 선다. */
+const WALL_SPOTS: readonly (readonly [number, number])[] = [
+  [0.31, 0],
+  [0.36, -12],
+  [0.28, 12],
+]
+
+/**
+ * 매도벽에 n번째(0부터)로 새로 뜨는 숫자의 자리 (#914): 벽 가운데에 적힌 남은 물량을 덮지 않게 왼쪽·오른쪽으로 번갈아 비켜 띄운다. centerY는
+ * 벽의 세로 가운데, minY는 떠오르기 시작할 수 있는 가장 높은 자리다(맨 위 벽의 숫자가 머리띠까지 올라가지 않게).
+ */
+export function wallNumberSpot(
+  n: number,
+  left: number,
+  width: number,
+  centerY: number,
+  minY: number,
+): { x: number; y: number } {
+  const [reach, dy] = WALL_SPOTS[Math.floor(n / 2) % WALL_SPOTS.length]
+  const side = n % 2 === 0 ? -1 : 1
+  return { x: left + width / 2 + side * width * reach, y: Math.max(minY, centerY + dy) }
+}
+
 export interface DamageSlot<T> {
   item: T
   /** 이 칸이 지금 보이는 숫자의 적과 종류, 합친 피해, 처음 뜬 때(ms). 비어 있으면 owner가 null. */

@@ -69,7 +69,8 @@ try {
             code: company.idle.cats[i % company.idle.cats.length].code,
             grade,
             level: i + 1,
-            isNew: i === 2,
+            // 처음 얻은 장: 첫 장(C)과 셋째 장(A).
+            isNew: i === 0 || i === 2,
           })),
         })
       }
@@ -88,7 +89,8 @@ try {
       if (reducedMotion === 'no-preference') {
         // 뒷면으로 나와 뜸을 들인 뒤 열린다 (576번): 보통 장은 금방, A등급 0.5초, S등급 1초.
         const shownAt = Date.now()
-        await expect(single).toHaveAttribute('data-open', 'false')
+        // 보통 장은 0.22초 만에 열려, 느린 기계에서는 앞의 확인을 하는 사이에 이미 열려 있다. 뒷면은 빛나는 장에서만 본다.
+        if (shiny) await expect(single).toHaveAttribute('data-open', 'false')
         if (process.env.OUT && grade === 'S') {
           await page.waitForTimeout(600)
           await page.screenshot({ path: `${process.env.OUT}/ten-S-back.png` })
@@ -112,6 +114,21 @@ try {
     await expect(page.getByTestId('cat-ten-card')).toHaveCount(GRADES.length)
     await expect(page.locator('[data-testid=cat-ten-card][data-shiny=true]')).toHaveCount(2)
     await expect(page.getByTestId('cat-ten')).toContainText('A등급 이상 2')
+    // 테두리 색은 등급으로만 정한다 (#917): 처음 얻은 C등급 장도 다른 C등급 장과 같은 색이고 B등급 색이 아니다.
+    const borders = await page
+      .getByTestId('cat-ten-card')
+      .evaluateAll((cards) => cards.map((card) => getComputedStyle(card).borderTopColor))
+    assert.equal(borders[0], borders[1], 'a new C card keeps the C colour')
+    assert.notEqual(borders[0], borders[4], 'C and B cards differ')
+    await expect(page.locator('[data-testid=cat-ten-card][data-new=true]')).toHaveCount(2)
+    // '팀 편성하기'는 닫기처럼 테두리가 있는 단추다 (#917).
+    const use = page.getByTestId('cat-ten-use')
+    await expect(use).toHaveText(/팀 편성하기/)
+    const useStyle = await use.evaluate((node) => {
+      const style = getComputedStyle(node)
+      return { border: Number.parseFloat(style.borderTopWidth), height: node.clientHeight }
+    })
+    assert(useStyle.border >= 1 && useStyle.height >= 40, 'the use action looks like a button')
     if (process.env.OUT && reducedMotion === 'no-preference') {
       await page.waitForTimeout(1500)
       await page.screenshot({ path: `${process.env.OUT}/ten-result.png` })
@@ -132,6 +149,8 @@ try {
     await expect(page.getByTestId('cat-ten-card')).toHaveCount(GRADES.length)
     await page.getByTestId('cat-ten-close').click()
     await expect(page.getByTestId('cat-ten')).toHaveCount(0)
+    // 알림은 마지막 장(라일락냥)이 아니라 가장 좋은 장(S등급, 첫 장의 하늘냥)을 가리킨다 (#911).
+    await expect(page.getByTestId('draw-note')).toContainText('하늘냥')
     assert.deepEqual(errors, [])
     await page.close()
   }

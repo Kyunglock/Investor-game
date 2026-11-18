@@ -274,6 +274,37 @@ try {
     await expect.poll(slotOrder).toEqual(['night', 'mint', 'lilac', 'sunset'])
     assert.deepEqual(mutations[2].body, { code: 'mint', fielded: true, slot: 1 })
     mutations.splice(1)
+    // A full team (#910): the benched cat's button is "교체", not a disabled "칸 없음". It asks which
+    // fielded cat leaves, and the swap is one request.
+    await cat('sky').click()
+    await expect(page.getByTestId('cat-field')).toHaveCount(0)
+    const swap = page.getByTestId('cat-swap')
+    await expect(swap).toHaveText('교체')
+    await swap.click()
+    await expect(page.getByTestId('swap-hint')).toContainText('하늘냥 대신 뺄 고양이')
+    await expect(page.locator('[data-testid=cat-slot].is-drop-ready')).toHaveCount(4)
+    await expect(swap).toHaveText('취소')
+    await swap.click()
+    await expect(page.getByTestId('swap-hint')).toHaveCount(0)
+    // The boss cat cannot leave: picking it ends the swap with no request, and it does not resume.
+    await swap.click()
+    await page.getByTestId('cat-boss').click()
+    await expect(page.getByTestId('swap-hint')).toHaveCount(0)
+    await cat('sky').click()
+    await expect(page.getByTestId('swap-hint')).toHaveCount(0)
+    assert.equal(mutations.length, 1)
+    await swap.click()
+    await target('slot:sunset').click()
+    await expect(page.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByTestId('swap-hint')).toHaveCount(0)
+    assert.deepEqual(mutations[1].body, { code: 'sky', fielded: true, replaceCode: 'sunset' })
+    assert.equal(mutations.length, 2)
+    await expect.poll(slotOrder).toEqual(['night', 'mint', 'lilac', 'sky'])
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    )
+    mutations.splice(1)
     // Keyboard-equivalent tap selection + slot works and server rejection preserves the team.
     await cat('snow').click()
     reject = true

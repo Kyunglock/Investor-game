@@ -67,10 +67,11 @@ export class BuyWallFx {
       .setDepth(7)
       .setVisible(false)
     this.chunk.setCrop(this.chunk.width / 2, 0, this.chunk.width / 2, this.chunk.height)
+    // 남은 물량은 벽 앞에 선 고양이의 스킬 그림(깊이 7)에 가려지지 않게 그 위에 적는다 (#916).
     this.title = scene.add
       .text(0, 0, '', { ...WALL_LABEL_STYLE })
       .setOrigin(0.5)
-      .setDepth(6)
+      .setDepth(7.5)
     this.shots = []
   }
 
@@ -108,6 +109,8 @@ export class BuyWallFx {
       fortifySecondsLeft: this.fortifyLeft,
       fortified: this.fortifyLeft > 0 && this.surface.visible,
       label: this.title.text,
+      /** 서 있는 벽의 위 끝(px). */
+      top: this.surface.y,
       tossing: this.tossing,
       hitLeft: this.hitLeft,
       breakLeft: this.breakLeft,

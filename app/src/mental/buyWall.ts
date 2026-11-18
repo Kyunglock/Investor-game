@@ -45,6 +45,34 @@ export function pushedByCollapse(y: number, viewHeight: number): boolean {
   return y >= viewHeight / 2
 }
 
+/** 매수벽이 깎인 양을 하나로 합치는 시간(ms): 매도벽 쪽 데미지 숫자(damageNumbers.ts의 MERGE_MS)와 같다. */
+export const BUY_LOSS_MERGE_MS = 150
+
+/**
+ * 매수벽이 깎일 때 뜨는 "매수 -N주" (#915): 여러 물량이 한꺼번에 닿으면 글자가 겹쳐 뭉개졌다. 처음 뜬 때부터 BUY_LOSS_MERGE_MS 안에 깎인
+ * 양은 떠 있는 글자에 더한다.
+ */
+export class BuyLossNote {
+  total = 0
+  private born = Number.NEGATIVE_INFINITY
+  /** 깎인 양을 더한다. 떠 있는 글자에 합쳤으면 true, 새 글자를 띄워야 하면 false다. */
+  add(lost: number, now: number): boolean {
+    if (now - this.born < BUY_LOSS_MERGE_MS) {
+      this.total += lost
+      return true
+    }
+    this.born = now
+    this.total = lost
+    return false
+  }
+}
+
+/** 글자의 가운데 x를 화면 안쪽으로 묶는다: 폭이 width인 글자가 양 끝에서 margin만큼 떨어진다. */
+export function noteX(x: number, width: number, viewWidth: number, margin = 8): number {
+  const half = width / 2 + margin
+  return Math.max(half, Math.min(viewWidth - half, x))
+}
+
 /** 매도 물량 하나당 매수 주문 두 개로 맞선다. 붕괴하면 후퇴하고 1.5초 뒤 새 벽을 세운다. */
 export class BuyWall {
   maxHp: number
@@ -89,6 +117,10 @@ export class BuyWall {
     const lost = Math.min(this.hp - 1, Math.floor(this.hp * Math.min(1, Math.max(0, ratio))))
     this.hp -= lost
     return lost
+  }
+  /** 서킷브레이커 (#913): 서 있는 벽의 깎인 체력을 amount만큼 되채운다. 무너진 벽은 재건을 기다린다. */
+  recover(amount: number) {
+    if (this.active) this.hp = Math.min(this.maxHp, this.hp + Math.max(0, amount))
   }
   get active() {
     return this.hp > 0

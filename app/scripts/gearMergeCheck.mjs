@@ -3,7 +3,8 @@ import { mkdirSync } from 'node:fs'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
 
-// 고양이 탭의 장비 목록 (decisions.md 530번, #791): 짧게 누르면 장착, 길게 눌러 같은 무기 위로 끌면 합치기. 남이 든 무기는 못 고른다.
+// 고양이·무기 탭의 장비 목록 (decisions.md 530·560번, #791·#918): 누르면 비교하고 단추로 장착, 집어서 같은 무기 위로 끌면 합치기. 남이 든
+// 무기는 못 고른다. 아무도 안 든 무기는 한 칸에 수로 묶고, 합칠 수 있을 때만 두 칸을 한 상자로 붙여 보인다.
 // 서버 없이 가짜 API로 본다. 가짜 API는 서버와 같은 규칙으로 거절(400)하고, 화면이 한 번도 거절당하지 않는지 센다.
 // SHOTS=폴더 를 주면 화면을 그 폴더에 찍는다.
 
@@ -131,10 +132,11 @@ function world() {
       if (free(w) < company.armory.mergeCount) return '장착 중인 무기는 합칠 수 없다'
       w.count -= company.armory.mergeCount
       if (w.count === 0) company.weapons.splice(company.weapons.indexOf(w), 1)
+      // 서버처럼 같은 종류의 한 등급 위 무기가 된다.
       const up = GRADES[at + 1]
-      const made = company.weapons.find((x) => x.grade === up)
+      const made = find(w.kind, up)
       if (made) made.count++
-      else company.weapons.push(weapon(up, 1))
+      else company.weapons.push({ ...weapon(up, 1), kind: w.kind, name: w.name })
     } else if (path.endsWith('/company/weapon')) {
       const w = find(sent.kind, sent.grade)
       if (!w || (!w.equipped && free(w) < 1))
@@ -172,6 +174,12 @@ const center = async (locator) => {
   const box = await locator.boundingBox()
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
+const CAT_MENU = /^고양이·무기( 합칠 수 있는 무기 있음)?$/
+/** 누르면 비교가 뜨고, 그 단추를 눌러야 장착한다. */
+const equip = async (page, locator) => {
+  await locator.click()
+  await page.getByTestId('gear-equip').click()
+}
 const noOverflow = async (page) =>
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
@@ -199,15 +207,6 @@ try {
       await page.route(/\/api\/(company|sessions)(\/|$|\?)/, route)
       await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
 
-      // 성장 메뉴에는 능력치만 있다: 탭 줄이 없다.
-      await page.getByRole('button', { name: '성장' }).click()
-      await expect(page.getByTestId('idle-power')).toBeVisible()
-      await expect(page.getByRole('tab')).toHaveCount(0)
-      await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
-      await noOverflow(page)
-      await shot('growth')
-      await page.getByRole('button', { name: '닫기 ✕' }).click()
-
       // 뽑기는 상점 탭에 있다 (541번): 고양이 뽑기와 무기 뽑기를 한 화면에서 고른다.
       await page.getByRole('button', { name: /^상점/ }).click()
       await expect(page.getByTestId('cat-draw')).toBeVisible()
@@ -220,16 +219,15 @@ try {
       await shot('draw-weapon')
       await page.getByTestId('draw-kind-cat').click()
 
-      // 무기 탭 (540번): 처음에는 사장냥이 골라져 있고 바로 장비를 고를 수 있다.
+      // 고양이·무기 탭 (560번): 처음에는 사장냥이 골라져 있고 스킬 설명이 없다. 든 무기를 누르면 장비 목록이 펴진다.
       const tab = (name) =>
         page.getByRole('navigation', { name: '게임 메뉴' }).last().getByRole('button', { name })
-      await tab(/^무기/).click()
-      const now = page.getByTestId('weapon-now')
-      await expect(page.locator('[data-testid=gear-wearer][data-code=boss]')).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-      await expect(now).toContainText('권총')
+      await tab(CAT_MENU).click()
+      const detail = page.getByTestId('cat-detail')
+      await expect(detail).toHaveAttribute('data-code', 'boss')
+      await expect(detail.getByTestId('cat-skill')).toHaveCount(0)
+      await detail.getByTestId('cat-gun').click()
+      await expect(detail.getByTestId('cat-gun')).toContainText('권총')
       await expect(cell(page, 'F', 'boss')).toHaveAttribute('aria-pressed', 'true')
       // 하늘냥·민트냥이 든 것은 사장냥이 못 고른다.
       await expect(cell(page, 'E', 'sky')).toBeDisabled()
@@ -238,51 +236,49 @@ try {
       await expect(cell(page, 'S', 'mint')).toBeDisabled()
       // 사장냥의 무기도 뺄 수 있다 (585번).
       await expect(page.getByTestId('cat-unequip')).toHaveCount(1)
-      await now.scrollIntoViewIfNeeded()
       await shot('boss')
       // 사장냥이 남은 리볼버 D를 든다.
-      await cell(page, 'D').first().click()
+      await equip(page, cell(page, 'D').first())
       await expect(cell(page, 'D', 'boss')).toHaveAttribute('aria-pressed', 'true')
       await expect(cell(page, 'F', 'boss')).toHaveCount(0)
       assert.deepEqual(calls, ['/weapon D'])
-      await cell(page, 'F').first().click()
+      await equip(page, cell(page, 'F').first())
       await expect(cell(page, 'F', 'boss')).toHaveAttribute('aria-pressed', 'true')
 
-      // 고양이 탭: 사장냥이 골라져 있고 스킬 설명이 없다. 하늘냥을 누르면 스킬 설명이 나온다.
-      await tab('고양이').click()
-      const detail = page.getByTestId('cat-detail')
-      await expect(detail).toHaveAttribute('data-code', 'boss')
-      await expect(detail.getByTestId('cat-skill')).toHaveCount(0)
+      // 고양이 목록으로 돌아가 하늘냥을 누르면 스킬 설명이 나온다.
+      await detail.getByTestId('cat-gun').click()
       await page.locator('[data-testid=cat][data-code=sky]').click()
       await expect(detail).toHaveAttribute('data-code', 'sky')
       const skill = detail.getByTestId('cat-skill')
       await expect(skill).toContainText('고유 스킬 메테오 스킬 Lv.1')
       await expect(skill).toContainText('운석이 떨어져')
       await expect(skill).toContainText('운석 → 대운석 → 유성우')
-      await expect(skill.getByTestId('cat-skill-next')).toHaveText(
+      await expect(detail.getByTestId('cat-skill-next')).toHaveText(
         '고양이 Lv.2에 스킬 Lv.2 · 앞으로 1레벨',
       )
       await page.locator('[data-testid=cat][data-code=night]').click()
       await expect(detail.getByTestId('cat-skill-next')).toHaveText('스킬 최고 레벨이에요')
       await page.locator('[data-testid=cat][data-code=sky]').click()
 
-      // 하늘냥의 무기를 누르면 무기 탭이 하늘냥으로 열린다: 든 것, 남이 든 것, 남은 것.
+      // 하늘냥의 무기를 누르면 하늘냥의 장비 목록이 펴진다: 든 것, 남이 든 것, 남은 것.
       await detail.getByTestId('cat-gun').click()
-      await expect(page.locator('[data-testid=gear-wearer][data-code=sky]')).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
       await expect(cell(page, 'E', 'sky')).toHaveAttribute('aria-pressed', 'true')
       await expect(cell(page, 'F', 'boss')).toBeDisabled()
       await expect(cell(page, 'F', 'boss')).toContainText('장착 중')
       await expect(cell(page, 'F', 'boss')).toContainText('사장냥')
       await expect(cell(page, 'S', 'mint')).toBeDisabled()
       await expect(cell(page, 'S', 'mint')).toContainText('민트냥')
-      // 권총 F는 넷 가운데 사장냥이 하나 들었다: 남은 셋이 두 칸(하나, 둘)으로 보인다.
+      // 합칠 수 있는 무기 (#918): 권총 F는 넷 가운데 사장냥이 하나 들었다. 남은 셋이 한 상자의 두 칸이고, 수는 상자에 한 번만 적는다.
+      const pair = (grade) => page.getByTestId('gear-pair').filter({ has: cell(page, grade) })
       await expect(cell(page, 'F')).toHaveCount(2)
-      await expect(cell(page, 'F').last()).toContainText('×2')
+      await expect(pair('F').getByTestId('gear-pair-count')).toHaveText('권총 ×3')
+      await expect(pair('F')).toContainText('합성 가능')
+      await expect(pair('D').getByTestId('gear-pair-count')).toHaveText('리볼버 ×2')
+      await expect(page.getByTestId('gear-pair')).toHaveCount(2)
+      // 못 합치는 무기는 나누지 않는다: 하나 남은 권총 E는 한 칸, 가장 높은 등급(LR) 둘은 한 칸에 ×2다.
       await expect(cell(page, 'E')).toHaveCount(1)
-      await now.scrollIntoViewIfNeeded()
+      await expect(cell(page, 'LR')).toHaveCount(1)
+      await expect(cell(page, 'LR')).toContainText('×2')
       await noOverflow(page)
       await shot('cat-detail')
 
@@ -291,8 +287,8 @@ try {
       await cell(page, 'S', 'mint').dispatchEvent('click')
       assert.equal(calls.length, 2)
 
-      // 짧게 누르면 장착: 하늘냥이 리볼버 D를 든다. 든 무기는 못 끈다.
-      await cell(page, 'D').first().click()
+      // 하늘냥이 리볼버 D를 든다. 든 무기는 못 끈다.
+      await equip(page, cell(page, 'D').first())
       await expect(cell(page, 'D', 'sky')).toHaveAttribute('aria-pressed', 'true')
       assert.equal(calls.at(-1), '/cat/weapon sky D')
       assert.deepEqual(company.idle.cats[0].weapon, { kind: 'revolver', grade: 'D' })
@@ -323,8 +319,8 @@ try {
         )
       })
       await expect(page.getByTestId('cat-gear')).not.toHaveAttribute('data-dragging', /.+/)
-      // 가장 높은 등급(LR)은 둘이어도 못 합친다.
-      await drag(cell(page, 'LR').first(), cell(page, 'LR').last(), async () => {
+      // 가장 높은 등급(LR)은 둘이어도 못 합친다: 놓을 칸이 없다.
+      await drag(cell(page, 'LR'), cell(page, 'E').first(), async () => {
         await expect(page.locator('[data-testid=cat-weapon][data-target]')).toHaveCount(0)
         await expect(page.getByTestId('gear-hint')).toHaveText(
           '가장 높은 등급이라 더 합칠 수 없어요',
@@ -356,21 +352,23 @@ try {
       assert.equal(calls.at(-1), '/weapon/merge F')
       assert.equal(company.weapons.find((w) => w.grade === 'F').count, 2)
       assert.equal(company.weapons.find((w) => w.grade === 'E').count, 3)
-      // 권총 F는 이제 사장냥의 하나와 남은 하나뿐이라 더 못 합친다.
+      // 권총 F는 이제 사장냥의 하나와 남은 하나뿐이라 더 못 합친다: 상자가 풀려 한 칸이다.
       await expect(cell(page, 'F')).toHaveCount(1)
+      await expect(pair('F')).toHaveCount(0)
       await expect(page.getByTestId('merge-result')).toHaveCount(0, { timeout: 4000 })
 
       // 끌지 않고 합치기: 단추로도 합친다(키보드·화면 낭독기).
       await page.getByTestId('gear-manual').click()
       await expect(page.getByTestId('gear-merge')).toHaveCount(1)
       await expect(page.getByTestId('gear-merge')).toHaveText('권총 E 2개 → D')
-      await page.getByTestId('gear-manual').focus()
-      await page.keyboard.press('Tab')
+      await page.getByTestId('gear-merge').focus()
       await page.keyboard.press('Enter')
       await expect(page.getByTestId('merge-result')).toHaveAttribute('data-grade', 'D')
       assert.equal(company.weapons.find((w) => w.grade === 'E').count, 1)
-      // 리볼버 D가 셋이 되어(하늘냥이 하나) 이제 D를 합칠 수 있다.
-      await expect(page.getByTestId('gear-merge')).toHaveText('리볼버 D 2개 → C')
+      assert.equal(company.weapons.find((w) => w.kind === 'pistol' && w.grade === 'D').count, 1)
+      // 더 합칠 무기가 없다: 권총 E·D는 하나씩, 리볼버 D는 둘 가운데 하늘냥이 하나 들었다.
+      await expect(page.getByTestId('gear-manual')).toHaveCount(0)
+      await expect(page.getByTestId('gear-pair')).toHaveCount(0)
 
       // 무기 빼기.
       await page.getByTestId('cat-unequip').click()
@@ -379,12 +377,11 @@ try {
       await noOverflow(page)
       await page.getByRole('button', { name: '닫기 ✕' }).click()
 
-      // 출전 화면의 "무기 바꾸기"는 회사 탭 뒤에 있어 꺼 둔 동안에는 갈 수 없다 (540번). 켜면 무기 탭의 사장냥 장비가 열린다.
       assert.deepEqual(refused, [], '화면은 서버가 거절할 일을 시키지 않는다')
       assert.deepEqual(errors, [])
       await page.close()
     }
-    // ── 터치: 짧게 누르면 장착, 길게 눌러 끌면 합치기, 바로 밀면 목록 넘기기 ─────────────
+    // ── 터치: 누르면 비교, 집어서 끌면 합치기, 바로 위아래로 밀면 목록 넘기기 ─────────────
     {
       const { company, refused, calls, route } = world()
       const context = await browser.newContext({
@@ -398,7 +395,8 @@ try {
       await page.addInitScript(() => localStorage.setItem('investor-game.tutorial', 'done'))
       await page.route(/\/api\/(company|sessions)(\/|$|\?)/, route)
       await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
-      await page.getByRole('button', { name: /^무기/ }).click()
+      await page.getByRole('button', { name: CAT_MENU }).last().click()
+      await page.getByTestId('cat-gun').click()
       const cdp = await context.newCDPSession(page)
       const touch = (type, x, y) =>
         cdp.send('Input.dispatchTouchEvent', {
@@ -427,8 +425,9 @@ try {
       await expect(page.getByTestId('merge-result')).toHaveAttribute('data-grade', 'E')
       assert.deepEqual(calls, ['/weapon/merge F'])
       assert.equal(company.weapons.find((w) => w.grade === 'E').count, 3)
-      // 짧게 누르면 장착: 사장냥이 권총 E를 든다.
+      // 누르면 비교, 단추로 장착: 사장냥이 권총 E를 든다.
       await cell(page, 'E').first().tap()
+      await page.getByTestId('gear-equip').tap()
       await expect(cell(page, 'E', 'boss')).toHaveAttribute('aria-pressed', 'true')
       assert.equal(calls.at(-1), '/weapon E')
       assert.ok(a && b)
@@ -438,7 +437,7 @@ try {
     }
     console.log(
       width,
-      '성장은 능력치만 · 뽑기 고르기 · 스킬 설명 · 장착 중 표시 · 끌어서 합치기(마우스·터치) · 단추 합치기 OK',
+      '뽑기 고르기 · 스킬 설명 · 장착 중 표시 · 합칠 수 있는 무기 묶음 · 끌어서 합치기(마우스·터치) · 단추 합치기 OK',
     )
   }
 } finally {

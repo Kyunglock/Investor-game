@@ -253,6 +253,11 @@ try {
           if (sent?.code && mission.code !== sent.code) continue
           company.pass.points += mission.ready
           mission.earned += mission.ready
+          // 받으면 다음 문턱으로 넘어간다 (#912). 가짜 서버에서 받을 것이 있는 미션은 출석뿐이다.
+          if (mission.ready > 0) {
+            mission.target = mission.count + mission.every
+            mission.title = `출석 ${mission.target}일`
+          }
           mission.ready = 0
         }
         company.pass.missionsReady = 0
@@ -373,8 +378,13 @@ try {
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(1)
     const attend = page.locator('[data-testid=pass-mission][data-code=attend]')
     await expect(attend.getByTestId('pass-mission-claim')).toHaveText('받기 +100P')
+    // 받을 것이 있는 동안에는 닿은 문턱을 다 채운 것으로 보이고, 받으면 다음 문턱으로 넘어간다 (#912).
+    await expect(attend).toContainText('출석 8일')
+    await expect(attend).toContainText('8/8')
     await attend.getByTestId('pass-mission-claim').click()
     await expect(page.getByTestId('pass-got')).toContainText('포인트 +100P')
+    await expect(attend).toContainText('출석 9일')
+    await expect(attend).toContainText('8/9')
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(0)
     await expect(page.getByTestId('pass-exp')).toHaveText('220 / 300P')
     await expect(page.getByTestId('pass-badge')).toHaveCount(0)
@@ -569,8 +579,10 @@ try {
     await pickCat('night')
     await expect(detail).toHaveAttribute('data-code', 'night')
     await expect(detail.getByTestId('cat-grade')).toHaveText('A')
-    await expect(detail.getByTestId('cat-field')).toBeDisabled()
-    await expect(detail.getByTestId('cat-field')).toHaveText('칸 없음')
+    // With the team full its button offers a swap instead of a dead "칸 없음" (#910).
+    await expect(detail.getByTestId('cat-field')).toHaveCount(0)
+    await expect(detail.getByTestId('cat-swap')).toHaveText('교체')
+    await expect(detail.getByTestId('cat-swap')).toBeEnabled()
     await expect(detail).toContainText('치명타 피해 +25%')
     await expect.poll(mates).toBe(4)
     // The last approved companion is visible below the fold and uses its own portrait/texture.

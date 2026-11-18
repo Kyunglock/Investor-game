@@ -21,7 +21,8 @@ export function sortCats<T extends { level: number; grade: CatGrade }>(cats: rea
 export const CAT_ODDS = CAT_GRADES.map((g) => `${g} ${CAT_GRADE_PERCENT[g]}%`).join(' · ')
 
 /**
- * 뽑기 연출의 세기: 등급이 높을수록 뜸이 길고 빛이 세다. 무기 뽑기의 D·B·A·S 등급 연출과 같다. 처음 얻은 고양이는 한 단계 위로 보여 준다.
+ * 뽑기 연출의 세기: 등급이 높을수록 뜸이 길고 빛이 세다. 무기 뽑기의 D·B·A·S 등급 연출과 같다. 처음 얻은 고양이는 뜸·빛·소리를 한 단계 위로
+ * 보여 준다. 색은 등급의 색 그대로다 (#917): 처음 얻었다고 윗등급 색을 쓰면 카드에 적힌 등급과 테두리 색이 어긋난다.
  */
 export function catRevealPlan(grade: CatGrade, isNew: boolean) {
   const plans = [
@@ -31,7 +32,24 @@ export function catRevealPlan(grade: CatGrade, isNew: boolean) {
     { charge: 2100, power: 3, color: '#ffdd75', sound: 'S' as const },
   ]
   const at = ['C', 'B', 'A', 'S'].indexOf(grade)
-  return plans[Math.min(plans.length - 1, Math.max(0, at) + (isNew ? 1 : 0))]
+  const own = plans[Math.max(0, at)]
+  return {
+    ...plans[Math.min(plans.length - 1, Math.max(0, at) + (isNew ? 1 : 0))],
+    color: own.color,
+  }
+}
+
+/**
+ * 10연차에서 알림과 '팀 편성하기'가 가리킬 한 마리 (#911): 등급이 가장 높은 고양이. 같은 등급이면 이번에 처음 얻은 고양이, 그래도 같으면 먼저
+ * 나온 고양이다. isNew는 그 고양이가 이번 뽑기에서 처음 나왔는가다(같은 고양이가 또 나온 장은 isNew가 아니다).
+ */
+export function bestDraw<T extends { code: string; grade: CatGrade; isNew: boolean }>(
+  draws: readonly T[],
+): { code: T['code']; isNew: boolean } | null {
+  const fresh = (d: T) => draws.some((other) => other.code === d.code && other.isNew)
+  const rank = (d: T) => CAT_GRADES.indexOf(d.grade) * 2 + (fresh(d) ? 0 : 1)
+  const best = draws.reduce<T | null>((a, b) => (a && rank(a) <= rank(b) ? a : b), null)
+  return best && { code: best.code, isNew: fresh(best) }
 }
 
 /** 빛나는 등급 (574번): A등급부터는 좋은 것을 뽑았다는 느낌이 들게 뽑기 연출이 빛난다. */

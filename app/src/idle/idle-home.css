@@ -839,12 +839,21 @@
   }
 }
 
-/* 테스트판 (decisions.md 499번): 왼쪽 가장자리의 단추, 코드 창과 도구 창. */
-.idle-sandbox {
+/*
+ * 테스트판 (decisions.md 499번): 머리띠 아래 가운데의 단추와 프레임 표시, 코드 창과 도구 창. 왼쪽 가장자리에는 환생·광고 스킬 단추가 있어
+ * 거기 두면 서로 덮는다 (#919). 머리띠(top max(4px, 안전 영역) + 높이 42px) 바로 아래다. 머리띠에서 열리는 설정 창보다는 아래에 깔린다.
+ */
+.idle-sandbox-bar {
   position: absolute;
-  top: 46%;
-  left: 6px;
-  z-index: 2;
+  top: calc(max(4px, env(safe-area-inset-top)) + 46px);
+  left: 50%;
+  z-index: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  transform: translateX(-50%);
+}
+.idle-sandbox {
   display: grid;
   gap: 4px;
   padding: 6px;
@@ -964,22 +973,51 @@
   opacity: 0.5;
 }
 
+/* 스킬 단추 열의 자리 (#916): 평소에는 전장 높이의 44%쯤(메뉴 높이의 몫 37px을 더한다)에서 시작하고, 세로가 짧은 화면에서는 세 단추가
+   매수벽 위에서 끝나도록 올린다. 매수벽의 위 끝은 전장 아래에서 118px + 벽 높이(길 폭의 6분의 1, 길은 화면 폭 - 72px)이고 그 위로 8px을
+   띄운다(battle.ts의 playerY·buyWallY, buyWallFx.ts의 벽 높이와 같아야 한다). */
+.idle-home {
+  --idle-active-size: 48px;
+  --idle-active-gap: 8px;
+  --idle-actives-top: min(
+    calc(44% + 37px),
+    calc(
+      100% -
+      126px -
+      (100vw - 72px) /
+      6 -
+      3 *
+      var(--idle-active-size) -
+      2 *
+      var(--idle-active-gap)
+    )
+  );
+}
+/* 세로가 아주 짧으면 단추를 줄여 매도벽과 매수벽 사이에 넣는다. */
+@media (max-height: 640px) {
+  .idle-home {
+    --idle-active-size: 40px;
+    --idle-active-gap: 6px;
+  }
+}
 /* 액티브 스킬 단추 (decisions.md 503번): 오른쪽 가장자리에 세로로. 남은 시간은 원형 음영이 시계 방향으로 걷히며 나타낸다. */
 .idle-actives {
   position: absolute;
+  /* 전장(메뉴 위의 칸)을 기준으로 자리를 잡는다. 끝 줄을 적지 않으면 화면 맨 아래까지가 기준이 된다. */
+  grid-row: 1 / 2;
   right: 6px;
-  top: 44%;
+  top: var(--idle-actives-top);
   z-index: 2;
   display: grid;
-  gap: 8px;
+  gap: var(--idle-active-gap);
 }
 .idle-actives button {
   position: relative;
   overflow: hidden;
   display: grid;
   justify-items: center;
-  width: 48px;
-  height: 48px;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -1861,6 +1899,64 @@
     sans-serif;
   color: #8f7448;
 }
+/* 합칠 수 있는 무기 (#918): 나눈 두 칸을 한 상자로 붙여 그린다. 한 칸을 집어 옆 칸에 놓으면 합쳐진다. 수는 상자에 한 번만 적는다. */
+.idle-gear-pair {
+  position: relative;
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #e0a94a;
+  border-radius: 9px;
+  background: #fffaf0;
+}
+.idle-gear-pair .idle-gear-cell {
+  justify-content: center;
+  min-height: 68px;
+  padding: 13px 1px 14px;
+  border-color: transparent;
+  background: transparent;
+}
+.idle-gear-pair .idle-gear-cell + .idle-gear-cell .idle-gear-grade {
+  display: none;
+}
+.idle-gear-pair::before {
+  content: "+";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -58%);
+  font:
+    800 14px / 1 "Noto Sans KR",
+    sans-serif;
+  color: #c98a1e;
+  pointer-events: none;
+}
+.idle-gear-pair-tag {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font:
+    800 8.5px / 13px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+  color: #b06a00;
+  pointer-events: none;
+}
+.idle-gear-pair-note {
+  position: absolute;
+  right: 2px;
+  bottom: 3px;
+  left: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  font:
+    700 8.5px / 1.25 "Noto Sans KR",
+    sans-serif;
+  color: #8a5a20;
+  pointer-events: none;
+}
 .idle-gear-held {
   display: block;
   font-weight: 800;
@@ -2147,12 +2243,8 @@
   text-align: center;
 }
 
-/* 프레임 표시 (543번): 테스트판에서만, 테스트판 단추 위에 뜬다. */
+/* 프레임 표시 (543번): 테스트판에서만, 테스트판 단추 옆에 뜬다. */
 .idle-frames {
-  position: absolute;
-  top: calc(46% - 62px);
-  left: 6px;
-  z-index: 2;
   display: grid;
   gap: 1px;
   min-width: 62px;
@@ -2217,6 +2309,12 @@
   justify-content: space-between;
   gap: 8px;
 }
+/* 교체할 고양이를 고르는 동안 (#910): 출전 칸의 초록 테와 같은 색으로 눈에 띄게 적는다. */
+.idle-swap-hint {
+  color: #1f7a3d;
+  font-weight: 700;
+  word-break: keep-all;
+}
 .idle-rebirth {
   display: grid;
   gap: 6px;
@@ -2263,7 +2361,12 @@
   color: #553a27;
   font-size: 14px;
 }
+/* 생선 그림(svg)은 블록이라 그냥 두면 글자와 줄이 갈린다 (#920): 광고 단추처럼 한 줄로 늘어놓는다. */
 .idle-rebirth-button.idle-rebirth-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   border-color: #bfe9ff;
   background: linear-gradient(#58bdf5, #1f86d6);
   box-shadow: 0 3px 0 #135b99;
@@ -2355,11 +2458,12 @@
 .idle-rebirth-shortcut {
   position: absolute;
   z-index: 2;
-  /* 광고 스킬 줄(.idle-actives-ad: top 44%, left 6px) 바로 위 (605번): 단추 48px에 그 줄의 간격 8px만큼 띄운다. */
-  top: calc(44% - 56px);
+  /* 광고 스킬 줄(.idle-actives-ad, left 6px) 바로 위 (605번): 단추 하나에 그 줄의 간격만큼 띄운다. */
+  grid-row: 1 / 2;
+  top: calc(var(--idle-actives-top) - var(--idle-active-size) - var(--idle-active-gap));
   left: 6px;
-  width: 48px;
-  height: 48px;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
   padding: 0;
   border: 0;
   border-radius: 50%;

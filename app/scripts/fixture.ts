@@ -256,8 +256,8 @@ export const company = {
         points: 30,
       },
       { code: 'merge', title: '무기 합성 5번', count: 2, target: 5, every: 5, points: 30 },
-      { code: 'attend', title: '출석 9일', count: 8, target: 9, every: 1, points: 100 },
-      // 출석 미션은 포인트를 아직 받지 않았다 (572번): 눌러서 받는다.
+      // 출석 미션은 포인트를 아직 받지 않았다 (572번): 눌러서 받는다. 받을 것이 있어 닿은 문턱(8일)을 가리킨다 (#912).
+      { code: 'attend', title: '출석 8일', count: 8, target: 8, every: 1, points: 100 },
     ].map((m) => ({
       ...m,
       earned: Math.floor(m.count / m.every) * m.points - (m.code === 'attend' ? 100 : 0),

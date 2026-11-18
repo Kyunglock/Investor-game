@@ -161,7 +161,7 @@ raising:
         - { code: free, name: 오늘의 무료 다이아, give-diamonds: 20, daily-limit: 1 }
     # 시즌패스 (decisions.md 529·571번): 무료 줄 하나. 시즌은 epoch(한국 시간 자정)부터 days일(4주)마다 이어지고, steps단계에 단계마다
     # 포인트 points-per-step. 포인트는 미션을 깨면 들어온다: 미션마다 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points
-    # (끝없이 되풀이된다). title의 {n}은 다음에 닿을 수다. 보상에 돈은 없다: 보통 단계 normal-diamonds, 5의 배수 five-diamonds,
+    # (끝없이 되풀이된다). title의 {n}은 다음에 닿을 수(받을 포인트가 있으면 닿은 수)다. 보상에 돈은 없다: 보통 단계 normal-diamonds, 5의 배수 five-diamonds,
     # 10의 배수(10·20) ten-diamonds + 무기 하나, 마지막 단계 last-diamonds + 고양이 한 마리. 한 시즌에 다이아 2,900.
     pass:
       epoch: "2026-11-02"

@@ -1047,14 +1047,36 @@ class IdleEngine {
     // Diamonds (526): 100 for one, 1,000 for the ten-pull that gives eleven.
     CompanyEngine.spend(c, engine.diamonds().cost(count));
     List<CompanyState.Pulled> drawn = new ArrayList<>();
+    List<String> fresh = new ArrayList<>();
     for (int i = 0; i < engine.diamonds().items(count); i++) {
-      drawn.add(grantCat(c, random));
+      CompanyState.Pulled pulled = pull(c, random);
+      drawn.add(pulled);
+      if (pulled.isNew) fresh.add(pulled.kind);
+    }
+    // 빈 출전 칸은 이번에 처음 얻은 고양이 가운데 등급이 높은 순으로 채운다 (#909): 뽑힌 차례대로 채우면 10연차의 S등급이 대기석에 남는다.
+    // 같은 등급은 뽑힌 차례를 지킨다. 이미 출전해 있던 고양이는 밀어내지 않는다.
+    fresh.sort(java.util.Comparator.comparing(IdleEngine::gradeIndex).reversed());
+    for (String code : fresh) {
+      if (s.fielded.size() < FIELD_SLOTS) s.fielded.add(code);
     }
     s.lastDraws = drawn;
   }
 
-  /** One random cat at no cost: the gacha (526) and the season pass's last step (529) share it. */
+  /**
+   * One random cat at no cost, fielded at once while a slot is free: the season pass's last step
+   * (529).
+   */
   CompanyState.Pulled grantCat(CompanyState c, SeededRandom random) {
+    CompanyState.Idle s = state(c);
+    CompanyState.Pulled pulled = pull(c, random);
+    if (pulled.isNew && s.fielded.size() < FIELD_SLOTS) {
+      s.fielded.add(pulled.kind);
+    }
+    return pulled;
+  }
+
+  /** One random cat joins or levels up. Fielding it is the caller's. */
+  private CompanyState.Pulled pull(CompanyState c, SeededRandom random) {
     CompanyState.Idle s = state(c);
     s.catDraws++;
     int roll =
@@ -1063,9 +1085,6 @@ class IdleEngine {
     while (roll >= CAT_WEIGHTS[cat]) roll -= CAT_WEIGHTS[cat++];
     String code = CATS.get(cat);
     int level = s.cats.merge(code, 1, Integer::sum);
-    if (level == 1 && s.fielded.size() < FIELD_SLOTS) {
-      s.fielded.add(code);
-    }
     return new CompanyState.Pulled(code, null, level, level == 1);
   }
 

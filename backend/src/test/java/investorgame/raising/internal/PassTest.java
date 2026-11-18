@@ -103,7 +103,9 @@ class PassTest {
     rewards.attend(c);
     assertThat(c.passExp).isZero();
     assertThat(mission(c, "attend").count()).isEqualTo(1);
-    assertThat(mission(c, "attend").title()).isEqualTo("출석 2일");
+    // 받을 것이 있는 동안에는 닿은 문턱을 가리키고, 받으면 다음 문턱으로 넘어간다 (#912).
+    assertThat(mission(c, "attend").title()).isEqualTo("출석 1일");
+    assertThat(mission(c, "attend").target()).isEqualTo(1);
     assertThat(mission(c, "attend").ready()).isEqualTo(100);
     assertThat(mission(c, "attend").earned()).isZero();
     assertThat(rewards.passView(c).missionsReady()).isEqualTo(1);
@@ -125,13 +127,18 @@ class PassTest {
     assertThat(mission(c, "upgrade").ready()).isZero();
     rewards.upgraded(c, 1);
     assertThat(mission(c, "upgrade").ready()).isEqualTo(30);
-    assertThat(mission(c, "upgrade").title()).isEqualTo("강화 100번");
-    // 받지 않고 여러 문턱을 넘으면 그만큼 쌓여 한 번에 받는다.
-    rewards.upgraded(c, 100);
+    assertThat(mission(c, "upgrade").title()).isEqualTo("강화 50번");
+    // 받지 않고 여러 문턱을 넘으면 그만큼 쌓여 한 번에 받는다. 가리키는 것은 닿은 마지막 문턱이다.
+    rewards.upgraded(c, 110);
     assertThat(mission(c, "upgrade").ready()).isEqualTo(90);
+    assertThat(mission(c, "upgrade").count()).isEqualTo(160);
+    assertThat(mission(c, "upgrade").target()).isEqualTo(150);
+    assertThat(mission(c, "upgrade").title()).isEqualTo("강화 150번");
     assertThat(c.passExp).isEqualTo(100);
     rewards.claimPassMission(c, "upgrade");
     assertThat(c.passExp).isEqualTo(190);
+    assertThat(mission(c, "upgrade").target()).isEqualTo(200);
+    assertThat(mission(c, "upgrade").title()).isEqualTo("강화 200번");
     // 뽑기는 10번마다 30, 합성은 5번마다 30. 모두 받기는 받을 수 있는 미션을 다 받는다.
     rewards.drew(c, 11);
     for (int i = 0; i < 5; i++) {
@@ -151,7 +158,7 @@ class PassTest {
     assertThat(mission(c, "wall").ready()).as("벽 하나로는 아직 없다").isZero();
     engine.pass.progress(c, "wall", 49, idle.todayDate());
     assertThat(mission(c, "wall").ready()).as("쉰 번째 벽").isEqualTo(30);
-    assertThat(mission(c, "wall").title()).isEqualTo("매도벽 최고 기록 100개 돌파");
+    assertThat(mission(c, "wall").title()).isEqualTo("매도벽 최고 기록 50개 돌파");
     // 보스는 한 번에 30.
     engine.pass.progress(c, "boss", 1, idle.todayDate());
     rewards.claimPassMission(c, null);
