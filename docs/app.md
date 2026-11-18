@@ -49,10 +49,14 @@
 
 | 방식 | 언제 | 설정 | 서버 |
 |---|---|---|---|
-| **운영 웹의 /app/ 띄우기** (기본) | `CAP_SERVER_URL`이 없거나 주소일 때 | 앱 화면은 웹과 같이 배포되어 `https://game.kwaklabs.com/app/`에 있다(deploy.yml이 `app/dist`를 `web/app/`에 둔다). 앱은 그 주소를 WebView에 띄운다. 화면이 배포될 때마다 앱도 새 화면이다 | 손댈 것 없다. API와 세션 쿠키가 웹과 같은 출처다 |
-| **화면 담기** | Run workflow의 `server_url`에 `none` | `app/dist`를 APK 안에 담는다. 앱의 출처는 `https://localhost`이고 API는 `VITE_API_BASE`(저장소 변수 `APP_API_BASE`)로 간다. 화면을 바꾸면 앱을 다시 내야 한다 | 다른 출처에서 부르므로 CORS와 쿠키를 열어야 한다: 환경 변수 `API_CORS_ORIGINS=https://localhost`, `SESSION_COOKIE_SAME_SITE=None` |
+| **화면 담기** (기본, decisions.md 624번) | `CAP_SERVER_URL`이 없을 때 | `pnpm build:bundled`(`vite build --mode bundled`)의 `app/dist`를 앱 안에 담는다. 앱의 출처는 `https://localhost`이고 서버로는 API만 간다: `VITE_API_BASE`(기본 `app/.env.bundled`의 운영 서버, CI는 저장소 변수 `APP_API_BASE`). 화면을 바꾸면 앱을 다시 내야 한다 | 다른 출처에서 부르므로 CORS와 쿠키를 열어야 한다: 환경 변수 `API_CORS_ORIGINS=https://localhost`, `SESSION_COOKIE_SAME_SITE=None`. **없으면 세션 쿠키가 오가지 않아 켤 때마다 새 회사가 생긴다** |
+| **주소 띄우기** | `CAP_SERVER_URL`(Run workflow의 `server_url`)에 주소 | 화면을 담지 않고 그 주소를 WebView에 띄운다. 내 개발 서버로 볼 때 쓴다 | 손댈 것 없다. API와 세션 쿠키가 그 주소와 같은 출처다 |
 
-폰 브라우저로 `https://game.kwaklabs.com/app/`을 열면 앱과 같은 화면이 나온다(설치 없이 확인할 때).
+- 담는 화면은 뿌리(`/`)에서, 웹에 배포하는 화면(`pnpm build`)은 `/app/`에서 열린다(`vite.config.ts`의 `base`). 담는 화면이 `/app/`을 가리키면 앱에서 흰 화면이 되므로 Android 워크플로가 막는다.
+- 화면을 담는 까닭: iOS(App Store)는 화면을 웹에서 불러오기만 하는 앱을 받지 않는다. 안드로이드도 출시와 같은 방식으로 맞췄다. iOS의 WebView는 다른 출처의 쿠키를 막으므로, iOS를 낼 때는 세션을 쿠키가 아닌 방식(네이티브 HTTP나 헤더 토큰)으로 보내야 한다. 아직 하지 않았다.
+- 서버를 고칠 때는 **예전 화면을 담은 앱**이 남아 있다는 것을 생각한다: API의 응답 모양을 바꾸거나 필드를 지우면 업데이트하지 않은 앱이 깨진다.
+
+웹에 배포된 앱 화면(`https://game.kwaklabs.com/app/`)은 그대로 있다: 폰 브라우저로 열면 앱과 같은 화면이 나온다(설치 없이 확인할 때).
 
 ## 3. 개발
 
@@ -73,15 +77,14 @@ pnpm check && pnpm exec tsc -b && pnpm test && pnpm build
 
 ### GitHub Actions (권장)
 
-`.github/workflows/android.yml`. Actions 탭 → **Android** → Run workflow. 아무것도 넣지 않으면 운영 웹의 앱 화면을 띄우는 APK가 나온다. `app/`이나 `frontend/src/`가 바뀐 PR과 main에서도 돈다.
+`.github/workflows/android.yml`. Actions 탭 → **Android** → Run workflow. 아무것도 넣지 않으면 화면을 담은 APK가 나온다(API는 운영 서버). `server_url`에 주소를 넣으면 그 주소를 띄우는 APK다. `app/`이나 `frontend/src/`가 바뀐 PR과 main에서도 돈다.
 
 | 저장소 설정 | 뜻 |
 |---|---|
-| 변수 `APP_SERVER_URL` | 앱이 띄울 주소를 운영 웹이 아닌 곳으로 바꿀 때 |
-| 변수 `APP_API_BASE` | 화면 담기일 때 API 주소 |
+| 변수 `APP_API_BASE` | API 주소를 운영 서버(`https://game.kwaklabs.com`)가 아닌 곳으로 바꿀 때 |
 | 시크릿 `ANDROID_KEYSTORE_BASE64` `ANDROID_KEYSTORE_PASSWORD` `ANDROID_KEY_ALIAS` `ANDROID_KEY_PASSWORD` | 있으면 서명한 배포용 APK와 Play 스토어용 AAB도 만든다. 없으면 디버그 APK만 |
 
-결과는 실행 결과의 Artifacts에서 `app-debug`(폰에 바로 설치), `app-release`(서명 키가 있을 때), `app-release-aab`(서명 키가 있을 때, Play 콘솔에 올리는 파일)를 받는다. 배포용의 `versionCode`는 워크플로 실행 번호라 올릴 때마다 커진다(581번). 디버그 APK는 Play 프로텍트가 "잠재적으로 유해한 앱"이라 경고한다: 모르는 출처의 앱이라 그런 것이고 "무시하고 설치"·"닫기"로 지나간다. 경고를 줄이려면 고정 서명 키를, 없애려면 Play 콘솔 내부 테스트 트랙을 쓴다.
+결과는 실행 결과의 Artifacts에서 `app-debug`(폰에 바로 설치), `app-test-debug`(테스트판: `VITE_APP_TEST=1`로 만든 화면을 담는다), `app-release`(서명 키가 있을 때), `app-release-aab`(서명 키가 있을 때, Play 콘솔에 올리는 파일)를 받는다. 배포용의 `versionCode`는 워크플로 실행 번호라 올릴 때마다 커진다(581번). 디버그 APK는 Play 프로텍트가 "잠재적으로 유해한 앱"이라 경고한다: 모르는 출처의 앱이라 그런 것이고 "무시하고 설치"·"닫기"로 지나간다. 경고를 줄이려면 고정 서명 키를, 없애려면 Play 콘솔 내부 테스트 트랙을 쓴다.
 
 ### 내 컴퓨터
 
@@ -89,7 +92,7 @@ Android Studio(또는 안드로이드 SDK와 Java 21)가 있어야 한다.
 
 ```bash
 cd app
-pnpm apk                                   # 앱 화면 빌드 → android에 복사 → 디버그 APK
+pnpm apk                                   # 담는 화면 빌드(build:bundled) → android에 복사 → 디버그 APK
 # → android/app/build/outputs/apk/debug/app-debug.apk
 pnpm open                                  # Android Studio로 열기 (에뮬레이터·실기기 실행)
 CAP_SERVER_URL=http://192.168.0.10:5173/app/ pnpm apk   # 같은 Wi-Fi의 내 개발 서버(pnpm dev --host)로

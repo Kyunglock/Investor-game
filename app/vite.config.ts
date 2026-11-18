@@ -7,9 +7,10 @@ import { defineConfig } from 'vite'
 /** 웹(frontend/src)의 API 클라이언트·게임 상태·도트 그림·회의 창을 그대로 가져다 쓴다 (docs/app.md). */
 const web = fileURLToPath(new URL('../frontend/src', import.meta.url))
 
-export default defineConfig({
-  // 운영 웹의 /app/ 아래에 같이 배포한다 (decisions.md 309번). 앱은 그 주소를 WebView에 띄운다.
-  base: '/app/',
+export default defineConfig(({ mode }) => ({
+  // 웹 배포(`vite build`)는 운영 웹의 /app/ 아래에 둔다 (decisions.md 309번). 앱에 담는 빌드(`--mode bundled`, 624번)는
+  // 화면이 앱 안의 https://localhost/ 에서 열리므로 뿌리(/)다. API 주소는 .env.bundled 가 준다.
+  base: mode === 'bundled' ? '/' : '/app/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: { '@web': web },
@@ -24,4 +25,4 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
   },
-})
+}))
