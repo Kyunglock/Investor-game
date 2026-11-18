@@ -226,26 +226,30 @@ test('자리가 꽉 차면 더 뽑을 수 없다 (#801)', async ({ page }) => {
   expect(after.diamonds.amount).toBe(company.diamonds.amount)
 })
 
-test('무기 10연차는 다이아 1,000개에 열한 개를 주고, 다이아가 떨어지면 못 뽑는다 (#790)', async ({
-  page,
-}) => {
+test('광고 뽑기는 고양이·무기 각각 하루 3회이고 다이아 단일 뽑기는 유지한다', async ({ page }) => {
   const api = page.request
   expect((await api.post('/api/sessions')).ok()).toBe(true)
   let company = await companyOf(await api.post('/api/company'))
-  // 새 회사의 다이아는 10연차 한 번의 값과 꼭 같다: 직원을 뽑지 않고 바로 무기에 쓴다.
-  expect(company.diamonds.amount).toBe(START_DIAMONDS)
-  expect(company.diamonds.tenDraw).toBe(START_DIAMONDS)
-  expect(company.diamonds.tenCount).toBe(11)
-
-  company = await companyOf(await api.post('/api/company/weapon/draw', { data: { count: 10 } }))
-  expect(company.armory?.lastDraws).toHaveLength(11)
+  for (const kind of ['cat', 'weapon'] as const) {
+    const path = `/api/company/${kind}/draw`
+    expect((await api.post(path, { data: { count: 10 } })).status()).toBe(400)
+    for (let left = 2; left >= 0; left--) {
+      company = await companyOf(await api.post(path, { data: { count: 1, ad: true } }))
+      expect(company.adDraws?.[kind === 'cat' ? 'catLeft' : 'weaponLeft']).toBe(left)
+      expect(company.diamonds.amount).toBe(START_DIAMONDS)
+      expect(kind === 'cat' ? company.idle?.lastDraws : company.armory?.lastDraws).toHaveLength(1)
+    }
+    expect((await api.post(path, { data: { ad: true } })).status()).toBe(400)
+  }
+  company = await companyOf(await api.get('/api/company'))
+  expect(company.adDraws?.catLeft).toBe(0)
+  expect(company.adDraws?.weaponLeft).toBe(0)
+  for (let i = 0; i < START_DIAMONDS / company.diamonds.draw; i++) {
+    company = await companyOf(await api.post('/api/company/weapon/draw', { data: { count: 1 } }))
+  }
   expect(company.diamonds.amount).toBe(0)
-
-  // 다이아가 없으면 한 번 뽑기도 400이고, 아무것도 바뀌지 않는다.
-  const refused = await api.post('/api/company/weapon/draw', { data: { count: 1 } })
-  expect(refused.status()).toBe(400)
-  const after = await companyOf(await api.get('/api/company'))
-  expect(after.diamonds.amount).toBe(0)
+  expect((await api.post('/api/company/weapon/draw', { data: { count: 1 } })).status()).toBe(400)
+  expect((await companyOf(await api.get('/api/company'))).diamonds.amount).toBe(0)
 })
 
 test('다른 고양이나 사장냥이 든 무기는 못 가져가고 합치기에도 못 쓴다 (#791)', async ({ page }) => {
