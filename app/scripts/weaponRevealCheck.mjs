@@ -109,7 +109,8 @@ try {
       assert(bounds && bounds.x >= 0 && bounds.y + bounds.height <= height)
       await page.getByTestId('weapon-reveal-again').click()
       await expect(page.getByTestId('weapon-reveal')).toHaveAttribute('data-grade', grade)
-      await page.getByTestId('weapon-reveal-skip').click()
+      // 짧은 등급은 자동 공개와 클릭이 겹칠 수 있으므로 남아 있는 공개 버튼만 누른다.
+      await page.evaluate(() => document.querySelector('[data-testid=weapon-reveal-skip]')?.click())
       await expect(page.getByTestId('weapon-drawn')).toContainText('합성 재료 +1')
       await page.waitForTimeout(2400)
       await expect(page.getByTestId('weapon-drawn')).toBeVisible()
