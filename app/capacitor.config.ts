@@ -9,7 +9,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 const serverUrl = process.env.CAP_SERVER_URL?.trim() ?? ''
 
 const config: CapacitorConfig = {
-  appId: 'com.kyunglock.investorgame',
+  appId: 'com.kwaklabs.maedobyeok',
   appName: '매도벽 돌파냥',
   webDir: 'dist',
   server: serverUrl

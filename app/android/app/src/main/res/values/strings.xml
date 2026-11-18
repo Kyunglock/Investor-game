@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">매도벽 돌파냥</string>
     <string name="title_activity_main">매도벽 돌파냥</string>
-    <string name="package_name">com.kyunglock.investorgame</string>
-    <string name="custom_url_scheme">com.kyunglock.investorgame</string>
+    <string name="package_name">com.kwaklabs.maedobyeok</string>
+    <string name="custom_url_scheme">com.kwaklabs.maedobyeok</string>
 </resources>
