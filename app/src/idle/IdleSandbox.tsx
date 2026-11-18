@@ -40,8 +40,8 @@ export const SANDBOX_ENTRY =
   typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('test') === '1'
 
 /**
- * 테스트판 (decisions.md 499번). 입구(SANDBOX_ENTRY)가 열려 있으면 코드 창이 뜨고, 닫아도 왼쪽의 "테스트판" 단추로 다시 연다. 테스트판 안에서는 그
- * 단추가 도구 창을 연다: 벽 건너뛰기, 처음부터 다시, 본 게임으로.
+ * 테스트판 (decisions.md 499번). 입구(SANDBOX_ENTRY)가 열려 있으면 코드 창이 뜨고, 닫아도 머리띠 아래의 "테스트판" 단추로 다시 연다. 테스트판
+ * 안에서는 그 단추가 도구 창을 연다: 벽 건너뛰기, 처음부터 다시, 본 게임으로.
  */
 export function IdleSandbox({ company }: { company: Company }) {
   const [open, setOpen] = useState(SANDBOX_ENTRY)
@@ -111,17 +111,20 @@ export function IdleSandbox({ company }: { company: Company }) {
   }
   return (
     <>
-      {company.sandbox && frames && <IdleFrameMeter />}
+      {/* 단추와 프레임 표시는 머리띠 바로 아래 가운데에 나란히 둔다 (#919): 왼쪽 가장자리의 환생·광고 스킬 단추와 겹치지 않게. */}
       {company.sandbox && (
-        <button
-          type="button"
-          className="idle-sandbox"
-          data-testid="idle-sandbox"
-          onClick={() => setPanel(true)}
-        >
-          <b>테스트판</b>
-          <small>도구</small>
-        </button>
+        <div className="idle-sandbox-bar">
+          <button
+            type="button"
+            className="idle-sandbox"
+            data-testid="idle-sandbox"
+            onClick={() => setPanel(true)}
+          >
+            <b>테스트판</b>
+            <small>도구</small>
+          </button>
+          {frames && <IdleFrameMeter />}
+        </div>
       )}
       {company.sandbox && panel && (
         <div
@@ -304,15 +307,17 @@ export function IdleSandbox({ company }: { company: Company }) {
         </div>
       )}
       {SANDBOX_ENTRY && !company.sandbox && !open && (
-        <button
-          type="button"
-          className="idle-sandbox"
-          data-testid="idle-sandbox-enter"
-          onClick={() => setOpen(true)}
-        >
-          <b>테스트판</b>
-          <small>들어가기</small>
-        </button>
+        <div className="idle-sandbox-bar">
+          <button
+            type="button"
+            className="idle-sandbox"
+            data-testid="idle-sandbox-enter"
+            onClick={() => setOpen(true)}
+          >
+            <b>테스트판</b>
+            <small>들어가기</small>
+          </button>
+        </div>
       )}
       {SANDBOX_ENTRY && open && !company.sandbox && (
         <div className="idle-sandbox-gate" role="dialog" aria-modal="true" aria-label="테스트판">

@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
-import { DiamondPrice } from '@web/features/raising/DiamondIcon'
+import { DiamondIcon, DiamondPrice } from '@web/features/raising/DiamondIcon'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useState } from 'react'
 import { haptic } from '../fx/haptics'
@@ -46,10 +46,18 @@ export function IdleShop({
   }
   return (
     <div className="idle-shop">
-      <div className="idle-shop-wallet">
+      <div className="idle-shop-wallet" data-testid="shop-wallet">
         <span>게임 재화 전용</span>
-        <b>{money(company.capital)}</b>
-        <DiamondPrice amount={company.diamonds.amount} />
+        {/* 테스트판의 무한 지갑은 머리띠처럼 ∞로 적는다 (#919). */}
+        <b>{company.sandboxInfinite ? '∞' : money(company.capital)}</b>
+        {company.sandboxInfinite ? (
+          <span className="whitespace-nowrap">
+            <DiamondIcon />
+            <span className="sr-only">다이아 </span>∞
+          </span>
+        ) : (
+          <DiamondPrice amount={company.diamonds.amount} />
+        )}
       </div>
       <IdleGacha company={company} initialKind={kind} onCat={() => {}} onUse={onUse} />
       <div className="idle-shop-daily">

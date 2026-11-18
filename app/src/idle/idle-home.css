@@ -839,12 +839,21 @@
   }
 }
 
-/* 테스트판 (decisions.md 499번): 왼쪽 가장자리의 단추, 코드 창과 도구 창. */
-.idle-sandbox {
+/*
+ * 테스트판 (decisions.md 499번): 머리띠 아래 가운데의 단추와 프레임 표시, 코드 창과 도구 창. 왼쪽 가장자리에는 환생·광고 스킬 단추가 있어
+ * 거기 두면 서로 덮는다 (#919). 머리띠(top max(4px, 안전 영역) + 높이 42px) 바로 아래다. 머리띠에서 열리는 설정 창보다는 아래에 깔린다.
+ */
+.idle-sandbox-bar {
   position: absolute;
-  top: 46%;
-  left: 6px;
-  z-index: 2;
+  top: calc(max(4px, env(safe-area-inset-top)) + 46px);
+  left: 50%;
+  z-index: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  transform: translateX(-50%);
+}
+.idle-sandbox {
   display: grid;
   gap: 4px;
   padding: 6px;
@@ -2147,12 +2156,8 @@
   text-align: center;
 }
 
-/* 프레임 표시 (543번): 테스트판에서만, 테스트판 단추 위에 뜬다. */
+/* 프레임 표시 (543번): 테스트판에서만, 테스트판 단추 옆에 뜬다. */
 .idle-frames {
-  position: absolute;
-  top: calc(46% - 62px);
-  left: 6px;
-  z-index: 2;
   display: grid;
   gap: 1px;
   min-width: 62px;
