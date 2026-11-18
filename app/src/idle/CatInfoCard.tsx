@@ -1,6 +1,8 @@
 import type { Company } from '@web/api/client'
 import type { CatCode } from '@web/features/raising/store'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useModalBack } from '../app/useModalBack'
 import { sfx } from '../fx/sound'
 import { DEFAULT_WEAPON, heroOf } from '../mental/hero'
 import { CatPortrait, catTrait } from './CatPortrait'
@@ -21,6 +23,8 @@ export function CatInfoCard({
   onManage: (code: CatCode | null) => void
 }) {
   const [code, setCode] = useState<string | null>(null)
+  const dialog = useRef<HTMLDialogElement>(null)
+  useModalBack(() => setCode(null), code !== null)
   useEffect(() => {
     const show = (event: Event) => {
       sfx.tap()
@@ -31,11 +35,13 @@ export function CatInfoCard({
   }, [])
   useEffect(() => {
     if (!code) return
-    const key = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setCode(null)
+    const previous = document.activeElement as HTMLElement | null
+    const root = dialog.current
+    root?.showModal()
+    return () => {
+      root?.close()
+      previous?.focus()
     }
-    document.addEventListener('keydown', key)
-    return () => document.removeEventListener('keydown', key)
   }, [code])
   if (!code) return null
   const cat = company.idle?.cats.find((c) => c.code === code && c.level > 0) ?? null
@@ -45,18 +51,22 @@ export function CatInfoCard({
     ? (company.weapons?.find((w) => w.kind === cat.weapon?.kind && w.grade === cat.weapon.grade) ??
       DEFAULT_WEAPON)
     : hero.weapon
-  return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: 바깥을 누르면 닫히는 막이다. 닫기 단추와 Esc가 따로 있다.
+  return createPortal(
     // biome-ignore lint/a11y/useKeyWithClickEvents: 위와 같다.
-    <div
+    <dialog
+      ref={dialog}
       className="cat-info-veil"
+      aria-label={`${cat?.name ?? hero.name} 정보`}
+      onCancel={(event) => {
+        event.preventDefault()
+        setCode(null)
+      }}
       onClick={(event) => {
         if (event.target === event.currentTarget) setCode(null)
       }}
     >
       <section
         className={`cat-info-card is-${cat?.grade ?? 'boss'}`}
-        role="dialog"
         aria-label={`${cat?.name ?? hero.name} 정보`}
         data-testid="cat-info"
         data-code={code}
@@ -133,6 +143,7 @@ export function CatInfoCard({
           </button>
         </footer>
       </section>
-    </div>
+    </dialog>,
+    document.body,
   )
 }

@@ -2,6 +2,7 @@ import type { Company } from '@web/api/client'
 import { DiamondPrice } from '@web/features/raising/DiamondIcon'
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalBack } from '../app/useModalBack'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { CatPortrait, catTrait } from './CatPortrait'
@@ -34,6 +35,10 @@ export function CatReveal({
   useAction?: ReactNode
   onAgain: () => void
 }) {
+  // 응답을 기다릴 때도 뒤로 가기를 소비해 상점이 함께 닫히지 않게 한다.
+  useModalBack(() => {
+    if (result) onClose()
+  })
   const dialog = useRef<HTMLDialogElement>(null)
   const [phase, setPhase] = useState<'charge' | 'open' | 'result'>('charge')
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
