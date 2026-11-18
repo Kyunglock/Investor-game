@@ -2217,6 +2217,12 @@
   justify-content: space-between;
   gap: 8px;
 }
+/* 교체할 고양이를 고르는 동안 (#910): 출전 칸의 초록 테와 같은 색으로 눈에 띄게 적는다. */
+.idle-swap-hint {
+  color: #1f7a3d;
+  font-weight: 700;
+  word-break: keep-all;
+}
 .idle-rebirth {
   display: grid;
   gap: 6px;
