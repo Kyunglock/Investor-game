@@ -1701,14 +1701,12 @@ class BattleScene extends Phaser.Scene {
     // 벽 옆의 가격 표는 뺐다(416번): 가격은 위 HUD에만 보인다.
     wall.price.setVisible(false)
     if (this.opts.idle && !wall.broken) {
-      this.idleQueue?.draw(
-        this.idleWall,
-        wall.y,
-        lane.left,
-        lane.width,
-        layer,
-        this.opts.idle?.().upcoming,
-      )
+      // 명중이 벽을 부순 프레임에는 스냅샷의 벽 번호가 먼저 넘어가 있다: 그때 화면의 다음 벽은 스냅샷의 맨 앞 벽이라 그 체력도 함께 넘긴다.
+      const snapshot = this.opts.idle()
+      this.idleQueue?.draw(this.idleWall, wall.y, lane.left, lane.width, layer, [
+        { wall: snapshot.wall, hp: snapshot.hp, maxHp: snapshot.maxHp },
+        ...(snapshot.upcoming ?? []),
+      ])
     }
   }
 
