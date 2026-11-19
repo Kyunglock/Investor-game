@@ -241,6 +241,8 @@ public record CompanyView(
       List<IdleSkill> skills,
       List<IdleCat> cats,
       int fieldSlots,
+      long bread,
+      int bakingPercent,
       double wallDps,
       double circuitSeconds,
       List<IdleWall> upcoming,

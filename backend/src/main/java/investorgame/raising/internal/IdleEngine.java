@@ -145,6 +145,7 @@ class IdleEngine {
   // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
   // silence is a closed or sleeping app and pays nothing.
+  private static final long LOAF_MILLIS = 60_000;
   private static final long GRACE_MS = 10_000;
   // Attack kinds after the bullet (kind 0): skills. A cat's skills are its own and it casts them
   // while fielded (decisions.md 501). Only A and S grade cats have any (561): A one, S two.
@@ -514,6 +515,10 @@ class IdleEngine {
       return;
     }
     if (live) {
+      long bakers = s.cats.size() - s.fielded.size();
+      long work = s.bakingMillis + elapsed * bakers;
+      s.bread += work / LOAF_MILLIS;
+      s.bakingMillis = work % LOAF_MILLIS;
       tick(c, elapsed / 1000.0 * SPEED, hits == null ? List.of() : hits);
       s.lastSeen = now;
     } else {
@@ -1263,6 +1268,15 @@ class IdleEngine {
     c.fishLevels.put(kind, level + 1);
   }
 
+  void feedCat(CompanyState c, String code) {
+    CompanyState.Idle s = state(c);
+    if (!s.cats.containsKey(code) || !s.fielded.contains(code))
+      throw new InvalidRequestException("출전 중인 동료 고양이를 골라 주세요.");
+    if (s.bread < 1) throw new InvalidRequestException("완성된 식빵이 없어요.");
+    s.bread--;
+    s.cats.merge(code, 1, Integer::sum);
+  }
+
   void fieldCat(CompanyState c, String code, boolean fielded) {
     fieldCat(c, code, fielded, null, null);
   }
@@ -1485,6 +1499,8 @@ class IdleEngine {
         skills,
         cats,
         FIELD_SLOTS,
+        s.bread,
+        (int) (100 * s.bakingMillis / LOAF_MILLIS),
         SPEED * s.wallDps,
         s.circuitSeconds,
         List.of(

@@ -64,6 +64,7 @@ export function IdleCats({
   // 인벤토리: 가진 고양이를 등급순으로 먼저, 없는 고양이를 등급순으로 뒤에.
   const sorted = sortCats(idle?.cats ?? [])
   const cat = (idle?.cats ?? []).find((c) => c.code === picked && c.level > 0) ?? null
+  const bakers = sorted.filter((c) => c.level > 0 && !c.fielded)
   const full = fielded.length >= (idle?.fieldSlots ?? 0)
   // 교체 (#910): 출전 칸이 다 찼을 때 쉬는 고양이를 세우려면 뺄 고양이를 출전 칸에서 고른다. 사장냥은 출전 칸이 아니라 고를 수 없다.
   // 누구를 세우려는지 적어 둔다: 밖에서 다른 고양이를 골라 주거나 교체가 끝나 그 고양이가 출전하면 저절로 풀린다.
@@ -409,6 +410,39 @@ export function IdleCats({
           </>
         ) : (
           <>
+            <details className="cat-bakery">
+              <summary>식빵 공방 · 🍞 {idle?.bread ?? 0}개</summary>
+              <p>
+                {bakers.length
+                  ? `전투 중 쉬는 고양이 ${bakers.length}마리가 함께 구워요. 한 마리당 1분에 식빵 1개예요.`
+                  : '동료 고양이를 출전 칸에서 빼면 여기서 식빵을 구워요.'}
+              </p>
+              {bakers.length > 0 && (
+                <ul aria-label="식빵 굽는 고양이">
+                  {bakers.map((baker) => (
+                    <li key={baker.code}>
+                      <span className="baking-cat">
+                        <Portrait code={baker.code} />
+                      </span>
+                      {baker.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <progress aria-label="다음 식빵 굽기" max={100} value={idle?.bakingPercent ?? 0} />
+              {cat?.fielded ? (
+                <button
+                  type="button"
+                  className="idle-cat-field"
+                  disabled={busy || !idle?.bread}
+                  onClick={() => void useRaisingStore.getState().feedCat(cat.code)}
+                >
+                  {cat.name}에게 식빵 1개 먹이기 · Lv.{cat.level} → {cat.level + 1}
+                </button>
+              ) : (
+                <small>출전 중인 동료를 고르면 식빵을 먹여 레벨을 올릴 수 있어요.</small>
+              )}
+            </details>
             <p className="loadout-hint" aria-live="polite">
               {drag?.over
                 ? drag.over.startsWith('slot:empty')

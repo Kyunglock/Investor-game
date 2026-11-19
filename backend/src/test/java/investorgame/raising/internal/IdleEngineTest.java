@@ -187,6 +187,29 @@ class IdleEngineTest {
   }
 
   @Test
+  void restingCatsBakeTogetherAndOnlyFieldedCatsCanEat() {
+    start(1);
+    state.idle.cats.put("sky", 1);
+    state.idle.cats.put("mint", 1);
+    state.idle.cats.put("lilac", 1);
+    engine.fieldCat(state, "sky", true);
+    for (int i = 0; i < 3; i++) tick(10_000);
+    assertThat(engine.view(state).bread()).isEqualTo(1);
+    assertThatThrownBy(() -> engine.feedCat(state, "mint"))
+        .isInstanceOf(InvalidRequestException.class);
+    double before = engine.view(state).dps();
+    engine.feedCat(state, "sky");
+    assertThat(state.idle.cats.get("sky")).isEqualTo(2);
+    assertThat(engine.view(state).dps()).isGreaterThan(before);
+    assertThat(engine.view(state).bread()).isZero();
+    assertThatThrownBy(() -> engine.feedCat(state, "sky"))
+        .isInstanceOf(InvalidRequestException.class);
+    engine.fieldCat(state, "mint", true);
+    tick(6_000);
+    assertThat(engine.view(state).bakingPercent()).isEqualTo(10);
+  }
+
+  @Test
   void viewCarriesTheLastHandledBeatSoTheScreenKnowsWhichHitsAreInTheHealth() {
     start(1);
     tick(500, new IdleHit(1, "bullet", 1));
