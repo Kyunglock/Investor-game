@@ -162,6 +162,16 @@ try {
         await page.mouse.up()
       }
     }
+    const story = page.getByRole('main', { name: '첫 매도벽 프롤로그' })
+    await expect(story.getByRole('img')).toHaveAttribute('alt', /투매 급증/)
+    await expect(page.getByTestId('shell')).toHaveCount(0)
+    await story.getByRole('button', { name: /다음 컷/ }).click()
+    await refresh()
+    await expect(story.getByRole('img')).toHaveAttribute('alt', /떨어지는 주황색 무기/)
+    await story.getByRole('button', { name: /다음 컷/ }).click()
+    await story.getByRole('button', { name: /첫 매도벽 돌파/ }).click()
+    await refresh()
+    await expect(story).toHaveCount(0)
     const guide = page.getByTestId('idle-tutorial')
     await expect(guide).toHaveAttribute('data-step', '-1')
     await expect(guide).toContainText('환영해요')

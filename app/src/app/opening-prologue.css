@@ -1,0 +1,35 @@
+.opening-prologue {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  justify-items: center;
+  background: #fff3d9;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+.opening-prologue-page {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  width: min(100%, 640px);
+  min-height: 0;
+  padding: 8px 12px;
+  color: #50341e;
+  font-family: var(--font-game);
+}
+.opening-prologue-page img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.opening-prologue-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px;
+}
+.opening-prologue-nav strong {
+  padding: 8px 20px;
+  border: 2px solid #805223;
+  border-radius: 12px;
+  background: #ffd467;
+}
