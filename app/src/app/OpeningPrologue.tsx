@@ -19,10 +19,12 @@ const panels = [
 export function OpeningPrologue({
   companyId,
   firstVisit,
+  entered,
   children,
 }: {
   companyId: string
   firstVisit: boolean
+  entered: boolean
   children: ReactNode
 }) {
   const key = `investor-game.prologue:${companyId}`
@@ -36,6 +38,7 @@ export function OpeningPrologue({
   })
   const panel = panels[page]
   if (!firstVisit || !panel) return children
+  if (!entered) return null
   const next = () => {
     setPage(page + 1)
     try {

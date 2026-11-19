@@ -149,6 +149,7 @@ export function App() {
         <OpeningPrologue
           key={company.companyId}
           companyId={company.companyId}
+          entered={boot === 'entered'}
           firstVisit={company.idle?.onboarding?.step === -1}
         >
           <Shell company={company} />
