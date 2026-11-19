@@ -38,10 +38,12 @@ export function useTutorialFocus(targets: FocusTarget[], active: boolean) {
         found.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' })
       }
       const rect = found.getBoundingClientRect()
-      const left = choice.battle ? 12 : Math.max(4, rect.left - 5)
-      const top = choice.battle ? 58 : Math.max(4, rect.top - 5)
-      const right = choice.battle ? innerWidth - 12 : Math.min(innerWidth - 4, rect.right + 5)
-      const bottom = choice.battle ? innerHeight - 100 : Math.min(innerHeight - 4, rect.bottom + 5)
+      const hud = choice.battle ? found.closest('.idle-home')?.querySelector('.idle-hud') : null
+      const inset = choice.battle ? 2 : -5
+      const left = Math.max(4, rect.left + inset)
+      const top = Math.max(4, rect.top + inset, hud ? hud.getBoundingClientRect().bottom + 2 : 0)
+      const right = Math.min(innerWidth - 4, rect.right - inset)
+      const bottom = Math.min(innerHeight - 4, rect.bottom - inset)
       const dropElement = choice.drop
         ? [...document.querySelectorAll<HTMLElement>(choice.drop)].find(
             (el) => el.getClientRects().length > 0,

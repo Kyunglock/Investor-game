@@ -86,7 +86,7 @@ export function IdleTutorial({
   const top = focus.drop
     ? Math.max(60, Math.min(innerHeight - height - 10, focus.drop.top + focus.drop.height + 16))
     : focus.battle
-      ? 68
+      ? Math.min(innerHeight - height - 10, focus.top + 10)
       : above
         ? focus.top - height - 12
         : Math.min(innerHeight - height - 10, focus.top + focus.height + 12)
