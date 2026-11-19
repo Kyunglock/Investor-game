@@ -101,13 +101,11 @@ export function IdleTutorial({
           ? ready
             ? '첫 돌파 확인했어요'
             : '첫 매도벽 돌파를 기다려요'
-          : step === 6 && menu === 'battle'
-            ? '메테오 확인했어요'
-            : step === 7
-              ? '안내 마치기'
-              : skillGuide && menu === 'skills' && !skillUse
-                ? '사용 위치 보기'
-                : null
+          : step === 7
+            ? '안내 마치기'
+            : skillGuide && menu === 'skills' && !skillUse
+              ? '사용 위치 보기'
+              : null
   const drop = focus.drop
   const windows = (drop ? [focus, drop] : [focus]).map((box) => (
     <rect key={box.target} x={box.left} y={box.top} width={box.width} height={box.height} rx={9} />
@@ -119,7 +117,7 @@ export function IdleTutorial({
   const path = `M ${fromX} ${fromY} C ${fromX} ${(fromY + toY) / 2} ${toX} ${(fromY + toY) / 2} ${toX} ${toY}`
   const next = () => {
     if (replay !== null) {
-      onReplay(step === 7 ? null : step + 1)
+      onReplay(step === 7 ? null : step === 5 ? 7 : step + 1)
       return
     }
     if (skillGuide) {
@@ -197,7 +195,11 @@ export function IdleTutorial({
           />
         )}
         <small>
-          {replay !== null ? '다시 보기' : skillGuide ? '스킬 해금' : `${step + 2} / 9`}
+          {replay !== null
+            ? '다시 보기'
+            : skillGuide
+              ? '스킬 해금'
+              : `${Math.min(step + 2, 8)} / 8`}
         </small>
         <p aria-live="polite">
           {step === 0 && ready
