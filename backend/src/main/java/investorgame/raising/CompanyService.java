@@ -114,6 +114,8 @@ public interface CompanyService {
   CompanyView drawWeapon(UUID sessionId, int count, boolean ad);
 
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). 모자라거나 가장 높은 등급이면 400. */
+  CompanyView mergeAllWeapons(UUID sessionId);
+
   CompanyView mergeWeapon(UUID sessionId, String kind, String grade);
 
   /** 고양이 1회 뽑기. 다이아 또는 하루 3회의 광고 보상. 이미 가진 고양이면 레벨이 오른다. */

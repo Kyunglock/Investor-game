@@ -216,6 +216,25 @@ export function CatGear({
       <p className="idle-gear-hint" aria-live="polite" data-testid="gear-hint">
         {hint}
       </p>
+      <button
+        type="button"
+        className="idle-gear-manual"
+        disabled={busy || merges.length === 0}
+        onClick={async () => {
+          const store = useRaisingStore.getState()
+          if (store.busy) return
+          setNotice('')
+          await store.mergeAllWeapons()
+          if (mounted.current && !useRaisingStore.getState().error) {
+            setPicked(null)
+            setNotice('무기 일괄 합성을 마쳤어요.')
+            sfx.levelUp()
+            haptic.medium()
+          }
+        }}
+      >
+        일괄 합성
+      </button>
       <ul
         className={`idle-gear-grid ${drag ? 'is-dragging' : ''}`}
         aria-label={`${wearer?.name ?? BOSS_NAME} 장비`}

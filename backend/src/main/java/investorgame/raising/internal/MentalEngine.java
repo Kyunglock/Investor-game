@@ -171,19 +171,24 @@ class MentalEngine {
     if (owned == null || owned.count < need) {
       throw new InvalidRequestException("같은 무기가 " + need + "개 있어야 합친다: " + kind + " " + grade);
     }
-    owned.count -= need;
+    promoteWeapons(c, owned, at, 1);
+  }
+
+  void promoteWeapons(CompanyState c, CompanyState.Weapon owned, int at, int batches) {
+    owned.count -= batches * mergeCount();
     String up = WEAPON_GRADES.get(at + 1);
     String nextKind = kindOf(up);
     CompanyState.Weapon upgraded = find(c, nextKind, up);
     if (upgraded != null) {
-      upgraded.count++;
+      upgraded.count += batches;
     } else {
       upgraded = new CompanyState.Weapon(nextKind, up);
+      upgraded.count = batches;
       c.weapons.add(upgraded);
     }
     if (owned.count == 0) {
       c.weapons.remove(owned);
-      if (c.weapon != null && c.weapon.same(kind, grade)) {
+      if (c.weapon != null && c.weapon.same(owned.kind, owned.grade)) {
         c.weapon = upgraded;
       }
     }

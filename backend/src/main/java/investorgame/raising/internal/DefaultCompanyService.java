@@ -559,11 +559,23 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView mergeAllWeapons(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    int count = idle.mergeAllWeapons(row.state());
+    if (count > 0) {
+      rewards.merged(row.state(), count);
+      companies.update(row.id(), row.state(), false);
+    }
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView mergeWeapon(UUID sessionId, String kind, String grade) {
     CompanyRepository.Row row = lockActive(sessionId);
     idle.requireFreeForMerge(row.state(), kind, grade, engine.mental.mergeCount());
     engine.mental.mergeWeapon(row.state(), kind, grade);
-    rewards.merged(row.state());
+    rewards.merged(row.state(), 1);
     idle.releaseWeapons(row.state());
     companies.update(row.id(), row.state(), false);
     return view(row);

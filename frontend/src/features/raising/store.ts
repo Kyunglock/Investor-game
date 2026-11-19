@@ -57,6 +57,7 @@ interface RaisingState {
   /** 무기 하나를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. */
   drawWeapon: (ad?: boolean) => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
+  mergeAllWeapons: () => Promise<void>
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
   /** 고양이 하나를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. */
   drawCat: (ad?: boolean) => Promise<Company | null>
@@ -245,6 +246,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     drawWeapon: (ad = false) =>
       change(api.POST('/api/company/weapon/draw', { body: { count: 1, ad } })),
 
+    mergeAllWeapons: () => change(api.POST('/api/company/weapon/merge-all')),
     mergeWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon/merge', { body: { kind, grade } })),
 

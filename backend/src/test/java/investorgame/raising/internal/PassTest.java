@@ -142,7 +142,7 @@ class PassTest {
     // 뽑기는 10번마다 30, 합성은 5번마다 30. 모두 받기는 받을 수 있는 미션을 다 받는다.
     rewards.drew(c, 11);
     for (int i = 0; i < 5; i++) {
-      rewards.merged(c);
+      rewards.merged(c, 1);
     }
     assertThat(rewards.passView(c).missionsReady()).isEqualTo(2);
     rewards.claimPassMission(c, null);

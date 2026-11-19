@@ -175,9 +175,9 @@ class RewardsEngine {
     engine.pass.progress(c, "draw", count, idle.todayDate());
   }
 
-  /** 무기를 한 번 합쳤다: 시즌패스 미션 (570번). */
-  void merged(CompanyState c) {
-    engine.pass.progress(c, "merge", 1, idle.todayDate());
+  /** 무기를 count번 합쳤다: 시즌패스 미션 (570번). */
+  void merged(CompanyState c, int count) {
+    engine.pass.progress(c, "merge", count, idle.todayDate());
   }
 
   /**

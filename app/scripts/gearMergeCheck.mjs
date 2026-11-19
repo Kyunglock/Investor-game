@@ -137,6 +137,19 @@ function world() {
       const made = find(w.kind, up)
       if (made) made.count++
       else company.weapons.push({ ...weapon(up, 1), kind: w.kind, name: w.name })
+    } else if (path.endsWith('/weapon/merge-all')) {
+      for (const grade of GRADES.slice(0, -1)) {
+        const w = company.weapons.find((item) => item.grade === grade)
+        if (!w) continue
+        const batches = Math.floor(free(w) / company.armory.mergeCount)
+        if (!batches) continue
+        w.count -= batches * company.armory.mergeCount
+        if (!w.count) company.weapons.splice(company.weapons.indexOf(w), 1)
+        const up = GRADES[GRADES.indexOf(grade) + 1]
+        const made = company.weapons.find((item) => item.grade === up)
+        if (made) made.count += batches
+        else company.weapons.push(weapon(up, batches))
+      }
     } else if (path.endsWith('/company/weapon')) {
       const w = find(sent.kind, sent.grade)
       if (!w || (!w.equipped && free(w) < 1))
@@ -431,6 +444,11 @@ try {
       await page.getByTestId('gear-equip').tap()
       await expect(cell(page, 'E', 'boss')).toHaveAttribute('aria-pressed', 'true')
       assert.equal(calls.at(-1), '/weapon E')
+      const bulk = page.getByRole('button', { name: '일괄 합성' })
+      await bulk.tap()
+      await expect(bulk).toBeDisabled()
+      assert.equal(calls.at(-1), '/weapon/merge-all')
+      await expect(page.getByText('무기 일괄 합성을 마쳤어요.')).toBeVisible()
       assert.ok(a && b)
       assert.deepEqual(refused, [])
       assert.deepEqual(errors, [])

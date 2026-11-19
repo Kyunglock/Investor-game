@@ -1391,6 +1391,23 @@ class IdleEngine {
     }
   }
 
+  int mergeAllWeapons(CompanyState c) {
+    engine.mental.initWeapons(c);
+    int total = 0;
+    for (int i = 0; i < MentalEngine.WEAPON_GRADES.size() - 1; i++) {
+      String grade = MentalEngine.WEAPON_GRADES.get(i);
+      var owned = c.weapons.stream().filter(w -> w.grade.equals(grade)).findFirst();
+      if (owned.isEmpty()) continue;
+      CompanyState.Weapon w = owned.get();
+      int batches = free(c, w.kind, grade, null) / engine.mental.mergeCount();
+      if (batches > 0) {
+        engine.mental.promoteWeapons(c, w, i, batches);
+        total += batches;
+      }
+    }
+    return total;
+  }
+
   /** Merging only spends copies nobody holds (decisions.md 530). */
   void requireFreeForMerge(CompanyState c, String kind, String grade, int need) {
     int owned = owned(c, kind, grade);
