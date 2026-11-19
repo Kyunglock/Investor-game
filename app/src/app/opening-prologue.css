@@ -1,57 +1,58 @@
 .opening-prologue {
   position: fixed;
   inset: 0;
-  isolation: isolate;
-  overflow: hidden;
   display: grid;
-  place-items: center;
-  background: #162c48;
+  justify-items: center;
+  background: #133557;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
 }
-.opening-prologue-backdrop {
-  position: absolute;
-  inset: -40px;
-  z-index: -1;
-  background: center / cover;
-  filter: blur(26px) brightness(0.55);
-  pointer-events: none;
-}
 .opening-prologue-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  width: min(100%, 620px);
   min-height: 0;
-  padding: 0;
+  background: #f6da97;
+  color: #513721;
+  text-align: left;
   font-family: var(--font-game);
 }
-.opening-prologue-page img {
-  display: block;
-  width: auto;
-  height: auto;
-  max-width: min(100%, 760px);
-  max-height: calc(100% - 64px);
-  border-radius: 4px;
-  box-shadow: 0 4px 18px #14243e55;
+.prologue-field {
+  position: relative;
+  overflow: hidden;
+}
+.prologue-map,
+.prologue-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.prologue-dialogue {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  min-height: 76px;
+  padding: 12px 20px;
+  background: #fff8e4;
+  border-top: 2px solid #cfab6d;
+  font-size: clamp(16px, 4vw, 20px);
+}
+.prologue-dialogue b {
+  color: #27557d;
+  font-size: 0.82em;
 }
 .opening-prologue-nav {
-  height: 64px;
-  flex: none;
-  width: min(100%, 760px);
-  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 9px 16px;
+  background: #225793;
+  border-top: 3px solid #639cd5;
 }
 .opening-prologue-progress {
   display: flex;
   gap: 5px;
-  padding: 6px 9px;
-  border-radius: 12px;
-  background: #172a42cc;
 }
 .opening-prologue-progress i {
   width: 6px;
@@ -68,6 +69,70 @@
   border: 2px solid #805223;
   border-radius: 12px;
   background: #ffd467;
-  color: #50341e;
-  box-shadow: 0 2px 0 #624524;
+}
+.prologue-stage use[href$="-block"] {
+  filter: hue-rotate(200deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .prologue-wall-arrive {
+    animation: prologue-land 360ms backwards ease-out;
+  }
+  .prologue-drop {
+    animation: prologue-land 650ms ease-out;
+  }
+  .prologue-shot {
+    animation: prologue-shot 300ms ease-in forwards;
+  }
+  .prologue-block-left {
+    animation: prologue-left 500ms 250ms ease-out both;
+  }
+  .prologue-block-right {
+    animation: prologue-right 500ms 250ms ease-out both;
+  }
+  .prologue-team-run {
+    animation: prologue-run 750ms 520ms ease-out both;
+  }
+}
+@keyframes prologue-land {
+  from {
+    opacity: 0;
+    transform: translateY(-100px);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(5px);
+  }
+}
+@keyframes prologue-shot {
+  to {
+    transform: translate(8px, -150px);
+    opacity: 0;
+  }
+}
+@keyframes prologue-left {
+  to {
+    transform: translate(-125px, -44px) rotate(-12deg);
+    opacity: 0;
+  }
+}
+@keyframes prologue-right {
+  to {
+    transform: translate(125px, -44px) rotate(12deg);
+    opacity: 0;
+  }
+}
+@keyframes prologue-run {
+  to {
+    transform: translateY(-195px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prologue-block-left,
+  .prologue-block-right,
+  .prologue-shot {
+    opacity: 0;
+  }
+  .prologue-team-run {
+    transform: translateY(-195px);
+  }
 }
