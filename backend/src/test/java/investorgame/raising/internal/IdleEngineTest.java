@@ -1427,12 +1427,12 @@ class IdleEngineTest {
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
-    // Only the buy upgrade raises it, by a fixed forty shares a level and not by a percentage
-    // (579, doubled in 590 and 594): ten levels add four hundred shares to the 225 of one order.
+    // Only the buy upgrade raises it, by a fixed twenty shares a level and not by a percentage
+    // (579, 590, 594, halved in 632): ten levels add two hundred shares to the 225 of one order.
     assertThat(buyBonus()).isZero();
     company.mental.buyUpgrade(state, "buy", 10);
-    assertThat(buyBonus()).isEqualTo(400);
-    double up = (order + 400 / 150.0) / order;
+    assertThat(buyBonus()).isEqualTo(200);
+    double up = (order + 200 / 150.0) / order;
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order * up, offset(1e-9));
