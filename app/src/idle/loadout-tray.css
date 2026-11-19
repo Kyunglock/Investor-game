@@ -6,9 +6,12 @@
   background: #fff3da;
   color: #523820;
 }
-.cat-bakery summary {
-  cursor: pointer;
-  font-weight: bold;
+.loadout-team .loadout-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.cat-bakery > button {
+  display: block;
+  margin-top: 6px;
 }
 .cat-bakery p,
 .cat-bakery small {

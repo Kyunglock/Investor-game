@@ -17,6 +17,8 @@ import { fieldSeats } from './seats'
 import { SKILLS, skillNames } from './skills'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
+export type LoadoutTab = '고양이' | '무기' | '식빵 공방'
+
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
 /** 낭독기가 읽을 스킬 (561번): 없으면 없다고 읽는다. */
@@ -35,20 +37,20 @@ export function IdleCats({
   company,
   picked,
   onPick,
-  gear: gearOpen,
-  onGear: setGearOpen,
+  tab,
+  onTab,
   onDraw,
 }: {
   company: Company
   /** 메뉴를 오가도 선택한 고양이를 유지한다. null은 사장냥이다. */
   picked: CatCode | null
   onPick: (code: CatCode | null) => void
-  /** 고양이 목록 대신 장비 목록을 펴고 있는가 (560번). */
-  gear: boolean
-  onGear: (open: boolean) => void
+  tab: LoadoutTab
+  onTab: (tab: LoadoutTab) => void
   /** 무기 뽑기(상점 탭)로 간다. */
   onDraw: () => void
 }) {
+  const gearOpen = tab === '무기'
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   // 고른 고양이. null이면 사장냥이다.
@@ -147,7 +149,7 @@ export function IdleCats({
       onClick={(event) => {
         if (gunDrag.consumeClick(event.detail)) return
         pick(code)
-        if (!gearOpen) setGearOpen(true)
+        if (!gearOpen) onTab('무기')
       }}
     >
       <GunSprite kind={held.kind} grade={held.grade} width={38} />
@@ -156,27 +158,70 @@ export function IdleCats({
       </i>
     </button>
   )
+  const tabs = (
+    <div className="idle-gacha-kinds loadout-tabs" role="tablist" aria-label="편성 목록">
+      {(['고양이', '무기', '식빵 공방'] as const).map((label) => (
+        <button
+          key={label}
+          type="button"
+          role="tab"
+          className="idle-gacha-kind"
+          aria-selected={tab === label}
+          disabled={label === '무기' && gearLocked}
+          onClick={() => {
+            sfx.tap()
+            onTab(label)
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+  if (tab === '식빵 공방')
+    return (
+      <>
+        <div className="loadout-team">{tabs}</div>
+        <section className="cat-bakery" aria-label="식빵 공방">
+          <strong>보유 식빵 · 🍞 {idle?.bread ?? 0}개</strong>
+          <p>
+            {bakers.length
+              ? `전투 중 쉬는 고양이 ${bakers.length}마리가 함께 구워요. 한 마리당 1분에 식빵 1개예요.`
+              : '동료 고양이를 출전 칸에서 빼면 여기서 식빵을 구워요.'}
+          </p>
+          {bakers.length > 0 && (
+            <ul aria-label="식빵 굽는 고양이">
+              {bakers.map((baker) => (
+                <li key={baker.code}>
+                  <span className="baking-cat">
+                    <Portrait code={baker.code} />
+                  </span>
+                  {baker.name}
+                </li>
+              ))}
+            </ul>
+          )}
+          <progress aria-label="다음 식빵 굽기" max={100} value={idle?.bakingPercent ?? 0} />
+          {fielded.map((cat) => (
+            <button
+              key={cat.code}
+              type="button"
+              className="idle-cat-field"
+              disabled={busy || !idle?.bread}
+              onClick={() => void useRaisingStore.getState().feedCat(cat.code)}
+            >
+              {cat.name}에게 식빵 1개 먹이기 · Lv.{cat.level} → {cat.level + 1}
+            </button>
+          ))}
+          {!fielded.length && <small>동료 고양이를 출전시키면 식빵을 먹일 수 있어요.</small>}
+          {error && <p role="alert">{error}</p>}
+        </section>
+      </>
+    )
   return (
     <>
       <div className="loadout-team">
-        <div className="idle-gacha-kinds" role="tablist" aria-label="편성 목록">
-          {(['고양이', '무기'] as const).map((label) => (
-            <button
-              key={label}
-              type="button"
-              role="tab"
-              className="idle-gacha-kind"
-              aria-selected={gearOpen === (label === '무기')}
-              disabled={label === '무기' && gearLocked}
-              onClick={() => {
-                sfx.tap()
-                setGearOpen(label === '무기')
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {tabs}
         <p className="idle-subtitle idle-team-line">
           {swapping ? (
             <span className="idle-swap-hint" role="status" data-testid="swap-hint">
@@ -392,7 +437,7 @@ export function IdleCats({
             disabled={gearLocked}
             onClick={() => {
               sfx.tap()
-              setGearOpen(!gearOpen)
+              onTab(gearOpen ? '고양이' : '무기')
             }}
           >
             <GunSprite kind={gun.kind} grade={gun.grade} width={40} />
@@ -425,39 +470,6 @@ export function IdleCats({
           </>
         ) : (
           <>
-            <details className="cat-bakery">
-              <summary>식빵 공방 · 🍞 {idle?.bread ?? 0}개</summary>
-              <p>
-                {bakers.length
-                  ? `전투 중 쉬는 고양이 ${bakers.length}마리가 함께 구워요. 한 마리당 1분에 식빵 1개예요.`
-                  : '동료 고양이를 출전 칸에서 빼면 여기서 식빵을 구워요.'}
-              </p>
-              {bakers.length > 0 && (
-                <ul aria-label="식빵 굽는 고양이">
-                  {bakers.map((baker) => (
-                    <li key={baker.code}>
-                      <span className="baking-cat">
-                        <Portrait code={baker.code} />
-                      </span>
-                      {baker.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <progress aria-label="다음 식빵 굽기" max={100} value={idle?.bakingPercent ?? 0} />
-              {cat?.fielded ? (
-                <button
-                  type="button"
-                  className="idle-cat-field"
-                  disabled={busy || !idle?.bread}
-                  onClick={() => void useRaisingStore.getState().feedCat(cat.code)}
-                >
-                  {cat.name}에게 식빵 1개 먹이기 · Lv.{cat.level} → {cat.level + 1}
-                </button>
-              ) : (
-                <small>출전 중인 동료를 고르면 식빵을 먹여 레벨을 올릴 수 있어요.</small>
-              )}
-            </details>
             <p className="loadout-hint" aria-live="polite">
               {drag?.over
                 ? drag.over.startsWith('slot:empty')
