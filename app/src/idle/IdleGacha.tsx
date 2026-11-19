@@ -4,7 +4,6 @@ import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useEffect, useRef, useState } from 'react'
 import { AD_UNAVAILABLE, watchRewardedAd } from '../app/ads'
 import { sfx } from '../fx/sound'
-import { drawBadge } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
 import { type DrawResult, WeaponReveal } from '../mental/WeaponReveal'
 import { CatPortrait as Portrait } from './CatPortrait'
@@ -139,7 +138,6 @@ export function IdleGacha({
       },
       () => setGunReveal(null),
     )
-  const badge = drawBadge(company)
   const note = tutorialDraw
     ? kind === 'cat'
       ? '첫 동료 · A등급 밤냥 확정'
@@ -172,13 +170,6 @@ export function IdleGacha({
             >
               <ShopIcon kind={k} />
               {k === 'cat' ? '고양이 뽑기' : '무기 뽑기'}
-              {/* 무기 뽑기 배지 (526번): 가진 다이아로 뽑을 수 있는 횟수. */}
-              {k === 'weapon' && badge && (
-                <b className="idle-tab-badge" data-testid="weapon-draw-badge">
-                  <span className="sr-only">뽑을 수 있는 횟수 </span>
-                  {badge}
-                </b>
-              )}
             </button>
           ))}
         </div>

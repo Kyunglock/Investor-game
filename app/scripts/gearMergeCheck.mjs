@@ -210,7 +210,7 @@ try {
       // 뽑기는 상점 탭에 있다 (541번): 고양이 뽑기와 무기 뽑기를 한 화면에서 고른다.
       await page.getByRole('button', { name: /^상점/ }).click()
       await expect(page.getByTestId('cat-draw')).toBeVisible()
-      await expect(page.getByTestId('weapon-draw-badge')).toContainText('12')
+      await expect(page.getByTestId('draw-kind-weapon')).toHaveText('무기 뽑기')
       await shot('draw-cat')
       await page.getByTestId('draw-kind-weapon').click()
       await expect(page.getByTestId('weapon-draw')).toContainText('다이아 100개')

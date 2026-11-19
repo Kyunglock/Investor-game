@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
-import { drawBadge, freeCopies, gearCells, holdersOf, mergeable, mergeBlock } from './armory'
+import { freeCopies, gearCells, holdersOf, mergeable, mergeBlock } from './armory'
 
 const KIND = { F: 'pistol', E: 'pistol', D: 'revolver', S: 'rifle', LR: 'rifle' } as const
 type Grade = keyof typeof KIND
@@ -134,15 +134,5 @@ describe('장비 목록 (530번)', () => {
     expect(gearCells(c).map((cell) => [cell.weapon.kind, cell.holder?.name])).toEqual([
       ['pistol', '사장냥'],
     ])
-  })
-})
-
-describe('무기 뽑기 배지 (526번)', () => {
-  it('가진 다이아로 뽑을 수 있는 횟수다', () => {
-    const c = company([['F', 1]], 'F')
-    expect(drawBadge(c)).toBe('2')
-    expect(drawBadge({ ...c, diamonds: { ...c.diamonds, amount: 99 } })).toBeNull()
-    expect(drawBadge({ ...c, diamonds: { ...c.diamonds, amount: 100_000 } })).toBe('99+')
-    expect(drawBadge({ ...c, armory: undefined })).toBeNull()
   })
 })

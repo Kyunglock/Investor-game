@@ -25,14 +25,6 @@ export const GRADE_BADGE: Record<Weapon['grade'], string> = {
   LR: 'bg-yellow-100 text-yellow-900',
 }
 
-/** 무기 뽑기 배지: 가진 다이아로 뽑을 수 있는 횟수 (526번). 한 번도 못 뽑으면 달지 않는다. */
-export function drawBadge(company: Company): string | null {
-  const d = company.diamonds
-  if (!company.armory || d.draw <= 0) return null
-  const draws = Math.floor(d.amount / d.draw)
-  return draws > 0 ? (draws > 99 ? '99+' : String(draws)) : null
-}
-
 /** 무기를 든 이: code가 null이면 사장냥이다. */
 export interface Holder {
   code: CatCode | null
