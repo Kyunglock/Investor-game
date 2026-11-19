@@ -195,16 +195,6 @@ export function tutorialTargets(step: number, menu: string, skillUse: boolean): 
             night,
           ]
         : [nav('cats', '고양이·무기에서 밤냥의 무기를 바꿔봐요.')]
-    case 6:
-      return menu === 'battle'
-        ? [
-            {
-              selector: '.idle-canvas',
-              text: '밤냥은 메테오를 자동으로 써요. 함께 싸우는 모습을 확인해 봐요!',
-              battle: true,
-            },
-          ]
-        : [nav('battle', '돌파로 돌아가 자동 메테오를 확인해 봐요.')]
     case 7:
       return [nav('battle', '첫 팀 완성! 직접 쓰는 스킬은 100 매도벽 돌파 후 열려요.')]
     default:

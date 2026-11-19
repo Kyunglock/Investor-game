@@ -431,6 +431,8 @@ class IdleEngine {
     }
     seat(c.idle);
     c.idle.best = Math.max(c.idle.best, Math.max(c.idle.wall - 1, c.idle.bossCleared));
+    // 예전 메테오 확인 단계에 머문 저장도 팀 완성 안내로 이어진다.
+    if (Integer.valueOf(6).equals(c.tutorialStep)) c.tutorialStep = 7;
     if (!c.onboardingInitialized) {
       // 이미 해금 조건을 달성한 기존 유저에게 새 안내를 강제하지 않는다.
       c.skillGuideSeen = c.tutorialStep == null && c.idle.best >= 100;
@@ -849,7 +851,7 @@ class IdleEngine {
     if (!ready) throw new InvalidRequestException("안내된 행동을 먼저 완료해 주세요");
     if (step == 2) tutorialCat(c);
     if (step == 4) tutorialWeapon(c);
-    c.tutorialStep = step + 1;
+    c.tutorialStep = step == 5 ? 7 : step + 1;
   }
 
   private void tutorialCat(CompanyState c) {

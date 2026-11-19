@@ -118,7 +118,7 @@ try {
             })
           }
           if (p.step === 4) c.armory.lastDraw = { ...c.weapons[1], isNew: true }
-          p.step++
+          p.step = p.step === 5 ? 7 : p.step + 1
         } else if (body.action === 'skills') p.skillGuideSeen = true
         else if (body.action === 'start') p.step = -1
         else assert.fail('unexpected tutorial action')
@@ -319,9 +319,9 @@ try {
       page.locator('[data-testid=cat-weapon][data-grade=B]:not([data-holder])'),
       page.locator('[data-testid=gun-slot][data-code=night]'),
     )
-    await expect(guide).toHaveAttribute('data-step', '6')
+    await expect(guide).toHaveAttribute('data-step', '7')
     await expect(page.locator('body')).not.toHaveAttribute('data-tutorial-drag-lock', 'true')
-    await guide.getByRole('button', { name: '메테오 확인했어요' }).click()
+    await expect(guide).toContainText('8 / 8')
     await guide.getByRole('button', { name: '안내 마치기' }).click()
     await expect(guide).toHaveCount(0)
     await expect(shade).toHaveCount(0)
@@ -339,7 +339,12 @@ try {
     await page.getByTestId('idle-options').click()
     await page.getByRole('button', { name: '첫 출근 안내 다시 보기' }).click()
     await expect(guide).toContainText('다시 보기')
-    await guide.getByRole('button', { name: '안내 닫기', exact: true }).click()
+    for (const step of [-1, 0, 1, 2, 3, 4, 5]) {
+      await expect(guide).toHaveAttribute('data-step', String(step))
+      await guide.getByRole('button', { name: '다음 안내' }).click()
+    }
+    await expect(guide).toHaveAttribute('data-step', '7')
+    await guide.getByRole('button', { name: '다시 보기 마치기' }).click()
     assert.equal(c.idle.onboarding.step, 8)
     assert.equal(c.weapons.length, 2)
     c.idle.onboarding.catClaimed = false

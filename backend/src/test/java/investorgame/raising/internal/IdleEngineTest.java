@@ -66,7 +66,9 @@ class IdleEngineTest {
         .isInstanceOf(InvalidRequestException.class);
     engine.equipCat(resumed, "night", "smg", "B");
     engine.tutorial(resumed, "next", 5);
-    engine.tutorial(resumed, "next", 6);
+    assertThat(engine.view(resumed).onboarding().step()).isEqualTo(7);
+    resumed.tutorialStep = 6;
+    assertThat(engine.view(resumed).onboarding().step()).isEqualTo(7);
     engine.tutorial(resumed, "next", 7);
     engine.tutorial(resumed, "draw-cat", 2);
     engine.tutorial(resumed, "draw-weapon", 4);
