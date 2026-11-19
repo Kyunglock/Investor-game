@@ -558,6 +558,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/cat/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 식빵 하나로 출전 고양이의 레벨을 올린다 */
+        post: operations["feedCat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/cat/field": {
         parameters: {
             query?: never;
@@ -1574,6 +1591,8 @@ export interface components {
                     /** @description 출전한 고양이 가운데 이 스킬의 가장 높은 레벨 (515번). 발동 중이 아니면 0 */
                     level: number;
                 }[];
+                bread?: number;
+                bakingPercent?: number;
                 /** @description 한 번에 출전하는 고양이 수 (492·493번 */
                 fieldSlots: number;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
@@ -2546,6 +2565,36 @@ export interface operations {
         };
         responses: {
             /** @description 올린 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    feedCat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
+                };
+            };
+        };
+        responses: {
+            /** @description 바꾼 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

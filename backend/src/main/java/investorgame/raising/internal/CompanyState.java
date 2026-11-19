@@ -44,6 +44,8 @@ class CompanyState {
     double[] hitCredits = new double[5];
     double earned;
     double incomeRemainder;
+    long bread;
+    long bakingMillis;
     double activeSeconds;
     double circuitSeconds;
 
