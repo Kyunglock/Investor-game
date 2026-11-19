@@ -7,6 +7,7 @@ import { useCompanyFx } from '../fx/useCompanyFx'
 import { CAT_FACES_URL } from '../idle/CatPortrait'
 import { STAGE_ASSETS } from '../mental/assets'
 import { LoadingScreen, preloadImages } from './LoadingScreen'
+import { OpeningPrologue } from './OpeningPrologue'
 import { Shell } from './Shell'
 import { TutorialGuide } from './TutorialGuide'
 import officeAtlas from './toy-city/assets/cat-atlas.png'
@@ -145,10 +146,14 @@ export function App() {
         </div>
       )}
       {status === 'ready' && company && (
-        <>
+        <OpeningPrologue
+          key={company.companyId}
+          companyId={company.companyId}
+          firstVisit={company.idle?.onboarding?.step === -1}
+        >
           <Shell company={company} />
           <TutorialGuide key={`${company.companyId}-${tutorialRevision}`} company={company} />
-        </>
+        </OpeningPrologue>
       )}
       <FxLayer />
     </>
