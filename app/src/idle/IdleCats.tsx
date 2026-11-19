@@ -126,6 +126,7 @@ export function IdleCats({
   const draggedCat = (idle?.cats ?? []).find((c) => c.code === gunDrag.drag?.item)
   const draggedGun =
     gunDrag.drag?.item === 'boss' ? hero.weapon : draggedCat ? weaponOf(draggedCat) : undefined
+  const gearLocked = (idle?.onboarding?.step ?? 8) < 5
   const canMerge = mergeable(company).length > 0
   /**
    * 무기 칸 (569번): 바로 위 고양이(code가 null이면 사장냥)가 드는 무기. 장비 목록에서 무기를 끌어 놓으면 그 고양이가 장착하고, 누르면 그
@@ -158,6 +159,24 @@ export function IdleCats({
   return (
     <>
       <div className="loadout-team">
+        <div className="idle-gacha-kinds" role="tablist" aria-label="편성 목록">
+          {(['고양이', '무기'] as const).map((label) => (
+            <button
+              key={label}
+              type="button"
+              role="tab"
+              className="idle-gacha-kind"
+              aria-selected={gearOpen === (label === '무기')}
+              disabled={label === '무기' && gearLocked}
+              onClick={() => {
+                sfx.tap()
+                setGearOpen(label === '무기')
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <p className="idle-subtitle idle-team-line">
           {swapping ? (
             <span className="idle-swap-hint" role="status" data-testid="swap-hint">
@@ -370,7 +389,7 @@ export function IdleCats({
             type="button"
             className="idle-cat-gun"
             data-testid="cat-gun"
-            disabled={(company.idle?.onboarding?.step ?? 8) < 5}
+            disabled={gearLocked}
             onClick={() => {
               sfx.tap()
               setGearOpen(!gearOpen)
@@ -385,11 +404,7 @@ export function IdleCats({
               </small>
             </span>
             <em className="idle-gun-open">
-              {(company.idle?.onboarding?.step ?? 8) < 5
-                ? '무기 안내 후 해금'
-                : gearOpen
-                  ? '고양이 목록 ▾'
-                  : '무기 변경 ▸'}
+              {gearLocked ? '무기 안내 후 해금' : gearOpen ? '고양이 목록 ▾' : '무기 변경 ▸'}
               {canMerge && (
                 <i className="idle-gun-dot" role="img" aria-label="합칠 수 있는 무기 있음" />
               )}

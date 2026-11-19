@@ -181,6 +181,15 @@ try {
     // The cat tab fills the screen (567): it reaches the top and ends at the bottom menu.
     const trayBox = required(await tray.boundingBox())
     assert(trayBox.y < 60 && trayBox.height > 600, 'cat tab fills the screen')
+    const catsTab = tray.getByRole('tab', { name: '고양이', exact: true })
+    const weaponsTab = tray.getByRole('tab', { name: '무기', exact: true })
+    await expect(catsTab).toHaveAttribute('aria-selected', 'true')
+    await weaponsTab.click()
+    await expect(weaponsTab).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByTestId('cat-gear')).toBeVisible()
+    await catsTab.click()
+    await expect(catsTab).toHaveAttribute('aria-selected', 'true')
+    await expect(tray.locator('.idle-cat-grid')).toBeVisible()
     // Two rows of five: a cat row and a weapon row, with no names in the slots.
     await expect(page.locator('.idle-cat-field-row > li')).toHaveCount(5)
     await expect(page.getByTestId('gun-slot')).toHaveCount(5)
