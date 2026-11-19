@@ -524,16 +524,6 @@
     font-size: 13px;
   }
 }
-.idle-tab-badge {
-  margin-left: 4px;
-  padding: 1px 5px;
-  border-radius: 8px;
-  background: #e47353;
-  color: #fff;
-  font:
-    700 9px "Noto Sans KR",
-    sans-serif;
-}
 .idle-stat-icon .idle-icon {
   font-size: 26px;
 }
