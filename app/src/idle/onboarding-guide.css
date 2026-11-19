@@ -1,4 +1,11 @@
-/* 기존 UI 옆에 말풍선과 드래그 방향만 표시한다. */
+.tutorial-shade {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 57;
+  pointer-events: none;
+}
 .idle-tutorial {
   position: fixed;
   z-index: 60;
@@ -62,7 +69,7 @@
 }
 /* 포커스 안내 중에도 설정은 언제든 열 수 있다. */
 body:has([data-tutorial-layer]) .idle-hud {
-  z-index: 61;
+  z-index: 56;
 }
 body:has([data-tutorial-layer]) .idle-hud:has(.idle-options-panel) {
   z-index: 63;

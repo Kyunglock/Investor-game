@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { useRaisingStore } from '@web/features/raising/store'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { tutorialReady } from './onboarding'
 import { tutorialTargets, useTutorialFocus } from './tutorialFocus'
@@ -29,6 +29,7 @@ export function IdleTutorial({
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const attempted = useRef<number | null>(null)
+  const maskId = useId()
   const bubble = useRef<HTMLElement>(null)
   const [height, setHeight] = useState(110)
   const step = replay ?? progress?.step ?? 8
@@ -108,6 +109,9 @@ export function IdleTutorial({
                 ? '사용 위치 보기'
                 : null
   const drop = focus.drop
+  const windows = (drop ? [focus, drop] : [focus]).map((box) => (
+    <rect key={box.target} x={box.left} y={box.top} width={box.width} height={box.height} rx={9} />
+  ))
   const fromX = focus.left + focus.width / 2
   const fromY = focus.top - 8
   const toX = drop ? drop.left + drop.width / 2 : fromX
@@ -126,6 +130,18 @@ export function IdleTutorial({
   }
   return createPortal(
     <div data-tutorial-layer="true">
+      <svg className="tutorial-shade" aria-hidden="true" focusable="false">
+        <defs>
+          <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%">
+            <rect width="100%" height="100%" fill="white" />
+            <g fill="black">{windows}</g>
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="#14243e" opacity="0.38" mask={`url(#${maskId})`} />
+        <g className="tutorial-focus" fill="none" stroke="#ffe8a6" strokeWidth="2">
+          {windows}
+        </g>
+      </svg>
       {drop && (
         <svg
           className="tutorial-drag-path"
