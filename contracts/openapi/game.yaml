@@ -524,6 +524,18 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/weapon/merge-all:
+    post:
+      operationId: mergeAllWeapons
+      summary: 장착하지 않은 무기를 낮은 등급부터 가능한 만큼 일괄 합성한다
+      responses:
+        '200':
+          description: 합친 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/cat/draw:
     post:
       operationId: drawCat

@@ -31,6 +31,24 @@ class IdleEngineTest {
   private long sequence;
 
   @Test
+  void bulkMergeUsesOnlySparesAndChainsAcrossGrades() {
+    company.mental.initWeapons(state);
+    engine.view(state);
+    state.weapon.count = 7;
+    state.idle.catWeapons.put("night", new CompanyState.Weapon("pistol", "F"));
+    var highest = new CompanyState.Weapon("rifle", "LR");
+    highest.count = 2;
+    state.weapons.add(highest);
+
+    assertThat(engine.mergeAllWeapons(state)).isEqualTo(3);
+    assertThat(state.weapon.count).isEqualTo(3);
+    assertThat(state.idle.catWeapons.get("night").grade).isEqualTo("F");
+    assertThat(highest.count).isEqualTo(2);
+    assertThat(state.weapons).anyMatch(w -> w.same("revolver", "D") && w.count == 1);
+    assertThat(engine.mergeAllWeapons(state)).isZero();
+  }
+
+  @Test
   void onboardingResumesAndOnlyGrantsEachGiftOnce() {
     CompanyState c = company.open(new HashSeededRandom(3), company.openingCapital());
     assertThat(engine.view(c).onboarding().step()).isEqualTo(-1);

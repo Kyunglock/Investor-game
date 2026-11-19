@@ -357,6 +357,12 @@ class CompanyController {
     }
   }
 
+  @PostMapping("/weapon/merge-all")
+  CompanyView mergeAllWeapons(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    return companies.mergeAllWeapons(cookies.requirePlayer(token));
+  }
+
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
   @PostMapping("/weapon/merge")
   CompanyView mergeWeapon(

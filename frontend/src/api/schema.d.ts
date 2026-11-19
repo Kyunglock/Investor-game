@@ -494,6 +494,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/weapon/merge-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 장착하지 않은 무기를 낮은 등급부터 가능한 만큼 일괄 합성한다 */
+        post: operations["mergeAllWeapons"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/cat/draw": {
         parameters: {
             query?: never;
@@ -2475,6 +2492,28 @@ export interface operations {
                 };
             };
             400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    mergeAllWeapons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 합친 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
         };
