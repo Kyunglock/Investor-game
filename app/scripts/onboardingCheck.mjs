@@ -176,7 +176,23 @@ try {
     await expect(page.getByTestId('idle-active')).toHaveCount(0)
     await page.locator('[data-testid=idle-canvas] canvas').waitFor()
     await expect(page.getByTestId('loading')).toHaveCount(0, { timeout: 30000 })
-    await expect(page.locator('.tutorial-focus, .tutorial-shade')).toHaveCount(0)
+    const shade = page.locator('.tutorial-shade')
+    const windows = shade.locator('.tutorial-focus rect')
+    await expect(shade).toBeVisible()
+    await expect(shade).toHaveCSS('pointer-events', 'none')
+    const checkWindow = async (window, target) => {
+      await expect
+        .poll(async () => {
+          const [box, hole] = await Promise.all([target.boundingBox(), window.boundingBox()])
+          if (!box || !hole) return false
+          const x = box.x + box.width / 2
+          const y = box.y + box.height / 2
+          return hole.x <= x && x <= hole.x + hole.width && hole.y <= y && y <= hole.y + hole.height
+        })
+        .toBe(true)
+    }
+    await expect(windows).toHaveCount(1)
+    await checkWindow(windows.first(), page.getByTestId('idle-wall-number'))
     const canvas = page.getByTestId('idle-canvas')
     await expect(canvas).toHaveCSS('border-left-width', '0px')
     await expect(canvas).toHaveCSS('border-right-width', '0px')
@@ -234,9 +250,9 @@ try {
     await expect(guide).toHaveAttribute('data-step', '3')
     await expect(target).toHaveAttribute('data-target', '[data-testid="cat"][data-code="night"]')
     await expect(guide).toHaveAttribute('data-drop-target', '[data-loadout-target^="slot:empty"]')
-    await expect(
-      page.locator('.tutorial-focus, .tutorial-shade, [data-tutorial-layer] rect'),
-    ).toHaveCount(0)
+    await expect(windows).toHaveCount(2)
+    await checkWindow(windows.first(), page.locator('[data-testid=cat][data-code=night]'))
+    await checkWindow(windows.last(), page.locator('[data-loadout-target="slot:empty0"]'))
     await locked(3)
     await page.screenshot({ path: `/tmp/tutorial-drag-cat-${width}.png` })
     await drag(
@@ -278,6 +294,7 @@ try {
     await guide.getByRole('button', { name: '메테오 확인했어요' }).click()
     await guide.getByRole('button', { name: '안내 마치기' }).click()
     await expect(guide).toHaveCount(0)
+    await expect(shade).toHaveCount(0)
     await expect(nav('skills')).toBeDisabled()
     c.idle.wall = 101
     c.idle.onboarding.skillsUnlocked = true
