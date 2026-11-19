@@ -163,12 +163,15 @@ try {
       }
     }
     const story = page.getByRole('main', { name: '첫 매도벽 프롤로그' })
-    await expect(story.getByRole('img')).toHaveAttribute('alt', /투매 급증/)
+    await expect(story.getByRole('img')).toHaveAttribute('alt', /패닉셀과 투매 몬스터/)
     await expect(page.getByTestId('shell')).toHaveCount(0)
     await story.getByRole('button', { name: /다음 컷/ }).click()
     await refresh()
-    await expect(story.getByRole('img')).toHaveAttribute('alt', /떨어지는 주황색 무기/)
+    await expect(story.getByRole('img')).toHaveAttribute('alt', /주황색 총이 떨어진다/)
     await story.getByRole('button', { name: /다음 컷/ }).click()
+    await expect(story.getByRole('img')).toHaveAttribute('alt', /총을 집어 든다/)
+    await story.getByRole('button', { name: /다음 컷/ }).click()
+    await expect(story.getByRole('img')).toHaveAttribute('alt', /다음 매도벽으로 가는 길/)
     await story.getByRole('button', { name: /첫 매도벽 돌파/ }).click()
     await refresh()
     await expect(story).toHaveCount(0)

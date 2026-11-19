@@ -2,15 +2,17 @@ import { type ReactNode, useState } from 'react'
 import breakthrough from './assets/prologue-breakthrough.webp'
 import drop from './assets/prologue-drop.webp'
 import market from './assets/prologue-market.webp'
+import pickup from './assets/prologue-pickup.webp'
 import './opening-prologue.css'
 
 const panels = [
-  { image: market, alt: '투매 급증. 파란 매도벽 앞에 주저앉은 고양이들. “다들 팔고 있어…”' },
+  { image: market, alt: '“몰려온다!” 거대한 매도벽 아래로 패닉셀과 투매 몬스터가 밀려온다.' },
+  { image: drop, alt: '툭! 사장냥의 발앞에 주황색 총이 떨어진다.' },
+  { image: pickup, alt: '투매 몬스터가 다가오자 사장냥이 바닥에서 총을 집어 든다.' },
   {
-    image: drop,
-    alt: '사장냥이 하늘에서 떨어지는 주황색 무기를 올려다본다. “어? 이게 왜 여기서?”',
+    image: breakthrough,
+    alt: '“매도벽을 뚫자!” 동료들이 몬스터를 막는 사이 사장냥이 벽을 깨자 다음 매도벽으로 가는 길이 열린다.',
   },
-  { image: breakthrough, alt: '“얘들아, 가자!” 세 고양이가 함께 파란 벽돌을 깨고 뛰어나온다.' },
 ]
 
 export function OpeningPrologue({
@@ -22,10 +24,17 @@ export function OpeningPrologue({
   firstVisit: boolean
   children: ReactNode
 }) {
-  const key = `investor-game.prologue:${companyId}`
+  const key = `investor-game.prologue.v2:${companyId}`
   const [page, setPage] = useState(() => {
     try {
-      const saved = Number(localStorage.getItem(key))
+      const current = localStorage.getItem(key)
+      if (current === null) {
+        const previous = localStorage.getItem(`investor-game.prologue:${companyId}`)
+        if (previous === '3') return panels.length
+        if (previous === '2') return 3
+        return previous === '1' ? 1 : 0
+      }
+      const saved = Number(current)
       return Number.isInteger(saved) && saved >= 0 && saved <= panels.length ? saved : 0
     } catch {
       return 0
