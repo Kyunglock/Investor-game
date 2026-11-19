@@ -25,7 +25,7 @@ import { GrowthIcon } from './GrowthIcon'
 import { IdleActives } from './IdleActives'
 import { IdleAttendance } from './IdleAttendance'
 import { IdleCanvas } from './IdleCanvas'
-import { IdleCats } from './IdleCats'
+import { IdleCats, type LoadoutTab } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
 import { IdlePass } from './IdlePass'
 import { IdleRebirth } from './IdleRebirth'
@@ -120,8 +120,10 @@ export function IdleHome({
   const [ownWearer, setWearer] = useState<CatCode | null>(null)
   const wearer = weaponsAsked ? null : ownWearer
   // 고양이·무기 탭이 장비 목록을 펴고 있는가 (560번). 아래 메뉴로 들어오면 고양이 목록부터 보인다.
-  const [ownGear, setGear] = useState(false)
-  const gear = (weaponsAsked || ownGear) && (company.idle?.onboarding?.step ?? 8) >= 5
+  const [loadoutTab, setLoadoutTab] = useState<LoadoutTab>('고양이')
+  const requestedTab = weaponsAsked ? '무기' : loadoutTab
+  const tab =
+    requestedTab === '무기' && (company.idle?.onboarding?.step ?? 8) < 5 ? '고양이' : requestedTab
   // 상점이 처음 보일 뽑기: 장비 목록에서 오면 무기 뽑기다.
   const [shopKind, setShopKind] = useState<'cat' | 'weapon'>('cat')
   const go = (next: Menu) => {
@@ -159,7 +161,7 @@ export function IdleHome({
   const navigate = (next: Menu) => {
     // 아래 메뉴로 상점에 오면 고양이 뽑기부터 보인다.
     if (next === 'shop') setShopKind('cat')
-    if (next === 'cats') setGear(false)
+    if (next === 'cats') setLoadoutTab('고양이')
     if (next === 'company') {
       go('battle')
       onManage()
@@ -239,7 +241,7 @@ export function IdleHome({
       onGo={(next, openGear) => {
         if (next === 'cats') {
           setWearer('night')
-          setGear(!!openGear)
+          setLoadoutTab(openGear ? '무기' : '고양이')
         }
         go(next)
       }}
@@ -379,17 +381,17 @@ export function IdleHome({
                 if (weaponsAsked) {
                   useAppUi.getState().closeSheet()
                   setMenu('cats')
-                  setGear(true)
+                  setLoadoutTab('무기')
                 }
                 setWearer(code)
               }}
-              gear={gear}
-              onGear={(open) => {
+              tab={tab}
+              onTab={(nextTab) => {
                 if (weaponsAsked) {
                   useAppUi.getState().closeSheet()
                   setMenu('cats')
                 }
-                setGear(open)
+                setLoadoutTab(nextTab)
               }}
               onDraw={() => {
                 setShopKind('weapon')
@@ -406,7 +408,7 @@ export function IdleHome({
               onUse={(kind, code) => {
                 setWearer(code)
                 // 뽑은 무기를 들렸으면 장비 목록으로, 고양이를 편성했으면 고양이 목록으로 돌아온다.
-                setGear(kind !== 'cat')
+                setLoadoutTab(kind === 'cat' ? '고양이' : '무기')
                 go('cats')
               }}
             />

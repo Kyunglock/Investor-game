@@ -61,6 +61,8 @@ try {
         sequence: 0,
         upcoming: [],
         fieldSlots: 4,
+        bread: 1,
+        bakingPercent: 45,
         wallDps: 0,
         power: 1038,
         offline: null,
@@ -99,6 +101,12 @@ try {
           })
           return
         }
+      }
+      if (path.endsWith('/cat/feed')) {
+        const recipient = required(company.idle.cats.find((cat) => cat.code === body.code))
+        assert(recipient.fielded && company.idle.bread > 0)
+        company.idle.bread--
+        recipient.level++
       }
       if (path.endsWith('/cat/field')) {
         // 서버 IdleEngine.fieldCat처럼 칸을 지킨다 (599번).
@@ -187,6 +195,14 @@ try {
     await weaponsTab.click()
     await expect(weaponsTab).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByTestId('cat-gear')).toBeVisible()
+    const bakeryTab = tray.getByRole('tab', { name: '식빵 공방' })
+    await bakeryTab.click()
+    await expect(bakeryTab).toHaveAttribute('aria-selected', 'true')
+    await expect(tray.getByRole('list', { name: '식빵 굽는 고양이' })).toContainText('밤냥')
+    await expect(tray.getByRole('progressbar')).toHaveAttribute('value', '45')
+    await tray.getByRole('button', { name: /민트냥에게 식빵/ }).click()
+    await expect(tray.getByRole('button', { name: /민트냥에게 식빵.*Lv.13/ })).toBeDisabled()
+    await expect(tray.getByText('보유 식빵 · 🍞 0개')).toBeVisible()
     await catsTab.click()
     await expect(catsTab).toHaveAttribute('aria-selected', 'true')
     await expect(tray.locator('.idle-cat-grid')).toBeVisible()
