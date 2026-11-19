@@ -43,11 +43,21 @@ export function OpeningPrologue({
   }
   return (
     <main className="opening-prologue" aria-label="첫 매도벽 프롤로그">
+      <span
+        aria-hidden="true"
+        className="opening-prologue-backdrop"
+        style={{ backgroundImage: `url(${panel.image})` }}
+      />
       <button type="button" onClick={next} className="opening-prologue-page">
         <img src={panel.image} alt={panel.alt} />
         <span className="opening-prologue-nav">
-          <span>
-            {page + 1} / {panels.length}
+          <span className="opening-prologue-progress">
+            <span className="sr-only">
+              {panels.length}컷 중 {page + 1}번째
+            </span>
+            {panels.map((item, index) => (
+              <i key={item.image} data-current={index === page} />
+            ))}
           </span>
           <strong>{page === panels.length - 1 ? '첫 매도벽 돌파' : '다음 컷'} ▸</strong>
         </span>
