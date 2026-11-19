@@ -35,6 +35,21 @@ export function queuedWallLabel(maxHp: number, hp: number) {
 }
 
 /**
+ * 뒤 벽(wall)의 체력: 받은 값에 그 벽이 있으면 그것, 없으면 이미 그리던 같은 벽의 값을 그대로 둔다. 둘 다 없으면 모른다(undefined):
+ * 모르는 체력을 지어내 적지 않는다. 전에는 체력 1로 그려, 앞 벽이 부서지는 순간 다음 벽이 "200주"로 보였다가 제 체력으로 돌아왔다.
+ */
+export function queuedWallHealth(
+  wall: number,
+  known: readonly UpcomingWall[],
+  shown: readonly UpcomingWall[] = [],
+): UpcomingWall | undefined {
+  return (
+    known.find((entry) => entry.wall === wall) ??
+    shown.find((entry) => entry.wall === wall && entry.maxHp > 0)
+  )
+}
+
+/**
  * Server-owned health for the two walls behind the current target. Each carries its remaining
  * shares and nothing else (decisions.md 542; 507 had removed every text).
  * Only pierced bullets reach them, and they keep their last point of health until they come to the front (520).
@@ -74,13 +89,13 @@ export class IdleWallQueueFx {
     for (const [i, layer] of this.layers.entries()) {
       const wall = current + i + 1
       const y = bottom - (i + 1) * (height + IDLE_WALL_GAP)
-      const health = upcoming.find((entry) => entry.wall === wall)
+      const health = queuedWallHealth(wall, upcoming, this.layers)
       // 뒤 벽은 0으로 보이지 않는다: 서버와 같이 1을 남긴다 (520번).
-      const hp = Math.max(IDLE_PIERCE_FLOOR, health?.hp ?? 1)
-      const maxHp = health?.maxHp ?? 1
+      const hp = health ? Math.max(IDLE_PIERCE_FLOOR, health.hp) : 0
+      const maxHp = health?.maxHp ?? 0
       const crack = Math.min(
         CELL_CRACKS - 1,
-        Math.floor((1 - hp / Math.max(1, maxHp)) * CELL_CRACKS),
+        health ? Math.floor((1 - hp / Math.max(1, maxHp)) * CELL_CRACKS) : 0,
       )
       const changed = layer.wall !== wall || layer.hp !== hp || layer.maxHp !== maxHp
       layer.body
@@ -95,7 +110,7 @@ export class IdleWallQueueFx {
         .setAlpha(0.95 - i * 0.13)
         .setVisible(true)
       if (!changed) continue
-      layer.label.setText(queuedWallLabel(maxHp, hp))
+      layer.label.setText(health ? queuedWallLabel(maxHp, hp) : '')
       layer.wall = wall
       layer.hp = hp
       layer.maxHp = maxHp
