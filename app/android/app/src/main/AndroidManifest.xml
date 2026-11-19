@@ -38,4 +38,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- 화면은 세로로 고정하지만(screenOrientation) 세로 화면을 필수 기능으로 요구하지는 않는다 (decisions.md 630번).
+         없으면 Play가 세로로 돌릴 수 없는 기기(PC용 Google Play Games, 일부 크롬북 등)에서 설치를 막는다. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
 </manifest>

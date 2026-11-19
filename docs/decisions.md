@@ -2657,3 +2657,12 @@ Play Console에 만든 앱의 패키지 이름이 `com.kwaklabs.maedobyeok`인�
 - 돌파 캔버스 양쪽의 3px 파란 테두리를 제거한다. 드래그 단계의 다른 입력·스크롤 잠금과 이후 단계의 실제 행동 확인은 유지한다.
 
 검증: 첫 벽 돌파 전·후, 환영 중 돌파, 확인 전 재접속에서 두 번째 안내 유지, 사각 강조와 캔버스 양쪽 테두리 없음, 기존 모바일 뽑기·드래그 흐름을 브라우저에서 확인한다.
+
+### 630. 세로 화면을 필수 기능으로 요구하지 않는다 (2026-11-19)
+
+Play Console이 비공개 테스트를 제출할 때 "필수 하드웨어 기능 선언으로 인해 앱의 사용 가능 여부가 제한됨"(`android.hardware.screen.portrait`)을 알렸다. `MainActivity`의 `screenOrientation="portrait"` 때문에 안드로이드가 세로 화면을 필수 기능으로 넣어, 세로로 돌릴 수 없는 기기(PC용 Google Play Games, Desktop, 일부 크롬북·태블릿, Android XR)에서 설치가 막힌다. 사용자: "세로 화면 경고 지금 고쳐줘".
+
+- 매니페스트에 `<uses-feature android:name="android.hardware.screen.portrait" android:required="false" />`를 둔다. 화면은 그대로 세로로 고정된다.
+- 첫 비공개 테스트 버전(776)은 경고를 무시하고 제출했다. 이 고침은 다음 AAB부터 들어간다.
+
+검증: 매니페스트 병합과 APK·AAB 빌드는 CI의 Android 워크플로에서 확인한다(이 환경에는 안드로이드 SDK가 없다).
