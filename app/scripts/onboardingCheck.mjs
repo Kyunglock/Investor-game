@@ -176,6 +176,23 @@ try {
     await expect(guide).toHaveAttribute('data-step', '-1')
     await expect(guide).toContainText('환영해요')
     await expect(guide.getByRole('button', { name: '건너뛰기' })).toHaveCount(0)
+    const field = page.getByTestId('idle-canvas')
+    const openingFocus = page.locator('.tutorial-focus rect')
+    await expect
+      .poll(async () => {
+        const [canvas, hud, focus] = await Promise.all([
+          field.boundingBox(),
+          page.locator('.idle-hud').boundingBox(),
+          openingFocus.boundingBox(),
+        ])
+        if (!canvas || !hud || !focus) return false
+        return (
+          Math.abs(focus.y - Math.max(canvas.y + 2, hud.y + hud.height + 2)) < 2 &&
+          Math.abs(focus.y + focus.height - (canvas.y + canvas.height - 2)) < 2 &&
+          Math.abs(focus.x + focus.width / 2 - (canvas.x + canvas.width / 2)) < 2
+        )
+      })
+      .toBe(true)
     if (width === 390) {
       c.idle.wall = 2
       c.idle.cleared = 1
