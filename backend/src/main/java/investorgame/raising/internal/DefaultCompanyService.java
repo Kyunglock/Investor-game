@@ -404,7 +404,7 @@ class DefaultCompanyService implements CompanyService {
         lockedDesks,
         engine.mental.weaponViews(c),
         engine.mental.armoryView(c),
-        engine.mental.upgradeViews(c),
+        idle.upgradeViews(c),
         engine.mental.stagesView(c, idle.today()),
         engine.mental.assaultsView(c),
         idle.view(c),

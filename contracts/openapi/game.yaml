@@ -1679,7 +1679,7 @@ components:
               priceGrowthPercent: { type: integer, description: 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버) }
               bonusPercent: { type: integer, description: 지금 단계의 효과(%). buy는 0이다 (579번) }
               nextBonusPercent: { type: integer, description: 다음 단계의 효과(%) }
-              bonusShares: { type: integer, description: 'buy(매수벽 공격)만: 지금 단계에 매수 주문 한 장이 는 수량(주, 579번). buy는 %로 오르지 않아 bonusPercent가 0이다. 다른 강화는 0' }
+              bonusShares: { type: integer, description: 'buy(매수벽 공격)만: 지금 단계에 매수 주문 한 장이 는 수량(주, 579번). buy는 %로 오르지 않아 bonusPercent가 0이다. 다른 강화는 0. 자동 전투에서는 팀 화력을 따르는 덤(638번)이 더해져 있어 아주 커질 수 있다' }
               nextBonusShares: { type: integer, description: 다음 단계의 그 수량(주) }
               maxLevel: { type: integer, description: 살 수 있는 마지막 단계 (487번). 0이면 끝없이 산다 }
         armory:

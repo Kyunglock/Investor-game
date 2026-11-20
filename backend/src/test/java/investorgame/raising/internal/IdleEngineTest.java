@@ -1525,8 +1525,39 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isLessThan(30 * order * up);
   }
 
-  private int buyBonus() {
-    return company.mental.upgradeViews(state).stream()
+  @Test
+  void theTeamsGunsAddTheirShareToABuyOrder() {
+    // 638: a starting pistol alone adds nothing, so the order is what it was (225 shares).
+    start(1);
+    assertThat(engine.teamScale(state)).isCloseTo(1, offset(1e-9));
+    assertThat(buyBonus()).isZero();
+    // A level 4 C cat with the starting pistol shoots as hard as the boss cat, 25% faster (sky):
+    // the team is 2.25 pistols, and (2.25 - 1) x 0.5 x 225 = 140 shares come on top.
+    state.idle.cats.put("sky", 4);
+    engine.fieldCat(state, "sky", true);
+    assertThat(engine.teamScale(state)).isCloseTo(2.25, offset(1e-9));
+    assertThat(buyBonus()).isEqualTo(140);
+    // The attack and fire upgrades are not in it: the team's share follows gear, not upgrades.
+    state.capital = 1e18;
+    company.mental.buyUpgrade(state, "damage", 20);
+    company.mental.buyUpgrade(state, "fire", 20);
+    assertThat(buyBonus()).isEqualTo(140);
+    // Ten buy levels: 200 fixed shares, and the team's part grows by two shares a level.
+    company.mental.buyUpgrade(state, "buy", 10);
+    assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(1.25 * 0.5 * 245));
+    // The wall's depth changes nothing (573), and the server accepts an order of that size.
+    state.idle.wall = 100;
+    assertThat(buyBonus()).isEqualTo(200 + 153);
+    state.idle.damage = 0;
+    tick(1000, new IdleHit(100, "buy", 1, 1e9));
+    assertThat(state.idle.damage).isCloseTo(1.5 + 353 / 150.0, offset(1e-9));
+    // 영구 강화(생선)는 고정 수량에 30주를 더하고 팀의 몫에는 3%를 곱한다.
+    state.fishLevels.put("buy", 10);
+    assertThat(buyBonus()).isEqualTo(200 + 300 + (long) Math.floor(1.25 * 0.5 * 245 * 1.3));
+  }
+
+  private long buyBonus() {
+    return engine.upgradeViews(state).stream()
         .filter(u -> "buy".equals(u.kind()))
         .findFirst()
         .orElseThrow()

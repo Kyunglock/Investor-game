@@ -442,8 +442,8 @@ public record CompanyView(
       int priceGrowthPercent,
       int bonusPercent,
       int nextBonusPercent,
-      int bonusShares,
-      int nextBonusShares,
+      long bonusShares,
+      long nextBonusShares,
       int maxLevel) {}
 
   /**

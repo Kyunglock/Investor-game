@@ -468,7 +468,6 @@ class IdleEngine {
   }
 
   private List<Shooter> shooters(CompanyState c) {
-    CompanyState.Idle s = state(c);
     double damageUp = 1;
     double fireUp = 1;
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
@@ -479,6 +478,12 @@ class IdleEngine {
         default -> {}
       }
     }
+    return shooters(c, damageUp, fireUp);
+  }
+
+  /** The guns on the field with the given attack and fire upgrades (1 for none). */
+  private List<Shooter> shooters(CompanyState c, double damageUp, double fireUp) {
+    CompanyState.Idle s = state(c);
     List<Shooter> shooters = new ArrayList<>();
     shooters.add(shooter(c.weapon, damageUp, fireUp, 1.0));
     for (String code : s.fielded) {
@@ -759,20 +764,69 @@ class IdleEngine {
   static final double SHARES_PER_HP = 150;
 
   /**
-   * One buy order's damage (514, 573, 579). Neither the weapon nor the wall's depth is in it: only
-   * the buy wall attack upgrade raises it, by a fixed number of shares a level and not by a
-   * percentage.
+   * One buy order's damage (514, 573, 579, 638). The wall's depth is not in it. The buy wall attack
+   * upgrade raises it by a fixed number of shares a level, and the team's guns add their share on
+   * top (teamShares).
    */
   private double buyOrder(CompanyState c) {
     return BUY_ORDER_DAMAGE + buyUp(c);
   }
 
-  /** The damage the buy wall attack upgrade has added to one buy order. */
+  /** The damage added to one buy order: the buy wall attack upgrade's and the team's shares. */
   private double buyUp(CompanyState c) {
-    for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
+    for (CompanyView.BattleUpgrade u : upgradeViews(c)) {
       if ("buy".equals(u.kind())) return u.bonusShares() / SHARES_PER_HP;
     }
     return 0;
+  }
+
+  /**
+   * 매수 주문의 팀 덤 (decisions.md 638번): 벽 체력이 지수로 크면서(636번) 고정 수량뿐인 매수 주문은 깊은 벽에서 의미가 없었다. 팀 화력 배율(강화를
+   * 뺀 총들의 화력 ÷ 처음 권총)에서 1을 뺀 만큼, 바탕 수량(225주 + 단계당 BUY_TEAM_STEP_SHARES주)의 BUY_TEAM_SHARE배를 얹는다. 처음
+   * 권총뿐이면 덤이 없어 전과 같다. 벽의 깊이는 여전히 보지 않는다 (573번): 무기와 동료가 세질수록 커진다.
+   */
+  static final double BUY_TEAM_SHARE = 0.5;
+
+  static final int BUY_TEAM_STEP_SHARES = 2;
+
+  /** 팀 화력 배율 (638번): 강화를 뺀 모든 총의 (한 발 × 초당 발수 × 탄 강화)를 처음 권총의 그것으로 나눈 값. 처음 권총뿐이면 1. */
+  double teamScale(CompanyState c) {
+    double total = 0;
+    for (Shooter shooter : shooters(c, 1, 1)) {
+      total += shooter.damage() * shooter.perSecond() * shooter.power();
+    }
+    return total / (1000.0 / PISTOL_FIRE_MS);
+  }
+
+  /** 매수벽 공격 level단계에서 팀이 매수 주문 한 장에 얹는 수량(주, 638번). 영구 강화(fish단계)는 한 단계에 3%를 곱한다. */
+  private long teamShares(CompanyState c, int level) {
+    int fish = c.fishLevels.getOrDefault("buy", 0);
+    double shares =
+        Math.max(0, teamScale(c) - 1)
+            * BUY_TEAM_SHARE
+            * (BUY_ORDER_DAMAGE * SHARES_PER_HP + (double) BUY_TEAM_STEP_SHARES * level)
+            * (1 + MentalEngine.FISH_STEP_PERCENT / 100.0 * fish);
+    return (long) Math.min(Long.MAX_VALUE / 4, Math.floor(shares));
+  }
+
+  /** 전투 강화의 화면 값: 매수벽 공격에는 팀의 덤(638번)이 더해져 있다. 화면과 서버가 이 수량으로 매수 주문 한 장을 센다. */
+  List<CompanyView.BattleUpgrade> upgradeViews(CompanyState c) {
+    return engine.mental.upgradeViews(c).stream()
+        .map(
+            u ->
+                "buy".equals(u.kind())
+                    ? new CompanyView.BattleUpgrade(
+                        u.kind(),
+                        u.level(),
+                        u.price(),
+                        u.priceGrowthPercent(),
+                        u.bonusPercent(),
+                        u.nextBonusPercent(),
+                        u.bonusShares() + teamShares(c, u.level()),
+                        u.nextBonusShares() + teamShares(c, u.level() + 1),
+                        u.maxLevel())
+                    : u)
+        .toList();
   }
 
   /**
