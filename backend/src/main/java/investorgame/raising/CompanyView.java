@@ -272,7 +272,7 @@ public record CompanyView(
    *
    * @param count 환생한 횟수
    * @param fish 가진 생선
-   * @param gain 지금 환생하면 받는 생선. 깬 벽 50개마다 10%를 더 받는다 (633번). 아직 할 수 없으면 0
+   * @param gain 지금 환생하면 받는 생선. 깊이 갈수록 덤이 커진다 (633번). 아직 할 수 없으면 0
    * @param fromWall 이 벽에 서야 환생할 수 있다: 첫 환생은 첫 보스를 깬 다음 벽(51), 그 뒤로는 생선 한 마리가 나오는 벽(6, 603·625번)
    * @param adGain 광고를 보고 환생하면 받는 생선 (586번): gain의 3배
    * @param upgrades 생선으로 올리는 영구 강화 (600번). 환생해도 남는다
