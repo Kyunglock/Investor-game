@@ -462,7 +462,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 다이아 또는 광고로 무기 하나를 뽑는다
+         * 다이아로 무기를 1회 또는 10회 뽑거나 광고로 1회 뽑는다
          * @description 등급은 F 450·E 260·D 150·C 80·B 40·A 17·S 3의 가중치로, 종류는 등급에 따라 정한다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
          *     결과는 armory.lastDraw와 lastDraws에 담긴다. ad가 참이면 무료이며 세션별 하루 3회까지다(한국 자정 갱신). 광고가 아니면 다이아를 사용한다.
          */
@@ -521,7 +521,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 다이아 또는 광고로 고양이 한 마리를 뽑는다
+         * 다이아로 고양이를 1회 또는 10회 뽑거나 광고로 1회 뽑는다
          * @description 무기 뽑기와 같은 값이다. 동료 고양이는 39종(사장냥 포함 총 40종)이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
          *     이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 나온 고양이는 idle.lastDraws에 차례대로 담긴다.
          *     ad가 참이면 무료이며 고양이 광고 뽑기는 세션별 하루 3회까지다(한국 자정 갱신). 광고가 아니면 다이아를 사용하고, 부족하면 400.
@@ -2456,11 +2456,11 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * @description 한 번에 하나만 뽑는다
+                     * @description 다이아 뽑기는 1회 또는 10회. 광고는 1회만 가능
                      * @default 1
                      * @enum {integer}
                      */
-                    count?: 1;
+                    count?: 1 | 10;
                     /**
                      * @description 광고 완료 후 무료 뽑기. 고양이와 무기 각각 하루 3회까지
                      * @default false
@@ -2549,11 +2549,11 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * @description 한 번에 하나만 뽑는다
+                     * @description 다이아 뽑기는 1회 또는 10회. 광고는 1회만 가능
                      * @default 1
                      * @enum {integer}
                      */
-                    count?: 1;
+                    count?: 1 | 10;
                     /**
                      * @description 광고 완료 후 무료 뽑기. 고양이와 무기 각각 하루 3회까지
                      * @default false

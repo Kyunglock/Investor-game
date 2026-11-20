@@ -139,6 +139,7 @@ jobs:
           APP_URL=http://localhost:5182/app/ node ../app/scripts/labelCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/gearMergeCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/adDrawCheck.mjs
+          APP_URL=http://localhost:5182/app/ node ../app/scripts/tenRevealCheck.ts
           APP_URL=http://localhost:5182/app/ node ../app/scripts/repeatDrawCheck.mjs
       - uses: actions/upload-artifact@v7
         if: failure()

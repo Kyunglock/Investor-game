@@ -115,7 +115,7 @@ try {
     })
     for (const kind of ['cat', 'weapon']) {
       await page.getByTestId(`draw-kind-${kind}`).click()
-      await expect(page.getByTestId(`${kind}-draw-ten`)).toHaveCount(0)
+      await expect(page.getByTestId(`${kind}-draw-ten`)).toBeVisible()
       await expect(page.getByTestId(`${kind}-draw`)).toBeDisabled()
       for (let left = 2; left >= 0; left--) {
         await page.getByTestId(`${kind}-draw-ad`).evaluate((button) => {

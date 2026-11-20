@@ -280,7 +280,7 @@ class CompanyApiTest {
     // 한 번에 100.
     DocumentContext one = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
     assertThat(one.read("$.diamonds.amount", Long.class)).isEqualTo(900);
-    // 연속 뽑기는 잔액과 관계없이 거절한다.
+    // 잔액 900으로는 10연차를 살 수 없다.
     postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isBadRequest());
     postJson("/api/company/cat/draw", "{\"count\":10}").andExpect(status().isBadRequest());
     jdbc.sql(
@@ -288,16 +288,13 @@ class CompanyApiTest {
                 + " WHERE id = CAST(:id AS uuid)")
         .param("id", opened.read("$.companyId", String.class))
         .update();
-    postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isBadRequest());
-    DocumentContext drawn = one;
-    for (int i = 0; i < 10; i++) {
-      drawn = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
-    }
+    DocumentContext drawn =
+        json(postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isOk()));
     assertThat(drawn.read("$.diamonds.amount", Long.class)).isZero();
     List<Object> last = drawn.read("$.armory.lastDraws[*]");
-    assertThat(last).hasSize(1);
+    assertThat(last).hasSize(11);
     List<Integer> counts = drawn.read("$.weapons[*].count");
-    assertThat(counts.stream().mapToInt(Integer::intValue).sum()).isEqualTo(12);
+    assertThat(counts.stream().mapToInt(Integer::intValue).sum()).isEqualTo(13);
     postJson("/api/company/weapon/draw", "").andExpect(status().isBadRequest());
     // 모자란 합성: 뽑기 운에 따라 같은 무기 둘이 나올 수 있으니(그러면 합성이 된다) 하나도 없는 종류·등급을 고른다.
     List<java.util.Map<String, Object>> weapons = drawn.read("$.weapons[*]");

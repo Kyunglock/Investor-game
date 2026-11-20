@@ -331,7 +331,7 @@ class CompanyController {
 
   record BattleUpgradeRequest(@NotBlank String kind, @Positive Integer levels) {}
 
-  /** 다이아 또는 광고로 무기 하나를 뽑는다. */
+  /** 다이아로 무기를 1회 또는 10회 뽑거나 광고로 1회 뽑는다. */
   @PostMapping("/weapon/draw")
   CompanyView drawWeapon(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -350,8 +350,8 @@ class CompanyController {
     return company;
   }
 
-  /** 한 번에 하나. ad는 보상형 광고를 끝까지 본 경우에만 참이다. */
-  record DrawCountRequest(@Min(1) @Max(1) Integer count, Boolean ad) {
+  /** 다이아는 1회 또는 10회, 광고는 1회. ad는 보상형 광고를 끝까지 본 경우에만 참이다. */
+  record DrawCountRequest(@Min(1) @Max(10) Integer count, Boolean ad) {
     static int countOf(DrawCountRequest request) {
       return request == null || request.count() == null ? 1 : request.count();
     }
@@ -371,7 +371,7 @@ class CompanyController {
     return companies.mergeWeapon(cookies.requirePlayer(token), request.kind(), request.grade());
   }
 
-  /** 다이아 또는 광고로 고양이 한 마리를 뽑는다. */
+  /** 다이아로 고양이를 1회 또는 10회 뽑거나 광고로 1회 뽑는다. */
   @PostMapping("/cat/draw")
   CompanyView drawCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,

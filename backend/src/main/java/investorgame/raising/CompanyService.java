@@ -110,7 +110,7 @@ public interface CompanyService {
    */
   CompanyView buyBattleUpgrade(UUID sessionId, String kind, int levels);
 
-  /** 무기 1회 뽑기. 다이아를 쓰거나 종류별 하루 3회의 광고 보상을 받는다. count는 1만 허용한다. */
+  /** 다이아로 무기를 1회 또는 10회 뽑는다. 광고는 하루 세 번, 매번 1회다. */
   CompanyView drawWeapon(UUID sessionId, int count, boolean ad);
 
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). 모자라거나 가장 높은 등급이면 400. */
@@ -118,7 +118,7 @@ public interface CompanyService {
 
   CompanyView mergeWeapon(UUID sessionId, String kind, String grade);
 
-  /** 고양이 1회 뽑기. 다이아 또는 하루 3회의 광고 보상. 이미 가진 고양이면 레벨이 오른다. */
+  /** 다이아로 고양이를 1회 또는 10회 뽑는다. 광고는 하루 세 번, 매번 1회다. 이미 가진 고양이면 레벨이 오른다. */
   CompanyView drawCat(UUID sessionId, int count, boolean ad);
 
   /**

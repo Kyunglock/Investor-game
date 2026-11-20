@@ -227,7 +227,7 @@ try {
       await shot('draw-cat')
       await page.getByTestId('draw-kind-weapon').click()
       await expect(page.getByTestId('weapon-draw')).toContainText('다이아 100개')
-      await expect(page.getByTestId('weapon-draw-ten')).toHaveCount(0)
+      await expect(page.getByTestId('weapon-draw-ten')).toBeVisible()
       await expect(page.getByTestId('weapon-draw-ad')).toBeVisible()
       await expect(page.getByTestId('cat-draw')).toHaveCount(0)
       await shot('draw-weapon')
