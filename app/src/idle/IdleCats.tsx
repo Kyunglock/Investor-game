@@ -1,4 +1,5 @@
 import type { Company } from '@web/api/client'
+import { money } from '@web/features/game/labels'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -12,6 +13,7 @@ import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { sortCats } from './catGrade'
+import { LoafCat } from './LoafCat'
 import { SkillBadge } from './SkillBadge'
 import { fieldSeats } from './seats'
 import { SKILLS, skillNames } from './skills'
@@ -67,6 +69,7 @@ export function IdleCats({
   const sorted = sortCats(idle?.cats ?? [])
   const cat = (idle?.cats ?? []).find((c) => c.code === picked && c.level > 0) ?? null
   const bakers = sorted.filter((c) => c.level > 0 && !c.fielded)
+  const diamondSeconds = idle?.nextDiamondSeconds ?? 600
   const full = fielded.length >= (idle?.fieldSlots ?? 0)
   // 교체 (#910): 출전 칸이 다 찼을 때 쉬는 고양이를 세우려면 뺄 고양이를 출전 칸에서 고른다. 사장냥은 출전 칸이 아니라 고를 수 없다.
   // 누구를 세우려는지 적어 둔다: 밖에서 다른 고양이를 골라 주거나 교체가 끝나 그 고양이가 출전하면 저절로 풀린다.
@@ -183,7 +186,30 @@ export function IdleCats({
       <>
         <div className="loadout-team">{tabs}</div>
         <section className="cat-bakery" aria-label="식빵 공방">
-          <strong>보유 식빵 · 🍞 {idle?.bread ?? 0}개</strong>
+          <div className="bread-bundle">
+            <span className="bread-basket" aria-hidden="true">
+              {idle?.bread ? '🍞' : ''}
+            </span>
+            <div>
+              <strong>식빵 꾸러미 · {idle?.bread ?? 0}개</strong>
+              <small>
+                판매 금액 {money(idle?.bundlePrice ?? 0)} · 다이아 {idle?.bundleDiamonds ?? 0}개
+              </small>
+            </div>
+            <button
+              type="button"
+              className="idle-cat-field"
+              disabled={busy || !idle?.bread}
+              onClick={() => void useRaisingStore.getState().sellBread()}
+            >
+              꾸러미 팔기
+            </button>
+          </div>
+          <p>
+            매도벽 {idle?.wall ?? 1}단계 · 식빵 한 개당 {money((idle?.wall ?? 1) * 100)}. 공방 가동
+            10분마다 다이아 1개 · 다음 다이아까지 {Math.floor(diamondSeconds / 60)}분{' '}
+            {diamondSeconds % 60}초
+          </p>
           <p>
             {bakers.length
               ? `전투 중 쉬는 고양이 ${bakers.length}마리가 함께 구워요. 한 마리당 1분에 식빵 1개예요.`
@@ -193,9 +219,7 @@ export function IdleCats({
             <ul aria-label="식빵 굽는 고양이">
               {bakers.map((baker) => (
                 <li key={baker.code}>
-                  <span className="baking-cat">
-                    <Portrait code={baker.code} />
-                  </span>
+                  <LoafCat code={baker.code} />
                   {baker.name}
                 </li>
               ))}

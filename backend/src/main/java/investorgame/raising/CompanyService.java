@@ -162,6 +162,8 @@ public interface CompanyService {
   /** 테스트판: 그 등급의 무기를 여섯 개 주고 사장냥이 든다 (499번). 없는 등급이면 400. */
   CompanyView sandboxWeapon(UUID sessionId, String grade);
 
+  CompanyView sellBread(UUID sessionId);
+
   CompanyView feedCat(UUID sessionId, String code);
 
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */

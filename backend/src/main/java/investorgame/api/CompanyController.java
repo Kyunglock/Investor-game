@@ -452,6 +452,11 @@ class CompanyController {
 
   record FishUpgradeRequest(@NotBlank String kind) {}
 
+  @PostMapping("/bread/sell")
+  CompanyView sellBread(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    return companies.sellBread(cookies.requirePlayer(token));
+  }
+
   @PostMapping("/cat/feed")
   CompanyView feedCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
