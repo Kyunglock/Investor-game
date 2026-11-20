@@ -1576,7 +1576,7 @@ components:
               properties:
                 count: { type: integer, description: 환생한 횟수 }
                 fish: { type: integer, format: int64, description: 가진 생선. 영구 강화에 쓴다 (600번) }
-                gain: { type: integer, format: int64, description: 지금 환생하면 받는 생선. 아직 할 수 없으면 0 }
+                gain: { type: integer, format: int64, description: 지금 환생하면 받는 생선. 깬 벽 5개마다 한 마리에 깬 보스마다 커지는 덤(+5%, +10%, +15% …)을 쌓아 얹는다 (633번). 아직 할 수 없으면 0 }
                 fromWall: { type: integer, format: int64, description: 이 벽에 서야 환생할 수 있다. 첫 환생은 첫 보스를 깬 다음 벽(51)이고 그 뒤로는 생선 한 마리가 나오는 벽(6, 603·625번) }
                 adGain: { type: integer, format: int64, description: 광고를 보고 환생하면 받는 생선 (586번). gain의 3배 }
                 upgrades:

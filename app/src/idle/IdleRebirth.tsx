@@ -59,8 +59,9 @@ export function IdleRebirth({ company }: { company: Company }) {
         </span>
       </b>
       <p className="idle-rebirth-note">
-        매도벽 1로 돌아가고 강화와 돈이 처음으로 돌아가요. 대신 영구 강화에 쓰는 생선을 받아요. 영구
-        강화와 고양이·무기·다이아는 그대로예요.
+        매도벽 1로 돌아가고 강화와 돈이 처음으로 돌아가요. 대신 영구 강화에 쓰는 생선을 받아요.
+        보스를 깰 때마다 생선 덤이 커져요(+5%, +10%, +15% …). 영구 강화와 고양이·무기·다이아는
+        그대로예요.
       </p>
       {got != null && (
         <p className="idle-rebirth-got" role="status" data-testid="rebirth-got">

@@ -1216,12 +1216,24 @@ class IdleEngine {
   static final long REBIRTH_AD_MULTIPLIER = 3;
 
   /**
-   * 지금 환생하면 받는 생선 (571·600번): 깬 벽 수 ÷ 5. 51번째 벽에서 10, 101번째 20, 301번째 60. 아직 못 하면 0. 첫 보스를 깨야 하는 것은
-   * 첫 환생뿐이다 (603번): 한 번 환생한 뒤에는 어느 벽에서든 깬 벽만큼 받는다.
+   * 환생의 생선에 얹는 덤 (633번): 깬 보스(벽 BOSS_EVERY개)마다 덤이 이만큼씩 커지며 쌓인다. 첫 보스 +5%, 둘째 +10%, 셋째 +15% … 벽 체력이
+   * 깊이의 제곱으로 느는 만큼 깊이 갈수록 벽 하나의 값도 가파르게 커진다.
+   */
+  static final long REBIRTH_DEPTH_BONUS_PERCENT = 5;
+
+  /**
+   * 지금 환생하면 받는 생선 (571·600번): 깬 벽 수 ÷ 5에, 깬 보스마다 커지는 덤(+5%, +10%, +15% …)을 쌓아 얹는다 (633번, 내림). 51번째
+   * 벽에서 10, 101번째 23, 301번째 123, 501번째 375. 아직 못 하면 0. 첫 보스를 깨야 하는 것은 첫 환생뿐이다 (603번): 한 번 환생한 뒤에는
+   * 어느 벽에서든 깬 벽만큼 받는다.
    */
   long rebirthFish(CompanyState c) {
     long cleared = state(c).wall - 1;
-    return state(c).wall < rebirthWall(c) ? 0 : cleared / REBIRTH_WALLS_PER_FISH;
+    if (state(c).wall < rebirthWall(c)) {
+      return 0;
+    }
+    long bosses = cleared / BOSS_EVERY;
+    long percent = 100 + REBIRTH_DEPTH_BONUS_PERCENT * bosses * (bosses + 1) / 2;
+    return cleared / REBIRTH_WALLS_PER_FISH * percent / 100;
   }
 
   /** 이 벽에 서야 환생할 수 있다: 첫 환생은 첫 보스를 깬 다음 벽, 그 뒤로는 생선 한 마리가 나오는 벽 (603번). */
