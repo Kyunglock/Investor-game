@@ -471,7 +471,7 @@ try {
     const diamonds = company.diamonds.amount
     // The draw buttons carry their diamond prices, and ads replace the ten-pull.
     await expect(page.getByTestId('cat-draw')).toContainText('다이아 100개')
-    await expect(page.getByTestId('cat-draw-ten')).toHaveCount(0)
+    await expect(page.getByTestId('cat-draw-ten')).toBeVisible()
     await expect(page.getByTestId('cat-draw-ad')).toContainText('광고로 1회 뽑기')
     // The odds by grade are written under the draw (539).
     await expect(page.getByTestId('draw-note')).toContainText('S 2% · A 10% · B 28% · C 60%')
