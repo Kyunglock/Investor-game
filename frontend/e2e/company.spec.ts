@@ -357,18 +357,20 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
   const api = page.request
   expect((await api.post('/api/sessions')).ok()).toBe(true)
   const opened = await companyOf(await api.post('/api/company'))
-  // 새 회사의 패스: 서른 단계, 아직 0단계라 받을 것이 없다. 한 단계에 300포인트다.
+  // 새 회사의 패스: 쉰 단계 (634번), 아직 0단계라 받을 것이 없다. 한 단계에 300포인트다.
   expect(opened.pass.step).toBe(0)
   expect(opened.pass.points).toBe(0)
   expect(opened.pass.pointsPerStep).toBe(300)
   expect(opened.pass.claimable).toBe(0)
-  expect(opened.pass.steps).toHaveLength(30)
+  expect(opened.pass.steps).toHaveLength(50)
   expect(opened.pass.steps.every((step) => !step.reached && !step.claimed)).toBe(true)
   expect(opened.pass.secondsLeft).toBeGreaterThan(0)
   expect(opened.pass.name).toBe(`시즌 ${opened.pass.season}`)
-  // 큰 보상: 10·20단계에 무기, 30단계에 고양이. 모든 단계가 다이아를 주고 돈은 없다.
-  expect(opened.pass.steps.filter((step) => step.weapon).map((step) => step.step)).toEqual([10, 20])
-  expect(opened.pass.steps.filter((step) => step.cat).map((step) => step.step)).toEqual([30])
+  // 큰 보상: 10·20·30·40단계에 무기, 50단계에 고양이. 모든 단계가 다이아를 주고 돈은 없다.
+  expect(opened.pass.steps.filter((step) => step.weapon).map((step) => step.step)).toEqual([
+    10, 20, 30, 40,
+  ])
+  expect(opened.pass.steps.filter((step) => step.cat).map((step) => step.step)).toEqual([50])
   expect(opened.pass.steps.every((step) => step.diamonds > 0 && !('money' in step))).toBe(true)
   // 미션: 벽·보스·강화·뽑기·합성·출석에 생선·영구 강화·식빵·스킬 (634번). 아직 센 것이 없다.
   expect(opened.pass.missions.map((mission) => mission.code)).toEqual([
