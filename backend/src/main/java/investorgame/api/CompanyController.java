@@ -350,8 +350,8 @@ class CompanyController {
     return company;
   }
 
-  /** 한 번에 하나. ad는 보상형 광고를 끝까지 본 경우에만 참이다. */
-  record DrawCountRequest(@Min(1) @Max(1) Integer count, Boolean ad) {
+  /** 뽑기 수: 1~10(연속 뽑기, 639·640번). 10회면 하나를 더 준다. ad는 보상형 광고를 끝까지 본 경우에만 참이고 한 번에 하나다. */
+  record DrawCountRequest(@Min(1) @Max(10) Integer count, Boolean ad) {
     static int countOf(DrawCountRequest request) {
       return request == null || request.count() == null ? 1 : request.count();
     }

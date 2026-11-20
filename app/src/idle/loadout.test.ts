@@ -1,6 +1,7 @@
 import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
 import { feedCost } from './CatBakery'
+import { multiDraw } from './IdleGacha'
 import { idleLoadout } from './loadout'
 
 type Cat = {
@@ -162,5 +163,17 @@ describe('방치형 전투 획득 상태', () => {
 describe('feedCost', () => {
   it('costs one more bread every ten levels (636)', () => {
     expect([1, 10, 11, 20, 21, 999].map(feedCost)).toEqual([1, 1, 2, 2, 3, 100])
+  })
+})
+
+describe('multiDraw', () => {
+  const rule = { draw: 100, tenDraw: 1000 }
+  it('draws as many as the diamonds buy, ten at most (640)', () => {
+    expect(multiDraw({ ...rule, amount: 500 })).toEqual({ count: 5, price: 500 })
+    expect(multiDraw({ ...rule, amount: 999 })).toEqual({ count: 9, price: 900 })
+    expect(multiDraw({ ...rule, amount: 1000 })).toEqual({ count: 10, price: 1000 })
+    expect(multiDraw({ ...rule, amount: 5000 })).toEqual({ count: 10, price: 1000 })
+    expect(multiDraw({ ...rule, amount: 150 }).count).toBe(1)
+    expect(multiDraw({ ...rule, amount: 0 }).count).toBe(0)
   })
 })

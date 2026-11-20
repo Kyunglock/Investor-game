@@ -40,7 +40,6 @@ export function IdleCats({
   onPick,
   tab,
   onTab,
-  onDraw,
 }: {
   company: Company
   /** 메뉴를 오가도 선택한 고양이를 유지한다. null은 사장냥이다. */
@@ -48,8 +47,6 @@ export function IdleCats({
   onPick: (code: CatCode | null) => void
   tab: LoadoutTab
   onTab: (tab: LoadoutTab) => void
-  /** 무기 뽑기(상점 탭)로 간다. */
-  onDraw: () => void
 }) {
   const gearOpen = tab === '무기'
   const busy = useRaisingStore((s) => s.busy)
@@ -425,17 +422,7 @@ export function IdleCats({
           </button>
         </article>
         {gearOpen ? (
-          <>
-            <CatGear company={company} wearer={cat} onSelect={onPick} />
-            <button
-              type="button"
-              className="idle-weapon-draw"
-              data-testid="weapon-to-shop"
-              onClick={onDraw}
-            >
-              무기 뽑기는 상점에서 ▸
-            </button>
-          </>
+          <CatGear company={company} wearer={cat} onSelect={onPick} />
         ) : (
           <>
             <p className="loadout-hint" aria-live="polite">

@@ -54,13 +54,13 @@ interface RaisingState {
     kind: 'damage' | 'fire' | 'hp' | 'buy',
     levels?: number,
   ) => Promise<Company | null>
-  /** 무기 하나를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. */
-  drawWeapon: (ad?: boolean) => Promise<void>
+  /** 무기를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. count(1~10)가 2 이상이면 연속 뽑기(639·640번)로 company.armory.lastDraws에 담긴다. */
+  drawWeapon: (ad?: boolean, count?: number) => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
   mergeAllWeapons: () => Promise<void>
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
-  /** 고양이 하나를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. */
-  drawCat: (ad?: boolean) => Promise<Company | null>
+  /** 고양이를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. count(1~10)가 2 이상이면 연속 뽑기(639·640번)로 company.idle.lastDraws에 담긴다. */
+  drawCat: (ad?: boolean, count?: number) => Promise<Company | null>
   /** 액티브 스킬을 쓴다 (decisions.md 503번). 서버가 받아 줬으면 true. 전투를 멈추지 않게 busy를 켜지 않는다. */
   /** ad: 광고를 끝까지 본 뒤에 쓴다 (588번). 광고 스킬은 ad가 참이어야 서버가 받아 준다. */
   useActive: (code: ActiveCode, ad?: boolean) => Promise<boolean>
@@ -244,8 +244,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       return res?.data ?? null
     },
 
-    drawWeapon: (ad = false) =>
-      change(api.POST('/api/company/weapon/draw', { body: { count: 1, ad } })),
+    drawWeapon: (ad = false, count = 1) =>
+      change(api.POST('/api/company/weapon/draw', { body: { count, ad } })),
 
     mergeAllWeapons: () => change(api.POST('/api/company/weapon/merge-all')),
     mergeWeapon: (kind, grade) =>
@@ -309,8 +309,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       change(api.POST('/api/company/idle/tutorial', { body: { action, step } })),
     equipActive: (code, equipped) =>
       change(api.POST('/api/company/idle/active/equip', { body: { code, equipped } })),
-    drawCat: async (ad = false) => {
-      const res = await safely(api.POST('/api/company/cat/draw', { body: { count: 1, ad } }))
+    drawCat: async (ad = false, count = 1) => {
+      const res = await safely(api.POST('/api/company/cat/draw', { body: { count, ad } }))
       set({ company: res?.data ?? get().company, error: reason(res?.error) })
       return res?.data ?? null
     },

@@ -70,15 +70,15 @@ const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
   damage: { name: '공격력', note: '탄 공격력' },
   fire: { name: '공격 속도', note: '쏘는 빠르기' },
   hp: { name: '매수벽 체력', note: '매수벽이 무너지면 다시 설 때까지 공격이 멈춰요' },
-  buy: { name: '매수벽 공격', note: '매수 주문의 피해 · 무기와 따로 세요' },
+  buy: { name: '매수벽 공격', note: '매수 주문의 피해 · 무기와 동료가 셀수록 덤이 붙어요' },
 }
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
 
-/** 매수 주문 한 장의 수량 (514·573번): 무기와도 벽의 깊이와도 상관없이 이 강화만 따른다. */
+/** 매수 주문 한 장의 수량 (514·573·638번): 벽의 깊이는 보지 않는다. 이 강화의 고정 수량에 팀 화력을 따르는 덤이 붙는다(서버가 더해 준다). */
 function buyNote(company: Company, u: Upgrade) {
   if (!company.idle) return STATS.buy.note
   const damage = idleBuyOrderDamage((u.bonusShares ?? 0) / SHARES_PER_HP)
-  return `매수 주문 한 장 ${sharesOf(damage).toLocaleString()}주 · 무기와 따로 세요`
+  return `매수 주문 한 장 ${sharesOf(damage).toLocaleString()}주 · 무기와 동료가 셀수록 덤이 붙어요`
 }
 
 export function IdleHome({
@@ -396,10 +396,6 @@ export function IdleHome({
                   setMenu('cats')
                 }
                 setLoadoutTab(nextTab)
-              }}
-              onDraw={() => {
-                setShopKind('weapon')
-                go('shop')
               }}
             />
           )}

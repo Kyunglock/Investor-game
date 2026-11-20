@@ -138,6 +138,10 @@
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
+.idle-shop .idle-gacha-row .idle-buy-ad {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
 .idle-shop .idle-gacha-row .idle-buy {
   width: 100%;
   min-width: 0;

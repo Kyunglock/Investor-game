@@ -4,18 +4,31 @@ import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useEffect, useRef, useState } from 'react'
 import { AD_UNAVAILABLE, watchRewardedAd } from '../app/ads'
 import { sfx } from '../fx/sound'
+import { TEN } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
+import { TenBonus, type TenCard, TenReveal } from '../mental/TenReveal'
 import { type DrawResult, WeaponReveal } from '../mental/WeaponReveal'
+import { shinyWeapon, weaponRevealPlan } from '../mental/weaponRevealPlan'
 import { CatPortrait as Portrait } from './CatPortrait'
 import { type CatDraw, CatReveal } from './CatReveal'
-import { CAT_ODDS } from './catGrade'
+import { bestDraw, CAT_ODDS, catRevealPlan, shinyCat } from './catGrade'
 import { RewardPlacement } from './RewardPlacement'
 import { ShopIcon } from './ShopIcon'
 import { skillNames } from './skills'
 
 type Kind = 'cat' | 'weapon'
 
-/** 상점의 고양이·무기 뽑기. 다이아 1회 또는 종류별 하루 3회의 광고 뽑기를 제공한다. */
+/**
+ * 연속 뽑기의 수와 값 (640번): 가진 다이아로 뽑을 수 있는 만큼, 많아야 10회. 10회면 값이 tenDraw이고 나오는 수는 tenCount(덤)다.
+ * 서버 CompanyProperties.Diamonds의 cost·items와 같다.
+ */
+export function multiDraw(diamonds: { amount: number; draw: number; tenDraw: number }) {
+  const full = diamonds.amount >= diamonds.tenDraw
+  const count = full ? TEN : Math.min(TEN - 1, Math.floor(diamonds.amount / diamonds.draw))
+  return { count, price: full ? diamonds.tenDraw : diamonds.draw * count }
+}
+
+/** 상점의 고양이·무기 뽑기. 다이아 1회·10회 연속(639번) 또는 종류별 하루 3회의 광고 뽑기를 제공한다. */
 export function IdleGacha({
   company,
   onCat,
@@ -33,6 +46,7 @@ export function IdleGacha({
   const [kind, setKind] = useState<Kind>(initialKind ?? 'cat')
   const [catReveal, setCatReveal] = useState<{ id: number; result: CatDraw | null } | null>(null)
   const [gunReveal, setGunReveal] = useState<{ id: number; result: DrawResult | null } | null>(null)
+  const [ten, setTen] = useState<{ id: number; kind: Kind; cards: TenCard[] | null } | null>(null)
   const [watching, setWatching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [drawn, setDrawn] = useState<CatDraw | null>(null)
@@ -55,9 +69,14 @@ export function IdleGacha({
   const awaitingTutorialDraw = tutorialStep === 2 || tutorialStep === 4
   const canOne =
     ready && (tutorialDraw || (!awaitingTutorialDraw && diamonds.amount >= diamonds.draw))
+  // 연속 뽑기 (639·640번): 가진 다이아로 뽑을 수 있는 만큼, 많아야 10회. 500이면 5회다. 10회에만 덤이 붙는다. 안내 중에는 없다.
+  const multi = multiDraw(diamonds)
+  const canTen = ready && !awaitingTutorialDraw && multi.count >= 2
+  /** 이번 연속 뽑기의 이름: "5회 뽑기". 두 번을 못 뽑으면 "10회 뽑기"로 적고 누를 수 없다. */
+  const multiName = `${canTen ? multi.count : TEN}회 뽑기`
   const adLeft = (kind === 'cat' ? company.adDraws?.catLeft : company.adDraws?.weaponLeft) ?? 0
   const canAd = ready && adLeft > 0 && !awaitingTutorialDraw && !tutorialReveal
-  const showing = Boolean(catReveal || gunReveal)
+  const showing = Boolean(catReveal || gunReveal || ten)
   /** 한 번에 하나만 뽑는다. 뽑는 동안 화면이 닫혀도 끝까지 간다. */
   const once = async (can: boolean, run: (id: number) => Promise<void>, fail: () => void) => {
     if (drawing.current || useRaisingStore.getState().busy || !can) return
@@ -138,13 +157,98 @@ export function IdleGacha({
       },
       () => setGunReveal(null),
     )
+  // 10회 연속 (517·639번): 한 번에 tenCount마리. 같은 고양이가 또 나오면 차례로 레벨이 오른다.
+  const drawTenCats = () =>
+    once(
+      canTen,
+      async (id) => {
+        setCatReveal(null)
+        setTen({ id, kind: 'cat', cards: null })
+        const after = await useRaisingStore.getState().drawCat(false, multi.count)
+        if (!mounted.current) return
+        const draws = after?.idle?.lastDraws ?? []
+        const cats = after?.idle?.cats ?? []
+        if (draws.length < 1 || useRaisingStore.getState().error) {
+          setTen(null)
+          setError(useRaisingStore.getState().error ?? '뽑기를 완료하지 못했어요.')
+          return
+        }
+        setTen({
+          id,
+          kind: 'cat',
+          cards: draws.map((d, i) => {
+            const plan = catRevealPlan(d.grade, d.isNew)
+            const info = cats.find((c) => c.code === d.code)
+            return {
+              key: `${i}-${d.code}`,
+              art: <Portrait code={d.code} />,
+              badge: `${d.grade} 등급 · Lv.${d.level}`,
+              name: info?.name ?? d.code,
+              note: d.isNew ? 'NEW!' : '레벨 업',
+              isNew: d.isNew,
+              color: plan.color,
+              power: plan.power,
+              sound: plan.sound,
+              shiny: shinyCat(d.grade),
+              jackpot: d.grade === 'S',
+            }
+          }),
+        })
+        // 알림과 '팀 편성하기'는 마지막 장이 아니라 가장 좋은 고양이를 가리킨다 (#911).
+        const best = bestDraw(draws)
+        const cat = cats.find((c) => c.code === best?.code)
+        if (best && cat) {
+          setDrawn({ cat, isNew: best.isNew })
+          onCat(cat.code)
+        }
+      },
+      () => setTen(null),
+    )
+  const drawTenWeapons = () =>
+    once(
+      canTen,
+      async (id) => {
+        setGunReveal(null)
+        setTen({ id, kind: 'weapon', cards: null })
+        await useRaisingStore.getState().drawWeapon(false, multi.count)
+        const state = useRaisingStore.getState()
+        const draws = state.company?.armory?.lastDraws ?? []
+        if (!mounted.current) return
+        if (state.error) setError(state.error)
+        setTen(
+          !state.error && draws.length > 0
+            ? {
+                id,
+                kind: 'weapon',
+                cards: draws.map((d, i) => {
+                  const plan = weaponRevealPlan(d.grade)
+                  return {
+                    key: `${i}-${d.kind}-${d.grade}`,
+                    art: <GunSprite kind={d.kind} grade={d.grade} width={58} />,
+                    badge: `${d.gradeName} 등급`,
+                    name: d.name,
+                    note: d.isNew ? 'NEW!' : '재료 +1',
+                    isNew: d.isNew,
+                    color: plan.color,
+                    power: plan.power,
+                    sound: d.grade,
+                    shiny: shinyWeapon(d.grade),
+                    jackpot: shinyWeapon(d.grade) && d.grade !== 'A',
+                  }
+                }),
+              }
+            : null,
+        )
+      },
+      () => setTen(null),
+    )
   const note = tutorialDraw
     ? kind === 'cat'
       ? '첫 동료 · A등급 밤냥 확정'
       : '첫 무기 · B등급 기관단총 확정'
     : kind === 'cat'
-      ? `${CAT_ODDS} · 또 나오면 레벨 업`
-      : 'F~A 등급이 나와요 · S부터는 합쳐서 얻어요'
+      ? `${CAT_ODDS} · 또 나오면 레벨 업 · 다이아만큼 최대 10회 · 10회는 ${diamonds.tenCount}마리`
+      : `F~A 등급이 나와요 · S부터는 합쳐서 얻어요 · 다이아만큼 최대 10회 · 10회는 ${diamonds.tenCount}개`
   const resultNote = drawn
     ? drawn.isNew
       ? `${drawn.cat.grade} 등급 ${drawn.cat.name} 합류!${drawn.cat.skills.length > 0 ? ` 고유 스킬 ${skillNames(drawn.cat)}` : ''}`
@@ -232,6 +336,22 @@ export function IdleGacha({
           {!awaitingTutorialDraw && (
             <button
               type="button"
+              className="idle-buy idle-buy-ten"
+              data-testid={kind === 'cat' ? 'cat-draw-ten' : 'weapon-draw-ten'}
+              disabled={showing || busy || watching || !canTen}
+              onClick={() => void (kind === 'cat' ? drawTenCats() : drawTenWeapons())}
+            >
+              {multiName}
+              {multi.count >= TEN && <TenBonus count={diamonds.tenCount} />}
+              <small>
+                <DiamondPrice amount={canTen ? multi.price : diamonds.tenDraw} />
+              </small>
+              {!canTen && <small>다이아 부족</small>}
+            </button>
+          )}
+          {!awaitingTutorialDraw && (
+            <button
+              type="button"
               className="idle-buy idle-buy-ad"
               data-testid={kind === 'cat' ? 'cat-draw-ad' : 'weapon-draw-ad'}
               disabled={showing || busy || watching || !canAd}
@@ -259,6 +379,35 @@ export function IdleGacha({
         </>
       )}
       {error && <p role="alert">{error}</p>}
+      {ten && (
+        <TenReveal
+          key={ten.id}
+          label={ten.kind === 'cat' ? '고양이 연속 뽑기' : '무기 연속 뽑기'}
+          testId={ten.kind === 'cat' ? 'cat-ten' : 'weapon-ten'}
+          icon={ten.kind === 'cat' ? '🐾' : '★'}
+          loading={ten.kind === 'cat' ? '고양이들을 데려오는 중…' : '무기들을 가져오는 중…'}
+          cards={ten.cards}
+          canAgain={canTen}
+          againNote={<DiamondPrice amount={canTen ? multi.price : diamonds.tenDraw} />}
+          useAction={
+            onUse ? (
+              <button
+                type="button"
+                className="ten-reveal-use"
+                data-testid={`${ten.kind}-ten-use`}
+                onClick={() => {
+                  setTen(null)
+                  onUse(ten.kind, drawn?.cat.code ?? null)
+                }}
+              >
+                {ten.kind === 'cat' ? '팀 편성하기' : '무기 장착·합성하기'} ▸
+              </button>
+            ) : undefined
+          }
+          onClose={() => setTen(null)}
+          onAgain={() => void (ten.kind === 'cat' ? drawTenCats() : drawTenWeapons())}
+        />
+      )}
       {catReveal && (
         <CatReveal
           key={catReveal.id}

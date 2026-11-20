@@ -440,7 +440,7 @@ export interface paths {
         put?: never;
         /**
          * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번)
-         * @description 공격력(+3%)·연사(쏘는 빠르기 +2%, 100%까지)·매수벽 체력(+3%)·매수벽 공격(+3%)을 단계마다 올린다. 치명타 피해 강화는 없앴다(556번). 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
+         * @description 공격력(+1%, 637번)·연사(쏘는 빠르기 +1%, 100%까지)·매수벽 체력(+1%, 640번)·매수벽 공격(+20주, 팀의 덤은 638번)을 단계마다 올린다. 치명타 피해 강화는 없앴다(556번). 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
          *     상한에 닿은 강화를 사면 400 (487번).
          *     꾹 눌러 연속으로 올릴 때 화면이 모은 단계를 levels로 묶어 보낸다: 자본이 닿는 데까지 한 단계씩 사고, 한 단계도 못 사면 400.
          *     고양이 속도 강화는 394번에서 뺐다.
@@ -1763,7 +1763,7 @@ export interface components {
                 bonusPercent: number;
                 /** @description 다음 단계의 효과(%) */
                 nextBonusPercent: number;
-                /** @description buy(매수벽 공격)만: 지금 단계에 매수 주문 한 장이 는 수량(주, 579번). buy는 %로 오르지 않아 bonusPercent가 0이다. 다른 강화는 0 */
+                /** @description buy(매수벽 공격)만: 지금 단계에 매수 주문 한 장이 는 수량(주, 579번). buy는 %로 오르지 않아 bonusPercent가 0이다. 다른 강화는 0. 자동 전투에서는 팀 화력을 따르는 덤(638번)이 더해져 있어 아주 커질 수 있다 */
                 bonusShares?: number;
                 /** @description 다음 단계의 그 수량(주) */
                 nextBonusShares?: number;
@@ -2456,11 +2456,10 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * @description 한 번에 하나만 뽑는다
+                     * @description 한꺼번에 뽑을 수(639·640번). 값은 diamonds.draw × count이고, 10이면 diamonds.tenDraw에 diamonds.tenCount개다. 광고 뽑기는 1만 된다
                      * @default 1
-                     * @enum {integer}
                      */
-                    count?: 1;
+                    count?: number;
                     /**
                      * @description 광고 완료 후 무료 뽑기. 고양이와 무기 각각 하루 3회까지
                      * @default false
@@ -2549,11 +2548,10 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * @description 한 번에 하나만 뽑는다
+                     * @description 한꺼번에 뽑을 수(639·640번). 값은 diamonds.draw × count이고, 10이면 diamonds.tenDraw에 diamonds.tenCount개다. 광고 뽑기는 1만 된다
                      * @default 1
-                     * @enum {integer}
                      */
-                    count?: 1;
+                    count?: number;
                     /**
                      * @description 광고 완료 후 무료 뽑기. 고양이와 무기 각각 하루 3회까지
                      * @default false
