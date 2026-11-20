@@ -4,10 +4,17 @@
  * not handled yet gives the wall and health to show.
  */
 
+/** IdleEngine.HP_GROWTH (decisions.md 636): every wall deeper multiplies the health by this. */
+export const IDLE_HP_GROWTH = 1.003
+
 /** IdleEngine.maxHp: the same curve, or the two sides disagree about when a wall breaks. */
 export function idleMaxHp(wall: number) {
   const depth = wall - 1
-  return (10 + 6 * depth + 0.1 * depth * depth) * (wall % IDLE_BOSS_EVERY === 0 ? 3 : 1)
+  return (
+    (10 + 6 * depth + 0.1 * depth * depth) *
+    IDLE_HP_GROWTH ** depth *
+    (wall % IDLE_BOSS_EVERY === 0 ? 3 : 1)
+  )
 }
 
 /** Hits the server never answered are forgotten after this long (decisions.md 497). */

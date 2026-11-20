@@ -61,8 +61,8 @@ try {
         sequence: 0,
         upcoming: [],
         fieldSlots: 4,
-        bread: 2,
-        bundlePrice: 200,
+        bread: 3,
+        bundlePrice: 300,
         bundleDiamonds: 1,
         nextDiamondSeconds: 600,
         bakingPercent: 45,
@@ -107,9 +107,11 @@ try {
       }
       if (path.endsWith('/cat/feed')) {
         const recipient = required(company.idle.cats.find((cat) => cat.code === body.code))
-        assert(recipient.fielded && company.idle.bread > 0)
-        company.idle.bread--
-        company.idle.bundlePrice -= 100
+        // 서버 IdleEngine.feedCost처럼 레벨 ÷ 10 올림만큼 든다 (636번): Lv12 민트냥은 2개.
+        const cost = Math.max(1, Math.ceil(recipient.level / 10))
+        assert(recipient.fielded && company.idle.bread >= cost)
+        company.idle.bread -= cost
+        company.idle.bundlePrice -= 100 * cost
         recipient.level++
       }
       if (path.endsWith('/bread/sell')) {

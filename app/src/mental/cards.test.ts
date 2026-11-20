@@ -15,6 +15,7 @@ import {
   mateMagicCard,
   pickCards,
   SIMPLE_CARDS,
+  skillPower,
   xpToNext,
 } from './cards'
 import { MAGIC_MAX_LEVEL } from './magic'
@@ -248,5 +249,17 @@ describe('동료 마법 각성', () => {
       for (let i = 0; i < 100; i++)
         expect(pickCards(state, rng(i)).some((c) => c.code === 'cat-magic')).toBe(false)
     }
+  })
+})
+
+describe('skillPower', () => {
+  // 636번: 스킬은 사장냥 무기의 실효 화력(처음 권총에 견준 한 발 피해 × 초당 발수 × 탄 강화)을 따른다.
+  it('is 1 for the starting pistol and grows when an A shotgun is merged into an S rifle', () => {
+    expect(skillPower({ damagePercent: 100, fireMs: 260, power: 0 })).toBe(1)
+    // A 산탄총: 220% × 9 = 1980%, 700ms × 0.8 = 560ms, 탄 강화 2. S 소총: 330% × 5.5 = 1815%, 900ms × 0.4 = 360ms, 탄 강화 3.
+    const shotgunA = skillPower({ damagePercent: 1980, fireMs: 560, power: 2 })
+    const rifleS = skillPower({ damagePercent: 1815, fireMs: 360, power: 3 })
+    expect(shotgunA).toBeCloseTo(16.55, 2)
+    expect(rifleS).toBeCloseTo(28.84, 2)
   })
 })

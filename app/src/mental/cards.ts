@@ -225,6 +225,11 @@ export interface Loadout {
   /** 고양이가 따로 든 총 (488번), 줄 선 차례대로. 없는 자리의 고양이는 사장냥과 같은 총을 쏜다. */
   mateGuns: MateGun[]
   /**
+   * 자동 전투의 스킬 피해 바탕 (636번): 사장냥 무기의 실효 화력(skillPower)에 공격력 강화를 곱한 것. 없으면(미션) 총알 한 발의 피해(damage)를
+   * 쓴다.
+   */
+  skillDamage?: number
+  /**
    * 자동 전투 (501번): 스킬은 고양이의 고유 능력이다. 줄 선 차례대로 그 고양이의 마법들(561번: C·B등급은 없고 A는 하나, S는 둘). 이 칸이
    * 있으면 고양이는 제 마법만 쓰고 사장냥은 마법을 쓰지 않는다. 없으면(미션) 사장냥과 각성한 고양이가 가진 마법을 모두 쓴다.
    */
@@ -271,6 +276,18 @@ export const BASE_LOADOUT: Loadout = {
  * 든 무기의 수치(서버가 등급을 더해 준 최종값, 346번)를 한 판의 바탕 수치로. 자본으로 산 전투 강화(367·394번)가 그 위에 붙고(공격력은 그만큼
  * 오르고, 연사는 쏘는 빠르기가 그만큼 올라 간격이 1 + 비율로 나뉘고, 체력은 최대 멘탈이 그만큼 는다. 단계가 끝없어 간격을 빼면 0에 닿는다), 카드는 다시 그 위에 쌓인다.
  */
+/** 처음 권총의 연사 간격(ms): 이 총의 skillPower가 1이다. 서버 IdleEngine.PISTOL_FIRE_MS와 같다. */
+export const PISTOL_FIRE_MS = 260
+
+/**
+ * 무기의 실효 화력 (636번): 처음 권총에 견준 한 발 피해 × 초당 발수 × 탄 강화. 자동 전투에서 고양이 스킬은 사장냥 무기의 이 값을 따른다. 한 발
+ * 피해만 따르던 때는 A 산탄총을 S 소총으로 합성하면 스킬이 오히려 약해졌다. 서버 IdleEngine.shooter의 skill과 같다.
+ */
+export function skillPower(weapon: { damagePercent: number; fireMs: number; power: number }) {
+  const power = 1 + Math.max(0, Math.min(MAX_BULLET_POWER, weapon.power)) * 0.4
+  return ((weapon.damagePercent / 100) * PISTOL_FIRE_MS * power) / weapon.fireMs
+}
+
 export function loadoutOf(
   weapon: {
     damagePercent: number

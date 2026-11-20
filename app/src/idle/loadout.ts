@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import type { CatCode } from '@web/features/raising/store'
-import { loadoutOf } from '../mental/cards'
+import { loadoutOf, skillPower } from '../mental/cards'
 import { NEW_CATS } from '../mental/catRoster'
 import { DEFAULT_WEAPON, heroOf } from '../mental/hero'
 import { EXTRA_SPELLS, type ExtraSpell } from '../mental/spellbook'
@@ -34,6 +34,9 @@ const SKILL_MAGIC = {
 export function idleLoadout(company: Company) {
   const hero = heroOf(company)
   const loadout = loadoutOf(hero.weapon, hero.upgrades)
+  // 스킬은 사장냥 무기의 실효 화력을 따른다 (636번, 서버 IdleEngine과 같다).
+  loadout.skillDamage =
+    (loadout.damage * skillPower(hero.weapon)) / (hero.weapon.damagePercent / 100)
   // 스킬은 고양이의 고유 능력이다 (501번): 출전한 고양이가 제 총을 쏘고 제 스킬을 쓴다. 스킬은 A등급부터 있고 S등급은 둘이다 (561번).
   // 총이 없으면 기본 권총이다(서버 IdleEngine과 같다).
   // 출전 칸의 번호순으로 줄을 선다 (599번).

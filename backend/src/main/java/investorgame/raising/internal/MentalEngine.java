@@ -322,7 +322,15 @@ class MentalEngine {
         .toList();
   }
 
-  /** 전투 강화의 화면 값 (367·394번): 강화마다 지금 단계·다음 값·효과. 효과에는 영구 강화(600번)가 더한 양이 들어 있다. */
+  /**
+   * 전투 강화(%)에 영구 강화(%)를 곱해 얹는다 (636번): (1 + 전투 강화) × (1 + 영구 강화) − 1, 내림. 전에는 더하기만 해서 깊이 갈수록 돈으로 산
+   * 강화(벽 1,000이면 +3,000%)에 묻혀 환생의 보람이 1%쯤이었다.
+   */
+  static int withFish(int percent, int fishPercent) {
+    return (int) Math.min(Integer.MAX_VALUE, (100L + percent) * (100L + fishPercent) / 100 - 100);
+  }
+
+  /** 전투 강화의 화면 값 (367·394번): 강화마다 지금 단계·다음 값·효과. 효과에는 영구 강화(600번)가 곱해져 있다(636번, 매수벽 공격의 주는 더한다). */
   List<CompanyView.BattleUpgrade> upgradeViews(CompanyState c) {
     CompanyProperties.Upgrades rule = properties.mental().upgrades();
     return UPGRADES.stream()
@@ -340,8 +348,8 @@ class MentalEngine {
                   level,
                   CompanyView.money(upgradePrice(level)),
                   rule.priceGrowthPercent(),
-                  level * step + fishPercent,
-                  Math.min(level + 1, max) * step + fishPercent,
+                  withFish(level * step, fishPercent),
+                  withFish(Math.min(level + 1, max) * step, fishPercent),
                   level * shares + fishShares,
                   (level + 1) * shares + fishShares,
                   max == Integer.MAX_VALUE ? 0 : max);
