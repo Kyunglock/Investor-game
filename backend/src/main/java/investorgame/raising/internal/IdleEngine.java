@@ -124,8 +124,10 @@ class IdleEngine {
   // BOSS_HP.
   // Halved in 562: 20 + 12 x depth + 0.2 x depth^2 before.
   private static final double HP_BASE = 10;
-  private static final double HP_LINEAR = 6;
-  private static final double HP_SQUARE = 0.1;
+  // Lowered from 6 and 0.1 in 637, with the attack upgrade's step (3% to 1% a level): the walls a
+  // set of gear stops at stay where 636 put them, with numbers about a third as large.
+  private static final double HP_LINEAR = 5;
+  private static final double HP_SQUARE = 0.035;
   private static final double BOSS_HP = 3;
 
   /**

@@ -425,8 +425,8 @@ class MentalEngineTest {
         .as("고양이 속도 강화는 뺐고(394번) 체력(410번)을 넣었다. 치명타 피해는 없앴다(556번)")
         .containsExactly("damage", "fire", "hp", "buy");
     assertThat(rule.stepPercent())
-        .as("공격력·체력 3%, 연사 2% (492번). 치명타 피해는 없앴다 (556번)")
-        .containsEntry("damage", 3)
+        .as("공격력 1%(637번), 체력 3%, 연사 2% (492번). 치명타 피해는 없앴다 (556번)")
+        .containsEntry("damage", 1)
         .containsEntry("fire", 2)
         .containsEntry("hp", 3)
         .doesNotContainKey("buy")
@@ -452,8 +452,8 @@ class MentalEngineTest {
         .isGreaterThan(1e90);
     CompanyView.BattleUpgrade damage = view(c, "damage");
     assertThat(damage.level()).isEqualTo(1);
-    assertThat(damage.bonusPercent()).isEqualTo(3);
-    assertThat(damage.nextBonusPercent()).isEqualTo(6);
+    assertThat(damage.bonusPercent()).isEqualTo(1);
+    assertThat(damage.nextBonusPercent()).isEqualTo(2);
     assertThat(damage.price().longValue()).isEqualTo((long) ENGINE.mental.upgradePrice(1));
     assertThat(damage.priceGrowthPercent()).isEqualTo(rule.priceGrowthPercent());
 

@@ -34,17 +34,16 @@ function server(
 const bullet = (wall: number, damage: number, depth = 0) => ({ wall, depth, damage })
 
 describe('idleMaxHp', () => {
-  it('is IdleEngine.maxHp: (10 + 6d + 0.1d²) × 1.003^d, three times that on every 50th wall', () => {
-    // Values from the Java formula (HP_BASE 10, HP_LINEAR 6, HP_SQUARE 0.1, HP_GROWTH 1.003, BOSS_HP 3,
-    // decisions.md 636).
+  it('is IdleEngine.maxHp: (10 + 5d + 0.035d²) × 1.003^d, three times that on every 50th wall', () => {
+    // Values from the Java formula (HP_BASE 10, HP_LINEAR 5, HP_SQUARE 0.035, HP_GROWTH 1.003,
+    // BOSS_HP 3, decisions.md 636·637).
     expect(idleMaxHp(1)).toBe(10)
-    expect(idleMaxHp(2)).toBeCloseTo(16.1 * 1.003, 9)
-    expect(idleMaxHp(11)).toBeCloseTo(80 * 1.003 ** 10, 9)
-    expect(idleMaxHp(50)).toBeCloseTo(1632.3 * 1.003 ** 49, 9)
-    expect(idleMaxHp(201)).toBeCloseTo(5210 * 1.003 ** 200, 9)
-    // Rounded: the curve grows faster than the old square, a thousand walls in about 20 times.
-    expect(Math.round(idleMaxHp(101))).toBe(2172)
-    expect(Math.round(idleMaxHp(1001))).toBe(2119727)
+    expect(idleMaxHp(2)).toBeCloseTo(15.035 * 1.003, 9)
+    expect(idleMaxHp(11)).toBeCloseTo(63.5 * 1.003 ** 10, 9)
+    expect(idleMaxHp(50)).toBeCloseTo(3 * 339.035 * 1.003 ** 49, 9)
+    expect(idleMaxHp(201)).toBeCloseTo(2410 * 1.003 ** 200, 9)
+    expect(Math.round(idleMaxHp(101))).toBe(1160)
+    expect(Math.round(idleMaxHp(1001))).toBe(800021)
   })
 })
 
