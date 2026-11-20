@@ -447,10 +447,7 @@ function IdlePower({ power }: { power: number }) {
   }, [power])
   return (
     <div className="idle-power" data-testid="idle-power">
-      <span>
-        전투력
-        <small>강화·무기·고양이를 모두 더한 힘</small>
-      </span>
+      <span>전투력</span>
       <strong>
         {gain > 0 && (
           <i className="idle-power-gain" data-testid="idle-power-gain">
