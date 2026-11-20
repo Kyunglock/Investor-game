@@ -11,7 +11,7 @@ export const IDLE_HP_GROWTH = 1.003
 export function idleMaxHp(wall: number) {
   const depth = wall - 1
   return (
-    (10 + 6 * depth + 0.1 * depth * depth) *
+    (10 + 5 * depth + 0.035 * depth * depth) *
     IDLE_HP_GROWTH ** depth *
     (wall % IDLE_BOSS_EVERY === 0 ? 3 : 1)
   )

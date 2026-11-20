@@ -557,7 +557,7 @@ class IdleEngineTest {
         new IdleHit(3, "bullet", 1, IdleEngine.maxHp(2), 0),
         new IdleHit(4, "bullet", 1, 3.0, 1));
     assertThat(state.idle.wall).isEqualTo(3);
-    assertThat(state.idle.damage).isEqualTo(5);
+    assertThat(state.idle.damage).isCloseTo(5, offset(1e-9));
     assertThat(state.idle.nextDamage).isEqualTo(3);
     // One huge hit runs through several walls, and no circuit breaker stops it at 6 (533).
     tick(1000, new IdleHit(3, "bullet", 1000));
@@ -701,10 +701,11 @@ class IdleEngineTest {
     // The tenth wall is an ordinary wall now (550): no three-fold reward.
     double tenth = 1_000_000 * IdleEngine.REWARD_UPGRADES * StrictMath.pow(1.04, 9);
     assertThat(state.capital).isBetween(tenth, tenth * 1.05);
-    // (10 + 6d + 0.1d²) × 1.003^d (636).
-    assertThat(IdleEngine.maxHp(10)).isCloseTo(72.1 * StrictMath.pow(1.003, 9), offset(1e-9));
+    // (10 + 5d + 0.035d²) × 1.003^d (636, 637).
+    assertThat(IdleEngine.maxHp(10)).isCloseTo(57.835 * StrictMath.pow(1.003, 9), offset(1e-9));
     // The boss wall (every 50th) has three times the health and pays three times the reward.
-    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 544.1 * StrictMath.pow(1.003, 49), offset(1e-9));
+    assertThat(IdleEngine.maxHp(50))
+        .isCloseTo(3 * 339.035 * StrictMath.pow(1.003, 49), offset(1e-9));
     state.idle.wall = 50;
     state.idle.damage = IdleEngine.maxHp(50) - 1;
     // Its own clear reward (549) was paid before: only the wall reward is counted here.
@@ -1489,7 +1490,7 @@ class IdleEngineTest {
     double order = 1.5;
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
     // The wall's health grows by 1.003 a wall (636), the order scale with it.
-    assertThat(IdleEngine.threat(100)).isEqualTo(6.6);
+    assertThat(IdleEngine.threat(100)).isEqualTo(4.0);
     // A buy order is capped at its own damage, whatever the screen reports.
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
@@ -1822,13 +1823,13 @@ class IdleEngineTest {
     assertThatThrownBy(() -> engine.buyFishUpgrade(c, "damage"))
         .isInstanceOf(InvalidRequestException.class);
     assertThat(c.fish).isEqualTo(2);
-    // 영구 강화는 전투 강화에 곱한다 (636번): 전투 강화 10단계(+30%) × 영구 강화 2단계(+6%) = +37.8% → 37.
+    // 영구 강화는 전투 강화에 곱한다 (636번): 전투 강화 10단계(+10%, 637번) × 영구 강화 2단계(+6%) = +16.6% → 16.
     c.capital = 1e18;
     company.mental.buyUpgrade(c, "damage", 10);
-    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(37);
+    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(16);
     assertThat(upgrade(c, "damage").nextBonusPercent())
-        .as("11단계 +33% × 1.06 = +40.98%")
-        .isEqualTo(40);
+        .as("11단계 +11% × 1.06 = +17.66%")
+        .isEqualTo(17);
     // 벽 1,000쯤(+3,000%)에서 영구 강화 +300%는 네 배다: 더하면 +3,300%뿐이었다.
     assertThat(MentalEngine.withFish(3000, 300)).isEqualTo(12_300);
     assertThat(c.fishLevels).containsEntry("damage", 2);
