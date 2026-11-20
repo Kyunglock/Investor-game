@@ -588,10 +588,10 @@ class IdleEngineTest {
 
   @Test
   void powerIsOneNumberThatEveryUpgradeRaisesAndTheWallDoesNotChange() {
-    // 전투력 (538번): 권총·강화 없음이면 100 × 2배속 × (1 × 3.846 ÷ 1.25 × 1.2 + 매수 주문 1.5) = 1,038.
+    // 전투력 (538·635번): 권총·강화 없음이면 100 × √(2배속 × 초당 피해와 매수 주문의 합 6.69) = 365.
     start(1);
     double base = engine.view(state).power();
-    assertThat(base).isEqualTo(1338);
+    assertThat(base).isEqualTo(365);
     state.idle.wall = 500;
     assertThat(engine.view(state).power()).as("the wall is not in it").isEqualTo(base);
     double last = base;
