@@ -739,10 +739,13 @@ class CompanyApiTest {
     assertThat(opened.read("$.pass.step", Integer.class)).isZero();
     assertThat(opened.read("$.pass.points", Long.class)).isZero();
     assertThat(opened.read("$.pass.pointsPerStep", Integer.class)).isEqualTo(300);
-    assertThat(opened.read("$.pass.steps.length()", Integer.class)).isEqualTo(30);
+    assertThat(opened.read("$.pass.steps.length()", Integer.class)).isEqualTo(50);
     assertThat(opened.read("$.pass.secondsLeft", Long.class)).isPositive();
     List<String> missions = opened.read("$.pass.missions[*].code");
-    assertThat(missions).containsExactly("wall", "boss", "upgrade", "draw", "merge", "attend");
+    assertThat(missions)
+        .containsExactly(
+            "wall", "boss", "upgrade", "draw", "merge", "attend", "fish", "forever", "feed",
+            "skill");
     assertThat(opened.read("$.pass.missions[0].title", String.class)).isEqualTo("매도벽 최고 기록 50개 돌파");
     postJson("/api/company/pass/claim", "{\"step\":1}").andExpect(status().isBadRequest());
     mvc.perform(post("/api/company/pass/claim").cookie(session)).andExpect(status().isBadRequest());

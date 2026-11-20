@@ -1035,7 +1035,7 @@ export interface components {
                 }[];
                 /** @description 포인트를 주는 미션과 진행도 (570번). 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 받고, 끝없이 되풀이된다 */
                 missions: {
-                    /** @description wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석) */
+                    /** @description wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·feed(식빵으로 고양이 레벨업)·skill(액티브 스킬 사용) (634번) */
                     code: string;
                     /** @description 화면에 적는 글. "매도벽 최고 기록 100개 돌파"처럼 target이 들어 있다 */
                     title: string;

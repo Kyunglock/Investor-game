@@ -773,6 +773,7 @@ class IdleEngine {
     }
     if (s.circuitSeconds > 0) throw new InvalidRequestException("거래 정지 중에는 쓸 수 없다");
     s.activeReady.put(code, s.activeSeconds + ACTIVE_COOLDOWN[at]);
+    engine.pass.progress(c, "skill", 1, todayDate());
     if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
     if (at == 0) s.hitCredits[BARRAGE] = BARRAGE_SHOTS;
     if (at == 1) s.rallyUntil = s.activeSeconds + ACTIVE_SECONDS[at];
@@ -1251,7 +1252,8 @@ class IdleEngine {
    */
   void rebirth(CompanyState c, boolean ad) {
     CompanyState.Idle s = state(c);
-    long fish = rebirthFish(c) * (ad ? REBIRTH_AD_MULTIPLIER : 1);
+    long base = rebirthFish(c);
+    long fish = base * (ad ? REBIRTH_AD_MULTIPLIER : 1);
     if (fish <= 0) {
       throw new InvalidRequestException(
           c.rebirths > 0
@@ -1259,6 +1261,8 @@ class IdleEngine {
               : "환생은 " + (REBIRTH_WALL - 1) + "번째 벽의 보스를 깬 뒤에 할 수 있어요");
     }
     c.fish += fish;
+    // 시즌패스 미션 (634번): 광고 3배를 뺀 바탕 수로 센다.
+    engine.pass.progress(c, "fish", base, todayDate());
     c.rebirths++;
     c.capital = engine.openingCapital();
     c.battleLevels.clear();
@@ -1280,6 +1284,7 @@ class IdleEngine {
     if (c.fish < cost) throw new InvalidRequestException("생선이 모자라요");
     c.fish -= cost;
     c.fishLevels.put(kind, level + 1);
+    engine.pass.progress(c, "forever", 1, todayDate());
   }
 
   void feedCat(CompanyState c, String code) {
@@ -1289,6 +1294,7 @@ class IdleEngine {
     if (s.bread < 1) throw new InvalidRequestException("완성된 식빵이 없어요.");
     s.bread--;
     s.cats.merge(code, 1, Integer::sum);
+    engine.pass.progress(c, "feed", 1, todayDate());
   }
 
   void fieldCat(CompanyState c, String code, boolean fielded) {

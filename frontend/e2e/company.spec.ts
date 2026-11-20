@@ -370,7 +370,7 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
   expect(opened.pass.steps.filter((step) => step.weapon).map((step) => step.step)).toEqual([10, 20])
   expect(opened.pass.steps.filter((step) => step.cat).map((step) => step.step)).toEqual([30])
   expect(opened.pass.steps.every((step) => step.diamonds > 0 && !('money' in step))).toBe(true)
-  // 미션: 벽·보스·강화·뽑기·합성·출석. 아직 센 것이 없다.
+  // 미션: 벽·보스·강화·뽑기·합성·출석에 생선·영구 강화·식빵·스킬 (634번). 아직 센 것이 없다.
   expect(opened.pass.missions.map((mission) => mission.code)).toEqual([
     'wall',
     'boss',
@@ -378,6 +378,10 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
     'draw',
     'merge',
     'attend',
+    'fish',
+    'forever',
+    'feed',
+    'skill',
   ])
   expect(opened.pass.missions.every((mission) => mission.count === 0)).toBe(true)
   expect(opened.pass.missions[0]).toMatchObject({
