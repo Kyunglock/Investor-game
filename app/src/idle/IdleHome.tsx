@@ -39,6 +39,7 @@ import { OfflineIncome } from './OfflineIncome'
 import { tutorialMenuLocked } from './onboarding'
 import { PowerSaveScreen } from './PowerSaveScreen'
 import { freeLeft } from './shop'
+import { VaultChallenges } from './VaultChallenges'
 import './idle-home.css'
 import './toy-arcade.css'
 import './loadout-tray.css'
@@ -336,6 +337,9 @@ export function IdleHome({
           {/* 출석 보상은 들어오면 저절로 받는다 (566번): 단추가 없다. */}
           <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
           <IdleSandbox company={company} />
+          {menu === 'battle' && !elsewhere && (
+            <VaultChallenges key={company.companyId} companyId={company.companyId} />
+          )}
           {idle?.onboarding?.skillsUnlocked !== false && (
             <IdleActives company={company} connected={connected} />
           )}
