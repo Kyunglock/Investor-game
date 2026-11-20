@@ -1625,7 +1625,7 @@ export interface components {
                     fish: number;
                     /**
                      * Format: int64
-                     * @description 지금 환생하면 받는 생선. 깬 벽 5개마다 한 마리에 깬 보스마다 커지는 덤(+10%
+                     * @description 지금 환생하면 받는 생선. 깬 벽 5개마다 한 마리에 깬 보스마다 커지는 덤(+5%
                      */
                     gain: number;
                     /**
