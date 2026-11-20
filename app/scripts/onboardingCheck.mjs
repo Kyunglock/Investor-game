@@ -163,6 +163,9 @@ try {
       }
     }
     const story = page.getByRole('main', { name: '첫 매도벽 프롤로그' })
+    await expect(story.getByRole('img')).toHaveAttribute('alt', /고양이전자 하락/)
+    await expect(story).toContainText('1 / 5')
+    await story.getByRole('button', { name: /다음 컷/ }).click()
     await expect(story.getByRole('img')).toHaveAttribute('alt', /패닉셀과 투매 몬스터/)
     await expect(page.getByTestId('shell')).toHaveCount(0)
     await story.getByRole('button', { name: /다음 컷/ }).click()
