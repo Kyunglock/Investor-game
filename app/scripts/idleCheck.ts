@@ -469,9 +469,10 @@ try {
     const pickCat = (code: string) => page.locator(`[data-testid=cat][data-code=${code}]`).click()
     await toShop()
     const diamonds = company.diamonds.amount
-    // The draw buttons carry their diamond prices, and ads replace the ten-pull.
+    // The draw buttons carry their diamond prices: one, the ten-pull (639) and the ad draw.
     await expect(page.getByTestId('cat-draw')).toContainText('다이아 100개')
-    await expect(page.getByTestId('cat-draw-ten')).toHaveCount(0)
+    await expect(page.getByTestId('cat-draw-ten')).toContainText('10회 뽑기')
+    await expect(page.getByTestId('cat-draw-ten')).toContainText('다이아 1,000개')
     await expect(page.getByTestId('cat-draw-ad')).toContainText('광고로 1회 뽑기')
     // The odds by grade are written under the draw (539).
     await expect(page.getByTestId('draw-note')).toContainText('S 2% · A 10% · B 28% · C 60%')
@@ -629,9 +630,8 @@ try {
     await expect(page.getByTestId('cat-boss')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByTestId('cat-gear')).toBeVisible()
     await page.screenshot({ path: `/tmp/idle-weapons-${width}.png`, fullPage: true })
-    // The weapon draw is in the shop: the link opens it on the weapon draw.
-    await page.getByTestId('weapon-to-shop').click()
-    await expect(page.getByTestId('cat-gacha')).toHaveAttribute('data-kind', 'weapon')
+    // The weapons tab no longer links to the shop's weapon draw (639).
+    await expect(page.getByTestId('weapon-to-shop')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     assert.equal(
       await page.evaluate(

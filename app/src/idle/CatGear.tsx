@@ -234,6 +234,9 @@ export function CatGear({
         }}
       >
         일괄 합성
+        <span className="idle-gear-manual-note">
+          {merges.length > 0 ? '합칠 수 있는 무기를 한 번에 모두 합쳐요' : '합칠 무기가 없어요'}
+        </span>
       </button>
       <ul
         className={`idle-gear-grid ${drag ? 'is-dragging' : ''}`}

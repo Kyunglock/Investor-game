@@ -397,10 +397,6 @@ export function IdleHome({
                 }
                 setLoadoutTab(nextTab)
               }}
-              onDraw={() => {
-                setShopKind('weapon')
-                go('shop')
-              }}
             />
           )}
           {menu === 'skills' && <IdleSkills company={company} />}

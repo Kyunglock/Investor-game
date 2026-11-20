@@ -2025,15 +2025,33 @@
     sans-serif;
   color: #8f7448;
 }
+/* 일괄 합성 (#955, 639번): 밑줄 글씨라 눈에 띄지 않아 단추로 바꿨다. 합칠 것이 없으면 흐리다. */
 .idle-gear-manual {
-  min-height: 36px;
-  margin-left: auto;
-  padding: 4px 2px;
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1.5px solid #d99a2b;
+  border-radius: 12px;
+  background: linear-gradient(#ffe9a8, #ffc95e);
+  box-shadow: 0 2px 0 #c98a22;
   font:
-    500 10.5px "Noto Sans KR",
+    700 13px "Noto Sans KR",
     sans-serif;
-  color: #947247;
-  text-decoration: underline;
+  color: #6b4322;
+}
+.idle-gear-manual-note {
+  margin-left: 6px;
+  font-weight: 500;
+  font-size: 11px;
+  opacity: 0.8;
+}
+.idle-gear-manual:disabled {
+  border-color: #dccfb4;
+  background: #f3ecdc;
+  box-shadow: none;
+  color: #a8997c;
 }
 .idle-gear-merges {
   display: flex;
@@ -2203,20 +2221,6 @@
   border-color: #e7b23c;
 }
 
-/* 무기 탭 (540번): 누가 들지 고르는 줄, 지금 든 무기, 장비 목록. */
-.idle-weapon-draw {
-  display: block;
-  width: 100%;
-  margin-top: 10px;
-  padding: 9px;
-  border: 1.5px dashed #d9a85a;
-  border-radius: 12px;
-  background: #fff7e2;
-  font:
-    700 12px "Noto Sans KR",
-    sans-serif;
-  color: #9a6420;
-}
 /* 상점 탭 (541번): 날마다의 상품은 성장 탭의 능력치 칸과 같은 모양이다. */
 .idle-shop-item .idle-buy {
   min-width: 78px;

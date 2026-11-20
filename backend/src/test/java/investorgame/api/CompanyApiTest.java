@@ -280,15 +280,28 @@ class CompanyApiTest {
     // 한 번에 100.
     DocumentContext one = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
     assertThat(one.read("$.diamonds.amount", Long.class)).isEqualTo(900);
-    // 연속 뽑기는 잔액과 관계없이 거절한다.
+    // 10회 연속 뽑기(639번)는 다이아 1,000이 있어야 한다: 900으로는 하나도 뽑지 않고 400. 1과 10이 아닌 수도 400.
     postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isBadRequest());
     postJson("/api/company/cat/draw", "{\"count\":10}").andExpect(status().isBadRequest());
+    postJson("/api/company/weapon/draw", "{\"count\":5}").andExpect(status().isBadRequest());
     jdbc.sql(
             "UPDATE raising_company SET state = jsonb_set(state, '{diamonds}', '1000')"
                 + " WHERE id = CAST(:id AS uuid)")
         .param("id", opened.read("$.companyId", String.class))
         .update();
-    postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isBadRequest());
+    // 10회 연속: 1,000에 열한 개가 한꺼번에 나온다.
+    DocumentContext ten =
+        json(postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isOk()));
+    assertThat(ten.read("$.diamonds.amount", Long.class)).isZero();
+    List<Object> tenDraws = ten.read("$.armory.lastDraws[*]");
+    assertThat(tenDraws).hasSize(11);
+    List<Integer> tenCounts = ten.read("$.weapons[*].count");
+    assertThat(tenCounts.stream().mapToInt(Integer::intValue).sum()).isEqualTo(13);
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{diamonds}', '1000')"
+                + " WHERE id = CAST(:id AS uuid)")
+        .param("id", opened.read("$.companyId", String.class))
+        .update();
     DocumentContext drawn = one;
     for (int i = 0; i < 10; i++) {
       drawn = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
@@ -297,7 +310,7 @@ class CompanyApiTest {
     List<Object> last = drawn.read("$.armory.lastDraws[*]");
     assertThat(last).hasSize(1);
     List<Integer> counts = drawn.read("$.weapons[*].count");
-    assertThat(counts.stream().mapToInt(Integer::intValue).sum()).isEqualTo(12);
+    assertThat(counts.stream().mapToInt(Integer::intValue).sum()).isEqualTo(23);
     postJson("/api/company/weapon/draw", "").andExpect(status().isBadRequest());
     // 모자란 합성: 뽑기 운에 따라 같은 무기 둘이 나올 수 있으니(그러면 합성이 된다) 하나도 없는 종류·등급을 고른다.
     List<java.util.Map<String, Object>> weapons = drawn.read("$.weapons[*]");

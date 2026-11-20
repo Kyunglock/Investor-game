@@ -536,10 +536,18 @@ class DefaultCompanyService implements CompanyService {
     return view(row);
   }
 
+  /** 뽑기 수 (639번): 다이아로는 한 번 또는 10회 연속, 광고로는 한 번만. */
+  private static void requireDrawCount(int count, boolean ad) {
+    if (count != 1 && (ad || count != 10)) {
+      throw new InvalidRequestException(
+          ad ? "광고 뽑기는 한 번에 하나만 뽑을 수 있어요" : "한 번 또는 10회 연속으로만 뽑을 수 있어요");
+    }
+  }
+
   @Override
   @Transactional
   public CompanyView drawWeapon(UUID sessionId, int count, boolean ad) {
-    if (count != 1) throw new InvalidRequestException("한 번에 하나만 뽑을 수 있어요");
+    requireDrawCount(count, ad);
     // 회사 차리기와 같은 순서로 잠근다. 회사·환생을 바꿔도 세션의 일일 횟수는 유지한다.
     RaisingMemory memory = ad ? memories.lock(sessionId) : null;
     CompanyRepository.Row row = lockActive(sessionId);
@@ -550,9 +558,9 @@ class DefaultCompanyService implements CompanyService {
           List.of(engine.mental.drawOne(row.state(), new HashSeededRandom(row.seed())));
       memories.save(sessionId, memory);
     } else {
-      engine.mental.drawWeapons(row.state(), new HashSeededRandom(row.seed()), 1);
+      engine.mental.drawWeapons(row.state(), new HashSeededRandom(row.seed()), count);
     }
-    rewards.drew(row.state(), 1);
+    rewards.drew(row.state(), engine.diamonds().items(count));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -584,7 +592,7 @@ class DefaultCompanyService implements CompanyService {
   @Override
   @Transactional
   public CompanyView drawCat(UUID sessionId, int count, boolean ad) {
-    if (count != 1) throw new InvalidRequestException("한 번에 하나만 뽑을 수 있어요");
+    requireDrawCount(count, ad);
     // 회사 차리기와 같은 순서로 잠근다. 회사·환생을 바꿔도 세션의 일일 횟수는 유지한다.
     RaisingMemory memory = ad ? memories.lock(sessionId) : null;
     CompanyRepository.Row row = lockActive(sessionId);
@@ -594,9 +602,9 @@ class DefaultCompanyService implements CompanyService {
       row.state().idle.lastDraws = List.of(pulled);
       memories.save(sessionId, memory);
     } else {
-      idle.drawCats(row.state(), new HashSeededRandom(row.seed()), 1);
+      idle.drawCats(row.state(), new HashSeededRandom(row.seed()), count);
     }
-    rewards.drew(row.state(), 1);
+    rewards.drew(row.state(), engine.diamonds().items(count));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

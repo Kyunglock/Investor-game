@@ -232,7 +232,8 @@ test('광고 뽑기는 고양이·무기 각각 하루 3회이고 다이아 단�
   let company = await companyOf(await api.post('/api/company'))
   for (const kind of ['cat', 'weapon'] as const) {
     const path = `/api/company/${kind}/draw`
-    expect((await api.post(path, { data: { count: 10 } })).status()).toBe(400)
+    // 광고 뽑기는 한 번에 하나다: 10회 연속(639번)은 다이아로만 뽑는다.
+    expect((await api.post(path, { data: { count: 10, ad: true } })).status()).toBe(400)
     for (let left = 2; left >= 0; left--) {
       company = await companyOf(await api.post(path, { data: { count: 1, ad: true } }))
       expect(company.adDraws?.[kind === 'cat' ? 'catLeft' : 'weaponLeft']).toBe(left)

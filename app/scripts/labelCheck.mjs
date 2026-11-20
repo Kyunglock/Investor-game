@@ -127,7 +127,7 @@ try {
     assert.ok(reach.last <= reach.box + 1, `${width}: 마지막 줄이 시트 안에 보인다`)
 
     await menu('상점')
-    await expect(page.getByTestId('cat-draw-ten')).toHaveCount(0)
+    await expect(page.getByTestId('cat-draw-ten')).toContainText('10회 뽑기')
     await expect(page.getByTestId('cat-draw-ad')).toBeEnabled()
     await expect(page.getByTestId('cat-draw-ad')).toContainText('오늘 3 / 3회 남음')
 
