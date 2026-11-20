@@ -80,6 +80,7 @@ try {
     await page.getByTestId(`draw-kind-${kind}`).click()
     const buy = page.getByTestId(`${kind}-draw-ten`)
     await buy.evaluate((button) => {
+      if (!(button instanceof HTMLButtonElement)) throw new Error('뽑기 버튼이 필요합니다')
       button.click()
       button.click()
     })
