@@ -1,0 +1,79 @@
+.vault-entry {
+  position: absolute;
+  right: 6px;
+  top: calc(max(4px, env(safe-area-inset-top)) + 49px);
+  z-index: 1;
+  min-height: 42px;
+  padding: 4px 10px;
+  border: 2px solid #ffdb83;
+  border-radius: 12px;
+  background: linear-gradient(#453d69, #201b37);
+  color: #ffe399;
+  box-shadow: 0 3px 0 #332449;
+}
+.vault-room {
+  display: grid;
+  gap: 12px;
+  max-width: 620px;
+  margin: auto;
+}
+.vault-tabs,
+.vault-actions {
+  display: flex;
+  gap: 6px;
+}
+.vault-room button {
+  min-height: 44px;
+  flex: 1;
+  border-radius: 10px;
+  background: #ece7df;
+  color: #433950;
+  font-weight: 700;
+}
+.vault-tabs button[aria-pressed="true"],
+.vault-room .vault-start,
+.vault-actions button:first-child {
+  background: #352e50;
+  color: #ffe49b;
+}
+.vault-scene {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 14px;
+  color: white;
+  background: #18172b;
+}
+.vault-scene img {
+  width: 100%;
+  height: clamp(110px, 24dvh, 220px);
+  object-fit: cover;
+  object-position: 50% 42%;
+}
+.vault-scene div {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 24px 14px 8px;
+  background: linear-gradient(transparent, #141226ed);
+}
+.vault-scene small {
+  color: #ffe398;
+}
+.vault-scene h4 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+.vault-room label {
+  display: grid;
+  grid-template-columns: 8em 1fr;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+.vault-room progress {
+  width: 100%;
+  height: 10px;
+  accent-color: #ad5339;
+}
+.vault-room label + label progress {
+  accent-color: #248779;
+}
