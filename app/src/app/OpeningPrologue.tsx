@@ -3,9 +3,11 @@ import breakthrough from './assets/prologue-breakthrough.webp'
 import drop from './assets/prologue-drop.webp'
 import market from './assets/prologue-market.webp'
 import pickup from './assets/prologue-pickup.webp'
+import sellWall from './assets/prologue-sell-wall.webp'
 import './opening-prologue.css'
 
 const panels = [
+  { image: sellWall, alt: '고양이전자 하락 전광판이 사악하게 웃고, 매도 쪽지가 성벽 사이의 세 고양이 위로 흩날린다.' },
   { image: market, alt: '“몰려온다!” 거대한 매도벽 아래로 패닉셀과 투매 몬스터가 밀려온다.' },
   { image: drop, alt: '툭! 사장냥의 발앞에 주황색 총이 떨어진다.' },
   { image: pickup, alt: '투매 몬스터가 다가오자 사장냥이 바닥에서 총을 집어 든다.' },
@@ -24,15 +26,20 @@ export function OpeningPrologue({
   firstVisit: boolean
   children: ReactNode
 }) {
-  const key = `investor-game.prologue.v2:${companyId}`
+  const key = `investor-game.prologue.v3:${companyId}`
   const [page, setPage] = useState(() => {
     try {
       const current = localStorage.getItem(key)
       if (current === null) {
+        const fourPanelSave = localStorage.getItem(`investor-game.prologue.v2:${companyId}`)
+        if (fourPanelSave !== null) {
+          const page = Number(fourPanelSave)
+          return Number.isInteger(page) && page >= 1 && page <= 4 ? page + 1 : 0
+        }
         const previous = localStorage.getItem(`investor-game.prologue:${companyId}`)
         if (previous === '3') return panels.length
-        if (previous === '2') return 3
-        return previous === '1' ? 1 : 0
+        if (previous === '2') return 4
+        return previous === '1' ? 2 : 0
       }
       const saved = Number(current)
       return Number.isInteger(saved) && saved >= 0 && saved <= panels.length ? saved : 0
