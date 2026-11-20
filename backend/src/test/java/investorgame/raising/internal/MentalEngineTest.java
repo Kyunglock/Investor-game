@@ -425,10 +425,10 @@ class MentalEngineTest {
         .as("고양이 속도 강화는 뺐고(394번) 체력(410번)을 넣었다. 치명타 피해는 없앴다(556번)")
         .containsExactly("damage", "fire", "hp", "buy");
     assertThat(rule.stepPercent())
-        .as("공격력 1%(637번), 체력 3%, 연사 2% (492번). 치명타 피해는 없앴다 (556번)")
+        .as("공격력·연사·체력 모두 1% (637·640번). 치명타 피해는 없앴다 (556번)")
         .containsEntry("damage", 1)
-        .containsEntry("fire", 2)
-        .containsEntry("hp", 3)
+        .containsEntry("fire", 1)
+        .containsEntry("hp", 1)
         .doesNotContainKey("buy")
         .doesNotContainKey("crit");
     assertThat(rule.buyStepShares())
@@ -469,30 +469,30 @@ class MentalEngineTest {
     assertThat(ENGINE.mental.buyUpgrade(c, "hp", 50)).isEqualTo(50);
     assertThat(c.battleLevels.get("hp")).isEqualTo(250);
     assertThat(wallet - c.capital).as("묶어 사도 한 단계씩 산 값의 합").isEqualTo(expected);
-    assertThat(view(c, "hp").bonusPercent()).isEqualTo(750);
+    assertThat(view(c, "hp").bonusPercent()).isEqualTo(250);
     assertThat(view(c, "hp").maxLevel()).as("0이면 끝없이 산다").isZero();
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", 0))
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", rule.maxBatch() + 1))
         .isInstanceOf(InvalidRequestException.class);
 
-    // 연사는 100%(50단계)에서 멈춘다 (487·492번): 넘치게 보내도 상한까지만 사고, 닿은 뒤에는 400.
-    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 30)).isEqualTo(30);
+    // 연사는 100%(100단계, 640번)에서 멈춘다 (487번): 넘치게 보내도 상한까지만 사고, 닿은 뒤에는 400.
+    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 80)).isEqualTo(80);
     long atThirty = (long) c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).as("남은 20단계만 산다").isEqualTo(20);
     long twenty = 0;
-    for (int level = 30; level < 50; level++) {
+    for (int level = 80; level < 100; level++) {
       twenty += (long) ENGINE.mental.upgradePrice(level);
     }
     assertThat(atThirty - c.capital).isEqualTo(twenty);
     assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);
     assertThat(view(c, "fire").nextBonusPercent()).isEqualTo(100);
-    assertThat(view(c, "fire").maxLevel()).isEqualTo(50);
+    assertThat(view(c, "fire").maxLevel()).isEqualTo(100);
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", 1))
         .isInstanceOf(InvalidRequestException.class);
     // 상한이 생기기 전에 넘겨 산 단계는 상한으로 읽는다.
     c.battleLevels.put("fire", 250);
-    assertThat(view(c, "fire").level()).isEqualTo(50);
+    assertThat(view(c, "fire").level()).isEqualTo(100);
     assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);
 
     // 치명타 피해 강화는 없앴다 (556번): 살 수 없고, 저장에 남은 단계는 쓴 돈을 돌려주고 지운다.
@@ -524,7 +524,7 @@ class MentalEngineTest {
     // 체력(최대 멘탈)도 같은 규칙으로 산다 (410번).
     CompanyState tough = company(7);
     assertThat(ENGINE.mental.buyUpgrade(tough, "hp", 3)).isEqualTo(3);
-    assertThat(view(tough, "hp").bonusPercent()).isEqualTo(9);
+    assertThat(view(tough, "hp").bonusPercent()).isEqualTo(3);
     assertThat(view(tough, "hp").price().longValue())
         .isEqualTo((long) ENGINE.mental.upgradePrice(3));
   }

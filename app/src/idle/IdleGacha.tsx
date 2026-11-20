@@ -18,6 +18,16 @@ import { skillNames } from './skills'
 
 type Kind = 'cat' | 'weapon'
 
+/**
+ * 연속 뽑기의 수와 값 (640번): 가진 다이아로 뽑을 수 있는 만큼, 많아야 10회. 10회면 값이 tenDraw이고 나오는 수는 tenCount(덤)다.
+ * 서버 CompanyProperties.Diamonds의 cost·items와 같다.
+ */
+export function multiDraw(diamonds: { amount: number; draw: number; tenDraw: number }) {
+  const full = diamonds.amount >= diamonds.tenDraw
+  const count = full ? TEN : Math.min(TEN - 1, Math.floor(diamonds.amount / diamonds.draw))
+  return { count, price: full ? diamonds.tenDraw : diamonds.draw * count }
+}
+
 /** 상점의 고양이·무기 뽑기. 다이아 1회·10회 연속(639번) 또는 종류별 하루 3회의 광고 뽑기를 제공한다. */
 export function IdleGacha({
   company,
@@ -59,8 +69,11 @@ export function IdleGacha({
   const awaitingTutorialDraw = tutorialStep === 2 || tutorialStep === 4
   const canOne =
     ready && (tutorialDraw || (!awaitingTutorialDraw && diamonds.amount >= diamonds.draw))
-  // 10회 연속 (639번): 안내 중에는 없다.
-  const canTen = ready && !awaitingTutorialDraw && diamonds.amount >= diamonds.tenDraw
+  // 연속 뽑기 (639·640번): 가진 다이아로 뽑을 수 있는 만큼, 많아야 10회. 500이면 5회다. 10회에만 덤이 붙는다. 안내 중에는 없다.
+  const multi = multiDraw(diamonds)
+  const canTen = ready && !awaitingTutorialDraw && multi.count >= 2
+  /** 이번 연속 뽑기의 이름: "5회 뽑기". 두 번을 못 뽑으면 "10회 뽑기"로 적고 누를 수 없다. */
+  const multiName = `${canTen ? multi.count : TEN}회 뽑기`
   const adLeft = (kind === 'cat' ? company.adDraws?.catLeft : company.adDraws?.weaponLeft) ?? 0
   const canAd = ready && adLeft > 0 && !awaitingTutorialDraw && !tutorialReveal
   const showing = Boolean(catReveal || gunReveal || ten)
@@ -151,7 +164,7 @@ export function IdleGacha({
       async (id) => {
         setCatReveal(null)
         setTen({ id, kind: 'cat', cards: null })
-        const after = await useRaisingStore.getState().drawCat(false, TEN)
+        const after = await useRaisingStore.getState().drawCat(false, multi.count)
         if (!mounted.current) return
         const draws = after?.idle?.lastDraws ?? []
         const cats = after?.idle?.cats ?? []
@@ -197,7 +210,7 @@ export function IdleGacha({
       async (id) => {
         setGunReveal(null)
         setTen({ id, kind: 'weapon', cards: null })
-        await useRaisingStore.getState().drawWeapon(false, TEN)
+        await useRaisingStore.getState().drawWeapon(false, multi.count)
         const state = useRaisingStore.getState()
         const draws = state.company?.armory?.lastDraws ?? []
         if (!mounted.current) return
@@ -234,8 +247,8 @@ export function IdleGacha({
       ? '첫 동료 · A등급 밤냥 확정'
       : '첫 무기 · B등급 기관단총 확정'
     : kind === 'cat'
-      ? `${CAT_ODDS} · 또 나오면 레벨 업 · 10회 뽑기는 ${diamonds.tenCount}마리`
-      : `F~A 등급이 나와요 · S부터는 합쳐서 얻어요 · 10회 뽑기는 ${diamonds.tenCount}개`
+      ? `${CAT_ODDS} · 또 나오면 레벨 업 · 다이아만큼 최대 10회 · 10회는 ${diamonds.tenCount}마리`
+      : `F~A 등급이 나와요 · S부터는 합쳐서 얻어요 · 다이아만큼 최대 10회 · 10회는 ${diamonds.tenCount}개`
   const resultNote = drawn
     ? drawn.isNew
       ? `${drawn.cat.grade} 등급 ${drawn.cat.name} 합류!${drawn.cat.skills.length > 0 ? ` 고유 스킬 ${skillNames(drawn.cat)}` : ''}`
@@ -328,10 +341,10 @@ export function IdleGacha({
               disabled={showing || busy || watching || !canTen}
               onClick={() => void (kind === 'cat' ? drawTenCats() : drawTenWeapons())}
             >
-              10회 뽑기
-              <TenBonus count={diamonds.tenCount} />
+              {multiName}
+              {multi.count >= TEN && <TenBonus count={diamonds.tenCount} />}
               <small>
-                <DiamondPrice amount={diamonds.tenDraw} />
+                <DiamondPrice amount={canTen ? multi.price : diamonds.tenDraw} />
               </small>
               {!canTen && <small>다이아 부족</small>}
             </button>
@@ -369,17 +382,13 @@ export function IdleGacha({
       {ten && (
         <TenReveal
           key={ten.id}
-          label={ten.kind === 'cat' ? '고양이 10회 뽑기' : '무기 10회 뽑기'}
+          label={ten.kind === 'cat' ? '고양이 연속 뽑기' : '무기 연속 뽑기'}
           testId={ten.kind === 'cat' ? 'cat-ten' : 'weapon-ten'}
           icon={ten.kind === 'cat' ? '🐾' : '★'}
-          loading={
-            ten.kind === 'cat'
-              ? `고양이 ${diamonds.tenCount}마리를 데려오는 중…`
-              : `무기 ${diamonds.tenCount}개를 가져오는 중…`
-          }
+          loading={ten.kind === 'cat' ? '고양이들을 데려오는 중…' : '무기들을 가져오는 중…'}
           cards={ten.cards}
           canAgain={canTen}
-          againNote={<DiamondPrice amount={diamonds.tenDraw} />}
+          againNote={<DiamondPrice amount={canTen ? multi.price : diamonds.tenDraw} />}
           useAction={
             onUse ? (
               <button

@@ -54,13 +54,13 @@ interface RaisingState {
     kind: 'damage' | 'fire' | 'hp' | 'buy',
     levels?: number,
   ) => Promise<Company | null>
-  /** 무기를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. count가 10이면 10회 연속(639번)으로 company.armory.lastDraws에 담긴다. */
-  drawWeapon: (ad?: boolean, count?: 1 | 10) => Promise<void>
+  /** 무기를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. count(1~10)가 2 이상이면 연속 뽑기(639·640번)로 company.armory.lastDraws에 담긴다. */
+  drawWeapon: (ad?: boolean, count?: number) => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
   mergeAllWeapons: () => Promise<void>
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
-  /** 고양이를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. count가 10이면 10회 연속(639번)으로 company.idle.lastDraws에 담긴다. */
-  drawCat: (ad?: boolean, count?: 1 | 10) => Promise<Company | null>
+  /** 고양이를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. count(1~10)가 2 이상이면 연속 뽑기(639·640번)로 company.idle.lastDraws에 담긴다. */
+  drawCat: (ad?: boolean, count?: number) => Promise<Company | null>
   /** 액티브 스킬을 쓴다 (decisions.md 503번). 서버가 받아 줬으면 true. 전투를 멈추지 않게 busy를 켜지 않는다. */
   /** ad: 광고를 끝까지 본 뒤에 쓴다 (588번). 광고 스킬은 ad가 참이어야 서버가 받아 준다. */
   useActive: (code: ActiveCode, ad?: boolean) => Promise<boolean>

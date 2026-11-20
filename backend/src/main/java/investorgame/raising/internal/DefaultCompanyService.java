@@ -536,11 +536,10 @@ class DefaultCompanyService implements CompanyService {
     return view(row);
   }
 
-  /** 뽑기 수 (639번): 다이아로는 한 번 또는 10회 연속, 광고로는 한 번만. */
+  /** 뽑기 수 (639·640번): 다이아로는 한 번에 1~10회(가진 다이아만큼 연속으로), 광고로는 한 번만. */
   private static void requireDrawCount(int count, boolean ad) {
-    if (count != 1 && (ad || count != 10)) {
-      throw new InvalidRequestException(
-          ad ? "광고 뽑기는 한 번에 하나만 뽑을 수 있어요" : "한 번 또는 10회 연속으로만 뽑을 수 있어요");
+    if (count < 1 || count > 10 || (ad && count != 1)) {
+      throw new InvalidRequestException(ad ? "광고 뽑기는 한 번에 하나만 뽑을 수 있어요" : "한 번에 1~10회까지 뽑을 수 있어요");
     }
   }
 

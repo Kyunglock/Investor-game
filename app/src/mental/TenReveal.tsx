@@ -252,7 +252,7 @@ export function TenReveal({
               <b>{icon}</b>
             </span>
             <strong>
-              {!cards ? loading : phase === 'open' ? '10회 뽑기 개봉!' : '상자들이 떨려요…'}
+              {!cards ? loading : phase === 'open' ? '연속 뽑기 개봉!' : '상자들이 떨려요…'}
             </strong>
             <small>{cards ? '화면을 누르면 바로 공개' : '잠시만 기다려 주세요'}</small>
           </button>
@@ -260,7 +260,7 @@ export function TenReveal({
           cards && (
             <section className="ten-reveal-result" aria-live="polite">
               <p className="weapon-reveal-new">
-                10회 뽑기 결과 {cards.length}개 · NEW {fresh}
+                연속 뽑기 결과 {cards.length}개 · NEW {fresh}
                 {shiny > 0 && ` · A등급 이상 ${shiny}`}
               </p>
               <ul className="ten-reveal-grid" data-count={cards.length}>
@@ -293,7 +293,7 @@ export function TenReveal({
                 </button>
                 {canAgain && (
                   <button type="button" onClick={onAgain} data-testid={`${testId}-again`}>
-                    10회 한 번 더 <small>{againNote}</small>
+                    한 번 더 <small>{againNote}</small>
                   </button>
                 )}
               </div>
