@@ -254,6 +254,31 @@ class IdleEngineTest {
   }
 
   @Test
+  void feedingCostsMoreBreadEveryTenLevels() {
+    // 636번: 레벨 ÷ 10 올림. Lv1~10은 1개, Lv11~20은 2개, Lv999는 100개.
+    assertThat(IdleEngine.feedCost(1)).isEqualTo(1);
+    assertThat(IdleEngine.feedCost(10)).isEqualTo(1);
+    assertThat(IdleEngine.feedCost(11)).isEqualTo(2);
+    assertThat(IdleEngine.feedCost(999)).isEqualTo(100);
+    start(1);
+    state.idle.cats.put("sky", 11);
+    engine.fieldCat(state, "sky", true);
+    state.idle.bread = 1;
+    assertThatThrownBy(() -> engine.feedCat(state, "sky"))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(state.idle.bread).isEqualTo(1);
+    state.idle.bread = 3;
+    engine.feedCat(state, "sky");
+    assertThat(state.idle.cats.get("sky")).isEqualTo(12);
+    assertThat(state.idle.bread).isEqualTo(1);
+    // 레벨의 끝(1000)에서는 더 먹지 않는다.
+    state.idle.cats.put("sky", IdleEngine.MAX_CAT_LEVEL);
+    state.idle.bread = 1_000;
+    assertThatThrownBy(() -> engine.feedCat(state, "sky"))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
   void viewCarriesTheLastHandledBeatSoTheScreenKnowsWhichHitsAreInTheHealth() {
     start(1);
     tick(500, new IdleHit(1, "bullet", 1));
@@ -676,9 +701,10 @@ class IdleEngineTest {
     // The tenth wall is an ordinary wall now (550): no three-fold reward.
     double tenth = 1_000_000 * IdleEngine.REWARD_UPGRADES * StrictMath.pow(1.04, 9);
     assertThat(state.capital).isBetween(tenth, tenth * 1.05);
-    assertThat(IdleEngine.maxHp(10)).isCloseTo(72.1, offset(1e-9));
+    // (10 + 6d + 0.1d²) × 1.003^d (636).
+    assertThat(IdleEngine.maxHp(10)).isCloseTo(72.1 * StrictMath.pow(1.003, 9), offset(1e-9));
     // The boss wall (every 50th) has three times the health and pays three times the reward.
-    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 544.1, offset(1e-9));
+    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 544.1 * StrictMath.pow(1.003, 49), offset(1e-9));
     state.idle.wall = 50;
     state.idle.damage = IdleEngine.maxHp(50) - 1;
     // Its own clear reward (549) was paid before: only the wall reward is counted here.
@@ -733,7 +759,7 @@ class IdleEngineTest {
     assertThat(state.idle.circuitSeconds).isEqualTo(IdleEngine.CIRCUIT_SECONDS);
     assertThat(engine.view(state).bossChallenge()).isTrue();
     double waiting = state.idle.damage;
-    assertThat(waiting).isEqualTo(IdleEngine.maxHp(50) + 5);
+    assertThat(waiting).isCloseTo(IdleEngine.maxHp(50) + 5, offset(1e-9));
     // No hit counts during the halt: two real seconds are three of its four game seconds.
     tick(2000, new IdleHit(50, "bullet", 1, 100.0, 0));
     assertThat(state.idle.circuitSeconds).isEqualTo(1);
@@ -743,7 +769,7 @@ class IdleEngineTest {
     tick(1000);
     assertThat(state.idle.circuitSeconds).isZero();
     assertThat(state.idle.wall).isEqualTo(51);
-    assertThat(state.idle.damage).isEqualTo(5);
+    assertThat(state.idle.damage).isCloseTo(5, offset(1e-9));
   }
 
   @Test
@@ -1005,9 +1031,10 @@ class IdleEngineTest {
     assertThat(cats.stream().filter(cat -> cat.fielded()).count())
         .isEqualTo(engine.view(state).fieldSlots())
         .isEqualTo(4);
-    // A cat's gun: half the weapon's damage, +20% of that per level, times its trait.
+    // A cat's gun: half the weapon's damage times the square root of its level (636), times its
+    // trait.
     var sky = cats.getFirst();
-    assertThat(sky.damagePercent()).isEqualTo((int) Math.round(50 * (1 + 0.2 * (sky.level() - 1))));
+    assertThat(sky.damagePercent()).isEqualTo((int) Math.round(50 * Math.sqrt(sky.level())));
     assertThat(sky.firePercent()).isEqualTo(125);
     assertThat(cats.get(1).firePercent()).isEqualTo(100);
     assertThat(cats.get(2).criticalPercent()).isEqualTo(150);
@@ -1439,17 +1466,17 @@ class IdleEngineTest {
         .isCloseTo(2.25 * SPEED / 2 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(engine.view(state).wallDps()).as("what the wall really took lately").isPositive();
     // A forged bullet may claim the strongest gun's critical: here the boss cat's pistol, since
-    // a level 6 cat still shoots at 50% x (1 + 0.2 x 5) = 100%.
-    state.idle.cats.put("sky", 6);
+    // a level 4 cat still shoots at 50% x √4 = 100% (636).
+    state.idle.cats.put("sky", 4);
     double before = state.idle.damage;
     for (int i = 0; i < 3; i++) tick(1000);
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
     assertThat(state.idle.damage - before).isEqualTo(4);
-    state.idle.cats.put("sky", 11);
+    state.idle.cats.put("sky", 9);
     before = state.idle.damage;
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
     assertThat(state.idle.damage - before)
-        .as("level 11 cat: 150% pistol critical")
+        .as("level 9 cat: 50% x √9 = 150% pistol critical")
         .isCloseTo(6, offset(1e-9));
   }
 
@@ -1461,7 +1488,8 @@ class IdleEngineTest {
     // A deep wall does not make a buy order stronger (573): the order scale is not in it.
     double order = 1.5;
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
-    assertThat(IdleEngine.threat(100)).isEqualTo(5.2);
+    // The wall's health grows by 1.003 a wall (636), the order scale with it.
+    assertThat(IdleEngine.threat(100)).isEqualTo(6.6);
     // A buy order is capped at its own damage, whatever the screen reports.
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
@@ -1773,7 +1801,7 @@ class IdleEngineTest {
     assertThat(fishUpgrade(c, "damage").bonus()).isEqualTo(6);
     assertThat(fishUpgrade(c, "damage").nextBonus()).isEqualTo(9);
     assertThat(fishUpgrade(c, "damage").cost()).isEqualTo(3);
-    assertThat(upgrade(c, "damage").bonusPercent()).as("전투 강화의 효과에 더한다").isEqualTo(6);
+    assertThat(upgrade(c, "damage").bonusPercent()).as("전투 강화가 없으면 영구 강화만큼").isEqualTo(6);
     assertThat(upgrade(c, "damage").level()).as("전투 강화의 단계는 그대로다").isZero();
     engine.buyFishUpgrade(c, "hp");
     engine.buyFishUpgrade(c, "buy");
@@ -1794,6 +1822,15 @@ class IdleEngineTest {
     assertThatThrownBy(() -> engine.buyFishUpgrade(c, "damage"))
         .isInstanceOf(InvalidRequestException.class);
     assertThat(c.fish).isEqualTo(2);
+    // 영구 강화는 전투 강화에 곱한다 (636번): 전투 강화 10단계(+30%) × 영구 강화 2단계(+6%) = +37.8% → 37.
+    c.capital = 1e18;
+    company.mental.buyUpgrade(c, "damage", 10);
+    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(37);
+    assertThat(upgrade(c, "damage").nextBonusPercent())
+        .as("11단계 +33% × 1.06 = +40.98%")
+        .isEqualTo(40);
+    // 벽 1,000쯤(+3,000%)에서 영구 강화 +300%는 네 배다: 더하면 +3,300%뿐이었다.
+    assertThat(MentalEngine.withFish(3000, 300)).isEqualTo(12_300);
     assertThat(c.fishLevels).containsEntry("damage", 2);
   }
 

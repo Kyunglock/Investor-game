@@ -3623,9 +3623,9 @@ class BattleScene extends Phaser.Scene {
     return this.elapsed < this.boostUntil[code] ? BOOST : 1
   }
 
-  /** 총알과 스킬 피해의 바탕: 공격력 3배(588번)가 도는 동안 세 배다. */
+  /** 스킬 피해의 바탕: 자동 전투는 무기의 실효 화력(636번)이다. 공격력 3배(588번)가 도는 동안 세 배다. */
   private get attackDamage() {
-    return this.loadout.damage * this.boost('boostDamage')
+    return (this.loadout.skillDamage ?? this.loadout.damage) * this.boost('boostDamage')
   }
 
   /**

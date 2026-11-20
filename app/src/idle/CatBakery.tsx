@@ -12,6 +12,14 @@ import './cat-bakery.css'
 type Idle = NonNullable<Company['idle']>
 type Cats = Idle['cats']
 
+/** 동료를 level에서 한 단계 올리는 식빵 수 (636번): 레벨 ÷ 10 올림. 서버 IdleEngine.feedCost와 같다. */
+export function feedCost(level: number) {
+  return Math.max(1, Math.ceil(level / 10))
+}
+
+/** 동료 레벨의 끝 (서버 IdleEngine.MAX_CAT_LEVEL). */
+const MAX_CAT_LEVEL = 1000
+
 export function CatBakery({
   idle,
   bakers,
@@ -116,29 +124,35 @@ export function CatBakery({
       <section className="bakery-feeding">
         <header>
           <h3>동료에게 먹이기</h3>
-          <small>한 번에 식빵 1개</small>
+          <small>Lv.10마다 식빵 1개씩 더 들어요</small>
         </header>
         <div className="bakery-diners">
-          {fielded.map((cat) => (
-            <button
-              type="button"
-              key={cat.code}
-              disabled={busy || !bread}
-              aria-label={`${cat.name}에게 식빵 1개 먹이기 · Lv.${cat.level} → ${cat.level + 1}`}
-              onClick={() => {
-                setReceipt('')
-                void useRaisingStore.getState().feedCat(cat.code)
-              }}
-            >
-              <CatPortrait code={cat.code} />
-              <span>
-                <b>{cat.name}</b>
-                <small>
-                  Lv.{cat.level} → {cat.level + 1}
-                </small>
-              </span>
-            </button>
-          ))}
+          {fielded.map((cat) => {
+            const cost = feedCost(cat.level)
+            const max = cat.level >= MAX_CAT_LEVEL
+            return (
+              <button
+                type="button"
+                key={cat.code}
+                disabled={busy || max || bread < cost}
+                aria-label={`${cat.name}에게 식빵 ${cost}개 먹이기 · Lv.${cat.level} → ${cat.level + 1}`}
+                onClick={() => {
+                  setReceipt('')
+                  void useRaisingStore.getState().feedCat(cat.code)
+                }}
+              >
+                <CatPortrait code={cat.code} />
+                <span>
+                  <b>{cat.name}</b>
+                  <small>
+                    {max
+                      ? `Lv.${cat.level} · 최대`
+                      : `Lv.${cat.level} → ${cat.level + 1} · 식빵 ${cost}개`}
+                  </small>
+                </span>
+              </button>
+            )
+          })}
         </div>
         {!fielded.length && <small>출전 중인 동료에게 식빵을 먹일 수 있어요.</small>}
       </section>

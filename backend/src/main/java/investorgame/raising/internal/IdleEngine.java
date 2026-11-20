@@ -129,6 +129,12 @@ class IdleEngine {
   private static final double BOSS_HP = 3;
 
   /**
+   * 벽 체력의 지수 (636번): 깊이마다 이만큼 더 곱한다. 2차식만으로는 무기·고양이가 곱으로 키우는 화력을 따라가지 못해 어느 장비든 끝없이 뚫렸다. 장비마다 막히는
+   * 벽이 생기게 한다. 화면 idlePredict.ts의 idleMaxHp와 같이 바꾼다.
+   */
+  static final double HP_GROWTH = 1.003;
+
+  /**
    * Bullet pierce (520): every bullet goes through the front wall into the two behind it, weaker at
    * each wall. The app's IDLE_PIERCE holds the same shares.
    */
@@ -360,9 +366,10 @@ class IdleEngine {
   // Cats used to join at these walls. Saves from then keep them.
   private static final long[] CAT_LEGACY_WALLS = {15, 50};
   private static final int FIELD_SLOTS = 4;
-  // A cat's gun hits for this share of the weapon's damage; each level above 1 adds the bonus.
+  // A cat's gun hits for this share of the weapon's damage times the square root of its level
+  // (636): level 100 is ten times level 1, level 1000 about 32 times. It was 1 + 0.2 per level
+  // above 1 before, 200 times at level 1000.
   private static final double CAT_POWER = 0.5;
-  private static final double CAT_LEVEL_BONUS = 0.2;
   // 벽 보상 (553번): 벽 하나를 깨면 그 벽 번호와 같은 단계의 전투 강화 값 REWARD_UPGRADES개 어치를 준다. 물가가 강화 값과 같은
   // 빠르기로 크므로(CompanyEngine.inflation), N번째 벽을 깰 때까지 번 돈이 끝없는 강화(공격력·체력·매수)를 평균 N단계쯤 올린다.
   // 보스 벽은 BOSS_REWARD배. 전에는 그 벽의 시간 수입 10초 어치였다 (537·552번). 세 단계 어치를 한 단계 반으로 낮췄다 (559번).
@@ -382,9 +389,25 @@ class IdleEngine {
   // slower than its stats and each bullet hits that much harder. Damage per second is unchanged.
   private static final double BULLET_WEIGHT = 2;
 
-  /** One gun on the field: the boss cat's, then one per fielded cat. */
+  /**
+   * One gun on the field: the boss cat's, then one per fielded cat. skill is what the cats' skills
+   * hit for when this is the boss cat's gun (636): the weapon's effective power against the
+   * starting pistol (one bullet x bullets a second x bullet power), times the attack upgrade. It
+   * was the one bullet's damage before, so merging an A shotgun into an S rifle made the skills
+   * weaker. Matches the app's mental/cards.ts skillPower.
+   */
   private record Shooter(
-      double damage, double perSecond, double power, double critical, boolean explosive) {}
+      double damage,
+      double perSecond,
+      double power,
+      double critical,
+      boolean explosive,
+      double skill) {}
+
+  /**
+   * The starting pistol's fire interval (ms): the skill power (636) of the starting pistol is 1.
+   */
+  static final double PISTOL_FIRE_MS = 260;
 
   IdleEngine(Clock clock, CompanyEngine engine) {
     this.clock = clock;
@@ -469,7 +492,7 @@ class IdleEngine {
   }
 
   private static double power(int level) {
-    return CAT_POWER * (1 + CAT_LEVEL_BONUS * (level - 1));
+    return CAT_POWER * Math.sqrt(Math.max(1, level));
   }
 
   /** A cat without a gun, and a company from before weapons, shoots the starting pistol. */
@@ -479,12 +502,15 @@ class IdleEngine {
     CompanyProperties.Weapon stats =
         engine.mental.stats(
             kind, weapon == null ? MentalEngine.WEAPON_GRADES.getFirst() : weapon.grade);
+    double damage = Math.min(1_000_000_000, stats.damagePercent() / 100.0 * damageUp);
+    double power = 1 + Math.max(0, Math.min(3, stats.power())) * 0.4;
     return new Shooter(
-        Math.min(1_000_000_000, stats.damagePercent() / 100.0 * damageUp),
+        damage,
         1000.0 / stats.fireMs() * fireUp,
-        1 + Math.max(0, Math.min(3, stats.power())) * 0.4,
+        power,
         ("revolver".equals(kind) ? REVOLVER_CRITICAL : CRITICAL) * catCritical,
-        stats.power() >= 2);
+        stats.power() >= 2,
+        damage * PISTOL_FIRE_MS / stats.fireMs() * power);
   }
 
   void beat(CompanyState c, String runId, long sequence, String action) {
@@ -634,7 +660,8 @@ class IdleEngine {
   /** A wall's health before the every-tenth-wall multiplier. */
   private static double plainHp(long wall) {
     long depth = wall - 1;
-    return HP_BASE + HP_LINEAR * depth + HP_SQUARE * depth * depth;
+    return (HP_BASE + HP_LINEAR * depth + HP_SQUARE * depth * depth)
+        * StrictMath.pow(HP_GROWTH, depth);
   }
 
   private double dps(CompanyState c) {
@@ -650,7 +677,7 @@ class IdleEngine {
       int level = skillLevel(s.cats.getOrDefault(code, 1)) - 1;
       for (int skill : CAT_SKILLS[cat]) {
         total +=
-            shooters.getFirst().damage()
+            shooters.getFirst().skill()
                 * SKILL_DAMAGE[skill][level]
                 * (skill == 1 || skill >= 12 ? SKILL_HITS[skill][level] : 1)
                 / COOLDOWNS[skill][level];
@@ -691,7 +718,7 @@ class IdleEngine {
       int level = skillLevel(s.cats.getOrDefault(code, 1)) - 1;
       for (int skill : CAT_SKILLS[cat]) {
         total +=
-            shooters.getFirst().damage()
+            shooters.getFirst().skill()
                 * SKILL_DAMAGE[skill][level]
                 * SKILL_HITS[skill][level]
                 / COOLDOWNS[skill][level];
@@ -973,7 +1000,7 @@ class IdleEngine {
         perSecond += SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
         gained += active * SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
       }
-      double damage = damageBoost * hero.damage() * perHit;
+      double damage = damageBoost * (kind == 0 ? hero.damage() : hero.skill()) * perHit;
       double maxDamage = kind == 0 ? bulletMax : damage;
       s.hitCredits[kind] =
           Math.min(Math.max(2, SPEED * GRACE_MS / 1000 * perSecond), s.hitCredits[kind] + gained);
@@ -1303,12 +1330,23 @@ class IdleEngine {
     s.bread = 0;
   }
 
+  /**
+   * 식빵으로 동료를 level에서 한 단계 올리는 값 (636번): 레벨 ÷ 10을 올림한 개수. Lv1~10은 1개, Lv11~20은 2개 … 한 개로 한 단계씩이라 대기
+   * 고양이 스무 마리면 세 시간에 Lv900까지 갔다. 화면 CatBakery의 feedCost와 같다.
+   */
+  static long feedCost(int level) {
+    return Math.max(1, (level + 9) / 10);
+  }
+
   void feedCat(CompanyState c, String code) {
     CompanyState.Idle s = state(c);
     if (!s.cats.containsKey(code) || !s.fielded.contains(code))
       throw new InvalidRequestException("출전 중인 동료 고양이를 골라 주세요.");
-    if (s.bread < 1) throw new InvalidRequestException("완성된 식빵이 없어요.");
-    s.bread--;
+    int level = s.cats.get(code);
+    if (level >= MAX_CAT_LEVEL) throw new InvalidRequestException("더 키울 수 없는 동료예요.");
+    long cost = feedCost(level);
+    if (s.bread < cost) throw new InvalidRequestException("식빵이 " + cost + "개 있어야 해요.");
+    s.bread -= cost;
     s.cats.merge(code, 1, Integer::sum);
     engine.pass.progress(c, "feed", 1, todayDate());
   }
