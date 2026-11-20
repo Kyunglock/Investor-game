@@ -46,6 +46,7 @@ class CompanyState {
     double incomeRemainder;
     long bread;
     long bakingMillis;
+    long bundleMillis;
     double activeSeconds;
     double circuitSeconds;
 

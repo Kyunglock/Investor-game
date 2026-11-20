@@ -9,6 +9,7 @@ import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { magicTier } from '../mental/magic'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
+import { CatBakery } from './CatBakery'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { sortCats } from './catGrade'
@@ -182,40 +183,7 @@ export function IdleCats({
     return (
       <>
         <div className="loadout-team">{tabs}</div>
-        <section className="cat-bakery" aria-label="식빵 공방">
-          <strong>보유 식빵 · 🍞 {idle?.bread ?? 0}개</strong>
-          <p>
-            {bakers.length
-              ? `전투 중 쉬는 고양이 ${bakers.length}마리가 함께 구워요. 한 마리당 1분에 식빵 1개예요.`
-              : '동료 고양이를 출전 칸에서 빼면 여기서 식빵을 구워요.'}
-          </p>
-          {bakers.length > 0 && (
-            <ul aria-label="식빵 굽는 고양이">
-              {bakers.map((baker) => (
-                <li key={baker.code}>
-                  <span className="baking-cat">
-                    <Portrait code={baker.code} />
-                  </span>
-                  {baker.name}
-                </li>
-              ))}
-            </ul>
-          )}
-          <progress aria-label="다음 식빵 굽기" max={100} value={idle?.bakingPercent ?? 0} />
-          {fielded.map((cat) => (
-            <button
-              key={cat.code}
-              type="button"
-              className="idle-cat-field"
-              disabled={busy || !idle?.bread}
-              onClick={() => void useRaisingStore.getState().feedCat(cat.code)}
-            >
-              {cat.name}에게 식빵 1개 먹이기 · Lv.{cat.level} → {cat.level + 1}
-            </button>
-          ))}
-          {!fielded.length && <small>동료 고양이를 출전시키면 식빵을 먹일 수 있어요.</small>}
-          {error && <p role="alert">{error}</p>}
-        </section>
+        <CatBakery idle={idle} bakers={bakers} fielded={fielded} />
       </>
     )
   return (

@@ -575,6 +575,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/bread/sell": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 식빵 꾸러미를 팔아 돈과 다이아를 받는다 */
+        post: operations["sellBread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/cat/feed": {
         parameters: {
             query?: never;
@@ -1609,6 +1626,9 @@ export interface components {
                     level: number;
                 }[];
                 bread?: number;
+                bundlePrice?: number;
+                bundleDiamonds?: number;
+                nextDiamondSeconds?: number;
                 bakingPercent?: number;
                 /** @description 한 번에 출전하는 고양이 수 (492·493번 */
                 fieldSlots: number;
@@ -2604,6 +2624,29 @@ export interface operations {
         };
         responses: {
             /** @description 올린 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    sellBread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 바꾼 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

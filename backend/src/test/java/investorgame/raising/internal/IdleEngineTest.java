@@ -207,6 +207,30 @@ class IdleEngineTest {
   }
 
   @Test
+  void bundleSaleUsesCurrentWallAndCountsBakeryTimeOnceForAllCats() {
+    start(1);
+    state.idle.cats.put("sky", 1);
+    state.idle.cats.put("mint", 1);
+    for (int i = 0; i < 59; i++) tick(10_000);
+    assertThat(engine.view(state).bundleDiamonds()).isZero();
+    assertThat(engine.view(state).nextDiamondSeconds()).isEqualTo(10);
+    state.idle.wall = 7;
+    double capital = state.capital;
+    long diamonds = state.diamonds;
+    long bread = state.idle.bread;
+    engine.sellBread(state);
+    assertThat(state.capital).isEqualTo(capital + bread * 700);
+    assertThat(state.diamonds).isEqualTo(diamonds);
+    assertThatThrownBy(() -> engine.sellBread(state)).isInstanceOf(InvalidRequestException.class);
+    tick(10_000);
+    assertThat(engine.view(state).bundleDiamonds()).isEqualTo(1);
+    engine.sellBread(state);
+    assertThat(state.diamonds).isEqualTo(diamonds + 1);
+    assertThat(engine.view(state).bread()).isZero();
+    assertThat(engine.view(state).nextDiamondSeconds()).isEqualTo(600);
+  }
+
+  @Test
   void restingCatsBakeTogetherAndOnlyFieldedCatsCanEat() {
     start(1);
     state.idle.cats.put("sky", 1);

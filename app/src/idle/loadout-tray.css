@@ -1,60 +1,6 @@
-.cat-bakery {
-  margin: 6px 0;
-  padding: 8px 10px;
-  border: 1px solid #caa16b;
-  border-radius: 10px;
-  background: #fff3da;
-  color: #523820;
-}
 .loadout-team .loadout-tabs {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-.cat-bakery > button {
-  display: block;
-  margin-top: 6px;
-}
-.cat-bakery p,
-.cat-bakery small {
-  font-size: 0.8rem;
-}
-.cat-bakery ul {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 4px;
-  list-style: none;
-}
-.cat-bakery li {
-  flex: 0 0 auto;
-  text-align: center;
-  font-size: 0.75rem;
-}
-.baking-cat {
-  position: relative;
-  display: block;
-  width: 57px;
-  height: 32px;
-  margin: 8px auto 3px;
-  border: 2px solid #925d36;
-  border-radius: 58% 65% 38% 36% / 80% 85% 28% 28%;
-  background: linear-gradient(#d29658, #f1ca92);
-  box-shadow: inset 0 -4px #c18b56;
-}
-.baking-cat .idle-cat-portrait {
-  position: absolute;
-  left: -2px;
-  bottom: 2px;
-  width: 32px;
-  height: 32px;
-}
-.cat-bakery progress {
-  display: block;
-  width: 100%;
-  height: 8px;
-  accent-color: #ab682d;
-  margin: 8px 0;
-}
-
 .loadout-compare button {
   border: 2px solid #1755a4;
   border-radius: 8px;
