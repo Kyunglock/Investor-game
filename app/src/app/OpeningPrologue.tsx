@@ -7,7 +7,10 @@ import sellWall from './assets/prologue-sell-wall.webp'
 import './opening-prologue.css'
 
 const panels = [
-  { image: sellWall, alt: '고양이전자 하락 전광판이 사악하게 웃고, 매도 쪽지가 성벽 사이의 세 고양이 위로 흩날린다.' },
+  {
+    image: sellWall,
+    alt: '고양이전자 하락 전광판이 사악하게 웃고, 매도 쪽지가 성벽 사이의 세 고양이 위로 흩날린다.',
+  },
   { image: market, alt: '“몰려온다!” 거대한 매도벽 아래로 패닉셀과 투매 몬스터가 밀려온다.' },
   { image: drop, alt: '툭! 사장냥의 발앞에 주황색 총이 떨어진다.' },
   { image: pickup, alt: '투매 몬스터가 다가오자 사장냥이 바닥에서 총을 집어 든다.' },
