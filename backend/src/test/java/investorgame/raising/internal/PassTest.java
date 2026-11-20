@@ -39,26 +39,27 @@ class PassTest {
   }
 
   @Test
-  void 시즌은_4주이고_30단계에_다이아_2900을_주며_돈은_없다() {
+  void 시즌은_4주이고_50단계에_다이아_4700을_주며_돈은_없다() {
     CompanyProperties.Pass rule = PROPERTIES.pass();
     assertThat(rule.days()).isEqualTo(28);
-    assertThat(rule.steps()).isEqualTo(30);
+    assertThat(rule.steps()).isEqualTo(50);
     assertThat(rule.pointsPerStep()).isEqualTo(300);
     long diamonds = 0;
-    for (int step = 1; step <= 30; step++) {
+    for (int step = 1; step <= 50; step++) {
       PassRules.Reward r = engine.pass.reward(step);
       diamonds += r.diamonds();
       assertThat(r.diamonds()).as("모든 단계가 다이아를 준다").isPositive();
-      assertThat(r.weapon()).as("무기는 10·20단계").isEqualTo(step == 10 || step == 20);
-      assertThat(r.cat()).as("고양이는 30단계").isEqualTo(step == 30);
+      assertThat(r.weapon()).as("무기는 10·20·30·40단계").isEqualTo(step % 10 == 0 && step < 50);
+      assertThat(r.cat()).as("고양이는 50단계").isEqualTo(step == 50);
     }
-    assertThat(diamonds).isEqualTo(24 * 50 + 3 * 200 + 2 * 300 + 500);
+    assertThat(diamonds).isEqualTo(40 * 50 + 5 * 200 + 4 * 300 + 500);
     assertThat(engine.pass.reward(1).diamonds()).isEqualTo(50);
     assertThat(engine.pass.reward(2).diamonds()).as("돈 단계였던 자리도 다이아다").isEqualTo(50);
     assertThat(engine.pass.reward(5).diamonds()).isEqualTo(200);
     assertThat(engine.pass.reward(10).diamonds()).isEqualTo(300);
     assertThat(engine.pass.reward(15).diamonds()).isEqualTo(200);
-    assertThat(engine.pass.reward(30).diamonds()).isEqualTo(500);
+    assertThat(engine.pass.reward(30).diamonds()).isEqualTo(300);
+    assertThat(engine.pass.reward(50).diamonds()).isEqualTo(500);
   }
 
   @Test
@@ -71,7 +72,7 @@ class PassTest {
     assertThat(pass.endsAt()).isEqualTo(Instant.parse("2026-11-29T15:00:00Z").toEpochMilli());
     assertThat(pass.secondsLeft()).isEqualTo(14 * 86_400 + 12 * 3600);
     assertThat(pass.endingSoon()).isFalse();
-    assertThat(pass.steps()).hasSize(30);
+    assertThat(pass.steps()).hasSize(50);
     assertThat(engine.pass.season(c, LocalDate.parse("2026-11-29"))).isEqualTo(1);
     assertThat(engine.pass.season(c, LocalDate.parse("2026-11-30"))).isEqualTo(2);
     assertThat(engine.pass.season(c, LocalDate.parse("2026-10-01"))).as("첫 시즌 전이면 1").isEqualTo(1);
@@ -92,7 +93,9 @@ class PassTest {
     CompanyState c = opened();
     assertThat(rewards.passView(c).missions())
         .extracting(m -> m.code())
-        .containsExactly("wall", "boss", "upgrade", "draw", "merge", "attend");
+        .containsExactly(
+            "wall", "boss", "upgrade", "draw", "merge", "attend", "fish", "forever", "feed",
+            "skill");
     assertThat(mission(c, "wall").title()).isEqualTo("매도벽 최고 기록 50개 돌파");
     assertThat(mission(c, "wall").target()).isEqualTo(50);
     assertThat(mission(c, "wall").points()).isEqualTo(30);
@@ -170,8 +173,47 @@ class PassTest {
     assertThat(rewards.passView(c).missionsReady()).isZero();
     // 마지막 단계를 채우면 더 쌓이지 않는다.
     rewards.addPassExp(c, 100_000);
-    assertThat(c.passExp).isEqualTo(9000);
-    assertThat(rewards.passView(c).step()).isEqualTo(30);
+    assertThat(c.passExp).isEqualTo(15_000);
+    assertThat(rewards.passView(c).step()).isEqualTo(50);
+  }
+
+  @Test
+  void 환생_영구_강화_식빵_스킬도_미션이다() {
+    CompanyState c = opened();
+    idle.beat(c, "one", 0, "start");
+    assertThat(mission(c, "fish").title()).isEqualTo("환생으로 생선 100마리 얻기");
+    assertThat(mission(c, "forever").title()).isEqualTo("영구 강화 5번");
+    assertThat(mission(c, "feed").title()).isEqualTo("식빵으로 고양이 레벨업 5번");
+    assertThat(mission(c, "skill").title()).isEqualTo("스킬 100번 사용");
+    // 환생으로 얻은 생선: 광고 3배를 뺀 바탕 수로 센다. 301번째 벽은 123마리.
+    c.idle.wall = 301;
+    idle.rebirth(c, true);
+    assertThat(c.fish).isEqualTo(369);
+    assertThat(mission(c, "fish").count()).isEqualTo(123);
+    assertThat(mission(c, "fish").ready()).isEqualTo(30);
+    // 영구 강화는 다섯 번마다 30.
+    for (int i = 0; i < 5; i++) {
+      idle.buyFishUpgrade(c, "damage");
+    }
+    assertThat(mission(c, "forever").count()).isEqualTo(5);
+    assertThat(mission(c, "forever").ready()).isEqualTo(30);
+    // 식빵으로 올린 고양이 레벨.
+    String cat = "sky";
+    c.idle.cats.put(cat, 1);
+    idle.fieldCat(c, cat, true);
+    c.idle.bread = 5;
+    for (int i = 0; i < 5; i++) {
+      idle.feedCat(c, cat);
+    }
+    assertThat(mission(c, "feed").ready()).isEqualTo(30);
+    // 스킬은 쓴 횟수.
+    c.idle.wall = 101;
+    c.idle.best = 100;
+    c.idle.bossCleared = 100;
+    idle.useActive(c, "barrage");
+    assertThat(mission(c, "skill").count()).isEqualTo(1);
+    rewards.claimPassMission(c, null);
+    assertThat(c.passExp).isEqualTo(90);
   }
 
   @Test
@@ -286,7 +328,7 @@ class PassTest {
   void 열_단계는_무기를_마지막_단계는_고양이를_더_준다() {
     CompanyState c = opened();
     c.diamonds = 0;
-    rewards.addPassExp(c, 9000);
+    rewards.addPassExp(c, 15_000);
     int weapons = c.weapons.stream().mapToInt(w -> w.count).sum();
     rewards.claimPass(c, 10, random);
     assertThat(c.diamonds).isEqualTo(300);
@@ -295,16 +337,16 @@ class PassTest {
     assertThat(ten.weaponKind()).isNotNull();
     assertThat(ten.weaponGrade()).isIn(MentalEngine.DRAW_GRADES);
     assertThat(ten.cat()).isNull();
-    rewards.claimPass(c, 30, random);
+    rewards.claimPass(c, 50, random);
     assertThat(c.diamonds).isEqualTo(800);
     CompanyView.PassReward last = rewards.passView(c).lastRewards().getFirst();
     assertThat(last.cat()).isNotNull();
     assertThat(last.catName()).isNotBlank();
     assertThat(idle.view(c).cats().stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(1);
-    // 한 시즌을 다 받으면 다이아 2,900.
+    // 한 시즌을 다 받으면 다이아 4,700.
     rewards.claimPass(c, null, random);
-    assertThat(c.diamonds).isEqualTo(2900);
-    assertThat(c.passClaimed).hasSize(30);
+    assertThat(c.diamonds).isEqualTo(4700);
+    assertThat(c.passClaimed).hasSize(50);
   }
 
   @Test
