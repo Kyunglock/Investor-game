@@ -1673,15 +1673,15 @@ class IdleEngineTest {
     assertThatThrownBy(() -> engine.rebirth(c, true)).isInstanceOf(InvalidRequestException.class);
     c.idle.wall = 101;
     engine.rebirth(c, true);
-    assertThat(c.fish).isEqualTo(60);
+    assertThat(c.fish).isEqualTo(72);
     assertThat(c.idle.wall).isEqualTo(1);
     // 다음 환생에도 다시 3배를 받는다. 그냥 환생은 1배다.
     c.idle.wall = 101;
     engine.rebirth(c, true);
-    assertThat(c.fish).isEqualTo(120);
+    assertThat(c.fish).isEqualTo(144);
     c.idle.wall = 101;
     engine.rebirth(c, false);
-    assertThat(c.fish).isEqualTo(140);
+    assertThat(c.fish).isEqualTo(168);
     assertThat(c.rebirths).isEqualTo(3);
   }
 
@@ -1693,15 +1693,15 @@ class IdleEngineTest {
     c.idle.wall = 50;
     assertThat(engine.rebirthFish(c)).isZero();
     assertThatThrownBy(() -> engine.rebirth(c)).isInstanceOf(InvalidRequestException.class);
-    // 진행한 만큼 비례해서 받는다 (600번): 깬 벽 다섯 개마다 한 마리 (625번).
+    // 깬 벽 다섯 개마다 한 마리 (625번)에, 깬 벽 50개마다 10%를 더 받는다 (633번).
     c.idle.wall = 51;
-    assertThat(engine.rebirthFish(c)).isEqualTo(10);
+    assertThat(engine.rebirthFish(c)).isEqualTo(11);
     c.idle.wall = 101;
-    assertThat(engine.rebirthFish(c)).isEqualTo(20);
+    assertThat(engine.rebirthFish(c)).isEqualTo(24);
     c.idle.wall = 301;
-    assertThat(engine.rebirthFish(c)).isEqualTo(60);
-    assertThat(engine.view(c).rebirth().gain()).isEqualTo(60);
-    assertThat(engine.view(c).rebirth().adGain()).as("광고를 보면 3배 (586번)").isEqualTo(180);
+    assertThat(engine.rebirthFish(c)).isEqualTo(96);
+    assertThat(engine.view(c).rebirth().gain()).isEqualTo(96);
+    assertThat(engine.view(c).rebirth().adGain()).as("광고를 보면 3배 (586번)").isEqualTo(288);
     assertThat(engine.view(c).rebirth().fromWall()).isEqualTo(51);
     // 환생: 벽 1, 강화와 돈은 처음으로. 고양이·무기·다이아·받은 보스 보상은 그대로다.
     c.idle.cats.put("sky", 3);
@@ -1717,7 +1717,7 @@ class IdleEngineTest {
     assertThat(c.idle.epoch).as("화면이 새 벽으로 안다").isEqualTo(epoch + 1);
     assertThat(c.capital).isEqualTo((double) company.openingCapital());
     assertThat(c.battleLevels).isEmpty();
-    assertThat(c.fish).isEqualTo(60);
+    assertThat(c.fish).isEqualTo(96);
     assertThat(c.rebirths).isEqualTo(1);
     assertThat(c.diamonds).isEqualTo(777);
     assertThat(c.idle.cats.get("sky")).isEqualTo(3);
@@ -1730,9 +1730,9 @@ class IdleEngineTest {
     assertThat(engine.rebirthFish(c)).isZero();
     assertThatThrownBy(() -> engine.rebirth(c)).isInstanceOf(InvalidRequestException.class);
     c.idle.wall = 31;
-    assertThat(engine.rebirthFish(c)).isEqualTo(6);
+    assertThat(engine.rebirthFish(c)).as("벽 50개를 깨기 전에는 덤이 없다").isEqualTo(6);
     engine.rebirth(c);
-    assertThat(c.fish).isEqualTo(66);
+    assertThat(c.fish).isEqualTo(102);
     assertThat(c.rebirths).isEqualTo(2);
     c.fish = 30;
     c.rebirths = 1;
