@@ -556,7 +556,7 @@ class CompanyApiTest {
     assertThat(kinds).containsExactly("damage", "fire", "hp", "buy");
     assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
     assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
-    assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(3);
+    assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(1);
     assertThat(opened.read("$.battleUpgrades[0].maxLevel", Integer.class))
         .as("공격력은 끝없이 산다")
         .isZero();
