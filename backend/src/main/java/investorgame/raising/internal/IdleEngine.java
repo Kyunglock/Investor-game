@@ -666,8 +666,8 @@ class IdleEngine {
 
   /**
    * 전투력 (decisions.md 538번): 성장 탭이 보여 주는 숫자 하나. 모든 총과 스킬의 초당 피해(치명타 기대값 포함)에 매수 주문의 피해를 더하고, 매수벽 체력
-   * 강화의 4분의 1을 곱한다. 벽 번호는 보지 않으므로 강화·무기·고양이가 바뀔 때만 오른다. 강화끼리 곱해져 숫자가 걷잡을 수 없이 커지므로 제곱근으로 눌러
-   * 적는다 (635번).
+   * 강화의 4분의 1을 곱한다. 벽 번호는 보지 않으므로 강화·무기·고양이가 바뀔 때만 오른다. 강화끼리 곱해져 숫자가 걷잡을 수 없이 커지므로 제곱근으로 눌러 적는다
+   * (635번).
    */
   private double power(CompanyState c) {
     CompanyState.Idle s = state(c);
@@ -702,8 +702,7 @@ class IdleEngine {
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
       if ("hp".equals(u.kind())) hpUp = u.bonusPercent() / 100.0;
     }
-    return Math.floor(
-        POWER_SCALE * Math.sqrt(INCOME_SPEED * total * (1 + POWER_HP_WEIGHT * hpUp)));
+    return Math.floor(POWER_SCALE * Math.sqrt(INCOME_SPEED * total * (1 + POWER_HP_WEIGHT * hpUp)));
   }
 
   /** A cat's skill level (515, 534): one more at cat level 10, 20, 30 and 40, up to five. */
