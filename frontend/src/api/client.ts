@@ -22,7 +22,22 @@ if (typeof document !== 'undefined') {
   })
 }
 
+/**
+ * 테스트판 코드 (decisions.md 499·642번). 화면을 앱 안에 담은 앱의 WebView에는 테스트판 쿠키가 남지 않을 수 있어, 맞힌 코드를 요청마다
+ * 머리글로 싣는다. 서버는 쿠키나 이 머리글 가운데 하나만 맞아도 테스트판 회사를 준다. 없으면(null) 싣지 않는다.
+ */
+export const SANDBOX_HEADER = 'X-Sandbox-Code'
+let sandboxCode: string | null = null
+export function setSandboxCode(code: string | null) {
+  sandboxCode = code
+}
+/** 지금 요청에 더 실을 머리글. api를 거치지 않는 요청(전투 정지 신호)도 이것을 싣는다. */
+export function extraHeaders(): Record<string, string> {
+  return sandboxCode ? { [SANDBOX_HEADER]: sandboxCode } : {}
+}
+
 function timedFetch(request: Request): Promise<Response> {
+  for (const [name, value] of Object.entries(extraHeaders())) request.headers.set(name, value)
   const controller = new AbortController()
   const entry = { controller, hidden: typeof document !== 'undefined' && document.hidden }
   inFlight.add(entry)

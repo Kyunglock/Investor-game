@@ -56,6 +56,34 @@ class SandboxApiTest {
         .content("{\"code\":\"" + code + "\"}");
   }
 
+  /** 쿠키가 남지 않는 앱: 맞힌 코드를 머리글로 실으면 쿠키 없이도 테스트판 회사다. */
+  @Test
+  void 코드_머리글이_맞으면_쿠키_없이도_테스트판이다() throws Exception {
+    DocumentContext main = json(mvc.perform(post("/api/company").cookie(session)).andReturn());
+    String mainId = main.read("$.companyId");
+    String trialId =
+        json(mvc.perform(enter("cat-test")).andExpect(status().isOk()).andReturn())
+            .read("$.companyId");
+    assertThat(trialId).isNotEqualTo(mainId);
+    DocumentContext withHeader =
+        json(
+            mvc.perform(get("/api/company").cookie(session).header(Sandbox.HEADER, "cat-test"))
+                .andExpect(status().isOk())
+                .andReturn());
+    assertThat(withHeader.read("$.companyId", String.class)).isEqualTo(trialId);
+    assertThat(withHeader.read("$.sandbox", Boolean.class)).isTrue();
+    // 머리글이 없거나 틀리면 본 게임이다.
+    assertThat(
+            json(mvc.perform(get("/api/company").cookie(session)).andReturn())
+                .read("$.companyId", String.class))
+        .isEqualTo(mainId);
+    assertThat(
+            json(mvc.perform(get("/api/company").cookie(session).header(Sandbox.HEADER, "nope"))
+                    .andReturn())
+                .read("$.companyId", String.class))
+        .isEqualTo(mainId);
+  }
+
   @Test
   void 틀린_코드로는_들어갈_수_없다() throws Exception {
     MvcResult refused = mvc.perform(enter("nope")).andExpect(status().isBadRequest()).andReturn();
