@@ -690,6 +690,13 @@ try {
     )
     await expect.poll(() => actions.slice(stopped).includes('start')).toBe(true)
     company.idle.wall = 6
+    // The walls behind come from the server untouched, so the check does not hang on the health
+    // curve: at 646's curve walls 7 and 8 hold only about 22, and pierced bullets wear them down
+    // before the intact look is read.
+    company.idle.upcoming = [
+      { wall: 7, hp: 264, maxHp: 264 },
+      { wall: 8, hp: 288, maxHp: 288 },
+    ]
     await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 6')
     await expect
       .poll(
