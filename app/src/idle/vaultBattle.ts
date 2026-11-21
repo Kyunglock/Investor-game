@@ -62,12 +62,13 @@ export function teamScale(loadout: Loadout): number {
  * 던전 층마다의 벽·수호냥 체력 배율: 팀 화력만큼 키운 뒤 이만큼을 더 곱한다. 카드 없이 1층은 넉넉히, 3층은 빠듯하게 깨도록 맞췄다
  * (scripts/vaultCheck.mjs).
  */
-const TUNE = (globalThis as { __vaultTune?: { floor: number[]; enemy: number; dmg: number; count: number; walls: number[] } }).__vaultTune
+const TUNE = (globalThis as { __vaultTune?: { floor: number[]; enemy: number; dmg: number; count: number; walls: number[]; boss: number } }).__vaultTune
 export const FLOOR_HP = (TUNE?.floor ?? [1, 1, 1]) as readonly number[]
 const ENEMY = TUNE?.enemy ?? 1
 const DMG = TUNE?.dmg ?? 1
 const COUNT = TUNE?.count ?? 1
 const WALLS = TUNE?.walls ?? [1, 2, 3]
+const BOSS = TUNE?.boss ?? 1
 
 interface Mods {
   damage: number
@@ -174,13 +175,13 @@ export function dungeonEncounter(
     ...spec,
     walls: [...approach, guardian].map((wall) => ({
       ...wall,
-      cellHp: wall.cellHp * hp * mods.wallHp,
+      cellHp: wall.cellHp * hp * (wall.boss ? BOSS : 1) * mods.wallHp,
     })),
     enemyHp: spec.enemyHp * Math.max(1, scale * ENEMY) * mods.enemyHp,
     enemySpeed: spec.enemySpeed * mods.enemySpeed,
     enemyDmg: spec.enemyDmg * DMG,
     enemyCount: spec.enemyCount * COUNT,
-    bossHp: spec.bossHp * hp * mods.bossHp,
+    bossHp: spec.bossHp * hp * BOSS * mods.bossHp,
     midBossHp: spec.midBossHp * hp * mods.bossHp,
   }
 }

@@ -193,7 +193,7 @@ function serve(company, calls) {
 }
 
 /** 전장이 열리면 빨리 돌리고, 끝나 시트로 돌아올 때까지 기다린다. 남은 시간(초)의 마지막 값을 돌려준다. */
-async function fight(page, speed = 12) {
+async function fight(page, speed = 6) {
   const field = page.getByTestId('vault-field')
   await expect(field).toBeVisible()
   await expect(field.locator('.vault-health')).toBeVisible({ timeout: 60000 })
