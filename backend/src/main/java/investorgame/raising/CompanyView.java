@@ -50,7 +50,109 @@ public record CompanyView(
     Assaults assaults,
     Idle idle,
     boolean sandbox,
-    boolean sandboxInfinite) {
+    boolean sandboxInfinite,
+    Vault vault) {
+
+  /**
+   * 금고 도전 (decisions.md 641번): 보스전과 주간 던전, 금괴로 사는 금고 상점. 한 주의 경계는 한국 시간 월요일 0시다.
+   *
+   * @param gold 가진 금괴. 금고 도전에서만 얻고 금고 상점에서만 쓴다
+   * @param week 이번 주의 번호
+   * @param resetsAt 다음 주가 시작되는 때(서버 시각, ms)
+   * @param trainingPercent 금고 훈련으로 오른 금고 전투 공격력(%)
+   * @param shop 금고 상점의 진열, 차례대로
+   * @param lastNote 마지막으로 받은 것 한 줄. 없으면 null
+   */
+  public record Vault(
+      long gold,
+      long week,
+      long resetsAt,
+      int trainingPercent,
+      VaultBoss boss,
+      VaultDungeon dungeon,
+      List<VaultItem> shop,
+      String lastNote) {}
+
+  /** 스킬 하나: 코드(idle.cats[].skills[].code와 같다)와 이름. */
+  public record VaultSkill(String code, String name) {}
+
+  /** 천적 고양이 한 마리. */
+  public record VaultRival(String code, String name, String grade) {}
+
+  /**
+   * 금고 보스전: seconds초 동안 수호냥에게 넣은 피해량을 겨룬다.
+   *
+   * @param weakSkills 이번 주의 약점 스킬: 피해가 weakPercent%
+   * @param resistSkills 이번 주의 내성 스킬: 피해가 resistPercent%
+   * @param rivals 이번 주의 천적 고양이: 그 고양이 총의 피해가 rivalPercent%
+   * @param best 이번 주의 최고 피해량
+   * @param record 역대 최고 피해량
+   * @param tier 이번 주에 닿은 등급(0이면 아직 없다)
+   * @param nextScore 다음 등급의 문턱(피해량)
+   * @param tierGold 등급 하나에 받는 금괴. 한 주에 등급마다 한 번이다
+   */
+  public record VaultBoss(
+      int seconds,
+      List<VaultSkill> weakSkills,
+      List<VaultSkill> resistSkills,
+      int weakPercent,
+      int resistPercent,
+      List<VaultRival> rivals,
+      int rivalPercent,
+      double best,
+      double record,
+      int tier,
+      String tierName,
+      double nextScore,
+      String nextTierName,
+      long tierGold) {}
+
+  /** 던전 카드 한 장. 배율은 모두 %이고 100이면 그대로다: 공격력·공격 속도·스킬 피해·최대 멘탈, 매도 물량의 체력·빠르기, 매도벽 체력, 수호냥 체력. */
+  public record VaultCard(
+      String code,
+      String name,
+      String effect,
+      int damagePercent,
+      int firePercent,
+      int skillPercent,
+      int mentalPercent,
+      int enemyHpPercent,
+      int enemySpeedPercent,
+      int wallHpPercent,
+      int bossHpPercent) {}
+
+  /**
+   * 주간 던전: 층에 들어가기 전에 카드 한 장을 고르고, 고른 카드는 그 주 내내 쌓인다.
+   *
+   * @param floors 층 수
+   * @param cleared 이번 주에 돌파한 층
+   * @param cards 이번 주에 고른 카드, 고른 차례대로
+   * @param offers 지금 골라야 할 카드들. 고를 차례가 아니면 비어 있다
+   * @param floorGold 층마다 받는 금괴, 1층부터
+   */
+  public record VaultDungeon(
+      int floors,
+      int cleared,
+      List<VaultCard> cards,
+      List<VaultCard> offers,
+      List<Long> floorGold) {}
+
+  /**
+   * 금고 상점의 상품 하나.
+   *
+   * @param price 금괴 값
+   * @param weeklyLimit 한 주에 살 수 있는 횟수. 0이면 횟수 대신 단계(level)가 있는 상품이다
+   * @param left 이번 주에 더 살 수 있는 횟수(단계가 있는 상품은 더 올릴 수 있으면 1)
+   * @param level 단계가 있는 상품의 지금 단계. 아니면 null
+   */
+  public record VaultItem(
+      String code,
+      String name,
+      String description,
+      long price,
+      int weeklyLimit,
+      int left,
+      Integer level) {}
 
   /** 광고 뽑기: 종류별 하루 한도와 남은 수, 다음 한국 자정(ms). */
   public record AdDraws(int dailyLimit, int catLeft, int weaponLeft, long resetsAt) {}

@@ -448,6 +448,11 @@ class MentalEngine {
         .toList();
   }
 
+  /** 무기 종류의 이름. */
+  String weaponName(String kind) {
+    return text().weapons().get(kind);
+  }
+
   /** 등급을 더한 최종 수치. */
   CompanyProperties.Weapon stats(String kind, String grade) {
     CompanyProperties.Weapon base = properties.mental().weapons().get(kind);

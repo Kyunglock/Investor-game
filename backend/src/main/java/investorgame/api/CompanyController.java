@@ -311,6 +311,81 @@ class CompanyController {
     return company;
   }
 
+  /** 금고 보스전의 결과 (decisions.md 641번): 넣은 피해량을 받아 기록을 고치고 새로 닿은 등급의 금괴를 준다. */
+  @PostMapping("/vault/boss")
+  CompanyView reportVaultBoss(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody VaultBossRequest request) {
+    UUID sessionId = cookies.requirePlayer(token);
+    CompanyView company = companies.reportVaultBoss(sessionId, request.damage());
+    PLAY.info(
+        "company-vault-boss session={} company={} damage={} best={} tier={} gold={} ip={}",
+        sessionId,
+        company.companyId(),
+        request.damage(),
+        company.vault().boss().best(),
+        company.vault().boss().tier(),
+        company.vault().gold(),
+        ClientIp.current());
+    return company;
+  }
+
+  record VaultBossRequest(@NotNull @PositiveOrZero Double damage) {}
+
+  /** 주간 던전의 한 층을 깼다 (641번). 차례가 아니거나 그 층의 카드를 고르지 않았으면 400. */
+  @PostMapping("/vault/floor")
+  CompanyView clearVaultFloor(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody VaultFloorRequest request) {
+    UUID sessionId = cookies.requirePlayer(token);
+    CompanyView company = companies.clearVaultFloor(sessionId, request.floor());
+    PLAY.info(
+        "company-vault-floor session={} company={} floor={} gold={} ip={}",
+        sessionId,
+        company.companyId(),
+        request.floor(),
+        company.vault().gold(),
+        ClientIp.current());
+    return company;
+  }
+
+  record VaultFloorRequest(@NotNull @Positive Integer floor) {}
+
+  /** 주간 던전의 다음 층에 들고 갈 카드를 고른다 (641번). */
+  @PostMapping("/vault/card")
+  CompanyView pickVaultCard(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody VaultCardRequest request) {
+    UUID sessionId = cookies.requirePlayer(token);
+    CompanyView company = companies.pickVaultCard(sessionId, request.code());
+    PLAY.info(
+        "company-vault-card session={} company={} card={} ip={}",
+        sessionId,
+        company.companyId(),
+        request.code(),
+        ClientIp.current());
+    return company;
+  }
+
+  record VaultCardRequest(@NotBlank String code) {}
+
+  /** 금괴로 금고 상점의 상품을 산다 (641번). 이번 주 횟수를 다 썼거나 금괴가 모자라면 400. */
+  @PostMapping("/vault/shop/{code}")
+  CompanyView buyVaultItem(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable String code) {
+    UUID sessionId = cookies.requirePlayer(token);
+    CompanyView company = companies.buyVaultItem(sessionId, code);
+    PLAY.info(
+        "company-vault-shop session={} company={} item={} gold={} ip={}",
+        sessionId,
+        company.companyId(),
+        code,
+        company.vault().gold(),
+        ClientIp.current());
+    return company;
+  }
+
   /** 자본으로 전투 강화를 levels단계까지(없으면 한 단계) 산다 (decisions.md 367·394번). 꾹 눌러 모은 단계를 묶어 보낸다. */
   @PostMapping("/battle-upgrade")
   CompanyView buyBattleUpgrade(
