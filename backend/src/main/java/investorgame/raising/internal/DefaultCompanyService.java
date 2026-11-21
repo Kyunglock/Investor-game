@@ -22,6 +22,7 @@ class DefaultCompanyService implements CompanyService {
   private final CompanyEngine engine;
   private final IdleEngine idle;
   private final RewardsEngine rewards;
+  private final VaultEngine vault;
   private final SecureRandom seeds = new SecureRandom();
 
   DefaultCompanyService(
@@ -29,12 +30,14 @@ class DefaultCompanyService implements CompanyService {
       MemoryRepository memories,
       CompanyEngine engine,
       IdleEngine idle,
-      RewardsEngine rewards) {
+      RewardsEngine rewards,
+      VaultEngine vault) {
     this.companies = companies;
     this.memories = memories;
     this.engine = engine;
     this.idle = idle;
     this.rewards = rewards;
+    this.vault = vault;
   }
 
   @Override
@@ -409,7 +412,44 @@ class DefaultCompanyService implements CompanyService {
         engine.mental.assaultsView(c),
         idle.view(c),
         c.sandbox,
-        c.sandbox && !c.sandboxFinite);
+        c.sandbox && !c.sandboxFinite,
+        vault.view(c));
+  }
+
+  @Override
+  @Transactional
+  public CompanyView reportVaultBoss(UUID sessionId, double damage) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    vault.reportBoss(row.state(), damage);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView clearVaultFloor(UUID sessionId, int floor) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    vault.clearFloor(row.state(), floor);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView pickVaultCard(UUID sessionId, String code) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    vault.pickCard(row.state(), code);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView buyVaultItem(UUID sessionId, String code) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    vault.buy(row.state(), code, new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   @Override

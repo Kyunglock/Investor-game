@@ -590,6 +590,42 @@ class CompanyState {
     long diamonds;
   }
 
+  /** 금고 도전 (decisions.md 641번). 없던 저장은 null이라 처음 볼 때 만든다. */
+  Vault vault;
+
+  /** 금고 도전의 상태 (641번): 금괴와 훈련은 남고, 나머지는 주(한국 시간 월요일 0시)가 바뀌면 비운다. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Vault {
+    /** 금괴: 금고 도전에서만 얻고 금고 상점에서만 쓴다. */
+    long gold;
+
+    /** 금고 훈련의 단계: 금고 전투의 공격력을 올린다. 주가 바뀌어도 남는다. */
+    int training;
+
+    /** 보스전 피해량의 역대 최고 기록. */
+    double bossRecord;
+
+    /** 아래 칸들이 속한 주. */
+    long week = Long.MIN_VALUE;
+
+    /** 이번 주 보스전의 최고 피해량과 금괴를 받은 등급. */
+    double bossBest;
+
+    int bossTier;
+
+    /** 이번 주에 돌파한 던전 층과 고른 카드(층마다 한 장, 입장 전에 고른다). */
+    int floors;
+
+    List<String> cards = new ArrayList<>();
+
+    /** 이번 주에 금고 상점에서 산 횟수: 상품 코드 → 횟수. */
+    Map<String, Integer> bought = new LinkedHashMap<>();
+
+    /** 마지막으로 받은 것 한 줄. 화면이 한 번 알려 준다. */
+    String lastNote;
+  }
+
   /** 뽑기에서 나온 것 하나 (517번): 무기면 종류·등급, 고양이면 코드(kind)와 그때의 레벨. 새로 얻었으면 isNew. */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)

@@ -724,6 +724,59 @@ class CompanyApiTest {
     mvc.perform(post("/api/sandbox/next-day").cookie(session)).andExpect(status().isBadRequest());
   }
 
+  /** 금고 도전 (decisions.md 641번): 보스전 피해량으로 금괴를 받고, 던전은 카드를 고른 뒤 깨고, 금괴로 산다. */
+  @Test
+  void 금고_도전은_금괴를_주고_금고_상점에서_쓴다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(opened.read("$.vault.gold", Long.class)).isZero();
+    assertThat(opened.read("$.vault.boss.seconds", Integer.class)).isEqualTo(60);
+    assertThat(opened.<List<String>>read("$.vault.boss.weakSkills[*].code")).hasSize(4);
+    assertThat(opened.<List<String>>read("$.vault.boss.resistSkills[*].code")).hasSize(4);
+    assertThat(opened.<List<String>>read("$.vault.boss.rivals[*].code")).hasSize(4);
+    assertThat(opened.read("$.vault.dungeon.cleared", Integer.class)).isZero();
+    List<String> offers = opened.read("$.vault.dungeon.offers[*].code");
+    assertThat(offers).hasSize(3);
+    // 보스전: 피해량 100은 3등급(30·45·67.5)이고 등급마다 금괴 3이다.
+    DocumentContext boss =
+        json(postJson("/api/company/vault/boss", "{\"damage\":100}").andExpect(status().isOk()));
+    assertThat(boss.read("$.vault.boss.tier", Integer.class)).isEqualTo(3);
+    assertThat(boss.read("$.vault.boss.tierName", String.class)).isEqualTo("브론즈 3");
+    assertThat(boss.read("$.vault.gold", Long.class)).isEqualTo(9);
+    postJson("/api/company/vault/boss", "{\"damage\":-1}").andExpect(status().isBadRequest());
+    postJson("/api/company/vault/boss", "{}").andExpect(status().isBadRequest());
+    // 던전: 카드를 고르기 전에는 깰 수 없다.
+    postJson("/api/company/vault/floor", "{\"floor\":1}").andExpect(status().isBadRequest());
+    postJson("/api/company/vault/card", "{\"code\":\"nothing\"}")
+        .andExpect(status().isBadRequest());
+    DocumentContext picked =
+        json(
+            postJson("/api/company/vault/card", "{\"code\":\"" + offers.getFirst() + "\"}")
+                .andExpect(status().isOk()));
+    assertThat(picked.<List<String>>read("$.vault.dungeon.cards[*].code"))
+        .containsExactly(offers.getFirst());
+    assertThat(picked.<List<String>>read("$.vault.dungeon.offers[*].code")).isEmpty();
+    postJson("/api/company/vault/floor", "{\"floor\":2}").andExpect(status().isBadRequest());
+    DocumentContext cleared =
+        json(postJson("/api/company/vault/floor", "{\"floor\":1}").andExpect(status().isOk()));
+    assertThat(cleared.read("$.vault.dungeon.cleared", Integer.class)).isEqualTo(1);
+    assertThat(cleared.read("$.vault.gold", Long.class)).isEqualTo(39);
+    assertThat(cleared.<List<String>>read("$.vault.dungeon.offers[*].code")).hasSize(3);
+    // 금고 상점: 다이아 300개는 금괴 30.
+    long diamonds = cleared.read("$.diamonds.amount", Long.class);
+    DocumentContext bought =
+        json(
+            mvc.perform(post("/api/company/vault/shop/diamonds").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(bought.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 300);
+    assertThat(bought.read("$.vault.gold", Long.class)).isEqualTo(9);
+    assertThat(bought.read("$.vault.shop[0].left", Integer.class)).isEqualTo(4);
+    mvc.perform(post("/api/company/vault/shop/diamonds").cookie(session))
+        .andExpect(status().isBadRequest());
+    mvc.perform(post("/api/company/vault/shop/nothing").cookie(session))
+        .andExpect(status().isBadRequest());
+  }
+
   /** 상점 (decisions.md 541번): 게임 재화로 사고 하루 횟수가 있다. */
   @Test
   void 상점에서_무료_다이아를_받고_삭제된_교환_상품은_살_수_없다() throws Exception {

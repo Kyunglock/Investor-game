@@ -217,6 +217,8 @@ export interface Hud {
   boss: { name: string; hp: number } | null
   /** 공격 판(413번)의 가격 눈금과 벽: 지금 가격·시작가·목표가, 부순 벽과 전체, 벽 앞에 막혀 있나. 다른 모드는 null. */
   assault: AssaultHud | null
+  /** 금고 보스전 (641번)에서 지금까지 넣은 피해량. 다른 판은 0. */
+  damage: number
 }
 
 export interface AssaultHud {
@@ -250,6 +252,8 @@ export interface Outcome {
   /** 공격 판의 시작 가격과 끝난 때의 가격(벽·잡은 물량으로 오른 만큼, #591·#593). 다른 모드는 0. */
   priceStart: number
   priceEnd: number
+  /** 금고 보스전 (641번)에서 수호냥과 금고벽에 넣은 피해량. 다른 판은 0. */
+  damage: number
 }
 
 /** 자동 전투가 그리는 벽: 서버의 값에 서버가 아직 처리하지 않은 명중을 얹은 것이다 (532번, idlePredict.ts). */
@@ -264,7 +268,16 @@ export interface IdleSnapshot {
 }
 
 export interface BattleOptions {
-  vault?: { mapWall: number; guardianArt: string }
+  /**
+   * 금고 도전 (641번): 전장 그림과 수호냥 그림. scale은 공격 종류마다의 피해 배율(이번 주의 약점·내성)이고, score가 있으면 피해량을
+   * 겨루는 보스전이다: 수호냥과 금고벽은 체력이 줄지 않고, seconds(전투 초)가 지나면 넣은 피해량(Outcome.damage)으로 끝난다.
+   */
+  vault?: {
+    mapWall: number
+    guardianArt: string
+    scale?: (kind: DamageKind) => number
+    score?: { seconds: number }
+  }
   /** Foreground idle mode: the wall and its health come from this snapshot, never from the renderer's own count. */
   idle?: () => IdleSnapshot
   /** depth: 총알이 이미 뚫고 온 벽의 수 (520·532번). 0은 지금 치는 벽을 바로 맞힌 것이다. */
@@ -631,6 +644,8 @@ class BattleScene extends Phaser.Scene {
   private wallStoodAt = 0
   private runRush = 0
   private wallsBroken = 0
+  /** 금고 보스전 (641번)에서 수호냥과 금고벽에 넣은 피해량. */
+  private vaultDamage = 0
   private sinceBreak = 0
   private stuck = 0
   private lastFlow = 0
@@ -3236,9 +3251,15 @@ class BattleScene extends Phaser.Scene {
       this.hitSpark.explode(2, e.x - Math.cos(angle) * 10, e.y + 10)
       return
     }
+    // 금고 도전 (641번): 이번 주의 약점·내성 스킬은 수호냥과 금고벽에만 통한다.
+    const vault = this.opts.vault
+    if (vault?.scale && (e.cell || e.boss)) dmg *= vault.scale(kind)
     if (this.opts.idle && e.cell) {
       // 벽의 체력은 여기서 깎지 않는다: 알린 명중이 예측(idlePredict.ts)에 얹혀 다음 프레임의 스냅샷으로 돌아온다 (532번).
       if (!this.idleTransition) this.reportIdleHit(this.idleWall, kind, dmg, 0)
+    } else if (vault?.score && (e.cell || e.boss)) {
+      // 피해량을 겨루는 보스전: 수호냥과 금고벽은 쓰러지지 않고 맞은 만큼 점수가 된다.
+      this.vaultDamage += dmg
     } else e.hp -= dmg
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
     if (e.cell) e.clearTint()
@@ -4870,6 +4891,7 @@ class BattleScene extends Phaser.Scene {
         wallsTotal,
         priceStart: this.assault?.startPrice ?? 0,
         priceEnd: this.assault ? (win ? this.assaultNow() : this.assault.startPrice) : 0,
+        damage: this.vaultDamage,
         stars:
           this.mode === 'assault'
             ? assaultStars(win, this.wallsBroken)
@@ -4892,7 +4914,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 이 판의 제한 시간(초): 공격 판은 3분(#593), 나머지는 BATTLE_SECONDS. */
   private limitSeconds() {
-    return this.assault ? ASSAULT_SECONDS : BATTLE_SECONDS
+    return this.opts.vault?.score?.seconds ?? (this.assault ? ASSAULT_SECONDS : BATTLE_SECONDS)
   }
 
   /** 전투 추가 수익 눈금은 부순 매도벽에만 비례한다. */
@@ -4940,6 +4962,7 @@ class BattleScene extends Phaser.Scene {
             stuck: Boolean(this.walls.find((wl) => !wl.broken)?.arrived),
           }
         : null,
+      damage: this.vaultDamage,
     })
   }
 
@@ -5182,7 +5205,10 @@ class BattleScene extends Phaser.Scene {
     const time = this.elapsed * 1000
     if (!this.opts.idle && this.elapsed >= this.limitSeconds()) {
       // 디펜스는 버티면 이기고, 전진 모드와 디펜스 보스 스테이지는 시간 안에 못 넘으면(보스를 못 잡으면) 진다 (364·509번).
-      if (this.mode === 'advance' || this.mode === 'assault' || this.defenseBoss) {
+      if (this.opts.vault?.score) {
+        // 금고 보스전 (641번): 시간이 다 되면 넣은 피해량으로 끝난다.
+        this.finish(true, 'time')
+      } else if (this.mode === 'advance' || this.mode === 'assault' || this.defenseBoss) {
         if (this.assault) this.opts.onBanner('시간 초과… 매도벽에 막혔다', '#6b7a99')
         this.finish(false, 'time')
       } else {

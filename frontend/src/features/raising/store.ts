@@ -97,6 +97,14 @@ interface RaisingState {
    */
   buyShopItem: (code: string) => Promise<Company | null>
   /**
+   * 금고 도전 (decisions.md 641번): 보스전의 피해량을 알리고, 던전의 층을 깼다고 알리고, 다음 층의 카드를 고르고, 금괴로 금고 상점의 상품을
+   * 산다. 받은 것은 company.vault.lastNote. 바뀐 회사(거절되거나 끊겼으면 null)를 돌려준다. 전투를 멈추지 않게 busy를 켜지 않는다.
+   */
+  reportVaultBoss: (damage: number) => Promise<Company | null>
+  clearVaultFloor: (floor: number) => Promise<Company | null>
+  pickVaultCard: (code: string) => Promise<Company | null>
+  buyVaultItem: (code: string) => Promise<Company | null>
+  /**
    * 시즌패스의 단계 보상을 받는다 (decisions.md 529번). step을 주면 그 단계 하나, 없으면 받을 수 있는 것을 모두 받는다. 받은 것은
    * company.pass.lastRewards. 받은 회사(거절되거나 끊겼으면 null)를 돌려준다. 전투를 멈추지 않게 busy를 켜지 않는다.
    */
@@ -278,6 +286,28 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     },
     buyShopItem: async (code) => {
       const res = await safely(api.POST('/api/company/shop/{code}', { params: { path: { code } } }))
+      set({ company: res?.data ?? get().company, error: reason(res?.error) })
+      return res?.data ?? null
+    },
+    reportVaultBoss: async (damage) => {
+      const res = await safely(api.POST('/api/company/vault/boss', { body: { damage } }))
+      set({ company: res?.data ?? get().company, error: reason(res?.error) })
+      return res?.data ?? null
+    },
+    clearVaultFloor: async (floor) => {
+      const res = await safely(api.POST('/api/company/vault/floor', { body: { floor } }))
+      set({ company: res?.data ?? get().company, error: reason(res?.error) })
+      return res?.data ?? null
+    },
+    pickVaultCard: async (code) => {
+      const res = await safely(api.POST('/api/company/vault/card', { body: { code } }))
+      set({ company: res?.data ?? get().company, error: reason(res?.error) })
+      return res?.data ?? null
+    },
+    buyVaultItem: async (code) => {
+      const res = await safely(
+        api.POST('/api/company/vault/shop/{code}', { params: { path: { code } } }),
+      )
       set({ company: res?.data ?? get().company, error: reason(res?.error) })
       return res?.data ?? null
     },

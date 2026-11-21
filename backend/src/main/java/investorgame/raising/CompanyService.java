@@ -87,6 +87,18 @@ public interface CompanyService {
   /** 상점에서 상품 하나를 산다 (decisions.md 541번). 하루 횟수를 다 썼거나 재화가 모자라면 400. */
   CompanyView buyShop(UUID sessionId, String code);
 
+  /** 금고 보스전을 마쳤다 (decisions.md 641번): 넣은 피해량을 받아 기록을 고치고 새로 닿은 등급의 금괴를 준다. */
+  CompanyView reportVaultBoss(UUID sessionId, double damage);
+
+  /** 주간 던전의 floor층을 깼다 (641번): 차례가 아니거나 그 층의 카드를 고르지 않았으면 400. */
+  CompanyView clearVaultFloor(UUID sessionId, int floor);
+
+  /** 주간 던전의 다음 층에 들고 갈 카드를 고른다 (641번). */
+  CompanyView pickVaultCard(UUID sessionId, String code);
+
+  /** 금괴로 금고 상점의 상품을 산다 (641번). */
+  CompanyView buyVaultItem(UUID sessionId, String code);
+
   /**
    * 시즌패스의 단계 보상을 받는다 (decisions.md 529번). step이 null이면 받을 수 있는 것을 모두 받는다. 도달하지 않았거나 이미 받았으면 400.
    */

@@ -409,6 +409,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/vault/boss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 금고 보스전의 결과를 알린다 (decisions.md 641번)
+         * @description 보스전은 vault.boss.seconds초 동안 수호냥에게 넣은 피해량을 겨룬다. 전투는 화면이 돌리고 넣은 피해량을 보낸다.
+         *     이번 주 최고 기록(vault.boss.best)과 역대 기록(record)을 고치고, 새로 닿은 등급마다 금괴(tierGold)를 준다. 한 주에 등급마다 한 번이다.
+         *     피해량은 지금 출전한 팀이 낼 수 있는 상한까지만 받아 준다(넘으면 상한으로 적는다). 받은 것은 vault.lastNote에 담긴다.
+         */
+        post: operations["reportVaultBoss"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/vault/floor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 주간 던전의 한 층을 깼다고 알린다 (decisions.md 641번)
+         * @description 층은 차례대로만 깬다(vault.dungeon.cleared + 1). 그 층에 들고 갈 카드를 먼저 골라야 한다. 처음 깬 층의 금괴(floorGold)를 준다.
+         *     차례가 아니거나 카드를 고르지 않았거나 이번 주에 이미 다 깼으면 400.
+         */
+        post: operations["clearVaultFloor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/vault/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 주간 던전의 다음 층에 들고 갈 카드를 고른다 (decisions.md 641번)
+         * @description vault.dungeon.offers 가운데 한 장을 고른다. 고른 카드는 그 주 내내 쌓여 금고 던전의 전투에 붙는다. 층을 깨지 못해도 카드는 남는다.
+         *     고를 차례가 아니거나 나온 카드가 아니면 400.
+         */
+        post: operations["pickVaultCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/vault/shop/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 금괴로 금고 상점의 상품을 산다 (decisions.md 641번)
+         * @description 값은 금괴(vault.shop[].price)다. 상품마다 한 주에 살 수 있는 횟수가 있고 한국 시간 월요일 0시에 다시 찬다. 금고 훈련(training)은 횟수 대신 단계가 있다.
+         *     없는 상품이거나 이번 주 횟수를 다 썼거나 금괴가 모자라면 400. 받은 것은 vault.lastNote에 담긴다.
+         */
+        post: operations["buyVaultItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/ex": {
         parameters: {
             query?: never;
@@ -864,6 +949,29 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description 주간 던전의 카드 한 장 (decisions.md 641번). 배율은 모두 %이고 100이면 그대로다 */
+        VaultCard: {
+            code: string;
+            name: string;
+            /** @description 화면에 적는 효과 한 줄 */
+            effect: string;
+            /** @description 공격력 */
+            damagePercent: number;
+            /** @description 공격 속도 */
+            firePercent: number;
+            /** @description 스킬 피해 */
+            skillPercent: number;
+            /** @description 최대 멘탈 */
+            mentalPercent: number;
+            /** @description 매도 물량의 체력 */
+            enemyHpPercent: number;
+            /** @description 매도 물량의 빠르기 */
+            enemySpeedPercent: number;
+            /** @description 매도벽 체력 */
+            wallHpPercent: number;
+            /** @description 수호냥 체력 */
+            bossHpPercent: number;
+        };
         /** @description 회사 화면의 값. 직원 능력치는 등급만. 분기·결산·파산·엔딩은 없다 (decisions.md 523번). 회사는 끝나지 않고 시간이 흐르는 대로 돈을 번다 */
         Company: {
             /** Format: uuid */
@@ -1501,6 +1609,98 @@ export interface components {
             sandbox?: boolean;
             /** @description 테스트판의 무한 지갑이 켜져 있다. 자본과 다이아가 떨어지지 않는다 */
             sandboxInfinite?: boolean;
+            /** @description 금고 도전 (decisions.md 641번). 보스전과 주간 던전에서 금괴를 얻어 금고 상점에서 쓴다. 한 주의 경계는 한국 시간 월요일 0시다 */
+            vault?: {
+                /**
+                 * Format: int64
+                 * @description 가진 금괴
+                 */
+                gold: number;
+                /**
+                 * Format: int64
+                 * @description 이번 주의 번호
+                 */
+                week: number;
+                /**
+                 * Format: int64
+                 * @description 다음 주가 시작되는 때(서버 시각
+                 */
+                resetsAt: number;
+                /** @description 금고 훈련으로 오른 금고 전투 공격력(%) */
+                trainingPercent: number;
+                /** @description 마지막으로 받은 것 한 줄 */
+                lastNote?: string | null;
+                /** @description 보스전. seconds초 동안 수호냥에게 넣은 피해량을 겨룬다. 약점·내성 스킬과 천적 고양이는 주마다 바뀐다 */
+                boss: {
+                    /** @description 보스전의 길이(실제 초) */
+                    seconds: number;
+                    /** @description 약점 스킬. 피해가 weakPercent%다 */
+                    weakSkills: {
+                        /** @description 스킬 코드 (idle.cats[].skills[].code와 같다) */
+                        code: string;
+                        name: string;
+                    }[];
+                    /** @description 내성 스킬. 피해가 resistPercent%다 */
+                    resistSkills: {
+                        /** @description 스킬 코드 (idle.cats[].skills[].code와 같다) */
+                        code: string;
+                        name: string;
+                    }[];
+                    weakPercent: number;
+                    resistPercent: number;
+                    /** @description 천적 고양이. 그 고양이 총의 피해가 rivalPercent%다 */
+                    rivals: {
+                        code: string;
+                        name: string;
+                        grade: string;
+                    }[];
+                    rivalPercent: number;
+                    /** @description 이번 주의 최고 피해량 */
+                    best: number;
+                    /** @description 역대 최고 피해량 */
+                    record: number;
+                    /** @description 이번 주에 닿은 등급. 0이면 아직 없다 */
+                    tier: number;
+                    tierName: string;
+                    /** @description 다음 등급의 문턱(피해량) */
+                    nextScore: number;
+                    nextTierName: string;
+                    /**
+                     * Format: int64
+                     * @description 등급 하나에 받는 금괴. 한 주에 등급마다 한 번이다
+                     */
+                    tierGold: number;
+                };
+                /** @description 주간 던전. 층에 들어가기 전에 카드 한 장을 고르고, 고른 카드는 그 주 내내 쌓인다 */
+                dungeon: {
+                    floors: number;
+                    /** @description 이번 주에 돌파한 층 */
+                    cleared: number;
+                    /** @description 이번 주에 고른 카드, 고른 차례대로 */
+                    cards: components["schemas"]["VaultCard"][];
+                    /** @description 지금 골라야 할 카드들. 고를 차례가 아니면 비어 있다 */
+                    offers: components["schemas"]["VaultCard"][];
+                    /** @description 층마다 받는 금괴, 1층부터 */
+                    floorGold: number[];
+                };
+                /** @description 금고 상점의 진열, 차례대로 */
+                shop: {
+                    code: string;
+                    name: string;
+                    description: string;
+                    /**
+                     * Format: int64
+                     * @description 금괴 값
+                     */
+                    price: number;
+                    /** @description 한 주에 살 수 있는 횟수. 0이면 횟수 대신 단계(level)가 있는 상품이다 */
+                    weeklyLimit: number;
+                    /** @description 이번 주에 더 살 수 있는 횟수(단계가 있는 상품은 더 올릴 수 있으면 1) */
+                    left: number;
+                    /** @description 단계가 있는 상품의 지금 단계 */
+                    level?: number | null;
+                }[];
+            };
             idle?: {
                 onboarding?: {
                     /** @description -1은 환영. 0~7 진행 중. 8은 완료 또는 기존 유저 */
@@ -2364,6 +2564,121 @@ export interface operations {
             header?: never;
             path: {
                 /** @description 상품 코드 (shop.items[].code) */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 산 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportVaultBoss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description 수호냥과 금고벽에 넣은 피해량 */
+                    damage: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 기록한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    clearVaultFloor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    floor: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 깬 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    pickVaultCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description 카드 코드 (vault.dungeon.offers[].code) */
+                    code: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 고른 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    buyVaultItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 상품 코드 (vault.shop[].code) */
                 code: string;
             };
             cookie?: never;

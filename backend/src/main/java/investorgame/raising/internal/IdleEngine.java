@@ -671,6 +671,24 @@ class IdleEngine {
         * StrictMath.pow(HP_GROWTH, depth);
   }
 
+  /** 금고 도전 (641번): 스킬의 수, 그 등급의 고양이들, 스킬 하나의 코드와 이름("물 스킬"의 "물"). */
+  static int skillCount() {
+    return CODES.length;
+  }
+
+  static List<String> catsOf(String grade) {
+    return CATS.stream().filter(code -> catGrade(code).equals(grade)).toList();
+  }
+
+  static CompanyView.VaultSkill vaultSkill(int skill) {
+    return new CompanyView.VaultSkill(CODES[skill], NAMES[skill].replace(" 스킬", ""));
+  }
+
+  /** 지금 출전한 팀의 총과 스킬이 실제 1초에 내는 피해 (641번): 금고 보스전의 피해량 상한에 쓴다. */
+  double fieldDps(CompanyState c) {
+    return dps(c);
+  }
+
   private double dps(CompanyState c) {
     CompanyState.Idle s = state(c);
     List<Shooter> shooters = shooters(c);
