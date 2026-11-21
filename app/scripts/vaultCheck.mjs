@@ -234,7 +234,6 @@ async function fight(page, speed = 6) {
 }
 
 async function openVault(browser, company, calls) {
-  // 움직임 줄이기는 켜지 않는다: 그 화면에서는 시트가 왼쪽으로 밀린다(index.css의 reduced-motion 규칙, 이 검사의 일이 아니다).
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
@@ -340,6 +339,26 @@ try {
     assert.ok(overflow <= 1, `가로 넘침 ${overflow}px`)
     assert.deepEqual(errors, [])
     await page.close()
+    // 움직임 줄이기를 켠 화면에서도 시트가 제자리에 또렷이 남는다 (전에는 왼쪽으로 반쯤 밀리며 흐려져 사라졌다).
+    const still = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: 'reduce',
+    })
+    await still.route(/\/api\/(company|sessions)(\/|$|\?)/, serve(companyOf(TEAMS.team), []))
+    await still.goto(process.env.APP_URL ?? 'http://localhost:5182/app/', { timeout: 90000 })
+    await expect(still.getByTestId('idle-canvas-loading')).toHaveCount(0, { timeout: 30000 })
+    await still.getByTestId('vault-entry').click()
+    await expect(still.getByTestId('vault-sheet')).toBeVisible()
+    await still.waitForTimeout(1300)
+    const sheet = await still.evaluate(() => {
+      const el = document.querySelector('[data-testid="vault-sheet"]')
+      const rect = el.getBoundingClientRect()
+      return { left: rect.left, right: rect.right, opacity: getComputedStyle(el).opacity }
+    })
+    assert.deepEqual(sheet, { left: 0, right: 390, opacity: '1' })
+    await still.getByRole('button', { name: '금고 상점' }).click()
+    await expect(still.getByTestId('vault-shop')).toBeVisible()
+    await still.close()
   }
 } finally {
   await browser.close()

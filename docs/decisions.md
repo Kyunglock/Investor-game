@@ -2868,6 +2868,6 @@ Play Console이 비공개 테스트를 제출할 때 "필수 하드웨어 기능
 
 - API: `POST /api/company/vault/boss`(`damage`) · `/vault/floor`(`floor`) · `/vault/card`(`code`) · `/vault/shop/{code}`. 받은 것은 `vault.lastNote`.
 - 기기에 남던 옛 기록(최고 시간, 돌파한 층)은 쓰지 않는다.
-- (알려 둘 것) 움직임 줄이기를 켠 화면에서는 모든 시트가 왼쪽으로 반쯤 밀린다(`app/src/index.css`의 reduced-motion 규칙이 `.sheet-up`에도 `translateX(-50%)`를 건다). 전부터 있던 문제라 이번에는 고치지 않았고, 금고 확인 스크립트는 그 설정을 켜지 않는다.
+- 움직임 줄이기를 켠 화면에서 시트·장면·제목이 왼쪽으로 반쯤 밀리며 흐려져 사라지던 것을 고쳤다(사용자: "기존버그고쳐줘"). `app/src/index.css`의 reduced-motion 규칙이 떠오르는 글(`.fx-float`)에만 줄 가운데 맞춤과 흐려짐을 시트·장면에도 걸고 있었다. 이제 그 둘(`.fx-flash`·`.fx-float`)만 흐려지고 나머지는 움직임만 끈다. 금고 확인 스크립트가 그 설정에서 시트의 자리와 또렷함을 본다.
 
 검증: VaultEngineTest(주의 경계, 등급 문턱, 금괴, 상한, 약점·천적, 카드와 층, 상점, 훈련, 저장), vaultBattle.test(팀 화력, 층, 카드, 약점 배율, 숫자 글), 앱 화면 검사 vaultCheck(보스전·카드·층·상점), 앱·웹 린트·타입·단위 테스트. API 테스트(CompanyApiTest)와 E2E는 CI에서 돈다.
