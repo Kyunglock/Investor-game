@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { enterVault, heavyStrike, nextVaultWeek, playTurn, vaultWeek } from './vaultBattle'
+import { nextVaultWeek, vaultEncounter, vaultWeek } from './vaultBattle'
 
 describe('금고 도전', () => {
   it('한국 시간 월요일 자정에 다음 주 금고를 연다', () => {
@@ -7,19 +7,13 @@ describe('금고 도전', () => {
     expect(nextVaultWeek(vaultWeek(monday - 1))).toBe(monday)
     expect(vaultWeek(monday)).toBe(vaultWeek(monday - 1) + 1)
   })
-  it('강타를 막고 반격하면 모든 층과 보스를 격파한다', () => {
-    for (const hp of [49, 61, 73, 86]) {
-      for (const pattern of [0, 1, 2]) {
-        let fight = enterVault(hp, pattern)
-        while (fight.hp && fight.enemy) fight = playTurn(fight, heavyStrike(fight))
-        expect(fight.enemy).toBe(0)
-        expect(playTurn(fight, false)).toBe(fight)
-      }
+  it('보스는 첫 벽에서, 주간 수호자는 층별 매도벽 뒤에서 싸운다', () => {
+    expect(vaultEncounter(true, 1, 100).walls.map((w) => w.boss)).toEqual([true])
+    for (const floor of [1, 2, 3]) {
+      const spec = vaultEncounter(false, floor, 100)
+      expect(spec.walls).toHaveLength(floor + 1)
+      expect(spec.walls.at(-1)?.boss).toBe(true)
+      expect(spec.walls.filter((w) => w.boss)).toHaveLength(1)
     }
-  })
-  it('강타를 계속 맞으면 패배한다', () => {
-    let fight = enterVault(86, 0)
-    while (fight.hp && fight.enemy) fight = playTurn(fight, false)
-    expect(fight.hp).toBe(0)
   })
 })

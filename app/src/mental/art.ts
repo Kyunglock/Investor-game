@@ -820,7 +820,15 @@ export function bakeOrders(scene: Phaser.Scene, hpScale = 1, redraw = false) {
     bake(scene, enemyKey('whale', frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
       c.save()
       c.translate(0, Math.sin(phase) * 1.2)
-      drawWhale(c)
+      if (scene.textures.exists('vault-guard')) {
+        c.drawImage(
+          scene.textures.get('vault-guard').getSourceImage() as HTMLImageElement,
+          0,
+          0,
+          ENEMY_SIZE,
+          ENEMY_SIZE,
+        )
+      } else drawWhale(c)
       c.restore()
     })
   }
