@@ -636,9 +636,8 @@ class IdleEngineTest {
 
   @Test
   void catsHaveAFixedGradeThatStrengthensTheirGunAndMakesThemRarer() {
-    // 고양이 등급 (539번): C 16 · B 12 · A 7 · S 4종. 총 공격력 C 1배 · B 1.15배 · A 1.35배 · S 1.6배(644번, 전에는 1
-    // · 1.4 · 2 ·
-    // 3배). 레벨 1이면 25%에 곱한다: 25 · 28.75 · 33.75 · 40.
+    // 고양이 등급 (539번): C 16 · B 12 · A 7 · S 4종. 총 공격력 C 1배 · B 1.05배 · A 1.1배 · S 1.2배(646번, 644번에는
+    // 1 · 1.15 · 1.35 · 1.6배, 그 전에는 1 · 1.4 · 2 · 3배). 레벨 1이면 25%에 곱한다: 25 · 26.25 · 27.5 · 30.
     start(1);
     var cats = engine.view(state).cats();
     assertThat(cats).hasSize(39);
@@ -658,9 +657,9 @@ class IdleEngineTest {
             engine.view(state).cats().stream().filter(c -> c.code().equals(code)).findFirst().get();
     // 특성으로 공격력이 붙지 않은 고양이끼리 견준다: 하늘냥 C, 카라멜냥 B, 바다냥 A, 별빛냥 S.
     assertThat(cat.apply("sky").damagePercent()).isEqualTo(25);
-    assertThat(cat.apply("caramel").damagePercent()).isEqualTo(29);
-    assertThat(cat.apply("ocean").damagePercent()).isEqualTo(34);
-    assertThat(cat.apply("star").damagePercent()).isEqualTo(40);
+    assertThat(cat.apply("caramel").damagePercent()).isEqualTo(26);
+    assertThat(cat.apply("ocean").damagePercent()).isEqualTo(28);
+    assertThat(cat.apply("star").damagePercent()).isEqualTo(30);
     // 마법은 A등급부터다 (561번): C·B는 없고 A는 하나, S는 둘이다. 모든 스킬이 쓰인다.
     for (var c : cats) {
       int want = c.grade().equals("S") ? 2 : c.grade().equals("A") ? 1 : 0;
@@ -706,15 +705,16 @@ class IdleEngineTest {
     // The tenth wall is an ordinary wall now (550): no three-fold reward.
     double tenth = 1_000_000 * IdleEngine.REWARD_UPGRADES * StrictMath.pow(1.04, 9);
     assertThat(state.capital).isBetween(tenth, tenth * 1.05);
-    // 10 + 5d + 0.035d² + 3.897e-9·d⁴ (644; × 1.003^d before, 636):
-    // d = 9: 10 + 45 + 2.835 + 3.897e-9 × 6,561 = 57.835025568217.
-    assertThat(IdleEngine.maxHp(10)).isCloseTo(57.835025568217, offset(1e-9));
+    // 10 + 2d + 9.065e-11·d⁴ (646; 10 + 5d + 0.035d² + 3.897e-9·d⁴ in 644, × 1.003^d before, 636):
+    // d = 9: 10 + 18 + 9.065e-11 × 6,561 = 28.00000059475465.
+    assertThat(IdleEngine.maxHp(10)).isCloseTo(28.00000059475465, offset(1e-9));
     // The boss wall (every 50th) has three times the health and pays three times the reward.
-    // d = 49: 10 + 245 + 84.035 + 3.897e-9 × 5,764,801 = 339.057465429497.
-    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 339.057465429497, offset(1e-9));
-    // The 5,000th wall (a boss) is about ten million (644; trillions with 1.003^d): d = 4,999,
-    // 10 + 24,995 + 874,650.035 + 3.897e-9 × 4,999⁴ = 3,333,332.12, times three.
-    assertThat(IdleEngine.maxHp(5000)).isCloseTo(9_999_996.358, offset(1e-3));
+    // d = 49: 10 + 98 + 9.065e-11 × 5,764,801 = 108.00052257921065.
+    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 108.00052257921065, offset(1e-9));
+    // The 5,001st wall (a plain wall) shows ten million shares (646: health 66,666 x 150 shares;
+    // 644 put ten million in the health itself): d = 5,000, 10 + 10,000 + 9.065e-11 × 5,000⁴
+    // = 10,010 + 56,656.25 = 66,666.25.
+    assertThat(IdleEngine.maxHp(5001)).isCloseTo(66_666.25, offset(1e-6));
     state.idle.wall = 50;
     state.idle.damage = IdleEngine.maxHp(50) - 1;
     // Its own clear reward (549) was paid before: only the wall reward is counted here.
@@ -1041,10 +1041,10 @@ class IdleEngineTest {
     assertThat(cats.stream().filter(cat -> cat.fielded()).count())
         .isEqualTo(engine.view(state).fieldSlots())
         .isEqualTo(4);
-    // A cat's gun: a quarter of the weapon's damage times its level to the 0.3 (644; half times
-    // the square root before, 636), times its trait.
+    // A cat's gun: a quarter of the weapon's damage times its level to the 0.1 (646; to the 0.3 in
+    // 644, half times the square root before, 636), times its trait.
     var sky = cats.getFirst();
-    assertThat(sky.damagePercent()).isEqualTo((int) Math.round(25 * Math.pow(sky.level(), 0.3)));
+    assertThat(sky.damagePercent()).isEqualTo((int) Math.round(25 * Math.pow(sky.level(), 0.1)));
     assertThat(sky.firePercent()).isEqualTo(125);
     assertThat(cats.get(1).firePercent()).isEqualTo(100);
     assertThat(cats.get(2).criticalPercent()).isEqualTo(150);
@@ -1084,16 +1084,19 @@ class IdleEngineTest {
         .extracting(skill -> skill.code())
         .containsExactly("meteor");
     engine.fieldCat(state, "sky", false);
-    // A resting cat's gun no longer adds to the bullet budget.
+    // A resting cat's gun no longer adds to the bullet budget. The wall's damage is cleared before
+    // each volley: wall 16 has only 10 + 2 x 15 = 40 health since 646, and two volleys would
+    // break it.
     for (int i = 0; i < 3; i++) tick(1000);
-    double before = state.idle.damage;
+    state.idle.damage = 0;
     tick(1000, new IdleHit(16, "bullet", 1000, 1000.0));
-    double alone = state.idle.damage - before;
+    double alone = state.idle.damage;
     engine.fieldCat(state, "sky", true);
     for (int i = 0; i < 3; i++) tick(1000);
-    before = state.idle.damage;
+    state.idle.damage = 0;
     tick(1000, new IdleHit(16, "bullet", 1000, 1000.0));
-    assertThat(state.idle.damage - before).isGreaterThan(alone);
+    assertThat(state.idle.wall).isEqualTo(16);
+    assertThat(state.idle.damage).isGreaterThan(alone);
     assertThatThrownBy(() -> engine.fieldCat(state, "mint", true))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
   }
@@ -1476,19 +1479,23 @@ class IdleEngineTest {
         .isCloseTo(2.25 * SPEED / 2 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(engine.view(state).wallDps()).as("what the wall really took lately").isPositive();
     // A forged bullet may claim the strongest gun's critical: here the boss cat's pistol, since
-    // a level 4 cat shoots at only 25% x 4^0.3 = 38% (644; 50% x √4 = 100% before, 636).
+    // a level 4 cat shoots at only 25% x 4^0.1 = 29% (646; 25% x 4^0.3 = 38% in 644, 50% x √4 =
+    // 100% before, 636).
     state.idle.cats.put("sky", 4);
     double before = state.idle.damage;
     for (int i = 0; i < 3; i++) tick(1000);
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
     assertThat(state.idle.damage - before).isEqualTo(4);
-    // Only past level 101 does the cat outgun the boss cat (25% x 1000^0.3 = 199%, 644).
-    state.idle.cats.put("sky", 1000);
+    // Even at the top level the cat does not outgun the boss cat (646): 25% x 1000^0.1 = 50% of the
+    // pistol (25% x 1000^0.3 = 199% in 644, when past level 101 it did), so the boss cat's pistol
+    // still sets the cap.
+    state.idle.cats.put("sky", IdleEngine.MAX_CAT_LEVEL);
+    assertThat(0.25 * Math.pow(IdleEngine.MAX_CAT_LEVEL, 0.1)).isCloseTo(0.4988, offset(1e-4));
     before = state.idle.damage;
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
     assertThat(state.idle.damage - before)
-        .as("level 1000 cat: 25% x 1000^0.3 = 199% pistol critical")
-        .isCloseTo(4 * 0.25 * Math.pow(1000, 0.3), offset(1e-9));
+        .as("level 1000 cat: 25% x 1000^0.1 = 50%, below the boss cat's pistol critical")
+        .isEqualTo(4);
   }
 
   @Test
@@ -1499,9 +1506,9 @@ class IdleEngineTest {
     // A deep wall does not make a buy order stronger (573): the order scale is not in it.
     double order = 1.5;
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
-    // The order scale follows the wall's health (10 + 5d + 0.035d² + 3.897e-9·d⁴, 644; × 1.003^d
-    // before, 4.0): 1 + 848.41 / 380 = 3.23, two digits 3.2.
-    assertThat(IdleEngine.threat(100)).isEqualTo(3.2);
+    // The order scale follows the wall's health (10 + 2d + 9.065e-11·d⁴, 646; 3.2 in 644, 4.0 with
+    // × 1.003^d before): d = 99, 1 + 208.0087 / 380 = 1.547, two digits 1.5.
+    assertThat(IdleEngine.threat(100)).isEqualTo(1.5);
     // A buy order is capped at its own damage, whatever the screen reports.
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
@@ -1542,29 +1549,29 @@ class IdleEngineTest {
     start(1);
     assertThat(engine.teamScale(state)).isCloseTo(1, offset(1e-9));
     assertThat(buyBonus()).isZero();
-    // A level 4 C cat with the starting pistol shoots 25% x 4^0.3 = 38% of the boss cat, 25%
-    // faster (sky, 644; as hard as the boss cat before): the team is 1.47 pistols, and
-    // (1.47 - 1) x 0.5 x 225 = 53 shares come on top (140 before).
-    double cat = 1.25 * 0.25 * Math.pow(4, 0.3);
+    // A level 4 C cat with the starting pistol shoots 25% x 4^0.1 = 29% of the boss cat, 25%
+    // faster (sky, 646; 4^0.3 = 38% in 644, as hard as the boss cat before): the team is 1.359
+    // pistols, and (1.359 - 1) x 0.5 x 225 = 40.38, 40 shares come on top (53 in 644, 140 before).
+    double cat = 1.25 * 0.25 * Math.pow(4, 0.1);
     state.idle.cats.put("sky", 4);
     engine.fieldCat(state, "sky", true);
     assertThat(engine.teamScale(state)).isCloseTo(1 + cat, offset(1e-9));
-    assertThat(buyBonus()).isEqualTo(53);
+    assertThat(buyBonus()).isEqualTo(40);
     // The attack and fire upgrades are not in it: the team's share follows gear, not upgrades.
     state.capital = 1e18;
     company.mental.buyUpgrade(state, "damage", 20);
     company.mental.buyUpgrade(state, "fire", 20);
-    assertThat(buyBonus()).isEqualTo(53);
+    assertThat(buyBonus()).isEqualTo(40);
     // Ten buy levels: 200 fixed shares, and the team's part grows by two shares a level.
     company.mental.buyUpgrade(state, "buy", 10);
     assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(cat * 0.5 * 245));
     // The wall's depth changes nothing (573), and the server accepts an order of that size.
     state.idle.wall = 100;
-    // 0.474 x 0.5 x 245 = 58.02.
-    assertThat(buyBonus()).isEqualTo(200 + 58);
+    // 0.359 x 0.5 x 245 = 43.97 (646; 0.474 x 0.5 x 245 = 58.02 in 644).
+    assertThat(buyBonus()).isEqualTo(200 + 43);
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 1, 1e9));
-    assertThat(state.idle.damage).isCloseTo(1.5 + 258 / 150.0, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(1.5 + 243 / 150.0, offset(1e-9));
     // 영구 강화(생선)는 고정 수량에 30주를 더하고 팀의 몫에는 한 단계에 1%를 곱한다 (644번, 전에는 3%).
     state.fishLevels.put("buy", 10);
     assertThat(buyBonus()).isEqualTo(200 + 300 + (long) Math.floor(cat * 0.5 * 245 * 1.1));

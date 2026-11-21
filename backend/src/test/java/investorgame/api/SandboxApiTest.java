@@ -119,7 +119,7 @@ class SandboxApiTest {
                     post("/api/company/battle-upgrade")
                         .cookie(session, in)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"kind\":\"damage\",\"levels\":100}"))
+                        .content("{\"kind\":\"damage\",\"levels\":50}"))
                 .andExpect(status().isOk())
                 .andReturn());
     assertThat(upgraded.read("$.companyId", String.class)).isEqualTo(trialId);
@@ -127,7 +127,7 @@ class SandboxApiTest {
     assertThat(again.read("$.companyId", String.class)).isEqualTo(trialId);
     assertThat(again.read("$.capital", Long.class)).isEqualTo(trialCapital);
     assertThat(again.read("$.battleUpgrades[?(@.kind=='damage')].level").toString())
-        .isEqualTo("[100]");
+        .isEqualTo("[50]"); // 646번: 단계마다 30%씩 올라 100단계는 지갑을 넘는다. 50단계는 약 1.7조
 
     // 쿠키 없이는 본 게임 그대로다.
     DocumentContext untouched = json(mvc.perform(get("/api/company").cookie(session)).andReturn());
