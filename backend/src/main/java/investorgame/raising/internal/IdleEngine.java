@@ -127,17 +127,14 @@ class IdleEngine {
   // BOSS_HP.
   // Halved in 562: 20 + 12 x depth + 0.2 x depth^2 before.
   private static final double HP_BASE = 10;
-  // Lowered from 6 and 0.1 in 637, with the attack upgrade's step (3% to 1% a level): the walls a
-  // set of gear stops at stay where 636 put them, with numbers about a third as large.
-  private static final double HP_LINEAR = 5;
-  private static final double HP_SQUARE = 0.035;
+  // 2 a wall and no square term since 646 (5 and 0.035 before, 637).
+  private static final double HP_LINEAR = 2;
 
   /**
-   * 벽 체력의 4차 항 (644번): 636번의 지수(1.003^깊이)를 대신한다. 지수는 5,000벽에서 3백만 배가 되어 벽 체력이 조·경 단위로 커졌고, 그것을
-   * 따라잡으려 무기 등급과 고양이 레벨이 곱으로 키우는 화력도 함께 커졌다. 화력을 누르고(무기 S 이상 등급, 고양이 레벨) 4차식으로 바꿔 장비마다 막히는 벽은 두면서
-   * 숫자를 줄였다. 화면 idlePredict.ts의 idleMaxHp와 같이 바꾼다.
+   * 벽 체력의 4차 항 (644·646번): 벽 체력 = 10 + 2d + 이 값 × d⁴. 5,001번째 벽(d = 5,000)이 화면에 1,000만주(체력 66,666 ×
+   * 150주)다. 644번에는 체력값 자체를 5,000벽 1,000만으로 맞춰 화면에는 5억주였다. 화면 idlePredict.ts의 idleMaxHp와 같이 바꾼다.
    */
-  private static final double HP_QUARTIC = 3.897e-9;
+  private static final double HP_QUARTIC = 9.065e-11;
 
   private static final double BOSS_HP = 3;
 
@@ -303,9 +300,9 @@ class IdleEngine {
           "caramel", "mocha", "peach", "biscuit", "lemon", "cocoa", "cloud", "tilt", "russet",
           "plum", "coral", "truffle");
   // A grade's share of the draws (percent) and its cats' gun damage (x the level's power). The
-  // damage was {1, 1.4, 2, 3} before 644.
+  // damage was {1, 1.4, 2, 3} before 644 and {1, 1.15, 1.35, 1.6} in 644.
   private static final int[] GRADE_PERCENT = {60, 28, 10, 2};
-  private static final double[] GRADE_DAMAGE = {1, 1.15, 1.35, 1.6};
+  private static final double[] GRADE_DAMAGE = {1, 1.05, 1.1, 1.2};
   private static final int[] CAT_GRADE = CATS.stream().mapToInt(IdleEngine::gradeIndex).toArray();
   // Each grade's share is split evenly over its cats: percent x (all cats' common multiple) / n.
   private static final int[] CAT_WEIGHTS = catWeights();
@@ -376,11 +373,11 @@ class IdleEngine {
   private static final long[] CAT_LEGACY_WALLS = {15, 50};
   private static final int FIELD_SLOTS = 4;
   // A cat's gun hits for this share of the weapon's damage times its level to CAT_LEVEL_EXPONENT
-  // (644): level 10 is twice level 1, level 100 four times, level 1000 about 8 times. It was half
-  // the weapon times the square root (636, level 1000 about 32 times) and 1 + 0.2 per level above
-  // 1 before that.
+  // (646): level 10 is 1.26 times level 1, level 100 1.58 times, level 1000 twice. It was the
+  // level to the 0.3 (644), half the weapon times the square root (636, level 1000 about 32 times)
+  // and 1 + 0.2 per level above 1 before that.
   private static final double CAT_POWER = 0.25;
-  private static final double CAT_LEVEL_EXPONENT = 0.3;
+  private static final double CAT_LEVEL_EXPONENT = 0.1;
   // 벽 보상 (553번): 벽 하나를 깨면 그 벽 번호와 같은 단계의 전투 강화 값 REWARD_UPGRADES개 어치를 준다. 물가가 강화 값과 같은
   // 빠르기로 크므로(CompanyEngine.inflation), N번째 벽을 깰 때까지 번 돈이 끝없는 강화(공격력·체력·매수)를 평균 N단계쯤 올린다.
   // 보스 벽은 BOSS_REWARD배. 전에는 그 벽의 시간 수입 10초 어치였다 (537·552번). 세 단계 어치를 한 단계 반으로 낮췄다 (559번).
@@ -677,7 +674,7 @@ class IdleEngine {
   private static double plainHp(long wall) {
     long depth = wall - 1;
     double square = (double) depth * depth;
-    return HP_BASE + HP_LINEAR * depth + HP_SQUARE * square + HP_QUARTIC * square * square;
+    return HP_BASE + HP_LINEAR * depth + HP_QUARTIC * square * square;
   }
 
   /** 금고 도전 (641번): 스킬의 수, 그 등급의 고양이들, 스킬 하나의 코드와 이름("물 스킬"의 "물"). */
