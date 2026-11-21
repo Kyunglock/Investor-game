@@ -62,9 +62,10 @@ export function teamScale(loadout: Loadout): number {
  * 던전 층마다의 벽·수호냥 체력 배율: 팀 화력만큼 키운 뒤 이만큼을 더 곱한다. 카드 없이 1층은 넉넉히, 3층은 빠듯하게 깨도록 맞췄다
  * (scripts/vaultCheck.mjs).
  */
-const TUNE = (globalThis as { __vaultTune?: { floor: number[]; enemy: number } }).__vaultTune
+const TUNE = (globalThis as { __vaultTune?: { floor: number[]; enemy: number; dmg: number } }).__vaultTune
 export const FLOOR_HP = (TUNE?.floor ?? [1, 1, 1]) as readonly number[]
 const ENEMY = TUNE?.enemy ?? 1
+const DMG = TUNE?.dmg ?? 1
 
 interface Mods {
   damage: number
@@ -152,7 +153,7 @@ export function bossScale(boss: Vault['boss']): (kind: DamageKind) => number {
 /** 보스전 한 판: 수호냥의 금고벽 하나. 졸개는 팀 화력만큼 단단하다. 벽과 수호냥은 쓰러지지 않는다(battle.ts vault.score). */
 export function bossEncounter(scale: number): AssaultSpec {
   const spec = assaultSpec(3, { name: GUARDIAN })
-  return { ...spec, enemyHp: spec.enemyHp * Math.max(1, scale * ENEMY), walls: [spec.walls[spec.walls.length - 1]] }
+  return { ...spec, enemyDmg: spec.enemyDmg * DMG, enemyHp: spec.enemyHp * Math.max(1, scale * ENEMY), walls: [spec.walls[spec.walls.length - 1]] }
 }
 
 /** 던전의 floor층: 층 수만큼의 매도벽 뒤에 수호냥의 벽이 선다. 벽·물량·수호냥은 팀 화력과 층을 따라 단단해지고 카드가 그것을 깎는다. */
@@ -175,6 +176,7 @@ export function dungeonEncounter(
     })),
     enemyHp: spec.enemyHp * Math.max(1, scale * ENEMY) * mods.enemyHp,
     enemySpeed: spec.enemySpeed * mods.enemySpeed,
+    enemyDmg: spec.enemyDmg * DMG,
     bossHp: spec.bossHp * hp * mods.bossHp,
     midBossHp: spec.midBossHp * hp * mods.bossHp,
   }

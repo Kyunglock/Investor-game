@@ -242,6 +242,7 @@ try {
       await page.getByRole('button', { name: '주간 던전' }).click()
       for (const floor of [1, 2, 3]) {
         company.vault.dungeon.cleared = floor - 1
+        company.vault.dungeon.offers = []
         await page.getByRole('button', { name: '보스전', exact: true }).click()
         await page.getByRole('button', { name: '주간 던전' }).click()
         await page.getByRole('button', { name: `${floor}층 입장` }).click()
