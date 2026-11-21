@@ -3,6 +3,8 @@ import type { CatCode } from '@web/features/raising/store'
 import { useId } from 'react'
 import faces from './assets/cat-face-rects.json'
 import facesUrl from './assets/cat-faces.webp'
+import type { CatGrade } from './catGrade'
+import './s-cat.css'
 import { IdleIcon } from './icons'
 
 /** 카드 초상화 아틀라스(scripts/catFaceAtlas.py가 만든다). 전투 원본 대신 이 작은 그림 하나만 받는다. */
@@ -10,11 +12,23 @@ export const CAT_FACES_URL = facesUrl
 const FACES: Record<string, { x: number; y: number; w: number; h: number }> = faces.faces
 
 /** 카드·출전 칸·뽑기 결과가 같은 얼굴을 사용한다. code가 없으면 사장냥이다. */
-export function CatPortrait({ code, locked }: { code?: CatCode; locked?: boolean }) {
+export function CatPortrait({
+  code,
+  grade,
+  locked,
+}: {
+  code?: CatCode
+  grade?: CatGrade
+  locked?: boolean
+}) {
   const clipId = useId()
   const rect = (code && FACES[code]) || FACES.boss
   return (
-    <span className={`idle-cat-portrait ${locked ? 'is-locked' : ''}`} aria-hidden="true">
+    <span
+      className={`idle-cat-portrait ${locked ? 'is-locked' : ''}`}
+      data-starlight={(grade === 'S' && !locked) || undefined}
+      aria-hidden="true"
+    >
       <svg
         className="idle-cat-face"
         viewBox={`${rect.x} ${rect.y} ${rect.w} ${rect.h}`}

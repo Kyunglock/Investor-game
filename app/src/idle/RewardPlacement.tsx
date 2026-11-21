@@ -95,7 +95,10 @@ export function RewardPlacement({
             data-testid="reward-grab"
           >
             {'cat' in reward ? (
-              <CatPortrait code={reward.cat} />
+              <CatPortrait
+                grade={cats.find((c) => c.code === reward.cat)?.grade}
+                code={reward.cat}
+              />
             ) : (
               <GunSprite kind={reward.weapon.kind} grade={reward.weapon.grade} width={56} />
             )}
@@ -112,7 +115,14 @@ export function RewardPlacement({
                 onClick={() => void place(`reward:${t.id}`)}
                 aria-label={`${t.name}에 ${'cat' in reward ? '편성' : '장착'}`}
               >
-                {t.id.startsWith('empty') ? '+' : <CatPortrait code={t.code ?? undefined} />}
+                {t.id.startsWith('empty') ? (
+                  '+'
+                ) : (
+                  <CatPortrait
+                    grade={cats.find((c) => c.code === t.code)?.grade}
+                    code={t.code ?? undefined}
+                  />
+                )}
                 <small>{t.name}</small>
               </button>
             ))}

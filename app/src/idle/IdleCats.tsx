@@ -235,7 +235,7 @@ export function IdleCats({
                     else pick(c.code)
                   }}
                 >
-                  <Portrait code={c.code} />
+                  <Portrait grade={c.grade} code={c.code} />
                   {c.skills.length > 0 && (
                     <span className="idle-cat-badge">
                       {c.skills.map((skill) => (
@@ -290,7 +290,7 @@ export function IdleCats({
           data-testid="cat-detail"
           data-code={cat?.code ?? 'boss'}
         >
-          <Portrait code={cat?.code} />
+          <Portrait code={cat?.code} grade={cat?.grade} />
           <div className="idle-cat-info">
             <b>
               {cat && (
@@ -460,7 +460,7 @@ export function IdleCats({
                         if (!consumeClick(event.detail)) pick(c.code)
                       }}
                     >
-                      <Portrait code={c.code} locked={c.level < 1} />
+                      <Portrait grade={c.grade} code={c.code} locked={c.level < 1} />
                       {/* 고유 스킬 (531번): 못 가진 고양이의 스킬은 흑백에 자물쇠다. */}
                       {c.skills.length > 0 && (
                         <span className="idle-cat-badge">
@@ -511,7 +511,7 @@ export function IdleCats({
             style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}
             aria-hidden="true"
           >
-            <Portrait code={drag.item} />
+            <Portrait code={drag.item} grade={sorted.find((c) => c.code === drag.item)?.grade} />
           </div>,
           document.body,
         )}

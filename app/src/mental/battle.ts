@@ -4105,7 +4105,13 @@ class BattleScene extends Phaser.Scene {
         if (cast) {
           caster.clock.cast(m, level, this.elapsed)
           this.damageStats.casts[m]++
-          if (caster.mate !== undefined) this.damageStats.mateCasts[caster.mate]++
+          if (caster.mate !== undefined) {
+            this.damageStats.mateCasts[caster.mate]++
+            if (!this.reducedMotion && this.mateGun(caster.mate)?.tag?.grade === 'S') {
+              this.glow(from.x, from.y, 0x6df4ee, 26, 220)
+              this.ring(from.x, from.y, 0xffda82, 34, 340)
+            }
+          }
         } else {
           caster.clock.retry(m, this.elapsed)
         }

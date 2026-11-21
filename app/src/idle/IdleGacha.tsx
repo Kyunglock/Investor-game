@@ -181,7 +181,8 @@ export function IdleGacha({
             const info = cats.find((c) => c.code === d.code)
             return {
               key: `${i}-${d.code}`,
-              art: <Portrait code={d.code} />,
+              art: <Portrait code={d.code} grade={d.grade} />,
+              starlight: d.grade === 'S',
               badge: `${d.grade} 등급 · Lv.${d.level}`,
               name: info?.name ?? d.code,
               note: d.isNew ? 'NEW!' : '레벨 업',
