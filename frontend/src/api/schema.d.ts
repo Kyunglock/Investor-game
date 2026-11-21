@@ -1111,7 +1111,7 @@ export interface components {
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
             };
-            /** @description 시즌패스 (decisions.md 529·571번). 4주짜리 시즌 동안 미션을 깨서 포인트를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이고 보상에 돈은 없다. 시즌이 끝나면 받지 않은 보상은 사라지고 미션도 처음부터 센다 */
+            /** @description 시즌패스 (decisions.md 529·571·643번). 4주짜리 시즌 동안 일일·주간 퀘스트를 깨서 포인트를 모아 단계마다 보상을 받는다. 무료 줄 하나뿐이고 보상에 돈은 없다. 시즌이 끝나면 받지 않은 보상은 사라지고 미션도 처음부터 센다 */
             pass: {
                 /** @description 시즌 번호 */
                 season: number;
@@ -1158,36 +1158,41 @@ export interface components {
                     /** @description 이미 받았다 */
                     claimed: boolean;
                 }[];
-                /** @description 포인트를 주는 미션과 진행도 (570번). 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 받고, 끝없이 되풀이된다 */
+                /** @description 포인트를 주는 일일·주간 퀘스트와 진행도 (570·643번). 이번 주기(오늘·이번 주)에 센 수가 target에 닿으면 points를 한 번 받고, 주기가 바뀌면 처음부터 센다. 오늘의 퀘스트가 먼저 온다 */
                 missions: {
-                    /** @description wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·feed(식빵으로 고양이 레벨업)·skill(액티브 스킬 사용) (634번) */
+                    /** @description wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·feed(식빵으로 고양이 레벨업)·skill(액티브 스킬 사용) */
                     code: string;
-                    /** @description 화면에 적는 글. "매도벽 최고 기록 100개 돌파"처럼 target이 들어 있다 */
+                    /** @description 화면에 적는 글. "강화 20번"처럼 target이 들어 있다 */
                     title: string;
                     /**
+                     * @description day는 한국 시간 하루
+                     * @enum {string}
+                     */
+                    period: "day" | "week";
+                    /**
                      * Format: int64
-                     * @description 이번 시즌에 센 수
+                     * @description 이번 주기에 센 수(target까지만)
                      */
                     count: number;
                     /**
                      * Format: int64
-                     * @description 다음에 포인트를 받는 수. 받을 포인트(ready)가 있으면 이미 닿은 마지막 문턱이다
+                     * @description 포인트를 받는 데 필요한 수
                      */
                     target: number;
-                    /** @description 포인트를 받는 간격 */
-                    every: number;
-                    /** @description 문턱 하나에 받는 포인트 */
+                    /** @description 받는 포인트 */
                     points: number;
                     /**
                      * Format: int64
-                     * @description 이 미션으로 이번 시즌에 받은 포인트
-                     */
-                    earned: number;
-                    /**
-                     * Format: int64
-                     * @description 문턱에 닿았지만 아직 받지 않은 포인트. 눌러서 받는다 (572번)
+                     * @description 닿았지만 아직 받지 않은 포인트. 눌러서 받는다 (572번)
                      */
                     ready: number;
+                    /** @description 이번 주기에 이미 받았다 */
+                    done: boolean;
+                    /**
+                     * Format: int64
+                     * @description 다음 주기까지 남은 초
+                     */
+                    resetsIn: number;
                 }[];
                 /** @description 마지막으로 받은 보상들. 화면이 획득 연출에 쓴다 */
                 lastRewards: {

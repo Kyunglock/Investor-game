@@ -810,25 +810,27 @@ class CompanyApiTest {
     assertThat(opened.read("$.pass.step", Integer.class)).isZero();
     assertThat(opened.read("$.pass.points", Long.class)).isZero();
     assertThat(opened.read("$.pass.pointsPerStep", Integer.class)).isEqualTo(300);
-    assertThat(opened.read("$.pass.steps.length()", Integer.class)).isEqualTo(50);
+    assertThat(opened.read("$.pass.steps.length()", Integer.class)).isEqualTo(30);
     assertThat(opened.read("$.pass.secondsLeft", Long.class)).isPositive();
     List<String> missions = opened.read("$.pass.missions[*].code");
     assertThat(missions)
         .containsExactly(
-            "wall", "boss", "upgrade", "draw", "merge", "attend", "fish", "forever", "feed",
-            "skill");
-    assertThat(opened.read("$.pass.missions[0].title", String.class)).isEqualTo("매도벽 최고 기록 50개 돌파");
+            "attend", "upgrade", "skill", "feed", "wall", "boss", "draw", "merge", "fish",
+            "forever");
+    assertThat(opened.read("$.pass.missions[4].title", String.class)).isEqualTo("매도벽 최고 기록 30개 돌파");
+    assertThat(opened.read("$.pass.missions[4].period", String.class)).isEqualTo("week");
+    assertThat(opened.read("$.pass.missions[0].period", String.class)).isEqualTo("day");
     postJson("/api/company/pass/claim", "{\"step\":1}").andExpect(status().isBadRequest());
     mvc.perform(post("/api/company/pass/claim").cookie(session)).andExpect(status().isBadRequest());
-    // 출석 미션: 하루에 100포인트. 한 단계에는 300이 든다.
+    // 출석 퀘스트: 하루에 50포인트 (643번). 한 단계에는 300이 든다.
     DocumentContext attended =
         json(
             mvc.perform(post("/api/company/attendance").cookie(session))
                 .andExpect(status().isOk()));
     // 포인트는 저절로 들어오지 않는다 (572번): 받을 수 있게 되고, 눌러서 받는다.
     assertThat(attended.read("$.pass.points", Long.class)).isZero();
-    assertThat(attended.read("$.pass.missions[5].count", Long.class)).isEqualTo(1);
-    assertThat(attended.read("$.pass.missions[5].ready", Long.class)).isEqualTo(100);
+    assertThat(attended.read("$.pass.missions[0].count", Long.class)).isEqualTo(1);
+    assertThat(attended.read("$.pass.missions[0].ready", Long.class)).isEqualTo(50);
     assertThat(attended.read("$.pass.missionsReady", Integer.class)).isEqualTo(1);
     postJson("/api/company/pass/missions/claim", "{\"code\":\"wall\"}")
         .andExpect(status().isBadRequest());
@@ -838,9 +840,9 @@ class CompanyApiTest {
         json(
             postJson("/api/company/pass/missions/claim", "{\"code\":\"attend\"}")
                 .andExpect(status().isOk()));
-    assertThat(taken.read("$.pass.points", Long.class)).isEqualTo(100);
-    assertThat(taken.read("$.pass.missions[5].earned", Long.class)).isEqualTo(100);
-    assertThat(taken.read("$.pass.missions[5].ready", Long.class)).isZero();
+    assertThat(taken.read("$.pass.points", Long.class)).isEqualTo(50);
+    assertThat(taken.read("$.pass.missions[0].done", Boolean.class)).isTrue();
+    assertThat(taken.read("$.pass.missions[0].ready", Long.class)).isZero();
     assertThat(taken.read("$.pass.missionsReady", Integer.class)).isZero();
     assertThat(taken.read("$.pass.step", Integer.class)).isZero();
     assertThat(taken.read("$.pass.claimable", Integer.class)).isZero();
@@ -852,7 +854,7 @@ class CompanyApiTest {
         json(
             postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\",\"levels\":1}")
                 .andExpect(status().isOk()));
-    assertThat(upgraded.read("$.pass.missions[2].count", Long.class)).isEqualTo(1);
+    assertThat(upgraded.read("$.pass.missions[1].count", Long.class)).isEqualTo(1);
     postJson("/api/company/pass/claim", "{\"step\":1}").andExpect(status().isBadRequest());
     // 본 게임에서는 경험치를 채우거나 시즌을 넘길 수 없다.
     postJson("/api/sandbox/pass-exp", "{\"exp\":1000}").andExpect(status().isBadRequest());

@@ -11,8 +11,11 @@ import {
   focusStep,
   leftText,
   milestone,
+  missionGroups,
   missionProgress,
+  missionState,
   type PassStep,
+  resetText,
   rewardsText,
   stepProgress,
   stepState,
@@ -20,7 +23,7 @@ import {
 } from './pass'
 
 /**
- * 시즌패스 (decisions.md 529·571번). 미션을 깨고 눌러서 포인트를 받아(572번) 모으면 단계 보상을 받는다. 돌파 화면 위쪽의 패스 단추(받을 보상과 미션의 수를 단다)와 시즌패스 시트다. 스스로 뜨지 않는다: 단추로 연다.
+ * 시즌패스 (decisions.md 529·571·643번). 일일·주간 퀘스트를 깨고 눌러서 포인트를 받아(572번) 모으면 단계 보상을 받는다. 돌파 화면 위쪽의 패스 단추(받을 보상과 미션의 수를 단다)와 시즌패스 시트다. 스스로 뜨지 않는다: 단추로 연다.
  */
 export function IdlePass({ company }: { company: Company }) {
   const pass = company.pass
@@ -161,47 +164,64 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
           모두 받기 <small className="idle-pass-all-count">{pass.claimable}개</small>
         </button>
       )}
-      {/* 미션 (570·572번): 깨면 포인트를 눌러서 받는다. 받으면 다음 문턱으로 넘어가며 되풀이된다. */}
-      <h4 className="idle-pass-missions-title">미션 · 깨고 눌러서 포인트를 받아요</h4>
-      <ul className="idle-pass-missions" data-testid="pass-missions">
-        {pass.missions.map((mission) => {
-          const progress = missionProgress(mission)
-          return (
-            <li
-              key={mission.code}
-              className={mission.ready > 0 ? 'is-ready' : ''}
-              data-testid="pass-mission"
-              data-code={mission.code}
-            >
-              <span className="idle-pass-mission-name">{mission.title}</span>
-              <span className="idle-pass-mission-count">{progress.text}</span>
-              {mission.ready > 0 ? (
-                <button
-                  type="button"
-                  className="idle-pass-mission-claim"
-                  disabled={busy}
-                  onClick={() => void take(mission.code, mission.ready)}
-                  data-testid="pass-mission-claim"
+      {/* 일일·주간 퀘스트 (643번): 주기마다 한 번, 목표에 닿으면 포인트를 눌러서 받는다 (572번). 주기가 바뀌면 처음부터 센다. */}
+      {missionGroups(pass.missions).map((group) => (
+        <section
+          key={group.period}
+          className="idle-pass-quests"
+          data-testid={`pass-quests-${group.period}`}
+        >
+          <h4 className="idle-pass-missions-title">
+            {group.title}
+            <small className="idle-pass-reset" data-testid="pass-reset">
+              {resetText(group.resetsIn)}
+            </small>
+          </h4>
+          <ul className="idle-pass-missions" data-testid="pass-missions">
+            {group.missions.map((mission) => {
+              const progress = missionProgress(mission)
+              const state = missionState(mission)
+              return (
+                <li
+                  key={mission.code}
+                  className={`is-${state}`}
+                  data-testid="pass-mission"
+                  data-code={mission.code}
+                  data-state={state}
                 >
-                  받기 +{mission.ready.toLocaleString()}P
-                </button>
-              ) : (
-                <b className="idle-pass-mission-points">{mission.points}P</b>
-              )}
-              <div
-                className="idle-pass-bar"
-                role="progressbar"
-                aria-label={`${mission.title} 진행도`}
-                aria-valuemin={0}
-                aria-valuemax={mission.target}
-                aria-valuenow={progress.have}
-              >
-                <i style={{ width: `${progress.ratio * 100}%` }} />
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+                  <span className="idle-pass-mission-name">{mission.title}</span>
+                  <span className="idle-pass-mission-count">{progress.text}</span>
+                  {state === 'ready' ? (
+                    <button
+                      type="button"
+                      className="idle-pass-mission-claim"
+                      disabled={busy}
+                      onClick={() => void take(mission.code, mission.ready)}
+                      data-testid="pass-mission-claim"
+                    >
+                      받기 +{mission.ready.toLocaleString()}P
+                    </button>
+                  ) : (
+                    <b className="idle-pass-mission-points">
+                      {state === 'done' ? '완료' : `${mission.points.toLocaleString()}P`}
+                    </b>
+                  )}
+                  <div
+                    className="idle-pass-bar"
+                    role="progressbar"
+                    aria-label={`${mission.title} 진행도`}
+                    aria-valuemin={0}
+                    aria-valuemax={mission.target}
+                    aria-valuenow={progress.have}
+                  >
+                    <i style={{ width: `${progress.ratio * 100}%` }} />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ))}
     </Sheet>
   )
 }

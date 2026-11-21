@@ -252,12 +252,8 @@ try {
         for (const mission of company.pass.missions) {
           if (sent?.code && mission.code !== sent.code) continue
           company.pass.points += mission.ready
-          mission.earned += mission.ready
-          // 받으면 다음 문턱으로 넘어간다 (#912). 가짜 서버에서 받을 것이 있는 미션은 출석뿐이다.
-          if (mission.ready > 0) {
-            mission.target = mission.count + mission.every
-            mission.title = `출석 ${mission.target}일`
-          }
+          // 받으면 이번 주기에는 완료다 (643번).
+          if (mission.ready > 0) mission.done = true
           mission.ready = 0
         }
         company.pass.missionsReady = 0
@@ -365,28 +361,35 @@ try {
     await expect(page.getByTestId('sound-toggle')).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('sound-toggle')).toHaveCount(0)
-    // 시즌패스 (570번): 미션과 진행도가 보이고 보상에 돈이 없다.
+    // 시즌패스 (570·643번): 일일·주간 퀘스트와 진행도가 보이고 보상에 돈이 없다.
     await page.getByTestId('idle-pass').click()
     await expect(page.getByTestId('pass-mission')).toHaveCount(6)
-    await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText(
-      '매도벽 최고 기록 100개 돌파',
+    await expect(page.getByTestId('pass-quests-day').getByTestId('pass-mission')).toHaveCount(4)
+    await expect(page.getByTestId('pass-quests-day')).toContainText('일일 퀘스트')
+    await expect(page.getByTestId('pass-quests-day')).toContainText('5시간 20분 뒤 초기화')
+    const weekly = page.getByTestId('pass-quests-week')
+    await expect(weekly).toContainText('주간 퀘스트')
+    await expect(weekly).toContainText('3일 5시간 뒤 초기화')
+    const wall = weekly.locator('[data-testid=pass-mission][data-code=wall]')
+    await expect(wall).toContainText('매도벽 최고 기록 30개 돌파')
+    await expect(wall).toContainText('12/30')
+    await expect(wall).toContainText('250P')
+    await expect(page.locator('[data-testid=pass-mission][data-code=upgrade]')).toContainText(
+      '완료',
     )
-    await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('73/100')
-    await expect(page.locator('[data-testid=pass-mission][data-code=wall]')).toContainText('30P')
     await expect(page.getByTestId('pass-exp')).toHaveText('120 / 300P')
-    // 포인트는 눌러서 받는다 (572번): 받을 것이 있는 미션에만 받기 단추가 서고, 누르면 그 미션을 받는다.
+    // 포인트는 눌러서 받는다 (572번): 받을 것이 있는 퀘스트에만 받기 단추가 서고, 받으면 이번 주기에는 완료다.
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(1)
     const attend = page.locator('[data-testid=pass-mission][data-code=attend]')
-    await expect(attend.getByTestId('pass-mission-claim')).toHaveText('받기 +100P')
-    // 받을 것이 있는 동안에는 닿은 문턱을 다 채운 것으로 보이고, 받으면 다음 문턱으로 넘어간다 (#912).
-    await expect(attend).toContainText('출석 8일')
-    await expect(attend).toContainText('8/8')
+    await expect(attend.getByTestId('pass-mission-claim')).toHaveText('받기 +50P')
+    await expect(attend).toContainText('출석하기')
+    await expect(attend).toContainText('1/1')
     await attend.getByTestId('pass-mission-claim').click()
-    await expect(page.getByTestId('pass-got')).toContainText('포인트 +100P')
-    await expect(attend).toContainText('출석 9일')
-    await expect(attend).toContainText('8/9')
+    await expect(page.getByTestId('pass-got')).toContainText('포인트 +50P')
+    await expect(attend).toContainText('완료')
+    await expect(attend).toHaveAttribute('data-state', 'done')
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(0)
-    await expect(page.getByTestId('pass-exp')).toHaveText('220 / 300P')
+    await expect(page.getByTestId('pass-exp')).toHaveText('170 / 300P')
     await expect(page.getByTestId('pass-badge')).toHaveCount(0)
     await expect(page.getByTestId('pass').locator('.idle-coin')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()

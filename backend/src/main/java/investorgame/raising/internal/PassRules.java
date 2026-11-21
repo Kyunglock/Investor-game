@@ -7,7 +7,7 @@ import java.util.LinkedHashMap;
 
 /**
  * 시즌패스의 규칙 (decisions.md 529·571번): 시즌은 epoch부터 days일마다 이어지고, 단계마다 포인트 points-per-step이 든다. 포인트는
- * 미션을 깨고 눌러서 받는다 (572번). 무료 줄 하나뿐이다. 오늘 날짜(한국 시간)는 부르는 쪽이 준다.
+ * 일일·주간 퀘스트를 깨고 눌러서 받는다 (572·643번). 무료 줄 하나뿐이다. 오늘 날짜(한국 시간)는 부르는 쪽이 준다.
  */
 class PassRules {
   private final CompanyProperties properties;
@@ -41,7 +41,10 @@ class PassRules {
 
   private static final int PAID_MISSIONS = 2;
 
-  private static final int RULES = 3;
+  /** 643번: 미션이 시즌 내내 되풀이되던 때(570번)의 센 수는 일일·주간 퀘스트로 옮기지 않는다. */
+  private static final int RULES = 4;
+
+  private static final int WEEK = 7;
 
   /** 시즌이 바뀌었으면 진행도를 비운다: 받지 않은 보상은 사라지고 미션도 처음부터 센다. 바꿨으면 true. */
   boolean roll(CompanyState c, LocalDate today) {
@@ -51,17 +54,22 @@ class PassRules {
     if (c.passMissionTaken == null) {
       c.passMissionTaken = new LinkedHashMap<>();
     }
+    if (c.passMissionPeriod == null) {
+      c.passMissionPeriod = new LinkedHashMap<>();
+    }
     if (c.passRules < PAID_MISSIONS) {
       // 570번 전의 저장: 모은 경험치를 포인트로 넘긴다. 단계에 드는 값이 는 만큼 늘려 닿은 단계를 지킨다.
-      c.passExp = Math.min(cap(), c.passExp * rule().pointsPerStep() / OLD_STEP);
+      c.passExp = c.passExp * rule().pointsPerStep() / OLD_STEP;
     }
     if (c.passRules < RULES) {
-      // 572번 전의 저장: 닿은 문턱의 포인트는 이미 들어와 있다. 받은 것으로 적어 두 번 주지 않는다.
-      for (CompanyProperties.PassMission m : rule().missions()) {
-        c.passMissionTaken.put(m.code(), c.passMissions.getOrDefault(m.code(), 0L) / m.every());
-      }
+      // 643번 전의 저장: 시즌 내내 센 수와 받은 문턱은 버리고 퀘스트를 오늘·이번 주의 0부터 센다. 이미 들어온 포인트는 그대로다.
+      c.passMissions.clear();
+      c.passMissionTaken.clear();
+      c.passMissionPeriod.clear();
       c.passRules = RULES;
     }
+    // 단계가 줄었으면(643번, 50 → 30) 넘친 포인트는 마지막 단계에서 멈춘다.
+    c.passExp = Math.min(cap(), c.passExp);
     int now = season(c, today);
     if (c.passSeason == now) {
       return false;
@@ -71,6 +79,7 @@ class PassRules {
     c.passClaimed = new ArrayList<>();
     c.passMissions = new LinkedHashMap<>();
     c.passMissionTaken = new LinkedHashMap<>();
+    c.passMissionPeriod = new LinkedHashMap<>();
     return true;
   }
 
@@ -88,25 +97,63 @@ class PassRules {
     return rule().missions().stream().filter(m -> m.code().equals(code)).findFirst().orElse(null);
   }
 
+  /** 퀘스트의 주기 번호 (643번): 일일은 epoch부터 센 날, 주간은 epoch부터 센 주. 시즌이 28일이라 주는 시즌 첫날에 맞는다. */
+  long period(CompanyProperties.PassMission m, LocalDate today) {
+    long days = ChronoUnit.DAYS.between(epoch(), today);
+    return m.weekly() ? Math.floorDiv(days, WEEK) : days;
+  }
+
+  /** 그 주기가 끝나는 날(다음 주기의 첫날, 한국 시간 자정). */
+  LocalDate resets(CompanyProperties.PassMission m, LocalDate today) {
+    long next = period(m, today) + 1;
+    return epoch().plusDays(m.weekly() ? next * WEEK : next);
+  }
+
+  /** 주기가 바뀌었으면 그 퀘스트의 센 수와 받은 표시를 비운다. */
+  private void refresh(CompanyState c, CompanyProperties.PassMission m, LocalDate today) {
+    roll(c, today);
+    long now = period(m, today);
+    Long was = c.passMissionPeriod.get(m.code());
+    if (was != null && was == now) {
+      return;
+    }
+    c.passMissionPeriod.put(m.code(), now);
+    c.passMissions.remove(m.code());
+    c.passMissionTaken.remove(m.code());
+  }
+
+  /** 이번 주기에 센 수 (goal까지만). */
+  long count(CompanyState c, CompanyProperties.PassMission m, LocalDate today) {
+    refresh(c, m, today);
+    return c.passMissions.getOrDefault(m.code(), 0L);
+  }
+
+  /** 이번 주기에 포인트를 받았다. */
+  boolean taken(CompanyState c, CompanyProperties.PassMission m, LocalDate today) {
+    refresh(c, m, today);
+    return c.passMissionTaken.getOrDefault(m.code(), 0L) > 0;
+  }
+
   /**
-   * 미션을 amount만큼 했다 (570번): 이번 시즌에 센 수를 올린다. 센 수가 every의 배수에 닿으면 그 문턱의 포인트를 받을 수 있게 되고, 포인트는 눌러서
-   * 받는다 (572번, take). 없는 미션이면 아무 일도 없다.
+   * 퀘스트를 amount만큼 했다 (643번): 이번 주기에 센 수를 올린다(goal에서 멈춘다). goal에 닿으면 포인트를 받을 수 있게 되고, 포인트는 눌러서 받는다
+   * (572번, take). 없는 미션이면 아무 일도 없다.
    */
   void progress(CompanyState c, String code, long amount, LocalDate today) {
     roll(c, today);
-    if (mission(code) == null || amount <= 0) {
+    CompanyProperties.PassMission m = mission(code);
+    if (m == null || amount <= 0) {
       return;
     }
-    c.passMissions.merge(code, amount, Long::sum);
+    long now = count(c, m, today);
+    c.passMissions.put(code, Math.min(m.goal(), now + amount));
   }
 
-  /** 그 미션에서 닿았지만 아직 받지 않은 포인트 (572번). */
-  long ready(CompanyState c, CompanyProperties.PassMission m) {
-    long reached = c.passMissions.getOrDefault(m.code(), 0L) / m.every();
-    return Math.max(0, reached - c.passMissionTaken.getOrDefault(m.code(), 0L)) * m.points();
+  /** 그 퀘스트에서 닿았지만 아직 받지 않은 포인트 (572번). 한 주기에 한 번이다. */
+  long ready(CompanyState c, CompanyProperties.PassMission m, LocalDate today) {
+    return count(c, m, today) >= m.goal() && !taken(c, m, today) ? m.points() : 0;
   }
 
-  /** 미션의 포인트를 받는다 (572번). code가 null이면 모든 미션의 것을 받는다. 받은 포인트를 돌려준다(없는 미션이거나 받을 것이 없으면 0). */
+  /** 퀘스트의 포인트를 받는다 (572번). code가 null이면 모든 퀘스트의 것을 받는다. 받은 포인트를 돌려준다(없는 미션이거나 받을 것이 없으면 0). */
   long take(CompanyState c, String code, LocalDate today) {
     roll(c, today);
     long points = 0;
@@ -114,8 +161,11 @@ class PassRules {
       if (code != null && !m.code().equals(code)) {
         continue;
       }
-      points += ready(c, m);
-      c.passMissionTaken.put(m.code(), c.passMissions.getOrDefault(m.code(), 0L) / m.every());
+      long got = ready(c, m, today);
+      if (got > 0) {
+        points += got;
+        c.passMissionTaken.put(m.code(), 1L);
+      }
     }
     gain(c, points, today);
     return points;

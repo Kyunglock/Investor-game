@@ -114,15 +114,20 @@ public record CompanyProperties(
       long normalDiamonds, long fiveDiamonds, long tenDiamonds, long lastDiamonds) {}
 
   /**
-   * 시즌패스의 미션 (570번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다. 끝없이 되풀이된다.
+   * 시즌패스의 퀘스트 (570번, 643번 고침): 주기(period)마다 센 수가 goal에 닿으면 points를 한 번 받는다. 주기가 바뀌면 처음부터 센다.
    *
-   * @param code wall(매도벽 통과)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은
-   *     생선)·forever(영구 강화)·feed(식빵으로 고양이 레벨업)·skill(액티브 스킬 사용) (634번)
-   * @param title 화면에 적는 글. {n}은 다음에 닿을 수(받을 포인트가 있으면 닿은 수)다
-   * @param every 포인트를 받는 간격
-   * @param points 한 번에 받는 포인트
+   * @param code wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기
+   *     합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·feed(식빵으로 고양이 레벨업)·skill(액티브 스킬 사용)
+   * @param title 화면에 적는 글. {n}은 goal이다
+   * @param period day(한국 시간 하루) 또는 week(시즌 첫날부터 7일)
+   * @param goal 포인트를 받는 데 필요한 수
+   * @param points 받는 포인트
    */
-  public record PassMission(String code, String title, int every, int points) {}
+  public record PassMission(String code, String title, String period, int goal, int points) {
+    public boolean weekly() {
+      return "week".equals(period);
+    }
+  }
 
   /**
    * 출석 보상 (decisions.md 528번): 출석판의 칸을 차례로 받고 끝 칸 다음은 다시 첫 칸이다.
