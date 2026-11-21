@@ -264,6 +264,7 @@ export interface IdleSnapshot {
 }
 
 export interface BattleOptions {
+  vault?: { mapWall: number; guardianArt: string }
   /** Foreground idle mode: the wall and its health come from this snapshot, never from the renderer's own count. */
   idle?: () => IdleSnapshot
   /** depth: 총알이 이미 뚫고 온 벽의 수 (520·532번). 0은 지금 치는 벽을 바로 맞힌 것이다. */
@@ -891,6 +892,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   preload() {
+    if (this.opts.vault) this.load.image('vault-guard', this.opts.vault.guardianArt)
     this.load.on('progress', (value: number) => this.opts.onProgress?.(value))
     for (const [key, url] of Object.entries(STAGE_ASSETS)) this.load.image(`art-${key}`, url)
   }
@@ -969,6 +971,7 @@ class BattleScene extends Phaser.Scene {
       this.bg2 = this.add.image(0, -h, 'art-street').setOrigin(0).setDisplaySize(w, h)
     }
     if (this.opts.idle) this.setArenaMap(this.opts.idle().wall)
+    if (this.opts.vault) this.setArenaMap(this.opts.vault.mapWall)
     this.scale.on('resize', fitView)
     this.events.once('shutdown', () => this.scale.off('resize', fitView))
 

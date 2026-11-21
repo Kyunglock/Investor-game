@@ -17,8 +17,7 @@
   max-width: 620px;
   margin: auto;
 }
-.vault-tabs,
-.vault-actions {
+.vault-tabs {
   display: flex;
   gap: 6px;
 }
@@ -31,8 +30,7 @@
   font-weight: 700;
 }
 .vault-tabs button[aria-pressed="true"],
-.vault-room .vault-start,
-.vault-actions button:first-child {
+.vault-room .vault-start {
   background: #352e50;
   color: #ffe49b;
 }
@@ -63,17 +61,66 @@
   font-size: 24px;
   line-height: 1.2;
 }
-.vault-room label {
-  display: grid;
-  grid-template-columns: 8em 1fr;
-  align-items: center;
-  font-variant-numeric: tabular-nums;
-}
-.vault-room progress {
+
+.vault-field[open] {
+  position: fixed;
+  inset: 0;
   width: 100%;
-  height: 10px;
-  accent-color: #ad5339;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: #102f55;
+  color: white;
+  font-family: Jua, sans-serif;
 }
-.vault-room label + label progress {
-  accent-color: #248779;
+.vault-canvas {
+  position: absolute;
+  inset: 0;
+}
+.vault-field header,
+.vault-health {
+  position: absolute;
+  padding: 8px 12px;
+  color: #fff;
+  border: 2px solid #8cddff;
+  border-radius: 12px;
+  background: #104a94ef;
+  box-shadow: 0 3px 0 #18395d;
+}
+.vault-field header {
+  inset: max(5px, env(safe-area-inset-top)) 6px auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.vault-field small {
+  display: block;
+}
+.vault-field button {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #143867;
+}
+.vault-health {
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.vault-health progress {
+  display: block;
+  height: 7px;
+  accent-color: #55dfaa;
+}
+.vault-loading {
+  position: absolute;
+  inset: 45% 10% auto;
+  text-align: center;
+  background: #173b6a;
+  padding: 12px;
 }

@@ -103,6 +103,7 @@ export function IdleHome({
 }) {
   const [skillUse, setSkillUse] = useState(false)
   const [replay, setReplay] = useState<number | null>(null)
+  const [inVault, setInVault] = useState(false)
   const [ownMenu, setMenu] = useState<Menu>('battle')
   // 전투에서 "무기 바꾸기"로 오면(Windows) 고양이·무기 탭이 사장냥의 장비 목록으로 열린다 (530·560번). 닫거나 다른 데로 가면 그 요청을 지운다.
   const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
@@ -254,7 +255,11 @@ export function IdleHome({
       data-testid="idle-battle"
       aria-label={managing ? '회사' : '무한 매도벽 돌파'}
     >
-      <IdleCanvas company={company} connected={connected} />
+      {inVault ? (
+        <div className="idle-canvas" />
+      ) : (
+        <IdleCanvas company={company} connected={connected} />
+      )}
       <BossReward company={company} hidden={managing} />
       {managing ? (
         <div className="idle-office">{office}</div>
@@ -338,7 +343,11 @@ export function IdleHome({
           <IdleAttendance company={company} wait={offlineShowing || elsewhere} />
           <IdleSandbox company={company} />
           {menu === 'battle' && !elsewhere && (
-            <VaultChallenges key={company.companyId} companyId={company.companyId} />
+            <VaultChallenges
+              key={company.companyId}
+              company={company}
+              onBattleChange={setInVault}
+            />
           )}
           {idle?.onboarding?.skillsUnlocked !== false && (
             <IdleActives company={company} connected={connected} />
