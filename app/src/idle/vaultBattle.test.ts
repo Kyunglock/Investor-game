@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import { assaultSpec } from '../mental/assault'
 import { BASE_LOADOUT, type Loadout } from '../mental/cards'
 import {
   bossEncounter,
   bossScale,
   cardMods,
+  DUNGEON_FLOW,
   dungeonEncounter,
   FLOOR_HP,
+  FLOOR_WALLS,
+  GUARDIAN_HP,
   leftText,
   scoreText,
   teamDps,
@@ -55,27 +59,27 @@ describe('금고 도전', () => {
     expect(teamScale({ ...BASE_LOADOUT, damage: 0.1 })).toBe(1)
   })
 
-  it('보스전은 수호냥의 벽 하나이고 졸개가 팀 화력만큼 단단하다', () => {
-    const spec = bossEncounter(10)
-    expect(spec.walls.map((w) => w.boss)).toEqual([true])
-    expect(spec.enemyHp).toBeCloseTo(bossEncounter(1).enemyHp * 10)
+  it('보스전은 수호냥의 벽 하나다', () => {
+    expect(bossEncounter().walls.map((w) => w.boss)).toEqual([true])
   })
 
-  it('던전은 층 수만큼의 벽 뒤에 수호냥이 서고 팀 화력과 층을 따라 단단해진다', () => {
+  it('던전은 층마다 벽이 늘고 팀 화력과 층을 따라 단단해지며 물량은 그대로다', () => {
     for (const floor of [1, 2, 3]) {
       const spec = dungeonEncounter(floor, 100, 1)
-      expect(spec.walls).toHaveLength(floor + 1)
+      expect(spec.walls).toHaveLength(FLOOR_WALLS[floor - 1] + 1)
       expect(spec.walls.at(-1)?.boss).toBe(true)
       expect(spec.walls.filter((w) => w.boss)).toHaveLength(1)
       const strong = dungeonEncounter(floor, 100, 10)
       expect(strong.walls[0].cellHp).toBeCloseTo(spec.walls[0].cellHp * 10)
       expect(strong.bossHp).toBeCloseTo(spec.bossHp * 10)
-      expect(strong.enemyHp).toBeCloseTo(spec.enemyHp * 10)
+      // 물량의 수량은 매수벽을 깎는 양이라 팀이 세져도 그대로다.
+      expect(strong.enemyHp).toBe(spec.enemyHp)
+      expect(spec.enemyCount).toBeCloseTo(assaultSpec(floor).enemyCount * DUNGEON_FLOW)
+      expect(spec.bossHp).toBeCloseTo(assaultSpec(floor).bossHp * FLOOR_HP[floor - 1] * GUARDIAN_HP)
     }
     const hp = (floor: number) => dungeonEncounter(floor, 100, 1).bossHp
     expect(hp(2)).toBeGreaterThan(hp(1))
     expect(hp(3)).toBeGreaterThan(hp(2))
-    expect(FLOOR_HP).toHaveLength(3)
   })
 
   it('카드는 서로 곱해지고 벽·물량·수호냥을 깎는다', () => {

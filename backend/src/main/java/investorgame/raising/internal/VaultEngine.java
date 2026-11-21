@@ -30,7 +30,7 @@ class VaultEngine {
   static final int BOSS_SECONDS = 60;
 
   /** 1등급의 문턱(전투 피해)과 한 등급마다 문턱이 커지는 배율. */
-  static final double TIER_BASE = 30;
+  static final double TIER_BASE = 10;
 
   static final double TIER_GROWTH = 1.5;
 

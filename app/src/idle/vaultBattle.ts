@@ -10,7 +10,7 @@ import { earthStats, fallStats, flowStats, isFall, isFlow, lightningStats } from
  * 이 파일은 그 값으로 전투 한 판을 차린다.
  *
  * - 보스전은 정해진 시간 동안 넣은 피해량을 겨룬다. 약점 스킬은 세게, 내성 스킬은 약하게 들어가고 천적 고양이는 총이 세다.
- * - 주간 던전의 벽과 물량은 지금 출전한 팀의 화력을 따라 커진다. 강해지는 것만으로는 쉬워지지 않고, 고른 카드와 금고 훈련이 판을 가른다.
+ * - 주간 던전의 벽과 수호냥은 지금 출전한 팀의 화력을 따라 단단해진다. 강해지는 것만으로는 쉬워지지 않고, 고른 카드와 금고 훈련이 판을 가른다.
  */
 export type Vault = NonNullable<Company['vault']>
 export type VaultCard = Vault['dungeon']['cards'][number]
@@ -53,22 +53,24 @@ export function teamDps(loadout: Loadout): number {
   return total
 }
 
-/** 팀의 화력이 처음 권총 한 자루의 몇 배인가: 금고의 벽과 물량이 이만큼 단단해진다. */
+/** 팀의 화력이 처음 권총 한 자루의 몇 배인가: 금고의 벽과 수호냥이 이만큼 단단해진다. */
 export function teamScale(loadout: Loadout): number {
   return Math.max(1, teamDps(loadout) / teamDps(BASE_LOADOUT))
 }
 
 /**
- * 던전 층마다의 벽·수호냥 체력 배율: 팀 화력만큼 키운 뒤 이만큼을 더 곱한다. 카드 없이 1층은 넉넉히, 3층은 빠듯하게 깨도록 맞췄다
- * (scripts/vaultCheck.mjs).
+ * 던전의 난이도 (scripts/vaultCheck.mjs를 VAULT_TUNE=1로 돌려 쟀다). 벽과 수호냥의 체력은 팀 화력만큼 키운 뒤 층의 배율을 곱한다.
+ * 매도 물량은 키우지 않는다: 물량의 수량이 곧 매수벽을 깎는 양이라, 키우면 강한 팀일수록 매수벽이 한 번에 무너진다.
+ * 벽을 두껍게 하기보다 수를 늘린다: 한 벽 앞에 오래 막히면 물량이 잦아져(assault.ts spawnSeconds) 시간보다 멘탈이 먼저 바닥난다.
+ * 고양이 넷인 팀이 카드 없이 1층 40초·2층 75초(배율 1.3)·3층 120초(배율 1.6)쯤에 깼고, 3층이 빠듯하도록 배율을 조금 더 올렸다.
  */
-const TUNE = (globalThis as { __vaultTune?: { floor: number[]; enemy: number; dmg: number; count: number; walls: number[]; boss: number } }).__vaultTune
-export const FLOOR_HP = (TUNE?.floor ?? [1, 1, 1]) as readonly number[]
-const ENEMY = TUNE?.enemy ?? 1
-const DMG = TUNE?.dmg ?? 1
-const COUNT = TUNE?.count ?? 1
-const WALLS = TUNE?.walls ?? [1, 2, 3]
-const BOSS = TUNE?.boss ?? 1
+export const FLOOR_HP = [1, 1.5, 2.1] as const
+/** 층마다 수호냥의 벽 앞에 서는 매도벽의 수. */
+export const FLOOR_WALLS = [2, 3, 4] as const
+/** 수호냥과 그 벽의 체력 배율: 가장 오래 막히는 구간이라 절반으로 낮췄다. */
+export const GUARDIAN_HP = 0.5
+/** 던전에서 매도 물량이 나오는 빈도의 배율. */
+export const DUNGEON_FLOW = 0.6
 
 interface Mods {
   damage: number
@@ -153,13 +155,13 @@ export function bossScale(boss: Vault['boss']): (kind: DamageKind) => number {
   return (kind) => table.get(kind) ?? 1
 }
 
-/** 보스전 한 판: 수호냥의 금고벽 하나. 졸개는 팀 화력만큼 단단하다. 벽과 수호냥은 쓰러지지 않는다(battle.ts vault.score). */
-export function bossEncounter(scale: number): AssaultSpec {
+/** 보스전 한 판: 수호냥의 금고벽 하나. 벽과 수호냥은 쓰러지지 않는다(battle.ts vault.score). */
+export function bossEncounter(): AssaultSpec {
   const spec = assaultSpec(3, { name: GUARDIAN })
-  return { ...spec, enemyDmg: spec.enemyDmg * DMG, enemyHp: spec.enemyHp * Math.max(1, scale * ENEMY), walls: [spec.walls[spec.walls.length - 1]] }
+  return { ...spec, walls: [spec.walls[spec.walls.length - 1]] }
 }
 
-/** 던전의 floor층: 층 수만큼의 매도벽 뒤에 수호냥의 벽이 선다. 벽·물량·수호냥은 팀 화력과 층을 따라 단단해지고 카드가 그것을 깎는다. */
+/** 던전의 floor층: 매도벽 몇 개 뒤에 수호냥의 벽이 선다. 벽과 수호냥은 팀 화력과 층을 따라 단단해지고 카드가 그것을 깎는다. */
 export function dungeonEncounter(
   floor: number,
   week: number,
@@ -168,21 +170,20 @@ export function dungeonEncounter(
 ): AssaultSpec {
   const mods = cardMods(cards)
   const spec = assaultSpec(floor, { name: vaults[Math.abs(week) % vaults.length] })
-  const hp = scale * FLOOR_HP[Math.min(FLOOR_HP.length, Math.max(1, floor)) - 1]
+  const at = Math.min(FLOOR_HP.length, Math.max(1, floor)) - 1
+  const hp = scale * FLOOR_HP[at]
   const guardian = spec.walls[spec.walls.length - 1]
-  const approach = Array.from({ length: WALLS[floor - 1] }, (_, i) => spec.walls[(week + i) % 4])
+  const approach = Array.from({ length: FLOOR_WALLS[at] }, (_, i) => spec.walls[(week + i) % 4])
   return {
     ...spec,
     walls: [...approach, guardian].map((wall) => ({
       ...wall,
-      cellHp: wall.cellHp * hp * (wall.boss ? BOSS : 1) * mods.wallHp,
+      cellHp: wall.cellHp * hp * (wall.boss ? GUARDIAN_HP : 1) * mods.wallHp,
     })),
-    enemyHp: spec.enemyHp * Math.max(1, scale * ENEMY) * mods.enemyHp,
+    enemyHp: spec.enemyHp * mods.enemyHp,
     enemySpeed: spec.enemySpeed * mods.enemySpeed,
-    enemyDmg: spec.enemyDmg * DMG,
-    enemyCount: spec.enemyCount * COUNT,
-    bossHp: spec.bossHp * hp * BOSS * mods.bossHp,
-    midBossHp: spec.midBossHp * hp * mods.bossHp,
+    enemyCount: spec.enemyCount * DUNGEON_FLOW,
+    bossHp: spec.bossHp * hp * GUARDIAN_HP * mods.bossHp,
   }
 }
 

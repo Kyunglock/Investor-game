@@ -41,7 +41,7 @@ const OFFERS = [
   card('safe-haven', '안전 자산', '최대 멘탈 +60%', { mentalPercent: 160 }),
   card('thin-book', '얇은 호가', '매도벽 체력 -20%', { wallHpPercent: 80 }),
 ]
-const TIER_BASE = 30
+const TIER_BASE = 10
 const tierOf = (score) =>
   score < TIER_BASE ? 0 : 1 + Math.floor(Math.log(score / TIER_BASE) / Math.log(1.5) + 1e-9)
 
@@ -148,10 +148,32 @@ function companyOf(team) {
         nextTierName: '브론즈 1',
         tierGold: 3,
       },
-      dungeon: { floors: 3, cleared: 0, cards: [], offers: structuredClone(OFFERS), floorGold: [30, 50, 80] },
+      dungeon: {
+        floors: 3,
+        cleared: 0,
+        cards: [],
+        offers: structuredClone(OFFERS),
+        floorGold: [30, 50, 80],
+      },
       shop: [
-        { code: 'diamonds', name: '다이아 300개', description: '뽑기에 쓰는 다이아', price: 30, weeklyLimit: 5, left: 5, level: null },
-        { code: 'training', name: '금고 훈련', description: '금고 전투의 공격력 +3%', price: 40, weeklyLimit: 0, left: 1, level: 0 },
+        {
+          code: 'diamonds',
+          name: '다이아 300개',
+          description: '뽑기에 쓰는 다이아',
+          price: 30,
+          weeklyLimit: 5,
+          left: 5,
+          level: null,
+        },
+        {
+          code: 'training',
+          name: '금고 훈련',
+          description: '금고 전투의 공격력 +3%',
+          price: 40,
+          weeklyLimit: 0,
+          left: 1,
+          level: 0,
+        },
       ],
     },
   }
@@ -192,7 +214,7 @@ function serve(company, calls) {
   }
 }
 
-/** 전장이 열리면 빨리 돌리고, 끝나 시트로 돌아올 때까지 기다린다. 남은 시간(초)의 마지막 값을 돌려준다. */
+/** 전장이 열리면 빨리 돌리고(6배속까지: 더 빠르면 전투 결과가 달라진다), 끝나 시트로 돌아올 때까지 기다린다. 남은 시간(초)의 마지막 값을 돌려준다. */
 async function fight(page, speed = 6) {
   const field = page.getByTestId('vault-field')
   await expect(field).toBeVisible()
@@ -200,7 +222,10 @@ async function fight(page, speed = 6) {
   await page.evaluate((k) => window.__mentalSpeed(k), speed)
   let left = 0
   while (await field.isVisible()) {
-    const text = await field.locator('header small').textContent({ timeout: 1000 }).catch(() => null)
+    const text = await field
+      .locator('header small')
+      .textContent({ timeout: 1000 })
+      .catch(() => null)
     const seconds = text?.match(/(\d+)초/)
     if (seconds) left = Number(seconds[1])
     await page.waitForTimeout(100)
@@ -208,9 +233,9 @@ async function fight(page, speed = 6) {
   return left
 }
 
-async function openVault(browser, company, calls, tune) {
+async function openVault(browser, company, calls) {
+  // 움직임 줄이기는 켜지 않는다: 그 화면에서는 시트가 왼쪽으로 밀린다(index.css의 reduced-motion 규칙, 이 검사의 일이 아니다).
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
-  if (tune) await page.addInitScript((t) => { window.__vaultTune = t }, tune)
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.route(/\/api\/(company|sessions)(\/|$|\?)/, serve(company, calls))
@@ -228,17 +253,19 @@ const browser = await chromium.launch({
 try {
   if (process.env.VAULT_TUNE) {
     // 팀마다: 보스전의 피해량, 카드 없이 층마다 걸린 시간(실제 초, 240초가 끝).
-    const tunes = JSON.parse(process.env.VAULT_TUNE)
-    for (const tune of tunes) for (const [name, team] of Object.entries(TEAMS)) {
-      console.log(JSON.stringify(tune))
+    for (const [name, team] of Object.entries(TEAMS)) {
       const company = companyOf(team)
       company.vault.dungeon.offers = []
       const calls = []
-      const { page } = await openVault(browser, company, calls, tune)
+      const { page } = await openVault(browser, company, calls)
       await page.getByRole('button', { name: '보스 도전' }).click()
       await fight(page)
-      console.log(name, 'boss', calls.at(-1)?.body, await page.getByTestId('vault-note').textContent())
-      if (process.env.VAULT_SHOT) await page.screenshot({ path: `${process.env.VAULT_SHOT}/${name}-boss.png` })
+      console.log(
+        name,
+        'boss',
+        calls.at(-1)?.body,
+        await page.getByTestId('vault-note').textContent(),
+      )
       await page.getByRole('button', { name: '주간 던전' }).click()
       for (const floor of [1, 2, 3]) {
         company.vault.dungeon.cleared = floor - 1
@@ -247,7 +274,14 @@ try {
         await page.getByRole('button', { name: '주간 던전' }).click()
         await page.getByRole('button', { name: `${floor}층 입장` }).click()
         const left = await fight(page)
-        console.log(name, 'floor', floor, 'left', left, await page.getByTestId('vault-note').textContent())
+        console.log(
+          name,
+          'floor',
+          floor,
+          'left',
+          left,
+          await page.getByTestId('vault-note').textContent(),
+        )
       }
       await page.close()
     }

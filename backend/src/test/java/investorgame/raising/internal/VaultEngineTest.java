@@ -46,10 +46,10 @@ class VaultEngineTest {
   @Test
   void 등급의_문턱은_한_등급마다_1_5배이고_리그는_열_등급씩이다() {
     assertThat(VaultEngine.tier(0)).isZero();
-    assertThat(VaultEngine.tier(29.9)).isZero();
-    assertThat(VaultEngine.tier(30)).isEqualTo(1);
-    assertThat(VaultEngine.tier(44.9)).isEqualTo(1);
-    assertThat(VaultEngine.tier(45)).isEqualTo(2);
+    assertThat(VaultEngine.tier(9.9)).isZero();
+    assertThat(VaultEngine.tier(10)).isEqualTo(1);
+    assertThat(VaultEngine.tier(14.9)).isEqualTo(1);
+    assertThat(VaultEngine.tier(15)).isEqualTo(2);
     for (int tier = 1; tier <= 80; tier++) {
       double score = VaultEngine.tierScore(tier);
       assertThat(VaultEngine.tier(score)).as("문턱 %d", tier).isEqualTo(tier);
@@ -67,15 +67,15 @@ class VaultEngineTest {
     CompanyState c = opened();
     vault.reportBoss(c, 100);
     CompanyView.VaultBoss boss = vault.view(c).boss();
-    assertThat(boss.tier()).isEqualTo(3);
+    assertThat(boss.tier()).isEqualTo(6);
     assertThat(boss.best()).isEqualTo(100);
     assertThat(boss.record()).isEqualTo(100);
-    assertThat(boss.nextScore()).isEqualTo(VaultEngine.tierScore(4));
-    assertThat(c.vault.gold).isEqualTo(3 * VaultEngine.TIER_GOLD);
+    assertThat(boss.nextScore()).isEqualTo(VaultEngine.tierScore(7));
+    assertThat(c.vault.gold).isEqualTo(6 * VaultEngine.TIER_GOLD);
     // 더 낮거나 같은 등급의 기록은 금괴가 없다.
     vault.reportBoss(c, 60);
     vault.reportBoss(c, 100);
-    assertThat(c.vault.gold).isEqualTo(3 * VaultEngine.TIER_GOLD);
+    assertThat(c.vault.gold).isEqualTo(6 * VaultEngine.TIER_GOLD);
     assertThat(vault.view(c).boss().best()).isEqualTo(100);
     assertThatThrownBy(() -> vault.reportBoss(c, -1)).isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(() -> vault.reportBoss(c, Double.NaN))
@@ -91,9 +91,9 @@ class VaultEngineTest {
     assertThat(view.boss().tier()).isZero();
     assertThat(view.boss().best()).isZero();
     assertThat(view.boss().record()).isEqualTo(100);
-    assertThat(view.gold()).isEqualTo(3 * VaultEngine.TIER_GOLD);
+    assertThat(view.gold()).isEqualTo(6 * VaultEngine.TIER_GOLD);
     vault.reportBoss(c, 100);
-    assertThat(c.vault.gold).isEqualTo(6 * VaultEngine.TIER_GOLD);
+    assertThat(c.vault.gold).isEqualTo(12 * VaultEngine.TIER_GOLD);
   }
 
   @Test

@@ -50,7 +50,7 @@ export function VaultField({
           vault.boss.rivals.map((cat) => cat.code),
           vault.boss.rivalPercent / 100,
         ),
-        spec: bossEncounter(scale),
+        spec: bossEncounter(),
         vault: {
           mapWall: 151,
           guardianArt,
