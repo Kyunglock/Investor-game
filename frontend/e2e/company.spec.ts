@@ -358,55 +358,54 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
   const api = page.request
   expect((await api.post('/api/sessions')).ok()).toBe(true)
   const opened = await companyOf(await api.post('/api/company'))
-  // 새 회사의 패스: 쉰 단계 (634번), 아직 0단계라 받을 것이 없다. 한 단계에 300포인트다.
+  // 새 회사의 패스: 서른 단계 (643번), 아직 0단계라 받을 것이 없다. 한 단계에 300포인트다.
   expect(opened.pass.step).toBe(0)
   expect(opened.pass.points).toBe(0)
   expect(opened.pass.pointsPerStep).toBe(300)
   expect(opened.pass.claimable).toBe(0)
-  expect(opened.pass.steps).toHaveLength(50)
+  expect(opened.pass.steps).toHaveLength(30)
   expect(opened.pass.steps.every((step) => !step.reached && !step.claimed)).toBe(true)
   expect(opened.pass.secondsLeft).toBeGreaterThan(0)
   expect(opened.pass.name).toBe(`시즌 ${opened.pass.season}`)
-  // 큰 보상: 10·20·30·40단계에 무기, 50단계에 고양이. 모든 단계가 다이아를 주고 돈은 없다.
-  expect(opened.pass.steps.filter((step) => step.weapon).map((step) => step.step)).toEqual([
-    10, 20, 30, 40,
-  ])
-  expect(opened.pass.steps.filter((step) => step.cat).map((step) => step.step)).toEqual([50])
+  // 큰 보상: 10·20단계에 무기, 30단계에 고양이. 모든 단계가 다이아를 주고 돈은 없다.
+  expect(opened.pass.steps.filter((step) => step.weapon).map((step) => step.step)).toEqual([10, 20])
+  expect(opened.pass.steps.filter((step) => step.cat).map((step) => step.step)).toEqual([30])
   expect(opened.pass.steps.every((step) => step.diamonds > 0 && !('money' in step))).toBe(true)
-  // 미션: 벽·보스·강화·뽑기·합성·출석에 생선·영구 강화·식빵·스킬 (634번). 아직 센 것이 없다.
+  // 퀘스트 (643번): 일일 넷이 먼저, 주간 여섯이 뒤에 온다. 아직 센 것이 없다.
   expect(opened.pass.missions.map((mission) => mission.code)).toEqual([
+    'attend',
+    'upgrade',
+    'skill',
+    'feed',
     'wall',
     'boss',
-    'upgrade',
     'draw',
     'merge',
-    'attend',
     'fish',
     'forever',
-    'feed',
-    'skill',
   ])
   expect(opened.pass.missions.every((mission) => mission.count === 0)).toBe(true)
-  expect(opened.pass.missions[0]).toMatchObject({
-    title: '매도벽 최고 기록 50개 돌파',
-    target: 50,
-    points: 30,
+  expect(opened.pass.missions[4]).toMatchObject({
+    title: '매도벽 최고 기록 30개 돌파',
+    period: 'week',
+    target: 30,
+    points: 250,
+    done: false,
   })
   // 닿지 않은 단계와 받을 것 없는 모두 받기는 400.
   expect((await api.post('/api/company/pass/claim', { data: { step: 1 } })).status()).toBe(400)
   expect((await api.post('/api/company/pass/claim', { data: {} })).status()).toBe(400)
 
-  // 출석 미션: 하루에 100포인트. 아직 1단계(300)에는 못 닿는다.
+  // 출석 퀘스트: 하루에 50포인트 (643번). 아직 1단계(300)에는 못 닿는다.
   const attended = await companyOf(await api.post('/api/company/attendance'))
   // 포인트는 저절로 들어오지 않는다 (572번): 받을 수 있게 되고, 눌러서 받는다.
-  // 받을 것이 있는 동안에는 닿은 문턱(1일)을, 받은 뒤에는 다음 문턱(2일)을 가리킨다 (614번).
   expect(attended.pass.points).toBe(0)
   expect(attended.pass.missionsReady).toBe(1)
   expect(attended.pass.missions.find((mission) => mission.code === 'attend')).toMatchObject({
     count: 1,
     target: 1,
-    earned: 0,
-    ready: 100,
+    ready: 50,
+    done: false,
   })
   expect(
     (await api.post('/api/company/pass/missions/claim', { data: { code: 'wall' } })).status(),
@@ -414,13 +413,12 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
   const taken = await companyOf(
     await api.post('/api/company/pass/missions/claim', { data: { code: 'attend' } }),
   )
-  expect(taken.pass.points).toBe(100)
+  expect(taken.pass.points).toBe(50)
   expect(taken.pass.step).toBe(0)
   expect(taken.pass.claimable).toBe(0)
   expect(taken.pass.missionsReady).toBe(0)
   expect(taken.pass.missions.find((mission) => mission.code === 'attend')).toMatchObject({
-    target: 2,
-    earned: 100,
+    done: true,
     ready: 0,
   })
   expect((await api.post('/api/company/pass/missions/claim', { data: {} })).status()).toBe(400)

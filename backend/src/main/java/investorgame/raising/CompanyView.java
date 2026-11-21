@@ -201,26 +201,28 @@ public record CompanyView(
       List<PassReward> lastRewards) {}
 
   /**
-   * 시즌패스의 미션 (570번): 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points를 준다.
+   * 시즌패스의 일일·주간 퀘스트 (570·643번): 이번 주기에 센 수가 target에 닿으면 points를 한 번 받는다.
    *
    * @param code wall·boss·upgrade·draw·merge·attend·fish·forever·feed·skill
-   * @param title 화면에 적는 글: "매도벽 최고 기록 100개 돌파"처럼 target이 들어 있다
-   * @param count 이번 시즌에 센 수
-   * @param target 다음에 포인트를 받는 수. 받을 포인트(ready)가 있으면 이미 닿은 마지막 문턱이다
-   * @param every 포인트를 받는 간격
-   * @param points 문턱 하나에 받는 포인트
-   * @param earned 이 미션으로 이번 시즌에 받은 포인트
-   * @param ready 문턱에 닿았지만 아직 받지 않은 포인트. 눌러서 받는다 (572번)
+   * @param title 화면에 적는 글: "강화 20번"처럼 target이 들어 있다
+   * @param period day(오늘의 퀘스트) 또는 week(이번 주의 퀘스트)
+   * @param count 이번 주기에 센 수 (target까지만)
+   * @param target 포인트를 받는 데 필요한 수
+   * @param points 받는 포인트
+   * @param ready 닿았지만 아직 받지 않은 포인트. 눌러서 받는다 (572번)
+   * @param done 이번 주기에 이미 받았다
+   * @param resetsIn 다음 주기까지 남은 초. 그때 처음부터 다시 센다
    */
   public record PassMission(
       String code,
       String title,
+      String period,
       long count,
       long target,
-      int every,
       int points,
-      long earned,
-      long ready) {}
+      long ready,
+      boolean done,
+      long resetsIn) {}
 
   /**
    * 시즌패스의 한 단계. 돈은 주지 않는다 (570번).

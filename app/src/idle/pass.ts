@@ -50,23 +50,48 @@ export function focusStep(pass: Pass): number {
   return Math.max(1, Math.min(pass.steps.length, pass.step + 1))
 }
 
-/**
- * 미션의 진행도 (570번): 다음 문턱까지 "73/100". 문턱이 되풀이되므로 센 수는 그대로 적고, 막대는 지난 문턱부터 다음 문턱까지의 비율이다.
- * 받을 포인트가 있으면 서버가 닿은 문턱을 준다 (#912): 그 문턱을 넘겨 센 수는 문턱까지만 적어 "10/10"과 가득 찬 막대가 된다.
- */
+/** 퀘스트의 진행도 (643번): "12/20"과 막대의 비율. 센 수는 목표에서 멈춘다. */
 export function missionProgress(mission: PassMission): {
   have: number
   text: string
   ratio: number
 } {
-  const every = Math.max(1, mission.every)
-  const from = mission.target - every
-  const have = Math.min(mission.count, mission.target)
+  const target = Math.max(1, mission.target)
+  const have = Math.max(0, Math.min(mission.count, target))
   return {
     have,
-    text: `${have.toLocaleString()}/${mission.target.toLocaleString()}`,
-    ratio: Math.max(0, Math.min(1, (have - from) / every)),
+    text: `${have.toLocaleString()}/${target.toLocaleString()}`,
+    ratio: have / target,
   }
+}
+
+/** 퀘스트의 상태: 받은 것(done), 목표에 닿아 받을 것(ready), 하는 중(doing). */
+export function missionState(mission: PassMission): 'done' | 'ready' | 'doing' {
+  if (mission.done) return 'done'
+  return mission.ready > 0 ? 'ready' : 'doing'
+}
+
+/** 퀘스트를 주기로 나눈다: 오늘의 퀘스트와 이번 주의 퀘스트. 다음 주기까지 남은 초는 그 묶음의 첫 퀘스트의 것이다. */
+export function missionGroups(
+  missions: PassMission[],
+): { period: 'day' | 'week'; title: string; resetsIn: number; missions: PassMission[] }[] {
+  return (['day', 'week'] as const)
+    .map((period) => {
+      const list = missions.filter((m) => m.period === period)
+      return {
+        period,
+        title: period === 'day' ? '일일 퀘스트' : '주간 퀘스트',
+        resetsIn: list[0]?.resetsIn ?? 0,
+        missions: list,
+      }
+    })
+    .filter((group) => group.missions.length > 0)
+}
+
+/** 다음 주기까지: "5시간 20분 뒤 초기화". */
+export function resetText(secondsLeft: number): string {
+  const left = leftText(secondsLeft)
+  return left === '곧 끝나요' ? '곧 초기화' : `${left.replace(/ 남음$/, '')} 뒤 초기화`
 }
 
 /** 받은 무기의 이름: 가진 무기 목록에서 찾고, 없으면 등급만 적는다. */

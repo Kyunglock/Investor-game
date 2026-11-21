@@ -3,10 +3,13 @@ import {
   focusStep,
   leftText,
   milestone,
+  missionGroups,
   missionProgress,
+  missionState,
   type Pass,
   type PassMission,
   type PassReward,
+  resetText,
   rewardsText,
   stepProgress,
   stepState,
@@ -53,22 +56,17 @@ const reward = (over: Partial<PassReward>): PassReward => ({
   catName: null,
   ...over,
 })
-const mission = (count: number, every: number): PassMission => ({
-  code: 'wall',
-  title: '매도벽 통과',
+const mission = (count: number, target: number, over: Partial<PassMission> = {}): PassMission => ({
+  code: 'upgrade',
+  title: `강화 ${target}번`,
+  period: 'day',
   count,
-  target: (Math.floor(count / every) + 1) * every,
-  every,
-  points: 30,
-  earned: Math.floor(count / every) * 30,
+  target,
+  points: 50,
   ready: 0,
-})
-/** 문턱에 닿아 받을 포인트가 있는 미션: 서버가 다음 문턱 대신 닿은 문턱을 준다 (#912). */
-const readyMission = (count: number, every: number): PassMission => ({
-  ...mission(count, every),
-  target: Math.floor(count / every) * every,
-  earned: 0,
-  ready: Math.floor(count / every) * 30,
+  done: false,
+  resetsIn: 3600 * 5,
+  ...over,
 })
 
 describe('시즌패스 (529·571번)', () => {
@@ -115,24 +113,38 @@ describe('시즌패스 (529·571번)', () => {
     expect(waiting(pass(650, [1], { missionsReady: 2 }))).toBe(3)
   })
 
-  it('미션은 다음 문턱까지의 진행도를 적는다', () => {
-    expect(missionProgress(mission(0, 50))).toEqual({ have: 0, text: '0/50', ratio: 0 })
-    expect(missionProgress(mission(73, 50))).toEqual({ have: 73, text: '73/100', ratio: 0.46 })
-    expect(missionProgress(mission(1250, 50))).toEqual({
-      have: 1250,
-      text: '1,250/1,300',
-      ratio: 0,
+  it('퀘스트는 목표까지의 진행도를 적는다 (643번)', () => {
+    expect(missionProgress(mission(0, 20))).toEqual({ have: 0, text: '0/20', ratio: 0 })
+    expect(missionProgress(mission(5, 20))).toEqual({ have: 5, text: '5/20', ratio: 0.25 })
+    expect(missionProgress(mission(1000, 1000))).toEqual({
+      have: 1000,
+      text: '1,000/1,000',
+      ratio: 1,
     })
-    // 하루에 한 번인 출석처럼 간격이 1이면 늘 다음 것을 가리킨다.
-    expect(missionProgress(mission(3, 1))).toEqual({ have: 3, text: '3/4', ratio: 0 })
+    // 목표를 넘겨 센 수는 목표에서 멈춘다.
+    expect(missionProgress(mission(25, 20))).toEqual({ have: 20, text: '20/20', ratio: 1 })
   })
 
-  it('받을 포인트가 있는 미션은 닿은 문턱을 다 채운 것으로 적는다 (#912)', () => {
-    // 뽑기 11번: "11/20 · 받기"가 아니라 "10/10 · 받기"다.
-    expect(missionProgress(readyMission(11, 10))).toEqual({ have: 10, text: '10/10', ratio: 1 })
-    expect(missionProgress(readyMission(1, 1))).toEqual({ have: 1, text: '1/1', ratio: 1 })
-    // 받지 않고 여러 문턱을 넘었으면 닿은 마지막 문턱이다.
-    expect(missionProgress(readyMission(160, 50))).toEqual({ have: 150, text: '150/150', ratio: 1 })
+  it('퀘스트의 상태는 하는 중·받을 것·받음이다 (643번)', () => {
+    expect(missionState(mission(5, 20))).toBe('doing')
+    expect(missionState(mission(20, 20, { ready: 50 }))).toBe('ready')
+    expect(missionState(mission(20, 20, { done: true }))).toBe('done')
+  })
+
+  it('퀘스트를 일일·주간으로 나누고 초기화까지 남은 시간을 적는다 (643번)', () => {
+    const groups = missionGroups([
+      mission(0, 1, { code: 'attend' }),
+      mission(0, 30, { code: 'wall', period: 'week', resetsIn: 86400 * 3 + 3600 }),
+      mission(0, 20),
+    ])
+    expect(groups.map((g) => [g.title, g.missions.map((m) => m.code)])).toEqual([
+      ['일일 퀘스트', ['attend', 'upgrade']],
+      ['주간 퀘스트', ['wall']],
+    ])
+    expect(resetText(groups[0].resetsIn)).toBe('5시간 뒤 초기화')
+    expect(resetText(groups[1].resetsIn)).toBe('3일 1시간 뒤 초기화')
+    expect(resetText(30)).toBe('곧 초기화')
+    expect(missionGroups([])).toEqual([])
   })
 
   it('받은 것을 한 줄로 적고 무기와 고양이는 이름을 적는다', () => {

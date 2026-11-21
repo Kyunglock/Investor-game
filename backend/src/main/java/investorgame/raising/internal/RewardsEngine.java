@@ -273,28 +273,25 @@ class RewardsEngine {
           new CompanyView.PassStep(
               at, reward.diamonds(), reward.weapon(), reward.cat(), at <= reached, claimed));
     }
-    int missionsReady =
-        (int) rule.missions().stream().filter(m -> engine.pass.ready(c, m) > 0).count();
-    // 미션 (570번): 이번 시즌에 센 수와 다음에 닿을 수, 그때 받는 포인트. 닿은 문턱의 포인트는 눌러서 받는다 (572번).
-    // 받을 포인트가 있는 동안에는 닿은 문턱을 가리킨다 (#912): 다음 문턱을 적으면 덜 한 미션을 받는 것처럼 보인다.
+    // 일일·주간 퀘스트 (643번): 이번 주기에 센 수와 목표, 받는 포인트. 목표에 닿으면 눌러서 받는다 (572번). 한 주기에 한 번이다.
     List<CompanyView.PassMission> missions =
         rule.missions().stream()
             .map(
                 m -> {
-                  long count = c.passMissions.getOrDefault(m.code(), 0L);
-                  long ready = engine.pass.ready(c, m);
-                  long target = (count / m.every() + (ready > 0 ? 0 : 1)) * m.every();
+                  long resets = IdleEngine.startOf(engine.pass.resets(m, today));
                   return new CompanyView.PassMission(
                       m.code(),
-                      m.title().replace("{n}", String.format("%,d", target)),
-                      count,
-                      target,
-                      m.every(),
+                      m.title().replace("{n}", String.format("%,d", m.goal())),
+                      m.weekly() ? "week" : "day",
+                      engine.pass.count(c, m, today),
+                      m.goal(),
                       m.points(),
-                      c.passMissionTaken.getOrDefault(m.code(), 0L) * m.points(),
-                      ready);
+                      engine.pass.ready(c, m, today),
+                      engine.pass.taken(c, m, today),
+                      Math.max(0, (resets - idle.now() + 999) / 1000));
                 })
             .toList();
+    int missionsReady = (int) missions.stream().filter(m -> m.ready() > 0).count();
     List<CompanyView.PassReward> last =
         (c.lastPass == null ? List.<CompanyState.PassReward>of() : c.lastPass)
             .stream()
