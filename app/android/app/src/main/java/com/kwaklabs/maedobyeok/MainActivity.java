@@ -1,6 +1,7 @@
 package com.kwaklabs.maedobyeok;
 
 import android.os.Bundle;
+import android.webkit.CookieManager;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
@@ -20,6 +21,14 @@ public class MainActivity extends BridgeActivity {
     super.onResume();
     // 켠 채 글꼴 크기를 바꾸면 액티비티가 다시 만들어지지만(configChanges에 fontScale이 없다), 돌아올 때마다 한 번 더 맞춘다.
     fixTextZoom();
+  }
+
+  @Override
+  public void onPause() {
+    super.onPause();
+    // WebView는 쿠키를 얼마 뒤에야 디스크에 적는다. 앱을 바로 닫으면 방금 받은 쿠키(세션 연장, 테스트판 쿠키)가 사라져 다시 켤 때
+    // 테스트판 코드를 또 물었다. 뒤로 갈 때마다 적어 둔다.
+    CookieManager.getInstance().flush();
   }
 
   private void fixTextZoom() {
