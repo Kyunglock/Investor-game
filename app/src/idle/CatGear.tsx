@@ -195,7 +195,10 @@ export function CatGear({
         {!cell.pair && cell.stack > 1 && <em className="idle-gear-count">×{cell.stack}</em>}
         {cell.holder && (
           <span className="idle-gear-holder">
-            <Portrait code={cell.holder.code ?? undefined} />
+            <Portrait
+              grade={company.idle?.cats.find((c) => c.code === cell.holder?.code)?.grade}
+              code={cell.holder.code ?? undefined}
+            />
           </span>
         )}
         {!cell.pair && (

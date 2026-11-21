@@ -73,7 +73,7 @@ export function CatInfoCard({
       >
         <header>
           <span className="cat-info-face">
-            <CatPortrait code={cat ? (cat.code as CatCode) : undefined} />
+            <CatPortrait grade={cat?.grade} code={cat ? (cat.code as CatCode) : undefined} />
           </span>
           <div>
             <b>

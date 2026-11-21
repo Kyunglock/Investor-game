@@ -74,7 +74,8 @@ export function CatReveal({
   useEffect(() => {
     if (phase !== 'result' || !result || sounded.current || reduced) return
     sounded.current = true
-    sfx.weaponReveal(plan.sound)
+    if (result.cat.grade === 'S') sfx.celebrate()
+    else sfx.weaponReveal(plan.sound)
     if (plan.power >= 3) haptic.burst()
     else haptic.light()
   }, [phase, result, plan.power, plan.sound, reduced])
@@ -92,6 +93,7 @@ export function CatReveal({
       data-testid="cat-reveal"
       data-phase={phase}
       data-grade={result ? plan.sound : undefined}
+      data-starlight={result?.cat.grade === 'S' || undefined}
       data-power={plan.power}
       data-shiny={result ? shinyCat(result.cat.grade) : false}
       style={{ '--reveal-color': plan.color } as CSSProperties}
@@ -153,7 +155,7 @@ export function CatReveal({
                   ` · 고유 ${skillNames(result.cat)} Lv.${result.cat.skillLevel}`}
               </span>
               <div className="weapon-reveal-art cat-reveal-art">
-                <CatPortrait code={result.cat.code} />
+                <CatPortrait code={result.cat.code} grade={result.cat.grade} />
                 {/* 고유 스킬 배지 (531번): 초상화 귀퉁이에 건다. */}
                 {/* 스킬은 A등급부터 있고 S등급은 둘이다 (561번). */}
                 {result.cat.skills.length > 0 && (

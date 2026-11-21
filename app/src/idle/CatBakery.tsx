@@ -141,7 +141,7 @@ export function CatBakery({
                   void useRaisingStore.getState().feedCat(cat.code)
                 }}
               >
-                <CatPortrait code={cat.code} />
+                <CatPortrait grade={cat.grade} code={cat.code} />
                 <span>
                   <b>{cat.name}</b>
                   <small>

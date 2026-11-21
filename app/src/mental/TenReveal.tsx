@@ -22,6 +22,7 @@ export type TenCard = {
   /** A등급 이상 (574번): 좋은 것을 뽑았다는 느낌이 들게 빛난다 */
   shiny: boolean
   /** S등급 이상 (576번): 더 좋은 장은 열리기 전의 뜸이 더 길다 */
+  starlight?: boolean
   jackpot: boolean
 }
 
@@ -79,7 +80,11 @@ export function TenReveal({
   const opened = openedAt === at
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const sounded = useRef(-1)
-  const best = cards?.reduce((a, b) => (b.power > a.power ? b : a), cards[0]) ?? null
+  const best =
+    cards?.reduce(
+      (a, b) => (b.power > a.power || (b.starlight && !a.starlight) ? b : a),
+      cards[0],
+    ) ?? null
   const power = best?.power ?? 0
   const charge = [700, 1000, 1500, 2200][power] ?? 700
   useEffect(() => {
@@ -131,7 +136,8 @@ export function TenReveal({
     if (!shown || !opened || sounded.current === at || reduced) return
     sounded.current = at
     sfx.cardFlip()
-    sfx.weaponReveal(shown.sound)
+    if (shown.starlight) sfx.celebrate()
+    else sfx.weaponReveal(shown.sound)
     if (shown.jackpot) haptic.burst()
     else if (shown.shiny) haptic.heavy()
     else haptic.light()
@@ -165,6 +171,7 @@ export function TenReveal({
       data-phase={phase}
       data-grade={lead ? lead.sound : undefined}
       data-power={lead?.power ?? 0}
+      data-starlight={lead?.starlight || undefined}
       data-shiny={lead?.shiny ?? false}
       style={{ '--reveal-color': lead?.color ?? '#cbd5e1' } as CSSProperties}
       onCancel={(e) => {
@@ -272,6 +279,7 @@ export function TenReveal({
                     data-new={card.isNew}
                     data-power={card.power}
                     data-shiny={card.shiny}
+                    data-starlight={card.starlight || undefined}
                     style={
                       {
                         '--card-color': card.color,
