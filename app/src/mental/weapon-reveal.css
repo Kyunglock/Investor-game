@@ -591,6 +591,9 @@
   border-radius: 50%;
   background: radial-gradient(circle at 50% 40%, #fff8e2, #f3dcae);
 }
+.ten-single-art .idle-cat-portrait[data-starlight] {
+  border-radius: 6px;
+}
 .ten-single-name {
   font-family: var(--font-game);
   font-size: 24px;
@@ -829,20 +832,6 @@
     background: linear-gradient(115deg, transparent 40%, #fff2be80 49%, transparent 58%);
     animation: s-cat-gild 850ms ease-out both;
   }
-  .cat-reveal-art:has([data-starlight])::before,
-  .ten-single[data-open="true"] .ten-single-art:has([data-starlight])::before {
-    content: "";
-    position: absolute;
-    width: 150px;
-    aspect-ratio: 1;
-    border: 2px solid #ffe39b;
-    border-radius: 50%;
-    box-shadow:
-      0 0 12px #71faec,
-      inset 0 0 8px #71faec;
-    pointer-events: none;
-    animation: s-cat-orbit 700ms ease-out both;
-  }
   @keyframes s-cat-gild {
     from {
       transform: translateX(-100%);
@@ -851,14 +840,14 @@
       transform: translateX(100%);
     }
   }
-  @keyframes s-cat-orbit {
-    from {
-      transform: scale(0.55);
-      opacity: 0.9;
-    }
-    to {
-      transform: scale(1.55);
-      opacity: 0;
-    }
-  }
+}
+
+.cat-reveal .cat-reveal-art .idle-cat-portrait[data-starlight] {
+  width: min(66vw, 34dvh, 300px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 12px;
+}
+.idle-cat-portrait img.idle-cat-face {
+  object-fit: cover;
 }
