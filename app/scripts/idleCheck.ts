@@ -394,6 +394,36 @@ try {
     await expect(page.getByTestId('pass').locator('.idle-coin')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     await expect(page.getByTestId('pass')).toHaveCount(0)
+    // 전투 통계 (645번): 서버에 실린 명중을 쏜 고양이마다 모아 10분 창으로 보인다.
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent('idle-wall-hit', {
+          detail: { wall: 1, kind: 'bullet', depth: 0, damage: 3, owner: 'boss', crit: true },
+        }),
+      ),
+    )
+    const statsKey = await page.getByTestId('idle-stats').boundingBox()
+    assert(statsKey, 'the stats key is shown')
+    assert(statsKey.y >= hudBounds.y + hudBounds.height, 'the stats key sits below the HUD')
+    assert(statsKey.x + statsKey.width <= width, 'the stats key stays on screen')
+    assert(statsKey.width >= 38, 'the stats key is large enough to press')
+    await page.getByTestId('idle-stats').click()
+    await expect(page.getByTestId('stats')).toBeVisible()
+    await expect(page.getByTestId('stats-reset')).toContainText('뒤 초기화')
+    // 실제 전장이 돌며 쏘는 총알도 쏜 고양이마다 쌓인다: 값은 움직이므로 사장냥의 줄과 치명타가 잡히는지만 본다.
+    const bossRow = page.locator('[data-testid=stats-row][data-code=boss]')
+    await expect(bossRow).toContainText('사장냥')
+    await expect(bossRow).toContainText(/[\d,.]+[만억조]?주/)
+    await expect(page.getByTestId('stats-total')).not.toHaveText('0주')
+    await expect(page.getByTestId('stats-crits')).toContainText(/[1-9][\d,]*번/)
+    await expect(page.getByTestId('stats-best')).toContainText('주')
+    const statsBox = await page.getByTestId('stats').boundingBox()
+    assert(
+      statsBox && statsBox.x >= 0 && statsBox.x + statsBox.width <= width + 1,
+      'stats sheet fits',
+    )
+    await page.getByRole('button', { name: '닫기 ✕' }).click()
+    await expect(page.getByTestId('stats')).toHaveCount(0)
     await page.getByRole('button', { name: '성장' }).click()
     await expect(page.getByTestId('idle-menu')).toBeVisible()
     // 전투력 하나만 보인다 (538번): 화력과 실제 벽 피해는 뺐다.
