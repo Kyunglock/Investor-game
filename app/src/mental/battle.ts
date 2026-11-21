@@ -47,6 +47,7 @@ import {
   mateKey,
   RAM_ART,
   SKILL_MARK,
+  SKILL_MARK_COLORS,
   skillMarkKey,
   spellKey,
   WALL_H,
@@ -82,7 +83,7 @@ import {
   wallCols,
   whaleSummonSeconds,
 } from './assault'
-import { STAGE_ASSETS } from './assets'
+import { BREAKTHROUGH_SPELL_ART, STAGE_ASSETS } from './assets'
 import {
   BUY_WALL,
   BuyLossNote,
@@ -482,6 +483,7 @@ const CAST_STAGGER = 0.18
 const SOUND_GAP_MS = 90
 /** 날아가는 물(풀에서 돌려 쓴다): 물방울·물줄기·큰 물결. half·depth는 지금 맞는 폭(sweepHits). */
 interface WaterShot {
+  color: number
   img: Phaser.GameObjects.Image
   active: boolean
   level: number
@@ -774,6 +776,7 @@ class BattleScene extends Phaser.Scene {
   private thumpIndex = 0
   private spikes: Phaser.GameObjects.Image[] = []
   private spikeIndex = 0
+  private trailColor = 0x83d5ff
   private waterFx!: Phaser.GameObjects.Particles.ParticleEmitter
   private fireFx!: Phaser.GameObjects.Particles.ParticleEmitter
   private boltFx!: Phaser.GameObjects.Particles.ParticleEmitter
@@ -919,6 +922,10 @@ class BattleScene extends Phaser.Scene {
   }
 
   preload() {
+    if (this.opts.idle) {
+      for (const [spell, url] of Object.entries(BREAKTHROUGH_SPELL_ART))
+        this.load.image(`breakthrough-${spell}`, url)
+    }
     if (this.opts.vault) this.load.image('vault-guard', this.opts.vault.guardianArt)
     this.load.on('progress', (value: number) => this.opts.onProgress?.(value))
     for (const [key, url] of Object.entries(STAGE_ASSETS)) this.load.image(`art-${key}`, url)
@@ -942,7 +949,7 @@ class BattleScene extends Phaser.Scene {
     bakeHero(this, this.opts.hero.weapon.grade)
     this.bakeMateGuns()
     bakeEnemies(this)
-    bakeMagic(this)
+    bakeMagic(this, Boolean(this.opts.idle))
     if (this.assault) bakeOrders(this, this.sellScale())
 
     // 선명하게(344번): 캔버스는 화면 배율만큼 크고(startBattle), 카메라를 그만큼 당겨 논리 좌표(view)는 CSS px 그대로다.
@@ -3911,7 +3918,9 @@ class BattleScene extends Phaser.Scene {
       scale: { start: 0.9 * TEX, end: 0 },
       alpha: { start: 1, end: 0.3 },
       gravityY: 420,
-      tint: [0xffffff, 0xbfe8ff, 0x6cc0ff, 0x2f8fe8],
+      tint: this.opts.idle
+        ? { onEmit: () => this.trailColor }
+        : [0xffffff, 0xbfe8ff, 0x6cc0ff, 0x2f8fe8],
     })
     this.fireFx = soft({
       speed: { min: 30, max: 190 },
@@ -3937,6 +3946,7 @@ class BattleScene extends Phaser.Scene {
     for (let i = 0; i < 16; i++) {
       this.waters.push({
         img: hidden('magic-drop', 4),
+        color: 0x83d5ff,
         spell: 'water',
         active: false,
         level: 1,
@@ -3953,7 +3963,7 @@ class BattleScene extends Phaser.Scene {
     for (let i = 0; i < 24; i++) {
       this.meteors.push({
         img: hidden('magic-rock', 6),
-        warning: hidden('magic-ring', 3),
+        warning: hidden(this.opts.idle ? 'magic-landing' : 'magic-ring', 3),
         crater: hidden('magic-scorch', 2.5).setTint(0x705d72),
         active: false,
         level: 1,
@@ -4170,6 +4180,7 @@ class BattleScene extends Phaser.Scene {
     s.active = true
     s.level = level
     s.spell = spell
+    s.color = hexColor(SKILL_MARK_COLORS[spell].mid)
     s.x = from.x
     s.y = from.y
     s.dx = Math.cos(a)
@@ -4193,6 +4204,14 @@ class BattleScene extends Phaser.Scene {
       .setRotation(a)
       .setAlpha(1)
       .setVisible(true)
+    // 물결 단계는 넓어지는 파도 모양을 유지한다. 그림 로드가 실패하면 기본 마법 그림을 사용한다.
+    if (
+      this.opts.idle &&
+      (spell === 'ice' || spell === 'wind' || (spell === 'water' && form !== 'wave'))
+    ) {
+      const art = `breakthrough-${spell}`
+      if (this.textures.exists(art)) s.img.setTexture(art)
+    }
     if (form === 'drop') {
       // 물방울은 꼬리가 있고, spellbook의 구슬은 둥글다.
       if (spell === 'water') s.img.setDisplaySize(36, 23)
@@ -4209,6 +4228,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   private moveWater(s: WaterShot, dt: number) {
+    this.trailColor = s.color
     const st = flowStats(s.spell, s.level)
     const tier = magicTier(s.level)
     const form = this.flowForm(s.spell, s.level)
@@ -4246,6 +4266,8 @@ class BattleScene extends Phaser.Scene {
         this.waterSplash(s, st, e.x, e.y)
         return
       }
+      if (this.opts.idle && !this.reducedMotion && s.hitList.length === 0)
+        this.ring(e.x, e.y, s.color, Math.min(30, 16 + s.level * 2), 220)
       s.hitList.push(e)
       this.waterFx.explode(this.fx(2 + tier), e.x, e.y)
       this.waterHit(e, st, angle, false, s.spell)
@@ -4323,6 +4345,8 @@ class BattleScene extends Phaser.Scene {
       )
       // 운석은 돌 그림을 물들이고, spellbook의 마법은 제 그림을 쓴다 (563번).
       if (look) s.img.setTexture(spellKey(spell as FallSpell)).clearTint()
+      else if (this.opts.idle && this.textures.exists('breakthrough-meteor'))
+        s.img.setTexture('breakthrough-meteor').clearTint()
       else s.img.setTexture('magic-rock').setTint(0xc98b72)
       s.img.setVisible(false).setAlpha(1)
       s.warning
@@ -4346,11 +4370,13 @@ class BattleScene extends Phaser.Scene {
     const size =
       (s.spell === 'bomb' ? 46 : s.spell !== 'meteor' ? 24 : s.level === 1 ? 26 : 40) *
       this.grow(s.level)
+    const comet = s.img.texture.key === 'breakthrough-meteor'
     s.img
+      .setOrigin(0.5, comet ? 0.77 : 0.5)
       .setVisible(drop > 0)
-      .setDisplaySize(size, size)
+      .setDisplaySize(size, comet ? size * 1.8 : size)
       .setPosition(s.tx, s.ty - 280 * (1 - drop * drop))
-      .setRotation(drop * 1.5)
+      .setRotation(comet ? 0 : drop * 1.5)
     if (drop > 0 && !this.reducedMotion && (s.spell === 'meteor' || s.spell === 'bomb'))
       this.fireFx.emitParticleAt(s.img.x, s.img.y - size / 2, 1)
     if (progress < 1) return
