@@ -144,35 +144,35 @@ raising:
       bonus-times: 2
       ex: 300
     # 출석 보상 (decisions.md 528·568번): 하루에 한 번(한국 시간 자정 기준), 누적 7일 주기. 들어오면 저절로 받는다. 보상은 다이아뿐이다
-    # (돈 칸은 566번에서 뺐다: income-minutes는 모두 0). 한 주기에 다이아 750. 출석은 시즌패스 미션(attend)으로도 센다
+    # (돈 칸은 566번에서 뺐다: income-minutes는 모두 0). 한 주기에 다이아 250(644번에 750에서 줄였다). 출석은 시즌패스 미션(attend)으로도 센다
     attendance:
       days:
-        - { diamonds: 50, income-minutes: 0 }
-        - { diamonds: 50, income-minutes: 0 }
+        - { diamonds: 20, income-minutes: 0 }
+        - { diamonds: 20, income-minutes: 0 }
+        - { diamonds: 30, income-minutes: 0 }
+        - { diamonds: 20, income-minutes: 0 }
+        - { diamonds: 30, income-minutes: 0 }
+        - { diamonds: 30, income-minutes: 0 }
         - { diamonds: 100, income-minutes: 0 }
-        - { diamonds: 50, income-minutes: 0 }
-        - { diamonds: 100, income-minutes: 0 }
-        - { diamonds: 100, income-minutes: 0 }
-        - { diamonds: 300, income-minutes: 0 }
     # 상점 (decisions.md 541번): 게임 재화로만 산다. 값은 다이아(price-diamonds)나 돈(그때 회사의 초당 수입 × price-income-minutes분),
     # 주는 것도 다이아(give-diamonds)나 돈(초당 수입 × give-income-minutes분). 값이 둘 다 0이면 무료. 산 횟수는 한국 시간 자정에 지워진다
     shop:
       items:
-        - { code: free, name: 오늘의 무료 다이아, give-diamonds: 20, daily-limit: 1 }
+        - { code: free, name: 오늘의 무료 다이아, give-diamonds: 10, daily-limit: 1 }
     # 시즌패스 (decisions.md 529·571번): 무료 줄 하나. 시즌은 epoch(한국 시간 자정)부터 days일(4주)마다 이어지고, steps단계에 단계마다
     # 포인트 points-per-step. 포인트는 미션을 깨면 들어온다: 미션마다 이번 시즌에 센 수가 every의 배수에 닿을 때마다 points
     # (끝없이 되풀이된다). title의 {n}은 다음에 닿을 수(받을 포인트가 있으면 닿은 수)다. 보상에 돈은 없다: 보통 단계 normal-diamonds, 5의 배수 five-diamonds,
-    # 10의 배수(10·20) ten-diamonds + 무기 하나, 마지막 단계 last-diamonds + 고양이 한 마리. 한 시즌에 다이아 2,900.
+    # 10의 배수(10·20) ten-diamonds + 무기 하나, 마지막 단계 last-diamonds + 고양이 한 마리. 한 시즌에 다이아 1,060(644번에 2,900에서 줄였다).
     pass:
       epoch: "2026-11-02"
       days: 28
       steps: 30
       points-per-step: 300
       rewards:
-        normal-diamonds: 50
-        five-diamonds: 200
-        ten-diamonds: 300
-        last-diamonds: 500
+        normal-diamonds: 20
+        five-diamonds: 60
+        ten-diamonds: 100
+        last-diamonds: 200
       # 643번: 일일·주간 퀘스트. 주기(day는 한국 시간 하루, week는 시즌 첫날부터 7일)마다 한 번 goal에 닿으면 points를 받고, 주기가 바뀌면 처음부터 센다.
       # 하루 200 × 28일 + 한 주 1,000 × 4주 = 9,600으로 30단계(9,000)에 25일째쯤 닿는다.
       missions:
@@ -238,6 +238,7 @@ raising:
         rifle: { damage-percent: 330, fire-ms: 900, power: 3, bullet-speed: 1100 }
       # 등급 밸런스 (decisions.md 461번, #683): 한 대상에 대한 실효 초당 피해(탄 강화 1+0.4×power, 리볼버 치명타·재장전 포함)가 한 등급에
       # 약 1.75배씩 오른다. F 385 → E 684 → D 1,197 → C 2,062 → B 3,594 → A 6,364 → S 11,091. 종류별 바탕 수치(430번)는 그대로다
+      # S 위로는 한 등급에 공격력 약 1.3배다 (644번): 전에는 SS 863 · SSS 1585 · SR 2849 · UR 5061 · LR 8932로 한 등급에 1.6~1.8배라 LR 총이 S의 16배였다(지금 4배)
       weapon-grades:
         F: { kind: pistol, damage-percent: 0, fire-percent: 0 }
         E: { kind: pistol, damage-percent: 60, fire-percent: 10 }
@@ -246,11 +247,11 @@ raising:
         B: { kind: smg, damage-percent: 360, fire-percent: 20 }
         A: { kind: shotgun, damage-percent: 800, fire-percent: 20 }
         S: { kind: rifle, damage-percent: 450, fire-percent: 60 }
-        SS: { kind: rifle, damage-percent: 863, fire-percent: 60 }
-        SSS: { kind: rifle, damage-percent: 1585, fire-percent: 60 }
-        SR: { kind: rifle, damage-percent: 2849, fire-percent: 60 }
-        UR: { kind: rifle, damage-percent: 5061, fire-percent: 60 }
-        LR: { kind: rifle, damage-percent: 8932, fire-percent: 60 }
+        SS: { kind: rifle, damage-percent: 645, fire-percent: 60 }
+        SSS: { kind: rifle, damage-percent: 890, fire-percent: 60 }
+        SR: { kind: rifle, damage-percent: 1195, fire-percent: 60 }
+        UR: { kind: rifle, damage-percent: 1575, fire-percent: 60 }
+        LR: { kind: rifle, damage-percent: 2050, fire-percent: 60 }
       # 무기 뽑기 (decisions.md 366번): 다이아로 뽑는다(526번). 등급 가중치로 등급을, 종류는 등급에 따라 정한다. 같은 무기(종류+등급)가 merge-count개
       # 모이면 합쳐 한 등급 올린다
       weapon-gacha:
@@ -268,12 +269,13 @@ raising:
         bonus-per-stage: 3
         max-bonus: 30
       # 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사를 단계마다 step-percent%씩, 최대 단계 없이 끝없이. 값은 처음
-      # base-price(1b)이고 단계마다 price-growth-percent%씩 오른다(100단계째 약 0.5억, 200단계째 약 25억). 한 요청에 max-batch단계까지 묶어 산다.
-      # price-growth-percent는 자동 전투의 물가(CompanyEngine.INFLATION)와 같은 비율이어야 한다 (553번): 돈과 강화 값이 나란히 큰다.
+      # base-price(1b)이고 단계마다 price-growth-percent%씩 오른다(8%면 100단계째 약 22억, 200단계째 약 4.8조). 한 요청에 max-batch단계까지 묶어 산다.
+      # price-growth-percent는 자동 전투의 물가(CompanyEngine.INFLATION, 4%)의 두 배다 (644번, 553번에는 같았다): 돈이 벽마다 4% 크는 동안 강화 값은
+      # 단계마다 8% 커서, N번째 벽에서 강화가 N단계가 아니라 N/2단계쯤에 머문다. 강화가 벽 번호를 그대로 따라가 화력이 벽 체력보다 빨리 컸다.
       # 멘탈 전투의 바탕 수치(무기 위)에 영구로 붙는다. 고양이 속도 강화는 394번에서 뺐다. 체력(hp)은 최대 멘탈을 단계마다 step-percent%씩 (410번)
       upgrades:
         base-price: 1000000
-        price-growth-percent: 4
+        price-growth-percent: 8
         max-batch: 100
         # 한 단계의 효과 (492번): 공격력·체력 3%, 연사 2%(100%에서 멈춘다, 487번). 치명타 피해 강화는 없앴다 (556번)
         # 매수벽은 체력(hp)과 공격(buy: 매수 주문의 공격력)을 따로 올린다 (495번)

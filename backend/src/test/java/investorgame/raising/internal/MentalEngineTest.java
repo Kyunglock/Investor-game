@@ -143,8 +143,13 @@ class MentalEngineTest {
       if (kind.equals("revolver"))
         dps *= 1.8 * (6.0 * stats.fireMs()) / (6.0 * stats.fireMs() + 1000);
       assertThat(dps).as(grade + " 지속 화력").isGreaterThan(previous);
+      // S까지는 한 등급에 1.6~1.9배(461번), S 위로는 1.3배쯤이다(644번): LR 총이 S의 4배쯤.
+      boolean high =
+          MentalEngine.WEAPON_GRADES.indexOf(grade) > MentalEngine.WEAPON_GRADES.indexOf("S");
       if (previous > 0)
-        assertThat(dps / previous).as(grade + " 한 등급 오름폭 (461번)").isBetween(1.6, 1.9);
+        assertThat(dps / previous)
+            .as(grade + " 한 등급 오름폭")
+            .isBetween(high ? 1.25 : 1.6, high ? 1.4 : 1.9);
       previous = dps;
     }
     assertThat(ENGINE.mental.stats("shotgun", "A").power()).isEqualTo(2);
@@ -438,15 +443,15 @@ class MentalEngineTest {
     long before = (long) c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "damage", 1)).isEqualTo(1);
     assertThat(c.capital).isEqualTo(before - rule.basePrice());
-    // 단계마다 몇 %씩만 오른다: 두 배씩이면 끝없이 살 수 없다.
+    // 단계마다 몇 %씩만 오른다: 두 배씩이면 끝없이 살 수 없다. 644번에 4%에서 8%로 올렸다: 100만 × 1.08.
     assertThat(ENGINE.mental.upgradePrice(0)).isEqualTo(rule.basePrice());
-    assertThat(ENGINE.mental.upgradePrice(1)).isEqualTo(1_040_000L);
+    assertThat(ENGINE.mental.upgradePrice(1)).isEqualTo(1_080_000L);
     assertThat(ENGINE.mental.upgradePrice(100))
-        .as("100단계째 약 0.5억")
-        .isBetween(40_000_000.0, 60_000_000.0);
+        .as("100단계째 100만 × 1.08^100 ≈ 22억")
+        .isBetween(2_000_000_000.0, 2_500_000_000.0);
     assertThat(ENGINE.mental.upgradePrice(200))
-        .as("200단계째 약 25억")
-        .isBetween(2_000_000_000.0, 3_000_000_000.0);
+        .as("200단계째 100만 × 1.08^200 ≈ 4.8조")
+        .isBetween(4_000_000_000_000.0, 6_000_000_000_000.0);
     assertThat(ENGINE.mental.upgradePrice(5_000))
         .as("long을 넘어도 값은 단계를 따라 계속 오른다")
         .isGreaterThan(1e90);
@@ -458,7 +463,8 @@ class MentalEngineTest {
     assertThat(damage.priceGrowthPercent()).isEqualTo(rule.priceGrowthPercent());
 
     // 꾹 눌러 모은 단계는 묶어 산다. 최대 단계는 없다. 자본은 실수라(505번) 정수 계산이 정확한 2^53 아래로 둔다.
-    c.capital = 1_000_000_000_000_000L;
+    // 250단계 값의 합은 100만 × (1.08^250 − 1) ÷ 0.08 ≈ 2.84경이다 (644번, 8%).
+    c.capital = 4_000_000_000_000_000L;
     double wallet = c.capital;
     long expected = 0;
     for (int level = 0; level < 250; level++) {
@@ -504,12 +510,12 @@ class MentalEngineTest {
     double held = c.capital;
     assertThat(ENGINE.mental.hasRemovedUpgrades(c)).isTrue();
     assertThat(ENGINE.mental.refundRemovedUpgrades(c)).isTrue();
-    assertThat(c.capital).isEqualTo(held + rule.basePrice() + 1_040_000L);
+    assertThat(c.capital).isEqualTo(held + rule.basePrice() + 1_080_000L);
     assertThat(c.battleLevels).doesNotContainKey("crit");
 
     // 자본이 닿는 데까지만 산다. 한 단계도 못 사면 400.
     CompanyState poor = company(6);
-    poor.capital = rule.basePrice() + 1_040_000L + 1_000L;
+    poor.capital = rule.basePrice() + 1_080_000L + 1_000L;
     assertThat(ENGINE.mental.buyUpgrade(poor, "fire", 10)).as("두 단계까지만 닿는다").isEqualTo(2);
     assertThat(poor.capital).isEqualTo(1_000L);
     assertThat(poor.battleLevels.get("fire")).isEqualTo(2);

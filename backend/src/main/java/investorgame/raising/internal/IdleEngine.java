@@ -40,8 +40,11 @@ class IdleEngine {
    */
   static final long BOSS_EVERY = 50;
 
-  /** 보스를 처음 깨면 따로 주는 보상 (549번): 다이아, 그리고 그 벽 보상(대량 매도벽의 3배가 든 값)의 이 배수만큼의 돈. 같은 보스는 한 번만 준다. */
-  static final long BOSS_CLEAR_DIAMONDS = 100;
+  /**
+   * 보스를 처음 깨면 따로 주는 보상 (549번): 다이아, 그리고 그 벽 보상(대량 매도벽의 3배가 든 값)의 이 배수만큼의 돈. 같은 보스는 한 번만 준다. 다이아는
+   * 100에서 10으로 줄였다 (644번): 한 달에 백 개 넘는 보스를 깨 다이아의 절반 넘게가 여기서 나왔다.
+   */
+  static final long BOSS_CLEAR_DIAMONDS = 10;
 
   static final double BOSS_CLEAR_REWARDS = 5;
 
@@ -128,13 +131,15 @@ class IdleEngine {
   // set of gear stops at stay where 636 put them, with numbers about a third as large.
   private static final double HP_LINEAR = 5;
   private static final double HP_SQUARE = 0.035;
-  private static final double BOSS_HP = 3;
 
   /**
-   * 벽 체력의 지수 (636번): 깊이마다 이만큼 더 곱한다. 2차식만으로는 무기·고양이가 곱으로 키우는 화력을 따라가지 못해 어느 장비든 끝없이 뚫렸다. 장비마다 막히는
-   * 벽이 생기게 한다. 화면 idlePredict.ts의 idleMaxHp와 같이 바꾼다.
+   * 벽 체력의 4차 항 (644번): 636번의 지수(1.003^깊이)를 대신한다. 지수는 5,000벽에서 3백만 배가 되어 벽 체력이 조·경 단위로 커졌고, 그것을
+   * 따라잡으려 무기 등급과 고양이 레벨이 곱으로 키우는 화력도 함께 커졌다. 화력을 누르고(무기 S 이상 등급, 고양이 레벨) 4차식으로 바꿔 장비마다 막히는 벽은 두면서
+   * 숫자를 줄였다. 화면 idlePredict.ts의 idleMaxHp와 같이 바꾼다.
    */
-  static final double HP_GROWTH = 1.003;
+  private static final double HP_QUARTIC = 3.897e-9;
+
+  private static final double BOSS_HP = 3;
 
   /**
    * Bullet pierce (520): every bullet goes through the front wall into the two behind it, weaker at
@@ -153,8 +158,9 @@ class IdleEngine {
   // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
   // silence is a closed or sleeping app and pays nothing.
-  private static final long DIAMOND_MILLIS = 600_000;
-  private static final long LOAF_MILLIS = 60_000;
+  // 식빵 공방 (644번에 줄임): 쉬는 고양이 하나가 5분에 식빵 하나(전에는 1분), 팔 때 굽던 30분마다 다이아 하나(전에는 10분).
+  private static final long DIAMOND_MILLIS = 1_800_000;
+  private static final long LOAF_MILLIS = 300_000;
   private static final long GRACE_MS = 10_000;
   // Attack kinds after the bullet (kind 0): skills. A cat's skills are its own and it casts them
   // while fielded (decisions.md 501). Only A and S grade cats have any (561): A one, S two.
@@ -296,9 +302,10 @@ class IdleEngine {
       java.util.Set.of(
           "caramel", "mocha", "peach", "biscuit", "lemon", "cocoa", "cloud", "tilt", "russet",
           "plum", "coral", "truffle");
-  // A grade's share of the draws (percent) and its cats' gun damage (x the level's power).
+  // A grade's share of the draws (percent) and its cats' gun damage (x the level's power). The
+  // damage was {1, 1.4, 2, 3} before 644.
   private static final int[] GRADE_PERCENT = {60, 28, 10, 2};
-  private static final double[] GRADE_DAMAGE = {1, 1.4, 2, 3};
+  private static final double[] GRADE_DAMAGE = {1, 1.15, 1.35, 1.6};
   private static final int[] CAT_GRADE = CATS.stream().mapToInt(IdleEngine::gradeIndex).toArray();
   // Each grade's share is split evenly over its cats: percent x (all cats' common multiple) / n.
   private static final int[] CAT_WEIGHTS = catWeights();
@@ -368,10 +375,12 @@ class IdleEngine {
   // Cats used to join at these walls. Saves from then keep them.
   private static final long[] CAT_LEGACY_WALLS = {15, 50};
   private static final int FIELD_SLOTS = 4;
-  // A cat's gun hits for this share of the weapon's damage times the square root of its level
-  // (636): level 100 is ten times level 1, level 1000 about 32 times. It was 1 + 0.2 per level
-  // above 1 before, 200 times at level 1000.
-  private static final double CAT_POWER = 0.5;
+  // A cat's gun hits for this share of the weapon's damage times its level to CAT_LEVEL_EXPONENT
+  // (644): level 10 is twice level 1, level 100 four times, level 1000 about 8 times. It was half
+  // the weapon times the square root (636, level 1000 about 32 times) and 1 + 0.2 per level above
+  // 1 before that.
+  private static final double CAT_POWER = 0.25;
+  private static final double CAT_LEVEL_EXPONENT = 0.3;
   // 벽 보상 (553번): 벽 하나를 깨면 그 벽 번호와 같은 단계의 전투 강화 값 REWARD_UPGRADES개 어치를 준다. 물가가 강화 값과 같은
   // 빠르기로 크므로(CompanyEngine.inflation), N번째 벽을 깰 때까지 번 돈이 끝없는 강화(공격력·체력·매수)를 평균 N단계쯤 올린다.
   // 보스 벽은 BOSS_REWARD배. 전에는 그 벽의 시간 수입 10초 어치였다 (537·552번). 세 단계 어치를 한 단계 반으로 낮췄다 (559번).
@@ -499,7 +508,7 @@ class IdleEngine {
   }
 
   private static double power(int level) {
-    return CAT_POWER * Math.sqrt(Math.max(1, level));
+    return CAT_POWER * Math.pow(Math.max(1, level), CAT_LEVEL_EXPONENT);
   }
 
   /** A cat without a gun, and a company from before weapons, shoots the starting pistol. */
@@ -667,8 +676,8 @@ class IdleEngine {
   /** A wall's health before the every-tenth-wall multiplier. */
   private static double plainHp(long wall) {
     long depth = wall - 1;
-    return (HP_BASE + HP_LINEAR * depth + HP_SQUARE * depth * depth)
-        * StrictMath.pow(HP_GROWTH, depth);
+    double square = (double) depth * depth;
+    return HP_BASE + HP_LINEAR * depth + HP_SQUARE * square + HP_QUARTIC * square * square;
   }
 
   /** 금고 도전 (641번): 스킬의 수, 그 등급의 고양이들, 스킬 하나의 코드와 이름("물 스킬"의 "물"). */
@@ -1321,10 +1330,10 @@ class IdleEngine {
   static final long REBIRTH_AD_MULTIPLIER = 3;
 
   /**
-   * 환생의 생선에 얹는 덤 (633번): 깬 보스(벽 BOSS_EVERY개)마다 덤이 이만큼씩 커지며 쌓인다. 첫 보스 +5%, 둘째 +10%, 셋째 +15% … 벽 체력이
-   * 깊이의 제곱으로 느는 만큼 깊이 갈수록 벽 하나의 값도 가파르게 커진다.
+   * 환생의 생선에 얹는 덤 (633·644번): 깬 보스(벽 BOSS_EVERY개)마다 이만큼 더한다. 첫 보스 +2%, 둘째 +4% … 5,000벽이면 +200%.
+   * 633번에는 덤이 보스마다 커지며 쌓여(+5%, +10%, +15% …) 5,000벽에서 250배가 되었고, 생선 강화가 화력을 수십 배로 키웠다.
    */
-  static final long REBIRTH_DEPTH_BONUS_PERCENT = 5;
+  static final long REBIRTH_DEPTH_BONUS_PERCENT = 2;
 
   /**
    * 지금 환생하면 받는 생선 (571·600번): 깬 벽 수 ÷ 5에, 깬 보스마다 커지는 덤(+5%, +10%, +15% …)을 쌓아 얹는다 (633번, 내림). 51번째
@@ -1337,7 +1346,7 @@ class IdleEngine {
       return 0;
     }
     long bosses = cleared / BOSS_EVERY;
-    long percent = 100 + REBIRTH_DEPTH_BONUS_PERCENT * bosses * (bosses + 1) / 2;
+    long percent = 100 + REBIRTH_DEPTH_BONUS_PERCENT * bosses;
     return cleared / REBIRTH_WALLS_PER_FISH * percent / 100;
   }
 

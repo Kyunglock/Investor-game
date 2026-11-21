@@ -211,7 +211,8 @@ class IdleEngineTest {
     start(1);
     state.idle.cats.put("sky", 1);
     state.idle.cats.put("mint", 1);
-    for (int i = 0; i < 59; i++) tick(10_000);
+    // 굽는 시간 30분마다 다이아 하나 (644번, 전에는 10분): 10초 틱 179번이면 10초가 남는다.
+    for (int i = 0; i < 179; i++) tick(10_000);
     assertThat(engine.view(state).bundleDiamonds()).isZero();
     assertThat(engine.view(state).nextDiamondSeconds()).isEqualTo(10);
     state.idle.wall = 7;
@@ -227,7 +228,7 @@ class IdleEngineTest {
     engine.sellBread(state);
     assertThat(state.diamonds).isEqualTo(diamonds + 1);
     assertThat(engine.view(state).bread()).isZero();
-    assertThat(engine.view(state).nextDiamondSeconds()).isEqualTo(600);
+    assertThat(engine.view(state).nextDiamondSeconds()).isEqualTo(1_800);
   }
 
   @Test
@@ -237,7 +238,8 @@ class IdleEngineTest {
     state.idle.cats.put("mint", 1);
     state.idle.cats.put("lilac", 1);
     engine.fieldCat(state, "sky", true);
-    for (int i = 0; i < 3; i++) tick(10_000);
+    // 쉬는 고양이 한 마리가 5분에 식빵 하나 (644번, 전에는 1분): 둘이 150초면 하나다.
+    for (int i = 0; i < 15; i++) tick(10_000);
     assertThat(engine.view(state).bread()).isEqualTo(1);
     assertThatThrownBy(() -> engine.feedCat(state, "mint"))
         .isInstanceOf(InvalidRequestException.class);
@@ -249,7 +251,8 @@ class IdleEngineTest {
     assertThatThrownBy(() -> engine.feedCat(state, "sky"))
         .isInstanceOf(InvalidRequestException.class);
     engine.fieldCat(state, "mint", true);
-    tick(6_000);
+    // 이제 lilac 혼자 굽는다: 30초는 5분의 10%.
+    for (int i = 0; i < 3; i++) tick(10_000);
     assertThat(engine.view(state).bakingPercent()).isEqualTo(10);
   }
 
@@ -633,7 +636,9 @@ class IdleEngineTest {
 
   @Test
   void catsHaveAFixedGradeThatStrengthensTheirGunAndMakesThemRarer() {
-    // 고양이 등급 (539번): C 16 · B 12 · A 7 · S 4종. 총 공격력 C 1배 · B 1.4배 · A 2배 · S 3배(레벨 1이면 50%에 곱한다).
+    // 고양이 등급 (539번): C 16 · B 12 · A 7 · S 4종. 총 공격력 C 1배 · B 1.15배 · A 1.35배 · S 1.6배(644번, 전에는 1
+    // · 1.4 · 2 ·
+    // 3배). 레벨 1이면 25%에 곱한다: 25 · 28.75 · 33.75 · 40.
     start(1);
     var cats = engine.view(state).cats();
     assertThat(cats).hasSize(39);
@@ -652,10 +657,10 @@ class IdleEngineTest {
         code ->
             engine.view(state).cats().stream().filter(c -> c.code().equals(code)).findFirst().get();
     // 특성으로 공격력이 붙지 않은 고양이끼리 견준다: 하늘냥 C, 카라멜냥 B, 바다냥 A, 별빛냥 S.
-    assertThat(cat.apply("sky").damagePercent()).isEqualTo(50);
-    assertThat(cat.apply("caramel").damagePercent()).isEqualTo(70);
-    assertThat(cat.apply("ocean").damagePercent()).isEqualTo(100);
-    assertThat(cat.apply("star").damagePercent()).isEqualTo(150);
+    assertThat(cat.apply("sky").damagePercent()).isEqualTo(25);
+    assertThat(cat.apply("caramel").damagePercent()).isEqualTo(29);
+    assertThat(cat.apply("ocean").damagePercent()).isEqualTo(34);
+    assertThat(cat.apply("star").damagePercent()).isEqualTo(40);
     // 마법은 A등급부터다 (561번): C·B는 없고 A는 하나, S는 둘이다. 모든 스킬이 쓰인다.
     for (var c : cats) {
       int want = c.grade().equals("S") ? 2 : c.grade().equals("A") ? 1 : 0;
@@ -701,11 +706,15 @@ class IdleEngineTest {
     // The tenth wall is an ordinary wall now (550): no three-fold reward.
     double tenth = 1_000_000 * IdleEngine.REWARD_UPGRADES * StrictMath.pow(1.04, 9);
     assertThat(state.capital).isBetween(tenth, tenth * 1.05);
-    // (10 + 5d + 0.035d²) × 1.003^d (636, 637).
-    assertThat(IdleEngine.maxHp(10)).isCloseTo(57.835 * StrictMath.pow(1.003, 9), offset(1e-9));
+    // 10 + 5d + 0.035d² + 3.897e-9·d⁴ (644; × 1.003^d before, 636):
+    // d = 9: 10 + 45 + 2.835 + 3.897e-9 × 6,561 = 57.835025568217.
+    assertThat(IdleEngine.maxHp(10)).isCloseTo(57.835025568217, offset(1e-9));
     // The boss wall (every 50th) has three times the health and pays three times the reward.
-    assertThat(IdleEngine.maxHp(50))
-        .isCloseTo(3 * 339.035 * StrictMath.pow(1.003, 49), offset(1e-9));
+    // d = 49: 10 + 245 + 84.035 + 3.897e-9 × 5,764,801 = 339.057465429497.
+    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 339.057465429497, offset(1e-9));
+    // The 5,000th wall (a boss) is about ten million (644; trillions with 1.003^d): d = 4,999,
+    // 10 + 24,995 + 874,650.035 + 3.897e-9 × 4,999⁴ = 3,333,332.12, times three.
+    assertThat(IdleEngine.maxHp(5000)).isCloseTo(9_999_996.358, offset(1e-3));
     state.idle.wall = 50;
     state.idle.damage = IdleEngine.maxHp(50) - 1;
     // Its own clear reward (549) was paid before: only the wall reward is counted here.
@@ -1032,10 +1041,10 @@ class IdleEngineTest {
     assertThat(cats.stream().filter(cat -> cat.fielded()).count())
         .isEqualTo(engine.view(state).fieldSlots())
         .isEqualTo(4);
-    // A cat's gun: half the weapon's damage times the square root of its level (636), times its
-    // trait.
+    // A cat's gun: a quarter of the weapon's damage times its level to the 0.3 (644; half times
+    // the square root before, 636), times its trait.
     var sky = cats.getFirst();
-    assertThat(sky.damagePercent()).isEqualTo((int) Math.round(50 * Math.sqrt(sky.level())));
+    assertThat(sky.damagePercent()).isEqualTo((int) Math.round(25 * Math.pow(sky.level(), 0.3)));
     assertThat(sky.firePercent()).isEqualTo(125);
     assertThat(cats.get(1).firePercent()).isEqualTo(100);
     assertThat(cats.get(2).criticalPercent()).isEqualTo(150);
@@ -1467,18 +1476,19 @@ class IdleEngineTest {
         .isCloseTo(2.25 * SPEED / 2 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(engine.view(state).wallDps()).as("what the wall really took lately").isPositive();
     // A forged bullet may claim the strongest gun's critical: here the boss cat's pistol, since
-    // a level 4 cat still shoots at 50% x √4 = 100% (636).
+    // a level 4 cat shoots at only 25% x 4^0.3 = 38% (644; 50% x √4 = 100% before, 636).
     state.idle.cats.put("sky", 4);
     double before = state.idle.damage;
     for (int i = 0; i < 3; i++) tick(1000);
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
     assertThat(state.idle.damage - before).isEqualTo(4);
-    state.idle.cats.put("sky", 9);
+    // Only past level 101 does the cat outgun the boss cat (25% x 1000^0.3 = 199%, 644).
+    state.idle.cats.put("sky", 1000);
     before = state.idle.damage;
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
     assertThat(state.idle.damage - before)
-        .as("level 9 cat: 50% x √9 = 150% pistol critical")
-        .isCloseTo(6, offset(1e-9));
+        .as("level 1000 cat: 25% x 1000^0.3 = 199% pistol critical")
+        .isCloseTo(4 * 0.25 * Math.pow(1000, 0.3), offset(1e-9));
   }
 
   @Test
@@ -1489,8 +1499,9 @@ class IdleEngineTest {
     // A deep wall does not make a buy order stronger (573): the order scale is not in it.
     double order = 1.5;
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
-    // The wall's health grows by 1.003 a wall (636), the order scale with it.
-    assertThat(IdleEngine.threat(100)).isEqualTo(4.0);
+    // The order scale follows the wall's health (10 + 5d + 0.035d² + 3.897e-9·d⁴, 644; × 1.003^d
+    // before, 4.0): 1 + 848.41 / 380 = 3.23, two digits 3.2.
+    assertThat(IdleEngine.threat(100)).isEqualTo(3.2);
     // A buy order is capped at its own damage, whatever the screen reports.
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
@@ -1531,29 +1542,32 @@ class IdleEngineTest {
     start(1);
     assertThat(engine.teamScale(state)).isCloseTo(1, offset(1e-9));
     assertThat(buyBonus()).isZero();
-    // A level 4 C cat with the starting pistol shoots as hard as the boss cat, 25% faster (sky):
-    // the team is 2.25 pistols, and (2.25 - 1) x 0.5 x 225 = 140 shares come on top.
+    // A level 4 C cat with the starting pistol shoots 25% x 4^0.3 = 38% of the boss cat, 25%
+    // faster (sky, 644; as hard as the boss cat before): the team is 1.47 pistols, and
+    // (1.47 - 1) x 0.5 x 225 = 53 shares come on top (140 before).
+    double cat = 1.25 * 0.25 * Math.pow(4, 0.3);
     state.idle.cats.put("sky", 4);
     engine.fieldCat(state, "sky", true);
-    assertThat(engine.teamScale(state)).isCloseTo(2.25, offset(1e-9));
-    assertThat(buyBonus()).isEqualTo(140);
+    assertThat(engine.teamScale(state)).isCloseTo(1 + cat, offset(1e-9));
+    assertThat(buyBonus()).isEqualTo(53);
     // The attack and fire upgrades are not in it: the team's share follows gear, not upgrades.
     state.capital = 1e18;
     company.mental.buyUpgrade(state, "damage", 20);
     company.mental.buyUpgrade(state, "fire", 20);
-    assertThat(buyBonus()).isEqualTo(140);
+    assertThat(buyBonus()).isEqualTo(53);
     // Ten buy levels: 200 fixed shares, and the team's part grows by two shares a level.
     company.mental.buyUpgrade(state, "buy", 10);
-    assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(1.25 * 0.5 * 245));
+    assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(cat * 0.5 * 245));
     // The wall's depth changes nothing (573), and the server accepts an order of that size.
     state.idle.wall = 100;
-    assertThat(buyBonus()).isEqualTo(200 + 153);
+    // 0.474 x 0.5 x 245 = 58.02.
+    assertThat(buyBonus()).isEqualTo(200 + 58);
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 1, 1e9));
-    assertThat(state.idle.damage).isCloseTo(1.5 + 353 / 150.0, offset(1e-9));
-    // 영구 강화(생선)는 고정 수량에 30주를 더하고 팀의 몫에는 3%를 곱한다.
+    assertThat(state.idle.damage).isCloseTo(1.5 + 258 / 150.0, offset(1e-9));
+    // 영구 강화(생선)는 고정 수량에 30주를 더하고 팀의 몫에는 한 단계에 1%를 곱한다 (644번, 전에는 3%).
     state.fishLevels.put("buy", 10);
-    assertThat(buyBonus()).isEqualTo(200 + 300 + (long) Math.floor(1.25 * 0.5 * 245 * 1.3));
+    assertThat(buyBonus()).isEqualTo(200 + 300 + (long) Math.floor(cat * 0.5 * 245 * 1.1));
   }
 
   private long buyBonus() {
@@ -1757,15 +1771,16 @@ class IdleEngineTest {
     assertThatThrownBy(() -> engine.rebirth(c, true)).isInstanceOf(InvalidRequestException.class);
     c.idle.wall = 101;
     engine.rebirth(c, true);
-    assertThat(c.fish).isEqualTo(69);
+    // 101번째 벽: 100 ÷ 5 × 104% = 20 (644번), 그 3배.
+    assertThat(c.fish).isEqualTo(60);
     assertThat(c.idle.wall).isEqualTo(1);
     // 다음 환생에도 다시 3배를 받는다. 그냥 환생은 1배다.
     c.idle.wall = 101;
     engine.rebirth(c, true);
-    assertThat(c.fish).isEqualTo(138);
+    assertThat(c.fish).isEqualTo(120);
     c.idle.wall = 101;
     engine.rebirth(c, false);
-    assertThat(c.fish).isEqualTo(161);
+    assertThat(c.fish).isEqualTo(140);
     assertThat(c.rebirths).isEqualTo(3);
   }
 
@@ -1777,18 +1792,19 @@ class IdleEngineTest {
     c.idle.wall = 50;
     assertThat(engine.rebirthFish(c)).isZero();
     assertThatThrownBy(() -> engine.rebirth(c)).isInstanceOf(InvalidRequestException.class);
-    // 깬 벽 다섯 개마다 한 마리 (625번)에, 깬 보스마다 커지는 덤(+5%, +10%, +15% …)을 쌓아 얹는다 (633번).
+    // 깬 벽 다섯 개마다 한 마리 (625번)에, 깬 보스마다 2%씩 덤을 얹는다 (644번, 내림. 633번에는 +5%, +10%, +15% …로 쌓였다).
+    // 51번째 벽 10 × 102% = 10, 101번째 20 × 104% = 20, 301번째 60 × 112% = 67, 501번째 100 × 120% = 120.
     c.idle.wall = 51;
     assertThat(engine.rebirthFish(c)).isEqualTo(10);
     c.idle.wall = 101;
-    assertThat(engine.rebirthFish(c)).isEqualTo(23);
+    assertThat(engine.rebirthFish(c)).isEqualTo(20);
     c.idle.wall = 301;
-    assertThat(engine.rebirthFish(c)).isEqualTo(123);
-    assertThat(engine.view(c).rebirth().gain()).isEqualTo(123);
+    assertThat(engine.rebirthFish(c)).isEqualTo(67);
+    assertThat(engine.view(c).rebirth().gain()).isEqualTo(67);
     c.idle.wall = 501;
-    assertThat(engine.rebirthFish(c)).isEqualTo(375);
+    assertThat(engine.rebirthFish(c)).isEqualTo(120);
     c.idle.wall = 301;
-    assertThat(engine.view(c).rebirth().adGain()).as("광고를 보면 3배 (586번)").isEqualTo(369);
+    assertThat(engine.view(c).rebirth().adGain()).as("광고를 보면 3배 (586번)").isEqualTo(201);
     assertThat(engine.view(c).rebirth().fromWall()).isEqualTo(51);
     // 환생: 벽 1, 강화와 돈은 처음으로. 고양이·무기·다이아·받은 보스 보상은 그대로다.
     c.idle.cats.put("sky", 3);
@@ -1804,7 +1820,7 @@ class IdleEngineTest {
     assertThat(c.idle.epoch).as("화면이 새 벽으로 안다").isEqualTo(epoch + 1);
     assertThat(c.capital).isEqualTo((double) company.openingCapital());
     assertThat(c.battleLevels).isEmpty();
-    assertThat(c.fish).isEqualTo(123);
+    assertThat(c.fish).isEqualTo(67);
     assertThat(c.rebirths).isEqualTo(1);
     assertThat(c.diamonds).isEqualTo(777);
     assertThat(c.idle.cats.get("sky")).isEqualTo(3);
@@ -1819,25 +1835,26 @@ class IdleEngineTest {
     c.idle.wall = 31;
     assertThat(engine.rebirthFish(c)).as("벽 50개를 깨기 전에는 덤이 없다").isEqualTo(6);
     engine.rebirth(c);
-    assertThat(c.fish).isEqualTo(129);
+    assertThat(c.fish).isEqualTo(73);
     assertThat(c.rebirths).isEqualTo(2);
     c.fish = 30;
     c.rebirths = 1;
     // 생선으로 영구 강화를 올린다 (600번): 값은 다음 단계의 번호만큼(1, 2, 3 …)이고, 고양이 레벨은 생선으로 올리지 않는다.
+    // 한 단계에 1% (644번, 전에는 3%), 매수벽 공격은 30주 그대로.
     assertThat(fishUpgrade(c, "damage").cost()).isEqualTo(1);
     assertThat(upgrade(c, "damage").bonusPercent()).isZero();
     engine.buyFishUpgrade(c, "damage");
     engine.buyFishUpgrade(c, "damage");
     assertThat(c.fish).isEqualTo(27);
     assertThat(fishUpgrade(c, "damage").level()).isEqualTo(2);
-    assertThat(fishUpgrade(c, "damage").bonus()).isEqualTo(6);
-    assertThat(fishUpgrade(c, "damage").nextBonus()).isEqualTo(9);
+    assertThat(fishUpgrade(c, "damage").bonus()).isEqualTo(2);
+    assertThat(fishUpgrade(c, "damage").nextBonus()).isEqualTo(3);
     assertThat(fishUpgrade(c, "damage").cost()).isEqualTo(3);
-    assertThat(upgrade(c, "damage").bonusPercent()).as("전투 강화가 없으면 영구 강화만큼").isEqualTo(6);
+    assertThat(upgrade(c, "damage").bonusPercent()).as("전투 강화가 없으면 영구 강화만큼").isEqualTo(2);
     assertThat(upgrade(c, "damage").level()).as("전투 강화의 단계는 그대로다").isZero();
     engine.buyFishUpgrade(c, "hp");
     engine.buyFishUpgrade(c, "buy");
-    assertThat(upgrade(c, "hp").bonusPercent()).isEqualTo(3);
+    assertThat(upgrade(c, "hp").bonusPercent()).isEqualTo(1);
     assertThat(upgrade(c, "buy").bonusShares()).isEqualTo(30);
     assertThat(upgrade(c, "fire").bonusPercent()).as("공격 속도는 영구 강화가 없다").isZero();
     assertThat(c.fish).isEqualTo(25);
@@ -1846,7 +1863,7 @@ class IdleEngineTest {
     c.idle.wall = 51;
     engine.rebirth(c);
     assertThat(c.fishLevels).containsEntry("damage", 2).containsEntry("hp", 1);
-    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(6);
+    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(2);
     // 없는 강화와 생선이 모자랄 때는 400.
     assertThatThrownBy(() -> engine.buyFishUpgrade(c, "fire"))
         .isInstanceOf(InvalidRequestException.class);
@@ -1854,13 +1871,13 @@ class IdleEngineTest {
     assertThatThrownBy(() -> engine.buyFishUpgrade(c, "damage"))
         .isInstanceOf(InvalidRequestException.class);
     assertThat(c.fish).isEqualTo(2);
-    // 영구 강화는 전투 강화에 곱한다 (636번): 전투 강화 10단계(+10%, 637번) × 영구 강화 2단계(+6%) = +16.6% → 16.
+    // 영구 강화는 전투 강화에 곱한다 (636번): 전투 강화 10단계(+10%, 637번) × 영구 강화 2단계(+2%, 644번) = +12.2% → 12.
     c.capital = 1e18;
     company.mental.buyUpgrade(c, "damage", 10);
-    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(16);
+    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(12);
     assertThat(upgrade(c, "damage").nextBonusPercent())
-        .as("11단계 +11% × 1.06 = +17.66%")
-        .isEqualTo(17);
+        .as("11단계 +11% × 1.02 = +13.22%")
+        .isEqualTo(13);
     // 벽 1,000쯤(+3,000%)에서 영구 강화 +300%는 네 배다: 더하면 +3,300%뿐이었다.
     assertThat(MentalEngine.withFish(3000, 300)).isEqualTo(12_300);
     assertThat(c.fishLevels).containsEntry("damage", 2);
