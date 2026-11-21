@@ -24,6 +24,7 @@ import { FishIcon } from './FishIcon'
 import { GrowthIcon } from './GrowthIcon'
 import { IdleActives } from './IdleActives'
 import { IdleAttendance } from './IdleAttendance'
+import { IdleBattleStats } from './IdleBattleStats'
 import { IdleCanvas } from './IdleCanvas'
 import { IdleCats, type LoadoutTab } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
@@ -322,6 +323,8 @@ export function IdleHome({
               </button>
             )}
           </header>
+          {/* 전투 통계 (645번): 오른쪽 스킬 줄 위. 위 줄은 320px 화면에서 벽 번호가 잘려 자리가 없다. */}
+          <IdleBattleStats company={company} />
           {idle?.rebirth && (
             <button
               type="button"

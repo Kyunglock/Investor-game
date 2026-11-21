@@ -110,10 +110,20 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
           hero: heroOf(c),
           loadout: idleLoadout(c),
           idle: () => shownIdle(latest.current.company.idle),
-          onIdleHit: (wall, kind, damage, depth) => {
+          onIdleHit: (wall, kind, damage, depth, source) => {
             if (!disposed && foreground && nativeActive && latest.current.connected) {
+              // owner·crit은 전투 통계(645번)에만 쓴다: 서버로 가는 명중에는 실리지 않는다.
               window.dispatchEvent(
-                new CustomEvent('idle-wall-hit', { detail: { wall, kind, depth, damage } }),
+                new CustomEvent('idle-wall-hit', {
+                  detail: {
+                    wall,
+                    kind,
+                    depth,
+                    damage,
+                    owner: source?.owner ?? null,
+                    crit: source?.crit ?? false,
+                  },
+                }),
               )
             }
           },

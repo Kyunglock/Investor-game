@@ -1,0 +1,155 @@
+/* 전투 통계 단추 (645번): 오른쪽 스킬 줄(.idle-actives) 바로 위, 왼쪽 환생 단추와 마주 본다. */
+.idle-stats-shortcut {
+  position: absolute;
+  z-index: 2;
+  grid-row: 1 / 2;
+  top: calc(var(--idle-actives-top) - var(--idle-active-size) - var(--idle-active-gap));
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
+  padding: 0;
+  border: 2px solid #94dfff;
+  border-radius: 50%;
+  background: linear-gradient(#50b8ff, #1267dc 60%, #084bad);
+  box-shadow:
+    inset 0 2px 0 #ffffff88,
+    0 2px 0 #064293;
+  color: #fff3bf;
+  cursor: pointer;
+}
+.idle-stats-shortcut .idle-icon {
+  width: 60%;
+  height: 60%;
+}
+/* 누르는 자리는 44px보다 좁지 않게 넓힌다. */
+.idle-stats-shortcut::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+}
+/* 전투 통계 (645번): 10분 창의 요약 칸 여섯과 출전 고양이의 기여 순위. */
+.idle-stats-sheet > section {
+  min-height: 0;
+  max-height: 88dvh;
+}
+.idle-stats-window {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.idle-stats-window span {
+  font:
+    700 12px "Noto Sans KR",
+    sans-serif;
+  color: #947247;
+}
+.idle-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.idle-stats-grid div {
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1.5px solid #e0c592;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+.idle-stats-grid dt {
+  font-size: 11px;
+  color: #947247;
+}
+.idle-stats-grid dd {
+  overflow: hidden;
+  margin: 2px 0 0;
+  font-weight: 800;
+  font-size: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #5b3416;
+}
+.idle-stats-title {
+  margin: 14px 0 6px;
+  font-size: 14px;
+  color: #744322;
+}
+.idle-stats-rank {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.idle-stats-rank li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 3px 8px;
+  padding: 7px 10px 8px;
+  border: 1.5px solid #e0c592;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+.idle-stats-rank li:first-child {
+  border-color: #e09a2c;
+  background: #fff1cf;
+}
+.idle-stats-no {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffe2a8;
+  color: #8a4a00;
+  font-size: 12px;
+}
+.idle-stats-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+.idle-stats-damage {
+  font-weight: 800;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.idle-stats-share {
+  min-width: 42px;
+  font:
+    700 11px "Noto Sans KR",
+    sans-serif;
+  text-align: right;
+  color: #947247;
+}
+.idle-stats-bar {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #f1dfb9;
+}
+.idle-stats-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffb53d, #ff7a2f);
+}
+.idle-stats-skill {
+  grid-column: 2 / -1;
+  font-size: 11px;
+  color: #947247;
+}
+.idle-stats-empty,
+.idle-stats-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #947247;
+}

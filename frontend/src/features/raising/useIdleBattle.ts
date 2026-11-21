@@ -155,7 +155,13 @@ export function useIdleBattle(companyId?: string) {
       const { wall, kind, depth = 0, damage } = (event as CustomEvent<Partial<IdleContact>>).detail
       if (wall === undefined || kind === undefined || damage === undefined) return
       // Only what the heartbeat will carry is shown: the two must not drift apart.
-      if (contacts.add(wall, kind, depth, damage)) predictor.add({ wall, depth, damage })
+      if (contacts.add(wall, kind, depth, damage)) {
+        predictor.add({ wall, depth, damage })
+        // 전투 통계 (645번): 서버에 실려 갈 명중만 센다. 쏜 고양이·치명타는 화면이 덧붙인 것이다.
+        window.dispatchEvent(
+          new CustomEvent('idle-hit-counted', { detail: (event as CustomEvent).detail }),
+        )
+      }
     }
     const visibility = () => {
       if (!visible()) stop()

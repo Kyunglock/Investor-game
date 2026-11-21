@@ -5,6 +5,17 @@ import type { ReactNode } from 'react'
  */
 const SHAPES = {
   battle: <path d="m6 3 15 15-3 3L3 6V3h3Zm8 11 5-5m-5-6h7v7M3 21l6-6m-4-2 6 6" />,
+  // 전투 통계 (645번): 길이가 다른 막대 셋과 바닥 줄.
+  stats: (
+    <>
+      <path
+        d="M5 20v-7h3.5v7Zm5.3 0V5h3.5v15Zm5.2 0v-10H19v10Z"
+        fill="currentColor"
+        fillOpacity=".28"
+      />
+      <path d="M3 20.5h18" />
+    </>
+  ),
   company: <path d="M4 22V5l8-3 8 3v17M9 22v-5h6v5M8 7h1m6 0h1M8 11h1m6 0h1" />,
   // 성장: 오르는 봉 셋 위로 치솟는 화살표와 반짝임.
   growth: (

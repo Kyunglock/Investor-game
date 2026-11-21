@@ -281,7 +281,14 @@ export interface BattleOptions {
   /** Foreground idle mode: the wall and its health come from this snapshot, never from the renderer's own count. */
   idle?: () => IdleSnapshot
   /** depth: 총알이 이미 뚫고 온 벽의 수 (520·532번). 0은 지금 치는 벽을 바로 맞힌 것이다. */
-  onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number, depth: number) => void
+  onIdleHit?: (
+    wall: number,
+    kind: IdleAttackKind,
+    damage: number,
+    depth: number,
+    /** 전투 통계 (645번): 쏜 고양이('boss'는 사장냥, 그 밖은 고양이 코드)와 치명타. 서버에는 보내지 않는다. */
+    source?: { owner: string | null; crit: boolean },
+  ) => void
   /** 자동 전투의 몬스터 습격 알림 (500번). */
   onIdleRaid?: (text: string, color: string) => void
   /** 자동 전투에서 고양이를 눌렀다: 그 고양이의 정보를 띄운다. code는 고양이의 코드, 사장냥은 'boss'. */
@@ -380,6 +387,8 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   grade: Weapon['grade']
   /** 쏜 총의 치명타 배율에 곱하는 값 (492번, 고양이 특성). */
   critical: number
+  /** 쏜 고양이 (645번, 전투 통계): 사장냥은 'boss', 동료는 그 고양이의 코드. 모르면 null. */
+  owner: string | null
   look: 0 | 1
   damage: number
   power: number
@@ -822,6 +831,9 @@ class BattleScene extends Phaser.Scene {
   /** 손절로 떼어 던진 매수벽 반쪽이 닿으면 줄 피해. 날아가는 것이 없으면 null이다. */
   private stopLossToss: number | null = null
   private reportAs: IdleAttackKind | null = null
+  /** 전투 통계 (645번): 지금 맞히는 총알을 쏜 고양이와 치명타인가. 총알이 맞는 동안만 채운다. */
+  private hitOwner: string | null = null
+  private hitCrit = false
   private calledRaid: IdleRaidKind | null = null
   private panicRushClock = 0
   private panicRushEvery = 0
@@ -1045,9 +1057,12 @@ class BattleScene extends Phaser.Scene {
       if (kind === 'smg') {
         this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }
+      this.hitOwner = bullet.owner
+      this.hitCrit = shot.crit
       this.hit(enemy, shot.damage, angle, shot.crit ? 'crit' : 'bullet')
       // 매도벽 돌파: 벽을 맞힌 총알은 뒤의 두 벽까지 뚫고 간다 (520번). 폭발(아래 splash)은 맨 앞 벽만 맞는다.
       if (enemy.cell) this.pierceIdleWalls(bullet, bx, by, vx, vy, shot.damage, shot.crit)
+      this.hitCrit = false
       // 산탄총은 맞은 적을 밀어낸다 (#587). 보스·매도벽은 밀리지 않는다.
       const push = WEAPON_TRAITS[kind].knockback
       if (push > 0 && !enemy.boss && !enemy.cell && !enemy.dying) {
@@ -1057,6 +1072,7 @@ class BattleScene extends Phaser.Scene {
       if (bullet.splashRadius > 0) {
         this.splash(bx, by, bullet.splashRadius, bullet.splashDamage, enemy)
       }
+      this.hitOwner = null
     })
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => {
       const enemy = e as Enemy
@@ -3834,6 +3850,7 @@ class BattleScene extends Phaser.Scene {
     b.kind = kind
     b.grade = grade
     b.critical = gun?.critical ?? 1
+    b.owner = mate ? (this.mateGun(this.mates.indexOf(mate))?.tag?.code ?? null) : 'boss'
     b.look = 0
     b.trailMs = Math.max(90, style.trailMs)
     b.damage = stats.damage * SHOT_WEIGHT * this.boost('boostDamage')
@@ -4759,7 +4776,12 @@ class BattleScene extends Phaser.Scene {
           : kind === 'earth' || kind === 'siege'
             ? 'ram'
             : 'bullet')
-    this.opts.onIdleHit?.(wall, code, damage, depth)
+    // 전투 통계 (645번): 총알만 쏜 고양이가 있다. 스킬과 매수 주문은 종류(code)로 가린다.
+    const bullet = code === 'bullet'
+    this.opts.onIdleHit?.(wall, code, damage, depth, {
+      owner: bullet ? this.hitOwner : null,
+      crit: bullet && this.hitCrit,
+    })
   }
 
   /**
