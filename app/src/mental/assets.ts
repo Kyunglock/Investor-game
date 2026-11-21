@@ -9,6 +9,10 @@ import sunsetPoses from './assets/cat-sunset-poses.png'
 import enemies from './assets/enemies.png'
 import hero from './assets/hero-unarmed.png'
 import shortSeller from './assets/short-seller.png'
+import ice from './assets/spell-ice.webp'
+import meteor from './assets/spell-meteor.webp'
+import water from './assets/spell-water.webp'
+import wind from './assets/spell-wind.webp'
 import street from './assets/toy-arena.png'
 import wallBlocks from './assets/wall-blocks-toy.png'
 import weapons from './assets/weapon-arcade-atlas.png'
@@ -35,3 +39,5 @@ export const STAGE_ASSETS = {
   weapons,
   battleWeapons,
 }
+
+export const BREAKTHROUGH_SPELL_ART = { water, ice, wind, meteor } as const

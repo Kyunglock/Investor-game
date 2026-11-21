@@ -211,20 +211,22 @@ export const SKILL_MARK = 28
 export const spellKey = (spell: ExtraSpell) => `magic-${spell}`
 export const skillMarkKey = (magic: Spell) => `skill-mark-${magic}`
 /** 스킬마다 고유 색: 메뉴의 스킬 배지(idle/SkillBadge.tsx)와 같다. */
-const SKILL_MARK_COLORS: Record<Spell, { light: string; mid: string; dark: string; line: string }> =
-  {
-    water: { light: '#e6f7ff', mid: '#5cc0ff', dark: '#1f72d8', line: '#103f86' },
-    meteor: { light: '#fff0b8', mid: '#ff9a3d', dark: '#dc3b2a', line: '#7c1d12' },
-    lightning: { light: '#fffbd0', mid: '#ffd633', dark: '#f09a00', line: '#7a4a00' },
-    earth: { light: '#fbe8c2', mid: '#cf9257', dark: '#8a5326', line: '#4a2a10' },
-    ice: { light: '#f2fdff', mid: '#8fe3f5', dark: '#2f9fc4', line: '#135a78' },
-    wind: { light: '#f1fff5', mid: '#8fe0b0', dark: '#2f9d74', line: '#125a40' },
-    // spellbook의 마법들 (563번).
-    ...(Object.fromEntries(EXTRA_SPELLS.map((spell) => [spell, SPELLBOOK[spell].colors])) as Record<
-      ExtraSpell,
-      { light: string; mid: string; dark: string; line: string }
-    >),
-  }
+export const SKILL_MARK_COLORS: Record<
+  Spell,
+  { light: string; mid: string; dark: string; line: string }
+> = {
+  water: { light: '#e6f7ff', mid: '#5cc0ff', dark: '#1f72d8', line: '#103f86' },
+  meteor: { light: '#fff0b8', mid: '#ff9a3d', dark: '#dc3b2a', line: '#7c1d12' },
+  lightning: { light: '#fffbd0', mid: '#ffd633', dark: '#f09a00', line: '#7a4a00' },
+  earth: { light: '#fbe8c2', mid: '#cf9257', dark: '#8a5326', line: '#4a2a10' },
+  ice: { light: '#f2fdff', mid: '#8fe3f5', dark: '#2f9fc4', line: '#135a78' },
+  wind: { light: '#f1fff5', mid: '#8fe0b0', dark: '#2f9d74', line: '#125a40' },
+  // spellbook의 마법들 (563번).
+  ...(Object.fromEntries(EXTRA_SPELLS.map((spell) => [spell, SPELLBOOK[spell].colors])) as Record<
+    ExtraSpell,
+    { light: string; mid: string; dark: string; line: string }
+  >),
+}
 /** 스킬 그림 (48×48 칸): 스킬 배지의 첫 단계 그림과 같은 모양. 조각마다 칠할 색을 따로 준다(없으면 밝은 색). */
 const SKILL_MARK_GLYPHS: Record<Spell, { d: string; fill?: string }[]> = {
   water: [{ d: 'M24 13.5c4.2 5 6.6 8.4 6.6 11.6a6.6 6.6 0 0 1-13.2 0c0-3.2 2.4-6.6 6.6-11.6Z' }],
@@ -436,7 +438,7 @@ export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
  * 마법 그림 (decisions.md 392번): 물방울·물결·불덩이·불기둥·충격파 고리·부드러운 빛. 색은 흰빛에 가깝게 구워 두고 화면에서 물들이거나(tint) 더해(ADD)
  * 빛나게 한다. 번개 줄기는 매번 모양이 달라 Graphics로 그린다(battle.ts).
  */
-export function bakeMagic(scene: Phaser.Scene) {
+export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
   const radial = (
     c: CanvasRenderingContext2D,
     x: number,
@@ -471,6 +473,32 @@ export function bakeMagic(scene: Phaser.Scene) {
     else if (form === 'wave')
       bake(scene, spellKey(spell), 44, 120, (c) => drawCrescent(c, book.colors))
     else bake(scene, spellKey(spell), 32, 32, (c) => drawOrb(c, book.colors, spell === 'bomb'))
+  }
+  if (breakthrough) {
+    // 낙하 지점의 중심은 비워 적과 물량 숫자를 계속 볼 수 있게 한다.
+    bake(scene, 'magic-landing', 80, 80, (c) => {
+      c.translate(40, 40)
+      c.strokeStyle = '#fff'
+      c.fillStyle = '#fff'
+      c.lineWidth = 2
+      for (let i = 0; i < 6; i++) {
+        c.beginPath()
+        c.arc(0, 0, 33, 0.1, Math.PI / 3 - 0.1)
+        c.stroke()
+        c.beginPath()
+        c.moveTo(27, 0)
+        c.lineTo(34, -3)
+        c.lineTo(38, 0)
+        c.lineTo(34, 3)
+        c.closePath()
+        c.fill()
+        c.rotate(Math.PI / 3)
+      }
+      c.lineWidth = 1
+      c.beginPath()
+      c.arc(0, 0, 23, 0, Math.PI * 2)
+      c.stroke()
+    })
   }
   // 불덩이: 흰 심 → 노랑 → 주황 → 빨강으로 번진다.
   bake(scene, 'magic-ember', 28, 28, drawEmber)
