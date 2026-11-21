@@ -596,7 +596,8 @@ class CompanyApiTest {
     assertThat(five.read("$.battleUpgrades[1].level", Integer.class)).isEqualTo(5);
     assertThat(five.read("$.battleUpgrades[1].bonusPercent", Integer.class)).isEqualTo(5);
     long spent = capital - five.read("$.capital", Long.class);
-    assertThat(spent).as("1b + 연사 다섯 단계").isGreaterThan(6_000_000L).isLessThan(7_000_000L);
+    // 646번(단계마다 30%): 100만 + (100만 + 130만 + 169만 + 219.7만 + 285.61만) = 1,004.31만.
+    assertThat(spent).as("1b + 연사 다섯 단계").isEqualTo(10_043_100L);
 
     postJson("/api/company/battle-upgrade", "{\"kind\":\"speed\"}")
         .andExpect(status().isBadRequest());
@@ -616,8 +617,8 @@ class CompanyApiTest {
             postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\",\"levels\":10}")
                 .andExpect(status().isOk()));
     assertThat(partial.read("$.battleUpgrades[0].level", Integer.class)).isEqualTo(2);
-    // 두 번째 단계는 100만 × 1.08 (644번, 전에는 1.04).
-    assertThat(partial.read("$.capital", Long.class)).isEqualTo(1_500_000L - 1_080_000L);
+    // 두 번째 단계는 100만 × 1.3 (646번, 644번에는 1.08, 전에는 1.04).
+    assertThat(partial.read("$.capital", Long.class)).isEqualTo(1_500_000L - 1_300_000L);
     postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\"}")
         .andExpect(status().isBadRequest());
   }
