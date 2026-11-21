@@ -1,4 +1,4 @@
-import type { Company } from '@web/api/client'
+import { type Company, setSandboxCode } from '@web/api/client'
 import { useRaisingStore, type WeaponGrade } from '@web/features/raising/store'
 import { type FormEvent, useEffect, useState } from 'react'
 import { idleThreat } from '../mental/assault'
@@ -65,6 +65,9 @@ function writeKey(key: string, value: string | null) {
 /** 이 화면을 연 뒤 저장한 코드로 다시 들어가 보았는가. 한 번만 시도해 실패가 되풀이되지 않게 한다. */
 let autoTried = false
 
+// 전에 맞힌 코드는 첫 요청부터 싣는다 (642번): 테스트판 쿠키가 남지 않는 앱에서도 켜자마자 테스트판 회사를 받는다.
+if (SANDBOX_ENTRY && !readKey(LEFT)) setSandboxCode(readKey(SAVED_CODE))
+
 /**
  * 테스트판 (decisions.md 499번). 입구(SANDBOX_ENTRY)가 열려 있으면 코드 창이 뜨고, 닫아도 머리띠 아래의 "테스트판" 단추로 다시 연다. 테스트판
  * 안에서는 그 단추가 도구 창을 연다: 벽 건너뛰기, 처음부터 다시, 본 게임으로.
@@ -99,6 +102,7 @@ export function IdleSandbox({ company }: { company: Company }) {
       .enterSandbox(saved)
       .then((failed) => {
         if (!failed) return
+        setSandboxCode(null)
         writeKey(SAVED_CODE, null)
         setError(failed)
         setOpen(true)

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { api, type Company } from '../../api/client'
+import { api, type Company, setSandboxCode } from '../../api/client'
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -266,10 +266,13 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
         if (status === 404) return '테스트판이 열려 있지 않아요'
         return status === 400 ? '코드가 맞지 않아요' : '연결이 끊겼어요. 다시 시도해 주세요'
       }
+      // 이 뒤의 요청부터 코드를 머리글로 싣는다: 테스트판 쿠키가 남지 않는 앱에서도 테스트판이 이어진다.
+      setSandboxCode(code)
       set({ company: res.data, error: null })
       return null
     },
     leaveSandbox: async () => {
+      setSandboxCode(null)
       await safely(api.DELETE('/api/sandbox'))
       await get().load()
     },

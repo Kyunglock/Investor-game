@@ -22,6 +22,9 @@ class Sandbox {
 
   static final String COOKIE = "IG_SANDBOX";
 
+  /** 테스트판 코드를 싣는 요청 머리글: 테스트판 쿠키를 대신한다. */
+  static final String HEADER = "X-Sandbox-Code";
+
   private final SandboxProperties properties;
   private final investorgame.session.SessionProperties session;
 
@@ -64,7 +67,7 @@ class Sandbox {
     return false;
   }
 
-  /** 회사 요청이 쓸 ID: 이 요청에 이 세션의 테스트판 쿠키가 있으면 테스트판 ID, 아니면 세션 ID 그대로. */
+  /** 회사 요청이 쓸 ID: 이 요청에 이 세션의 테스트판 쿠키나 맞는 코드 머리글이 있으면 테스트판 ID, 아니면 세션 ID 그대로. */
   UUID player(UUID sessionId) {
     if (!enabled()
         || !(RequestContextHolder.getRequestAttributes()
@@ -72,12 +75,18 @@ class Sandbox {
       return sessionId;
     }
     var cookie = WebUtils.getCookie(attrs.getRequest(), COOKIE);
-    if (cookie == null || cookie.getValue() == null) return sessionId;
     boolean signed =
-        MessageDigest.isEqual(
-            sign(sessionId).getBytes(StandardCharsets.UTF_8),
-            cookie.getValue().getBytes(StandardCharsets.UTF_8));
-    if (!signed) return sessionId;
+        cookie != null
+            && cookie.getValue() != null
+            && MessageDigest.isEqual(
+                sign(sessionId).getBytes(StandardCharsets.UTF_8),
+                cookie.getValue().getBytes(StandardCharsets.UTF_8));
+    // 쿠키가 남지 않는 곳(화면을 앱 안에 담은 앱의 WebView)에서는 앱이 맞힌 코드를 요청마다 머리글로 싣는다: 쿠키 없이도 테스트판이다.
+    // 틀린 코드는 코드 창과 같이 세어, 머리글로도 거듭 넣어 맞힐 수 없다.
+    if (!signed) {
+      String code = attrs.getRequest().getHeader(HEADER);
+      if (code == null || code.isBlank() || !tryCode(code)) return sessionId;
+    }
     // 세션 쿠키처럼 쓸 때마다 만료를 새로 건다: 테스트판 앱을 매일 열어도 코드를 다시 묻지 않는다.
     if (attrs.getResponse() != null) {
       attrs.getResponse().addHeader(HttpHeaders.SET_COOKIE, enter(sessionId).toString());

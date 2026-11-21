@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { API_BASE, api } from '../../api/client'
+import { API_BASE, api, extraHeaders } from '../../api/client'
 import { type IdleContact, IdleContacts } from './idleContacts'
 import { IdlePredictor, type IdleServer, type IdleShown } from './idlePredict'
 import { useRaisingStore } from './store'
@@ -105,7 +105,7 @@ export function useIdleBattle(companyId?: string) {
           method: 'POST',
           credentials: 'include',
           keepalive: true,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...extraHeaders() },
           body,
         }),
       ).catch(() => {})

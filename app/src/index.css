@@ -436,12 +436,18 @@ body {
   .animate-mental-card-in,
   .animate-mental-title,
   .animate-mental-card-pick,
-  .fx-flash,
   .animate-tab-bounce,
   .animate-badge-pulse,
-  .animate-num-pop,
+  .animate-num-pop {
+    animation: none;
+  }
+  /* 번쩍임과 떠오르는 글은 잠깐 떴다 사라져야 한다: 움직이지 않고 흐려지기만 한다. 위 목록에 함께 두면 시트와 장면까지 흐려져 사라진다. */
+  .fx-flash,
+  .fx-float {
+    animation: fx-flash 1s ease-out both;
+  }
+  /* 떠오르는 글의 가운데 맞춤은 fx-float의 translate(-50%)가 하던 일이다. */
   .fx-float {
     transform: translateX(-50%);
-    animation: fx-flash 1s ease-out both;
   }
 }
