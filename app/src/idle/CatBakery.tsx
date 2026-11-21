@@ -76,7 +76,7 @@ export function CatBakery({
             <span>{progress}%</span>
           </div>
           <progress aria-label="다음 식빵 굽기" max={100} value={progress} />
-          <small>쉬는 고양이 한 마리당 1분에 식빵 1개</small>
+          <small>쉬는 고양이 한 마리당 5분에 식빵 1개</small>
         </div>
       </section>
       <section className="bakery-counter">
@@ -98,7 +98,7 @@ export function CatBakery({
             <strong>
               <DiamondIcon /> {idle?.bundleDiamonds ?? 0}개
             </strong>
-            <small>공방 가동 10분당 1개</small>
+            <small>공방 가동 30분당 1개</small>
           </div>
         </div>
         <div className="bakery-countdown">

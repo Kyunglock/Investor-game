@@ -4,15 +4,15 @@
  * not handled yet gives the wall and health to show.
  */
 
-/** IdleEngine.HP_GROWTH (decisions.md 636): every wall deeper multiplies the health by this. */
-export const IDLE_HP_GROWTH = 1.003
+/** IdleEngine.HP_QUARTIC (decisions.md 644): the depth^4 term that took the place of 636's 1.003^depth. Wall 5000 is ten million. */
+export const IDLE_HP_QUARTIC = 3.897e-9
 
 /** IdleEngine.maxHp: the same curve, or the two sides disagree about when a wall breaks. */
 export function idleMaxHp(wall: number) {
   const depth = wall - 1
+  const square = depth * depth
   return (
-    (10 + 5 * depth + 0.035 * depth * depth) *
-    IDLE_HP_GROWTH ** depth *
+    (10 + 5 * depth + 0.035 * square + IDLE_HP_QUARTIC * square * square) *
     (wall % IDLE_BOSS_EVERY === 0 ? 3 : 1)
   )
 }

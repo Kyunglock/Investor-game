@@ -108,7 +108,9 @@ class VaultEngine {
   /** 금고 상점의 상품: 값(금괴)과 한 주에 살 수 있는 횟수. 훈련은 따로 다룬다. */
   private record Item(String code, String name, String description, long price, int weekly) {}
 
-  static final long SHOP_DIAMONDS = 300;
+  /** 금고 상점의 다이아 꾸러미 (641번): 300에서 100으로 줄였다 (644번). */
+  static final long SHOP_DIAMONDS = 100;
+
   static final long SHOP_FISH = 5;
   private static final List<Item> ITEMS =
       List.of(

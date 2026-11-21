@@ -34,16 +34,18 @@ function server(
 const bullet = (wall: number, damage: number, depth = 0) => ({ wall, depth, damage })
 
 describe('idleMaxHp', () => {
-  it('is IdleEngine.maxHp: (10 + 5d + 0.035d²) × 1.003^d, three times that on every 50th wall', () => {
-    // Values from the Java formula (HP_BASE 10, HP_LINEAR 5, HP_SQUARE 0.035, HP_GROWTH 1.003,
-    // BOSS_HP 3, decisions.md 636·637).
+  it('is IdleEngine.maxHp: 10 + 5d + 0.035d² + 0.000000003897d⁴, three times that on every 50th wall', () => {
+    // Values from the Java formula (HP_BASE 10, HP_LINEAR 5, HP_SQUARE 0.035, HP_QUARTIC 3.897e-9,
+    // BOSS_HP 3, decisions.md 644).
     expect(idleMaxHp(1)).toBe(10)
-    expect(idleMaxHp(2)).toBeCloseTo(15.035 * 1.003, 9)
-    expect(idleMaxHp(11)).toBeCloseTo(63.5 * 1.003 ** 10, 9)
-    expect(idleMaxHp(50)).toBeCloseTo(3 * 339.035 * 1.003 ** 49, 9)
-    expect(idleMaxHp(201)).toBeCloseTo(2410 * 1.003 ** 200, 9)
-    expect(Math.round(idleMaxHp(101))).toBe(1160)
-    expect(Math.round(idleMaxHp(1001))).toBe(800021)
+    expect(idleMaxHp(2)).toBeCloseTo(15.035000003897, 9)
+    expect(idleMaxHp(11)).toBeCloseTo(63.50003897, 9)
+    expect(idleMaxHp(50)).toBeCloseTo(1017.1723962884911, 6)
+    expect(idleMaxHp(201)).toBeCloseTo(2416.2352, 6)
+    expect(Math.round(idleMaxHp(101))).toBe(860)
+    expect(Math.round(idleMaxHp(1001))).toBe(43907)
+    // 5,000번째 벽(보스)은 천만이다. 지수(1.003^d) 때는 8.6조였다.
+    expect(Math.round(idleMaxHp(5000))).toBe(9999996)
   })
 })
 

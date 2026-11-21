@@ -294,8 +294,8 @@ class MentalEngine {
   static final List<String> FISH_UPGRADES = List.of("damage", "hp", "buy");
 
   // 처음의 10분의 1로 낮췄다가 (602번: 10%·100주는 너무 셌다) 세 배로 올렸다 (625번: 1%·10주는 환생의 보람이 없었다).
-  // 3%는 돈으로 사는 전투 강화의 한 단계와 같다.
-  static final int FISH_STEP_PERCENT = 3;
+  // 644번에 1%로 낮췄다: 환생을 되풀이해 수백 단계가 쌓이면 화력이 수십 배가 되었다. 돈으로 사는 공격력 한 단계와 같다.
+  static final int FISH_STEP_PERCENT = 1;
   static final int FISH_STEP_SHARES = 30;
 
   /** 영구 강화를 level에서 한 단계 올리는 값: 다음 단계의 번호만큼의 생선(1, 2, 3 …). */

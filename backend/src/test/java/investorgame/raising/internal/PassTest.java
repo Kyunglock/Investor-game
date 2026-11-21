@@ -39,7 +39,7 @@ class PassTest {
   }
 
   @Test
-  void 시즌은_4주이고_30단계에_다이아_2900을_주며_돈은_없다() {
+  void 시즌은_4주이고_30단계에_다이아_1060을_주며_돈은_없다() {
     CompanyProperties.Pass rule = PROPERTIES.pass();
     assertThat(rule.days()).isEqualTo(28);
     assertThat(rule.steps()).isEqualTo(30);
@@ -52,14 +52,15 @@ class PassTest {
       assertThat(r.weapon()).as("무기는 10·20단계").isEqualTo(step % 10 == 0 && step < 30);
       assertThat(r.cat()).as("고양이는 30단계").isEqualTo(step == 30);
     }
-    assertThat(diamonds).isEqualTo(24 * 50 + 3 * 200 + 2 * 300 + 500);
-    assertThat(engine.pass.reward(1).diamonds()).isEqualTo(50);
-    assertThat(engine.pass.reward(2).diamonds()).as("돈 단계였던 자리도 다이아다").isEqualTo(50);
-    assertThat(engine.pass.reward(5).diamonds()).isEqualTo(200);
-    assertThat(engine.pass.reward(10).diamonds()).isEqualTo(300);
-    assertThat(engine.pass.reward(15).diamonds()).isEqualTo(200);
-    assertThat(engine.pass.reward(20).diamonds()).isEqualTo(300);
-    assertThat(engine.pass.reward(30).diamonds()).isEqualTo(500);
+    // 644번: 보통 20 · 5의 배수 60 · 10·20단계 100 · 30단계 200 (전에는 50 · 200 · 300 · 500으로 2,900).
+    assertThat(diamonds).isEqualTo(24 * 20 + 3 * 60 + 2 * 100 + 200).isEqualTo(1_060);
+    assertThat(engine.pass.reward(1).diamonds()).isEqualTo(20);
+    assertThat(engine.pass.reward(2).diamonds()).as("돈 단계였던 자리도 다이아다").isEqualTo(20);
+    assertThat(engine.pass.reward(5).diamonds()).isEqualTo(60);
+    assertThat(engine.pass.reward(10).diamonds()).isEqualTo(100);
+    assertThat(engine.pass.reward(15).diamonds()).isEqualTo(60);
+    assertThat(engine.pass.reward(20).diamonds()).isEqualTo(100);
+    assertThat(engine.pass.reward(30).diamonds()).isEqualTo(200);
   }
 
   @Test
@@ -223,10 +224,10 @@ class PassTest {
     assertThat(mission(c, "forever").title()).isEqualTo("영구 강화 5번");
     assertThat(mission(c, "feed").title()).isEqualTo("식빵으로 고양이 레벨업 3번");
     assertThat(mission(c, "skill").title()).isEqualTo("스킬 20번 사용");
-    // 환생으로 얻은 생선: 광고 3배를 뺀 바탕 수로 센다. 301번째 벽은 123마리.
-    c.idle.wall = 301;
+    // 환생으로 얻은 생선: 광고 3배를 뺀 바탕 수로 센다. 501번째 벽은 100 × 120% = 120마리 (644번; 전에는 301번째 벽이 123마리).
+    c.idle.wall = 501;
     idle.rebirth(c, true);
-    assertThat(c.fish).isEqualTo(369);
+    assertThat(c.fish).isEqualTo(360);
     assertThat(mission(c, "fish").count()).as("목표에서 멈춘다").isEqualTo(100);
     assertThat(mission(c, "fish").ready()).isEqualTo(150);
     // 영구 강화는 한 주에 다섯 번이면 150.
@@ -352,7 +353,7 @@ class PassTest {
     assertThat(rewards.passView(c).step()).isEqualTo(4);
     assertThat(rewards.passView(c).claimable()).isEqualTo(4);
     rewards.claimPass(c, 1, random);
-    assertThat(c.diamonds).isEqualTo(50);
+    assertThat(c.diamonds).isEqualTo(20);
     assertThat(rewards.passView(c).lastRewards()).hasSize(1);
     assertThatThrownBy(() -> rewards.claimPass(c, 1, random))
         .as("이미 받았다")
@@ -365,10 +366,11 @@ class PassTest {
     double before = c.capital;
     rewards.claimPass(c, 2, random);
     assertThat(c.capital).isEqualTo(before);
-    assertThat(c.diamonds).isEqualTo(100);
+    assertThat(c.diamonds).isEqualTo(40);
     // 모두 받기: 남은 3·4단계.
     rewards.claimPass(c, null, random);
-    assertThat(c.diamonds).isEqualTo(200);
+    // 1~4단계 모두 20씩 (644번, 전에는 50씩 200).
+    assertThat(c.diamonds).isEqualTo(4 * 20);
     assertThat(rewards.passView(c).claimable()).isZero();
     assertThat(rewards.passView(c).lastRewards()).extracting(r -> r.step()).containsExactly(3, 4);
     assertThat(rewards.passView(c).steps().get(3).claimed()).isTrue();
@@ -382,21 +384,21 @@ class PassTest {
     rewards.addPassExp(c, 9_000);
     int weapons = c.weapons.stream().mapToInt(w -> w.count).sum();
     rewards.claimPass(c, 10, random);
-    assertThat(c.diamonds).isEqualTo(300);
+    assertThat(c.diamonds).isEqualTo(100);
     assertThat(c.weapons.stream().mapToInt(w -> w.count).sum()).isEqualTo(weapons + 1);
     CompanyView.PassReward ten = rewards.passView(c).lastRewards().getFirst();
     assertThat(ten.weaponKind()).isNotNull();
     assertThat(ten.weaponGrade()).isIn(MentalEngine.DRAW_GRADES);
     assertThat(ten.cat()).isNull();
     rewards.claimPass(c, 30, random);
-    assertThat(c.diamonds).isEqualTo(800);
+    assertThat(c.diamonds).isEqualTo(100 + 200);
     CompanyView.PassReward last = rewards.passView(c).lastRewards().getFirst();
     assertThat(last.cat()).isNotNull();
     assertThat(last.catName()).isNotBlank();
     assertThat(idle.view(c).cats().stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(1);
-    // 한 시즌을 다 받으면 다이아 2,900.
+    // 한 시즌을 다 받으면 다이아 1,060 (644번, 전에는 2,900).
     rewards.claimPass(c, null, random);
-    assertThat(c.diamonds).isEqualTo(2900);
+    assertThat(c.diamonds).isEqualTo(1_060);
     assertThat(c.passClaimed).hasSize(30);
   }
 
@@ -409,7 +411,7 @@ class PassTest {
     rewards.drew(c, 20);
     assertThat(rewards.passView(c).missionsReady()).isEqualTo(2);
     rewards.claimPass(c, 1, random);
-    assertThat(c.diamonds).isEqualTo(50);
+    assertThat(c.diamonds).isEqualTo(20);
     // 저장하고 다시 읽어도 그대로다.
     JsonMapper json = JsonMapper.builder().build();
     CompanyState saved = json.readValue(json.writeValueAsString(c), CompanyState.class);
@@ -426,7 +428,7 @@ class PassTest {
     assertThat(next.steps()).noneMatch(s -> s.claimed());
     assertThatThrownBy(() -> rewards.claimPass(c, 2, random))
         .isInstanceOf(InvalidRequestException.class);
-    assertThat(c.diamonds).as("받은 것은 그대로다").isEqualTo(50);
+    assertThat(c.diamonds).as("받은 것은 그대로다").isEqualTo(20);
     // 테스트판은 시즌을 넘길 수 있다.
     rewards.addPassExp(c, 200);
     rewards.nextSeason(c);
