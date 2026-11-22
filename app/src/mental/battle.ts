@@ -4665,7 +4665,7 @@ class BattleScene extends Phaser.Scene {
     this.tweens.killTweensOf(g)
     g.clear().setAlpha(1).setVisible(true)
     // 시전한 고양이에서 첫 대상까지 가는 가는 줄기: 본 낙뢰보다 훨씬 가늘게, 곁가지 없이. 어디서 쏜 번개인지 보이게만 한다.
-    this.drawBolt(g, from.x, from.y, target.x, target.y - 28, 1.8, 0)
+    this.drawBolt(g, from.x, from.y, target.x, target.y - 28, 2.4, 0)
     this.drawBolt(g, target.x, target.y - 28, target.x, target.y, width, 0)
     let prev = target
     for (const o of chain) {
@@ -4677,12 +4677,12 @@ class BattleScene extends Phaser.Scene {
     this.glow(target.x, target.y, 0xfff27a, 42, 360)
     this.ring(target.x, target.y, 0xffe94d, 34, 360)
     this.boltFx.explode(this.fx(10), target.x, target.y)
-    // 경로를 잠시 선명하게 유지한 뒤 한 번만 사라진다. 빠른 점멸 없이 타격과 연쇄를 읽을 수 있다.
+    // 배속이 트윈 시계를 바꾸므로 시전 순간의 배율로 보정한다. 줄기를 0.7초 보여 준 뒤 한 번만 흐려진다.
     this.tweens.add({
       targets: g,
       alpha: 0,
-      delay: 150,
-      duration: this.reducedMotion ? 180 : 260,
+      delay: 700 * this.simSpeed,
+      duration: (this.reducedMotion ? 300 : 550) * this.simSpeed,
       ease: 'Quad.easeIn',
       onComplete: () => g.setVisible(false),
     })
