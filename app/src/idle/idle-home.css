@@ -2619,14 +2619,18 @@
   pointer-events: none;
 }
 
-/* 고른 고양이의 설명은 목록을 내려도 출전 칸 바로 아래에 붙어 있다 (653번). 스킬 설명을 펴면 그 안에서 스크롤한다. */
-.loadout-sheet .loadout-unequip > .idle-cat {
-  position: sticky;
-  top: var(--loadout-team-height, 0px);
-  z-index: 2;
-  max-height: 42dvh;
-  overflow-y: auto;
-  box-shadow: 0 4px 8px #6b4a1a26;
+/*
+ * 고른 고양이의 설명은 목록을 내려도 출전 칸 바로 아래에 붙어 있다 (653번). 스킬 설명을 펴면 그 안에서 스크롤한다.
+ * 세로가 짧은 화면(700px 아래)에서는 붙이지 않는다: 출전 칸과 설명이 화면을 거의 다 덮어 고양이 목록이 보일 자리가 없다.
+ */
+@media (min-height: 700px) {
+  .loadout-sheet .loadout-unequip > .idle-cat {
+    position: sticky;
+    z-index: 2;
+    max-height: 34dvh;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px #6b4a1a26;
+  }
 }
 .loadout-sheet .loadout-recommend {
   margin-left: 6px;

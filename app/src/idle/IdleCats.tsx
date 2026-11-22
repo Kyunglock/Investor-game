@@ -71,15 +71,31 @@ export function IdleCats({
   // 누구를 세우려는지 적어 둔다: 밖에서 다른 고양이를 골라 주거나 교체가 끝나 그 고양이가 출전하면 저절로 풀린다.
   const [swapFor, setSwapFor] = useState<CatCode | null>(null)
   // 고른 고양이의 설명은 목록을 내려도 출전 칸 바로 아래에 붙는다 (653번): 출전 칸 높이를 재어 그 아래에 세운다.
+  // 시트가 고양이 칸을 스크롤해 보일 때 고정된 두 칸 아래로 오도록 스크롤 여백도 그 높이로 맞춘다(끌어 놓기가 설명창에 막히지 않게).
   const team = useRef<HTMLDivElement>(null)
+  const detail = useRef<HTMLElement>(null)
   const [teamHeight, setTeamHeight] = useState(0)
+  const sticky = tab !== '식빵 공방'
   useEffect(() => {
     const el = team.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(() => setTeamHeight(el.offsetHeight))
+    if (!sticky || !el || typeof ResizeObserver === 'undefined') return
+    const scroller = el.parentElement
+    const measure = () => {
+      setTeamHeight(el.offsetHeight)
+      const pinned = detail.current && getComputedStyle(detail.current).position === 'sticky'
+      if (scroller)
+        scroller.style.scrollPaddingTop = pinned
+          ? `${el.offsetHeight + (detail.current?.offsetHeight ?? 0) + 8}px`
+          : ''
+    }
+    const observer = new ResizeObserver(measure)
     observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+    if (detail.current) observer.observe(detail.current)
+    return () => {
+      observer.disconnect()
+      if (scroller) scroller.style.scrollPaddingTop = ''
+    }
+  }, [sticky])
   // 추천 편성 (653번): 팀 화력의 어림이 가장 큰 고양이들로 출전 칸을 바꾼다.
   const recommended = recommendParty(company)
   const alreadyBest =
@@ -342,6 +358,7 @@ export function IdleCats({
           className="idle-cat owned"
           data-testid="cat-detail"
           data-code={cat?.code ?? 'boss'}
+          ref={detail}
           style={teamHeight ? { top: teamHeight - 6 } : undefined}
         >
           <Portrait code={cat?.code} grade={cat?.grade} />
