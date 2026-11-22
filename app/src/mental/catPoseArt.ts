@@ -1,3 +1,5 @@
+import type { CatCode } from '@web/features/raising/store'
+import { drawCatOutfit } from './catOutfitArt'
 import { catPoseCell } from './catPose'
 import { rosterCell } from './catRoster'
 import { drawSprite } from './stageArt'
@@ -7,7 +9,7 @@ export function drawCatPose(
   c: CanvasRenderingContext2D,
   source: HTMLImageElement,
   index: number,
-  roster?: { atlas: number; slot: number },
+  roster?: { code: CatCode; atlas: number; slot: number },
 ) {
   drawSprite(
     c,
@@ -18,4 +20,5 @@ export function drawCatPose(
     { x: 14, y: 3, w: 75, h: 100 },
     'height',
   )
+  if (roster) drawCatOutfit(c, roster.code, index)
 }
