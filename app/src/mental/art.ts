@@ -466,8 +466,24 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
   bake(scene, 'magic-ice', 44, 16, drawIceLance)
   bake(scene, 'magic-gust', 44, 120, drawGust)
   // spellbook의 마법들 (563번): 모양(창·물결·구슬)과 색만으로 그린다. 떨어지는 마법은 구슬이다.
+  bake(scene, 'aurora-curtain', 192, 256, (c) => {
+    c.fillStyle = '#201843'
+    c.fillRect(0, 0, 192, 256)
+    for (const [band, color] of ['111,246,201', '184,147,255'].entries()) {
+      for (let x = 0; x < 192; x++) {
+        const y = 74 + 66 * band + 23 * Math.sin(x / 33 + band) + 8 * Math.cos(x / 12)
+        const light = c.createLinearGradient(x, y - 68, x, y + 18)
+        light.addColorStop(0, `rgba(${color},0)`)
+        light.addColorStop(0.73, `rgba(${color},0.88)`)
+        light.addColorStop(1, `rgba(${color},0)`)
+        c.fillStyle = light
+        c.fillRect(x, y - 68, 1, 86)
+      }
+    }
+  })
   for (const spell of EXTRA_SPELLS) {
     const book = SPELLBOOK[spell]
+    if (book.kind === 'global') continue
     const form = book.kind === 'fall' ? 'drop' : book.form
     if (form === 'jet') bake(scene, spellKey(spell), 44, 16, (c) => drawLance(c, book.colors))
     else if (form === 'wave')

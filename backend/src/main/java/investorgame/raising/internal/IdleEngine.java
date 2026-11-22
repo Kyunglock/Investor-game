@@ -53,9 +53,9 @@ class IdleEngine {
     return wall % BOSS_EVERY == 0;
   }
 
-  // Credit buckets: the bullet, the fifteen cat skills, the buy barrage (decisions.md 503), and the
+  // Credit buckets: the bullet, the cat skills, the buy barrage (decisions.md 503), and the
   // buy wall's own buy orders (514).
-  private static final int SKILLS = 15;
+  private static final int SKILLS = 16;
   private static final int KINDS = SKILLS + 4;
   private static final int BARRAGE = SKILLS + 1;
   private static final int BUY = SKILLS + 2;
@@ -192,12 +192,26 @@ class IdleEngine {
   // mental/spellbook.ts: cooldown and damage ramp from level 1 to level 5, and a falling spell
   // (hail, blossom, bomb) lands as many times as it drops.
   private static final String[] CODES = {
-    "water", "meteor", "bolt", "ram", "ice", "wind", "fire", "poison", "light", "dark", "sand",
-    "star", "hail", "blossom", "bomb"
+    "water",
+    "meteor",
+    "bolt",
+    "ram",
+    "ice",
+    "wind",
+    "fire",
+    "poison",
+    "light",
+    "dark",
+    "sand",
+    "star",
+    "hail",
+    "blossom",
+    "bomb",
+    "auroraNight"
   };
   private static final String[] NAMES = {
     "물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬", "얼음 스킬", "바람 스킬", "불 스킬", "독 스킬", "빛 스킬", "어둠 스킬", "모래 스킬",
-    "별 스킬", "우박 스킬", "꽃비 스킬", "폭탄 스킬"
+    "별 스킬", "우박 스킬", "꽃비 스킬", "폭탄 스킬", "극광의 밤"
   };
   private static final double[][] COOLDOWNS = {
     {2.4, 2.1, 1.8, 1.6, 1.4},
@@ -214,7 +228,8 @@ class IdleEngine {
     ramp(2, 1.3),
     ramp(3.4, 2.6),
     ramp(3, 2.2),
-    ramp(5, 3.8)
+    ramp(5, 3.8),
+    ramp(6, 4)
   };
   private static final double[][] SKILL_DAMAGE = {
     {1.5, 2, 2.6, 3, 3.4},
@@ -231,7 +246,8 @@ class IdleEngine {
     ramp(1.4, 3.2),
     ramp(2, 2.8),
     ramp(1.6, 2.4),
-    ramp(9, 20)
+    ramp(9, 20),
+    ramp(12, 28)
   };
   private static final double[][] SKILL_HITS = {
     ONE_HIT,
@@ -248,6 +264,7 @@ class IdleEngine {
     ONE_HIT,
     hits(2, 2, 3, 4, 5),
     hits(2, 2, 3, 3, 4),
+    ONE_HIT,
     ONE_HIT
   };
   // Cats (decisions.md 488, 492, 493): each has a trait for its own gun. Drawn with a ticket.
@@ -372,7 +389,7 @@ class IdleEngine {
           Map.entry("rose", new int[] {13}),
           Map.entry("tiger", new int[] {5}),
           Map.entry("siam", new int[] {10}),
-          // S grade: two each. No two cats share a skill (563): fifteen skills, fifteen slots.
+          // S grade cats have two skills each. Aurora has one exclusive spell.
           Map.entry("star", new int[] {11, 8}),
           Map.entry("silver", new int[] {2, 14}),
           Map.entry("wisteria", new int[] {7, 9}),
@@ -382,7 +399,7 @@ class IdleEngine {
           Map.entry("dune", new int[] {10, 5}),
           Map.entry("veil", new int[] {9, 2}),
           Map.entry("flora", new int[] {13, 7}),
-          Map.entry("aurora", new int[] {11, 8, 2}));
+          Map.entry("aurora", new int[] {15}));
   private static final int[] NO_SKILLS = {};
   private static final int[][] CAT_SKILLS =
       CATS.stream().map(code -> SKILLED.getOrDefault(code, NO_SKILLS)).toArray(int[][]::new);

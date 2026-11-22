@@ -15,6 +15,7 @@ export type IdleAttackKind =
   | 'hail'
   | 'blossom'
   | 'bomb'
+  | 'auroraNight'
   | 'barrage'
   | 'buy'
   | 'stoploss'

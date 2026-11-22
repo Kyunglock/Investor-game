@@ -675,17 +675,33 @@ class IdleEngineTest {
     // 마법은 A등급부터다 (561번): C·B는 없고 A는 하나, S는 둘이다. 모든 스킬이 쓰인다.
     for (var c : cats) {
       int want =
-          c.grade().equals("SS") ? 3 : c.grade().equals("S") ? 2 : c.grade().equals("A") ? 1 : 0;
+          c.grade().equals("SS") ? 1 : c.grade().equals("S") ? 2 : c.grade().equals("A") ? 1 : 0;
       assertThat(c.skills()).as(c.code()).hasSize(want);
       assertThat(c.skills().stream().map(skill -> skill.code()).distinct().count()).isEqualTo(want);
     }
     assertThat(
             cats.stream().flatMap(c -> c.skills().stream()).map(skill -> skill.code()).distinct())
         .containsExactlyInAnyOrder(
-            "water", "meteor", "bolt", "ram", "ice", "wind", "fire", "poison", "light", "dark",
-            "sand", "star", "hail", "blossom", "bomb");
-    // 동료 45종의 고유 스킬은 모두 28칸이다.
-    assertThat(cats.stream().mapToInt(c -> c.skills().size()).sum()).isEqualTo(28);
+            "water",
+            "meteor",
+            "bolt",
+            "ram",
+            "ice",
+            "wind",
+            "fire",
+            "poison",
+            "light",
+            "dark",
+            "sand",
+            "star",
+            "hail",
+            "blossom",
+            "bomb",
+            "auroraNight");
+    assertThat(cat.apply("aurora").skills())
+        .containsExactly(new investorgame.raising.CompanyView.CatSkill("auroraNight", "극광의 밤"));
+    // 동료 45종의 고유 스킬은 모두 26칸이다.
+    assertThat(cats.stream().mapToInt(c -> c.skills().size()).sum()).isEqualTo(26);
     // 뽑기: 등급의 몫은 C 60.8 · B 28 · A 10 · S 1 · SS 0.2%(651번, 전에는 C 59.8 · S 2%)이고 등급 안에서는 고르다.
     var random = new HashSeededRandom(7);
     java.util.Map<String, Integer> drawn = new java.util.HashMap<>();
@@ -762,7 +778,7 @@ class IdleEngineTest {
     tick(1000, new IdleHit(10, "bullet", 1));
     assertThat(state.diamonds).isEqualTo(diamonds);
     // Walls no longer unlock skills (decisions.md 501): without a cat nothing is cast.
-    assertThat(engine.view(state).skills()).hasSize(15).noneMatch(skill -> skill.owned());
+    assertThat(engine.view(state).skills()).hasSize(16).noneMatch(skill -> skill.owned());
   }
 
   @Test
@@ -1035,7 +1051,7 @@ class IdleEngineTest {
     // A skill is a cat's own ability (decisions.md 501): deep walls alone cast nothing.
     tick(3000, new IdleHit(60, "meteor", 1));
     assertThat(state.idle.damage).isZero();
-    assertThat(engine.view(state).skills()).hasSize(15).noneMatch(skill -> skill.owned());
+    assertThat(engine.view(state).skills()).hasSize(16).noneMatch(skill -> skill.owned());
     assertThatThrownBy(() -> engine.drawCat(state, random))
         .as("no diamonds, no cat")
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);

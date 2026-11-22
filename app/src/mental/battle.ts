@@ -149,6 +149,7 @@ import { BULLET_W, bulletHitbox } from './hitbox'
 import { idlePierceHits, idlePierceReach } from './idlePierce'
 import { IDLE_WALL_TOP, IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
+  auroraNightStats,
   densest,
   type EarthStats,
   earthStats,
@@ -800,6 +801,7 @@ class BattleScene extends Phaser.Scene {
   private mental = 100
   private score = 0
   private kills = 0
+  private auroraImpact: { at: number; level: number } | null = null
   private elapsed = 0
   private lastFire = 0
   /** 사장냥이 쏜 탄 수(재장전, #587). */
@@ -3270,7 +3272,7 @@ class BattleScene extends Phaser.Scene {
 
   private hit(e: Enemy, dmg: number, angle: number, kind: DamageKind = 'bullet', area = false) {
     if (e.dying || !e.active) return
-    if (this.beyondWall(e) && !(area && e.cell)) return
+    if (kind !== 'auroraNight' && this.beyondWall(e) && !(area && e.cell)) return
     if (e.kind === 'fake') {
       // 허매도 (413번): 맞히면 그냥 사라진다. 체결이 아니라 처치·경험치가 없다.
       this.damageNumber(e, dmg, kind)
@@ -4098,7 +4100,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 마법이 노릴 수 있는 적: 살아 있고 화면 안에 들어온 적. 같은 배열을 다시 채운다. */
-  private magicTargets(area = false): Enemy[] {
+  private magicTargets(area = false, global = false): Enemy[] {
     const buf = this.targetBuf
     buf.length = 0
     const { w, h } = this.view()
@@ -4107,12 +4109,12 @@ class BattleScene extends Phaser.Scene {
       if (
         e.active &&
         !e.dying &&
-        (e.cell ? e.cell.wall.y > 0 : e.y > 12) &&
+        (e.cell ? e.cell.wall.y > 0 : e.y > (global ? 0 : 12)) &&
         e.y < h &&
         e.x > 0 &&
         e.x < w &&
         !this.held(e) &&
-        (!this.beyondWall(e) || (area && Boolean(e.cell)))
+        (global || !this.beyondWall(e) || (area && Boolean(e.cell)))
       )
         buf.push(e)
     }
@@ -4136,13 +4138,16 @@ class BattleScene extends Phaser.Scene {
             : 0)
         if (!caster.clock.due(m, level, this.elapsed)) continue
         const from = caster.at()
-        const cast = isFlow(m)
-          ? this.castWater(from, level, m)
-          : isFall(m)
-            ? this.castMeteor(from, level, m)
-            : m === 'earth'
-              ? this.castEarth(from, level)
-              : this.castLightning(from, level)
+        const cast =
+          m === 'auroraNight'
+            ? this.castAuroraNight(from, level)
+            : isFlow(m)
+              ? this.castWater(from, level, m)
+              : isFall(m)
+                ? this.castMeteor(from, level, m)
+                : m === 'earth'
+                  ? this.castEarth(from, level)
+                  : this.castLightning(from, level)
         if (cast) {
           caster.clock.cast(m, level, this.elapsed)
           this.damageStats.casts[m]++
@@ -4160,7 +4165,52 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
+  private castAuroraNight(from: { x: number; y: number }, level: number) {
+    if (this.auroraImpact || !this.magicTargets(true, true).length) return false
+    this.auroraImpact = { at: this.elapsed + 0.45, level }
+    this.auroraStar(from.x, from.y - 25, 14)
+    if (!this.reducedMotion) {
+      const { w, h } = this.view()
+      const curtain = this.add
+        .image(w / 2, h / 2, 'aurora-curtain')
+        .setDisplaySize(w, h)
+        .setDepth(5)
+        .setAlpha(0)
+      this.tweens.add({
+        targets: curtain,
+        alpha: 0.52,
+        duration: 230,
+        hold: 100,
+        yoyo: true,
+        onComplete: () => curtain.destroy(),
+      })
+    }
+    return true
+  }
+
+  private auroraStar(x: number, y: number, size: number) {
+    const star = this.add
+      .star(x, y, 4, size * 0.26, size, 0xffdf83)
+      .setStrokeStyle(1, 0xfff8d1)
+      .setDepth(8)
+    this.tweens.add({ targets: star, alpha: 0, duration: 280, onComplete: () => star.destroy() })
+  }
+
   private updateMagic(dt: number) {
+    if (this.auroraImpact && this.elapsed >= this.auroraImpact.at) {
+      const damage = auroraNightStats(this.auroraImpact.level).damage * this.attackDamage
+      this.auroraImpact = null
+      const walls = new Set<WallState>()
+      for (const enemy of [...this.magicTargets(true, true)]) {
+        if (enemy.cell) {
+          const wall = enemy.cell.wall
+          if (walls.has(wall) || this.behindLayer(enemy)) continue
+          walls.add(wall)
+        }
+        this.auroraStar(enemy.x, enemy.y, 12)
+        this.hit(enemy, damage, -Math.PI / 2, 'auroraNight', true)
+      }
+    }
     for (const s of this.waters) if (s.active) this.moveWater(s, dt)
     for (const s of this.meteors) if (s.active) this.moveMeteor(s, dt)
     for (const r of this.rams) if (r.active) this.moveRam(r, dt)

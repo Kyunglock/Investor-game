@@ -13,11 +13,11 @@ export const WIND_GLYPH =
 
 export type FlowSpell = 'fire' | 'poison' | 'light' | 'dark' | 'sand' | 'star'
 export type FallSpell = 'hail' | 'blossom' | 'bomb'
-export type ExtraSpell = FlowSpell | FallSpell
+export type ExtraSpell = FlowSpell | FallSpell | 'auroraNight'
 
 export const FLOW_SPELLS: readonly FlowSpell[] = ['fire', 'poison', 'light', 'dark', 'sand', 'star']
 export const FALL_SPELLS: readonly FallSpell[] = ['hail', 'blossom', 'bomb']
-export const EXTRA_SPELLS: readonly ExtraSpell[] = [...FLOW_SPELLS, ...FALL_SPELLS]
+export const EXTRA_SPELLS: readonly ExtraSpell[] = [...FLOW_SPELLS, ...FALL_SPELLS, 'auroraNight']
 
 /** Lv.1 값과 Lv.5 값. 사이 레벨은 고르게 나눈다. */
 type Ramp = readonly [number, number]
@@ -75,7 +75,21 @@ export interface FallSpec extends Look {
 
 const none: Ramp = [0, 0]
 
-export const SPELLBOOK: { [K in FlowSpell]: FlowSpec } & { [K in FallSpell]: FallSpec } = {
+export const SPELLBOOK: { [K in FlowSpell]: FlowSpec } & { [K in FallSpell]: FallSpec } & {
+  auroraNight: Look & { kind: 'global' }
+} = {
+  auroraNight: {
+    kind: 'global',
+    name: '극광의 밤',
+    does: '오로라가 펼쳐지는 순간, 전장의 모든 적에게 별빛 피해를 한 번 줘요',
+    grows: '레벨이 오르면 더 자주 발동하고 한 번에 주는 피해가 커져요',
+    tiers: ['별빛', '극광', '극광의 밤'],
+    colors: { light: '#fff3bc', mid: '#77eacb', dark: '#8575cc', line: '#363165' },
+    glyph: 'M24 9 Q26 21 37 24 Q26 26 24 38 Q22 27 11 24 Q22 21 24 9Z',
+    number: '#ffda83',
+    cooldown: [6, 4],
+    damage: [12, 28],
+  },
   fire: {
     kind: 'flow',
     name: '불 스킬',
@@ -259,4 +273,4 @@ export const isFlowSpell = (spell: string): spell is FlowSpell =>
 export const isFallSpell = (spell: string): spell is FallSpell =>
   (FALL_SPELLS as readonly string[]).includes(spell)
 export const isExtraSpell = (spell: string): spell is ExtraSpell =>
-  isFlowSpell(spell) || isFallSpell(spell)
+  spell === 'auroraNight' || isFlowSpell(spell) || isFallSpell(spell)

@@ -275,7 +275,13 @@ export const isFlow = (spell: Spell): spell is Flow =>
   spell === 'water' || spell === 'ice' || spell === 'wind' || isFlowSpell(spell)
 export const isFall = (spell: Spell): spell is Fall => spell === 'meteor' || isFallSpell(spell)
 
+export function auroraNightStats(level: number) {
+  const spell = SPELLBOOK.auroraNight
+  return { cooldown: ramp(spell.cooldown, level), damage: ramp(spell.damage, level) }
+}
+
 export function magicCooldown(magic: Spell, level: number): number {
+  if (magic === 'auroraNight') return auroraNightStats(level).cooldown
   if (isFlow(magic)) return flowStats(magic, level).cooldown
   if (isFall(magic)) return fallStats(magic, level).cooldown
   if (magic === 'earth') return earthStats(level).cooldown
