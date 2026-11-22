@@ -448,7 +448,9 @@ try {
       await bulk.tap()
       await expect(bulk).toBeDisabled()
       assert.equal(calls.at(-1), '/weapon/merge-all')
+      // 649번: 무엇을 써서 무엇을 얻었는지 적는다.
       await expect(page.getByText('무기 일괄 합성을 마쳤어요.')).toBeVisible()
+      await expect(page.getByText(/쓴 무기: .+×\d.* → 얻은 무기: .+×\d/)).toBeVisible()
       assert.ok(a && b)
       assert.deepEqual(refused, [])
       assert.deepEqual(errors, [])
