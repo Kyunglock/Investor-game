@@ -104,7 +104,7 @@ try {
         for (const kind of ['cat', 'weapon']) {
           await page.getByTestId(`draw-kind-${kind}`).click()
           await expect(page.getByTestId('draw-note')).toContainText(
-            kind === 'cat' ? 'S 1% · A 10% · B 28% · C 61%' : 'F~A 등급',
+            kind === 'cat' ? 'SS 0.2% · S 1% · A 10% · B 28% · C 60.8%' : 'F~A 등급',
           )
           await expect(page.getByTestId('draw-note')).not.toContainText('모자라요')
           await expect(page.getByTestId('draw-ad-status')).toContainText(

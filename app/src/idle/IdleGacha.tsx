@@ -14,6 +14,7 @@ import { type CatDraw, CatReveal } from './CatReveal'
 import { bestDraw, CAT_ODDS, catRevealPlan, shinyCat } from './catGrade'
 import { RewardPlacement } from './RewardPlacement'
 import { ShopIcon } from './ShopIcon'
+import { SovereignArrival } from './SovereignArrival'
 import { skillNames } from './skills'
 
 type Kind = 'cat' | 'weapon'
@@ -47,6 +48,7 @@ export function IdleGacha({
   const [catReveal, setCatReveal] = useState<{ id: number; result: CatDraw | null } | null>(null)
   const [gunReveal, setGunReveal] = useState<{ id: number; result: DrawResult | null } | null>(null)
   const [ten, setTen] = useState<{ id: number; kind: Kind; cards: TenCard[] | null } | null>(null)
+  const [arrivals, setArrivals] = useState(0)
   const [watching, setWatching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [drawn, setDrawn] = useState<CatDraw | null>(null)
@@ -129,6 +131,7 @@ export function IdleGacha({
           return
         }
         const result = { cat: got, isNew: got.level === 1 }
+        if (got.grade === 'SS') setArrivals(1)
         setCatReveal({ id, result })
         setDrawn(result)
         onCat(got.code)
@@ -173,6 +176,7 @@ export function IdleGacha({
           setError(useRaisingStore.getState().error ?? '뽑기를 완료하지 못했어요.')
           return
         }
+        setArrivals(draws.filter((d) => d.grade === 'SS').length)
         setTen({
           id,
           kind: 'cat',
@@ -182,7 +186,7 @@ export function IdleGacha({
             return {
               key: `${i}-${d.code}`,
               art: <Portrait code={d.code} grade={d.grade} />,
-              starlight: d.grade === 'S',
+              starlight: d.grade === 'S' || d.grade === 'SS',
               badge: `${d.grade} 등급 · Lv.${d.level}`,
               name: info?.name ?? d.code,
               note: d.isNew ? 'NEW!' : '레벨 업',
@@ -191,7 +195,7 @@ export function IdleGacha({
               power: plan.power,
               sound: plan.sound,
               shiny: shinyCat(d.grade),
-              jackpot: d.grade === 'S',
+              jackpot: d.grade === 'S' || d.grade === 'SS',
             }
           }),
         })
@@ -380,7 +384,10 @@ export function IdleGacha({
         </>
       )}
       {error && <p role="alert">{error}</p>}
-      {ten && (
+      {arrivals > 0 && (
+        <SovereignArrival key={arrivals} onFinish={() => setArrivals((n) => n - 1)} />
+      )}
+      {ten && arrivals === 0 && (
         <TenReveal
           key={ten.id}
           label={ten.kind === 'cat' ? '고양이 연속 뽑기' : '무기 연속 뽑기'}
@@ -409,7 +416,7 @@ export function IdleGacha({
           onAgain={() => void (ten.kind === 'cat' ? drawTenCats() : drawTenWeapons())}
         />
       )}
-      {catReveal && (
+      {catReveal && arrivals === 0 && (
         <CatReveal
           key={catReveal.id}
           result={catReveal.result}

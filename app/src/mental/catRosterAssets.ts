@@ -10,6 +10,9 @@ import roster8 from './assets/roster/cats-32-34.png'
 import roster9 from './assets/roster/cats-35-37.png'
 import roster10 from './assets/roster/cats-38-40.png'
 
+import roster11 from './assets/roster/companions-0.webp'
+import roster12 from './assets/roster/companions-1.webp'
+
 export const ROSTER_ASSETS = {
   roster0,
   roster1,
@@ -22,6 +25,8 @@ export const ROSTER_ASSETS = {
   roster8,
   roster9,
   roster10,
+  roster11,
+  roster12,
 }
 export const rosterAsset = (atlas: number) =>
   ROSTER_ASSETS[`roster${atlas}` as keyof typeof ROSTER_ASSETS]

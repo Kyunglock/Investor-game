@@ -11,13 +11,19 @@ import {
 } from './catGrade'
 
 describe('고양이 등급 (539번)', () => {
-  it('뽑기 확률은 합쳐 100%이고 S가 가장 드물다', () => {
+  it('뽑기 확률은 합쳐 100%이고 SS가 가장 드물다', () => {
     expect(Object.values(CAT_GRADE_PERCENT).reduce((a, b) => a + b, 0)).toBe(100)
-    expect(CAT_ODDS).toBe('S 1% · A 10% · B 28% · C 61%')
+    expect(CAT_ODDS).toBe('SS 0.2% · S 1% · A 10% · B 28% · C 60.8%')
   })
 
   it('A등급부터 뽑기 연출이 빛난다 (574번)', () => {
-    expect((['C', 'B', 'A', 'S'] as const).map(shinyCat)).toEqual([false, false, true, true])
+    expect((['C', 'B', 'A', 'S', 'SS'] as const).map(shinyCat)).toEqual([
+      false,
+      false,
+      true,
+      true,
+      true,
+    ])
     expect((['F', 'E', 'D', 'C', 'B'] as const).some(shinyWeapon)).toBe(false)
     expect((['A', 'S', 'SS', 'SSS', 'SR', 'UR', 'LR'] as const).every(shinyWeapon)).toBe(true)
   })
@@ -48,7 +54,7 @@ describe('고양이 등급 (539번)', () => {
   })
 
   it('10연차의 알림과 팀 편성은 마지막 장이 아니라 등급이 가장 높은 고양이를 가리킨다 (#911)', () => {
-    const draw = (code: string, grade: 'C' | 'B' | 'A' | 'S', isNew = false) => ({
+    const draw = (code: string, grade: 'C' | 'B' | 'A' | 'S' | 'SS', isNew = false) => ({
       code,
       grade,
       isNew,
@@ -56,6 +62,10 @@ describe('고양이 등급 (539번)', () => {
     expect(
       bestDraw([draw('sky', 'C', true), draw('star', 'S', true), draw('petrol', 'C', true)]),
     ).toEqual({ code: 'star', isNew: true })
+    expect(bestDraw([draw('star', 'S', true), draw('aurora', 'SS')])).toEqual({
+      code: 'aurora',
+      isNew: false,
+    })
     // 같은 등급이면 이번에 처음 얻은 고양이가 먼저다. 같은 고양이가 또 나온 장이 뒤에 있어도 처음 얻은 것으로 친다.
     expect(
       bestDraw([
