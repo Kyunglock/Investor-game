@@ -13,6 +13,8 @@ import {
   type MergeGrade,
   mergeable,
   mergeBlock,
+  mergeResult,
+  mergeResultText,
   nextGrade,
 } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
@@ -227,10 +229,15 @@ export function CatGear({
           const store = useRaisingStore.getState()
           if (store.busy) return
           setNotice('')
+          const before = store.company
           await store.mergeAllWeapons()
-          if (mounted.current && !useRaisingStore.getState().error) {
+          const after = useRaisingStore.getState()
+          if (mounted.current && !after.error) {
             setPicked(null)
-            setNotice('무기 일괄 합성을 마쳤어요.')
+            // 649번: 무엇을 써서 무엇을 얻었는지 적는다. 한 개뿐이던 위 등급도 이어 합쳐져 사라진 것처럼 보였다.
+            const text =
+              before && after.company && mergeResultText(mergeResult(before, after.company))
+            setNotice(text ? `무기 일괄 합성을 마쳤어요. ${text}` : '무기 일괄 합성을 마쳤어요.')
             sfx.levelUp()
             haptic.medium()
           }
@@ -238,7 +245,9 @@ export function CatGear({
       >
         일괄 합성
         <span className="idle-gear-manual-note">
-          {merges.length > 0 ? '합칠 수 있는 무기를 한 번에 모두 합쳐요' : '합칠 무기가 없어요'}
+          {merges.length > 0
+            ? '아래 등급부터 이어서 합쳐요: 합쳐 만든 무기가 위 등급과 또 합쳐질 수 있어요'
+            : '합칠 무기가 없어요'}
         </span>
       </button>
       <ul
