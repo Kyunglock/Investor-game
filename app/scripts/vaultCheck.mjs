@@ -310,12 +310,20 @@ try {
     await page.getByRole('button', { name: '주간 던전' }).click()
     await expect(page.getByRole('button', { name: /층 입장/ })).toHaveCount(0)
     await expect(page.getByTestId('vault-offers').getByRole('button')).toHaveCount(3)
+    // 1층은 꼭 깨야 다음을 본다: CI의 느린 화면에서는 전장이 느려 시간 안에 못 깨는 판이 있었다(결과 요청이 오지 않아 실패). 금고
+    // 훈련을 넉넉히 줘 전투 결과에 기대지 않게 한다. 카드를 고르면 받는 회사 상태에 실린다.
+    company.vault.trainingPercent = 400
     await page.getByRole('button', { name: /금리 인하/ }).click()
     await expect(page.getByTestId('vault-picked')).toContainText('공격력 +25%')
-    assert.deepEqual(calls.at(-1), { path: '/api/company/vault/card', body: { code: 'rate-cut' } })
+    await expect
+      .poll(() => calls.at(-1))
+      .toEqual({ path: '/api/company/vault/card', body: { code: 'rate-cut' } })
     await page.getByRole('button', { name: '1층 입장 · 금괴 +30' }).click()
     await fight(page)
-    assert.deepEqual(calls.at(-1), { path: '/api/company/vault/floor', body: { floor: 1 } })
+    // 전장이 닫힌 뒤에 결과를 보낸다: 보낸 요청이 잡힐 때까지 기다린다(바로 견주면 아직 카드 요청이 마지막이라 실패했다).
+    await expect
+      .poll(() => calls.at(-1))
+      .toEqual({ path: '/api/company/vault/floor', body: { floor: 1 } })
     await expect(page.getByTestId('vault-note')).toContainText('1층 돌파 · 금괴 +30')
     await expect(page.getByTestId('vault-sheet')).toContainText('2층에 들고 갈 카드를 고르세요')
     // 금고 상점: 금괴로 산다. 모자라면 누를 수 없다.
@@ -327,8 +335,11 @@ try {
     await expect(page.getByTestId('vault-gold')).toContainText(String(afterBoss))
     await expect(items.nth(0)).toContainText('이번 주 4/5')
     company.vault.gold = 0
-    await items.nth(0).getByRole('button').click()
-    await expect(items.nth(0).getByRole('button')).toBeDisabled()
+    // 금괴가 바닥나면 누를 수 없다. 화면은 누른 뒤의 응답으로도, 접속 신호로 먼저 받은 새 상태로도 단추를 끈다: 언제 꺼질지 모르므로
+    // 누르기는 짧게만 기다린다(켜져 있는지 본 뒤 누르는 사이에 꺼져 30초를 기다리다 실패했다).
+    const buy = items.nth(0).getByRole('button')
+    await buy.click({ timeout: 2000 }).catch(() => {})
+    await expect(buy).toBeDisabled()
     // 좁은 화면에서도 시트가 가로로 넘치지 않는다.
     await page.setViewportSize({ width: 320, height: 568 })
     await page.getByRole('button', { name: '보스전', exact: true }).click()

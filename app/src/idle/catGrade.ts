@@ -7,7 +7,8 @@ export type CatGrade = NonNullable<Company['idle']>['cats'][number]['grade']
  * 확률은 서버 `IdleEngine.GRADE_PER_THOUSAND`와 같다.
  */
 export const CAT_GRADES: CatGrade[] = ['SS', 'S', 'A', 'B', 'C']
-export const CAT_GRADE_PERCENT: Record<CatGrade, number> = { SS: 0.2, S: 2, A: 10, B: 28, C: 59.8 }
+// 651번: S 2% → 1%, 줄어든 몫은 C(59.8% → 60.8%)로.
+export const CAT_GRADE_PERCENT: Record<CatGrade, number> = { SS: 0.2, S: 1, A: 10, B: 28, C: 60.8 }
 
 /**
  * 고양이 인벤토리의 순서: 가진 고양이를 먼저 SS·S·A·B·C 순으로, 그 뒤에 아직 없는 고양이를 SS·S·A·B·C 순으로 둔다. 같은 등급 안에서는 서버가 준 순서를 지킨다.
@@ -17,7 +18,7 @@ export function sortCats<T extends { level: number; grade: CatGrade }>(cats: rea
   return [...cats].sort((a, b) => rank(a) - rank(b))
 }
 
-/** 뽑기 창의 확률 한 줄: "SS 0.2% · S 2% · A 10% · B 28% · C 59.8%". */
+/** 뽑기 창의 확률 한 줄: "SS 0.2% · S 1% · A 10% · B 28% · C 60.8%". */
 export const CAT_ODDS = CAT_GRADES.map((g) => `${g} ${CAT_GRADE_PERCENT[g]}%`).join(' · ')
 
 /**

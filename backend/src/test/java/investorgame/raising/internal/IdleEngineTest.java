@@ -674,18 +674,18 @@ class IdleEngineTest {
             "sand", "star", "hail", "blossom", "bomb");
     // 동료 45종의 고유 스킬은 모두 28칸이다.
     assertThat(cats.stream().mapToInt(c -> c.skills().size()).sum()).isEqualTo(28);
-    // 뽑기: 등급의 몫은 C 59.8 · B 28 · A 10 · S 2 · SS 0.2%이고 등급 안에서는 고르다.
+    // 뽑기: 등급의 몫은 C 60.8 · B 28 · A 10 · S 1 · SS 0.2%(651번, 전에는 C 59.8 · S 2%)이고 등급 안에서는 고르다.
     var random = new HashSeededRandom(7);
     java.util.Map<String, Integer> drawn = new java.util.HashMap<>();
     int draws = 20_000;
     for (int i = 0; i < draws; i++) {
       drawn.merge(IdleEngine.catGrade(engine.grantCat(state, random).kind), 1, Integer::sum);
     }
-    assertThat(drawn.get("C") * 100.0 / draws).isCloseTo(59.8, offset(2.0));
+    assertThat(drawn.get("C") * 100.0 / draws).isCloseTo(60.8, offset(2.0));
     assertThat(drawn.get("B") * 100.0 / draws).isCloseTo(28, offset(2.0));
     assertThat(drawn.get("A") * 100.0 / draws).isCloseTo(10, offset(1.5));
     assertThat(drawn.get("SS") * 100.0 / draws).isCloseTo(0.2, offset(0.15));
-    assertThat(drawn.get("S") * 100.0 / draws).isCloseTo(2, offset(0.7));
+    assertThat(drawn.get("S") * 100.0 / draws).isCloseTo(1, offset(0.4));
     assertThat(engine.view(state).lastDraws()).isEmpty();
   }
 

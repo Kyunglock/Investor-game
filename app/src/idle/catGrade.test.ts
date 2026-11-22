@@ -13,7 +13,7 @@ import {
 describe('고양이 등급 (539번)', () => {
   it('뽑기 확률은 합쳐 100%이고 SS가 가장 드물다', () => {
     expect(Object.values(CAT_GRADE_PERCENT).reduce((a, b) => a + b, 0)).toBe(100)
-    expect(CAT_ODDS).toBe('SS 0.2% · S 2% · A 10% · B 28% · C 59.8%')
+    expect(CAT_ODDS).toBe('SS 0.2% · S 1% · A 10% · B 28% · C 60.8%')
   })
 
   it('A등급부터 뽑기 연출이 빛난다 (574번)', () => {

@@ -512,7 +512,7 @@ try {
     await expect(page.getByTestId('cat-draw-ad')).toContainText('광고로 1회 뽑기')
     // The odds by grade are written under the draw (539).
     await expect(page.getByTestId('draw-note')).toContainText(
-      'SS 0.2% · S 2% · A 10% · B 28% · C 59.8%',
+      'SS 0.2% · S 1% · A 10% · B 28% · C 60.8%',
     )
     // The draw opens the same reveal as the weapon draw (decisions.md 508).
     const drawCat = async () => {
