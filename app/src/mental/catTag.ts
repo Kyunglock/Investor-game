@@ -6,7 +6,7 @@ export interface CatTag {
   code: string
   name: string
   /** 고양이의 등급. 사장냥은 등급이 없다. */
-  grade?: 'C' | 'B' | 'A' | 'S'
+  grade?: 'C' | 'B' | 'A' | 'S' | 'SS'
 }
 
 /** 크림색 이름판과 등급별 파스텔 배지. 글자 외곽선 대신 판의 대비로 읽힌다. */
@@ -15,6 +15,7 @@ const TAG_STYLES = {
   B: { fill: 0xa8dcc3, edge: 0x4c9277 },
   A: { fill: 0xbccbf3, edge: 0x7287bd },
   S: { fill: 0xffd680, edge: 0xb98535 },
+  SS: { fill: 0xb8fff6, edge: 0x875ac9 },
   boss: { fill: 0xffbda5, edge: 0xb97659 },
 } as const
 

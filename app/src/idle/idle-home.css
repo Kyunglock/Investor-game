@@ -2499,3 +2499,13 @@
   opacity: 0.45;
   transform: scale(0.94);
 }
+
+.idle-cat-grade.is-SS {
+  background: linear-gradient(110deg, #282650, #4a3379);
+  color: #d9fff9;
+  border-color: #93eadf;
+}
+.idle-cat-grid button[data-grade="SS"].owned {
+  border-color: #8d64c6;
+  box-shadow: inset 0 0 0 1px #a5f6ed;
+}

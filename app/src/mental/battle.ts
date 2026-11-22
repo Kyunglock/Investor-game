@@ -1369,7 +1369,7 @@ class BattleScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDepth(7)
         .setVisible(false),
-      skillMarks: [0, 1].map(() =>
+      skillMarks: [0, 1, 2].map(() =>
         this.add
           .image(body.x, body.y - 58, skillMarkKey('water'))
           .setDisplaySize(SKILL_MARK, SKILL_MARK)

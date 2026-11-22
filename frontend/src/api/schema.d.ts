@@ -607,7 +607,7 @@ export interface paths {
         put?: never;
         /**
          * 다이아 또는 광고로 고양이 한 마리를 뽑는다
-         * @description 무기 뽑기와 같은 값이다. 동료 고양이는 39종(사장냥 포함 총 40종)이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
+         * @description 무기 뽑기와 같은 값이다. 동료 고양이는 45종(사장냥 포함 총 46종)이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
          *     이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 나온 고양이는 idle.lastDraws에 차례대로 담긴다.
          *     ad가 참이면 무료이며 고양이 광고 뽑기는 세션별 하루 3회까지다(한국 자정 갱신). 광고가 아니면 다이아를 사용하고, 부족하면 400.
          */
@@ -828,7 +828,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 테스트판에서 동료 고양이 39종을 모두 그 레벨로 받고 빈 출전 칸을 채운다 (decisions.md 499번) */
+        /** 테스트판에서 동료 고양이 45종을 모두 그 레벨로 받고 빈 출전 칸을 채운다 (decisions.md 499번) */
         post: operations["grantSandboxCats"];
         delete?: never;
         options?: never;
@@ -1793,9 +1793,9 @@ export interface components {
                      * @description 그 고양이의 등급 (539번)
                      * @enum {string}
                      */
-                    grade: "C" | "B" | "A" | "S";
+                    grade: "C" | "B" | "A" | "S" | "SS";
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat" | "ruby" | "abyss" | "dune" | "veil" | "flora" | "aurora";
                     /** @description 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다 */
                     level: number;
                     /** @description 처음 얻은 고양이 */
@@ -1884,7 +1884,7 @@ export interface components {
                 /** @description 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다. 스킬은 A등급부터 있다 (561번) */
                 cats: {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat" | "ruby" | "abyss" | "dune" | "veil" | "flora" | "aurora";
                     name: string;
                     /** @description 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다 */
                     level: number;
@@ -1897,7 +1897,7 @@ export interface components {
                     fielded: boolean;
                     /** @description 선 출전 칸의 번호(0부터 */
                     slot?: number | null;
-                    /** @description 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고(빈 배열) A등급은 하나, S등급은 둘이다. 출전해 있는 동안 발동한다 */
+                    /** @description 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고(빈 배열) A등급은 하나, S등급은 둘, SS등급은 셋이다. 출전해 있는 동안 발동한다 */
                     skills: {
                         /** @enum {string} */
                         code: "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb";
@@ -1908,10 +1908,10 @@ export interface components {
                     /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
                     skillNextLevel: number;
                     /**
-                     * @description 등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.4배 · A 2배 · S 3배) 뽑기에서 드물다
+                     * @description 등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.05배 · A 1.1배 · S 1.2배 · SS 1.4배) 뽑기에서 드물다
                      * @enum {string}
                      */
-                    grade: "C" | "B" | "A" | "S";
+                    grade: "C" | "B" | "A" | "S" | "SS";
                     /** @description 든 무기. 없으면 null(기본 권총을 쏜다) */
                     weapon: {
                         /** @enum {string} */
@@ -2989,7 +2989,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat" | "ruby" | "abyss" | "dune" | "veil" | "flora" | "aurora";
                 };
             };
         };
@@ -3019,7 +3019,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat" | "ruby" | "abyss" | "dune" | "veil" | "flora" | "aurora";
                     fielded: boolean;
                     /** @description 출전 중인 이 고양이를 한 번에 교체. 그 칸을 물려받는다 */
                     replaceCode?: string;
@@ -3054,7 +3054,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat" | "ruby" | "abyss" | "dune" | "veil" | "flora" | "aurora";
                     /** @enum {string} */
                     kind?: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                     /** @enum {string} */

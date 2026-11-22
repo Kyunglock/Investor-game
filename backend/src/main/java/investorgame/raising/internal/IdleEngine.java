@@ -283,16 +283,24 @@ class IdleEngine {
           "sand",
           "blush",
           "petrol",
-          "oat");
+          "oat",
+          "ruby",
+          "abyss",
+          "dune",
+          "veil",
+          "flora",
+          "aurora");
   private static final String[] CAT_NAMES = {
     "하늘냥", "민트냥", "라일락냥", "노을냥", "밤냥", "눈꽃냥", "카라멜냥", "모카냥", "복숭아냥", "은빛냥", "판다냥", "비스킷냥", "바다냥",
     "레몬냥", "코코아냥", "로즈냥", "호랑냥", "구름냥", "별빛냥", "샴냥", "짝귀냥", "단풍냥", "세이지냥", "살구냥", "자두냥", "조각냥",
-    "졸린냥", "산호냥", "트러플냥", "서리냥", "버터냥", "테라냥", "등꽃냥", "오드냥", "피스타냥", "모래냥", "볼터치냥", "청록냥", "오트냥"
+    "졸린냥", "산호냥", "트러플냥", "서리냥", "버터냥", "테라냥", "등꽃냥", "오드냥", "피스타냥", "모래냥", "볼터치냥", "청록냥", "오트냥",
+    "홍염냥", "심해냥", "사막별냥", "그림자냥", "봄꽃냥", "극광냥"
   };
   // 고양이 등급 (decisions.md 539번): 종마다 정해져 있다. C 16 · B 12 · A 7 · S 4종이고 S는 스킬마다 하나다.
-  static final List<String> CAT_GRADES = List.of("C", "B", "A", "S");
+  static final List<String> CAT_GRADES = List.of("C", "B", "A", "S", "SS");
   private static final java.util.Set<String> GRADE_S =
-      java.util.Set.of("star", "silver", "wisteria", "frost");
+      java.util.Set.of(
+          "star", "silver", "wisteria", "frost", "ruby", "abyss", "dune", "veil", "flora");
   private static final java.util.Set<String> GRADE_A =
       java.util.Set.of("tiger", "panda", "night", "snow", "rose", "ocean", "siam");
   private static final java.util.Set<String> GRADE_B =
@@ -301,13 +309,14 @@ class IdleEngine {
           "plum", "coral", "truffle");
   // A grade's share of the draws (percent) and its cats' gun damage (x the level's power). The
   // damage was {1, 1.4, 2, 3} before 644 and {1, 1.15, 1.35, 1.6} in 644.
-  private static final int[] GRADE_PERCENT = {60, 28, 10, 2};
-  private static final double[] GRADE_DAMAGE = {1, 1.05, 1.1, 1.2};
+  private static final int[] GRADE_PER_THOUSAND = {598, 280, 100, 20, 2};
+  private static final double[] GRADE_DAMAGE = {1, 1.05, 1.1, 1.2, 1.4};
   private static final int[] CAT_GRADE = CATS.stream().mapToInt(IdleEngine::gradeIndex).toArray();
   // Each grade's share is split evenly over its cats: percent x (all cats' common multiple) / n.
   private static final int[] CAT_WEIGHTS = catWeights();
 
   private static int gradeIndex(String code) {
+    if (code.equals("aurora")) return 4;
     return GRADE_S.contains(code) ? 3 : GRADE_A.contains(code) ? 2 : GRADE_B.contains(code) ? 1 : 0;
   }
 
@@ -318,7 +327,7 @@ class IdleEngine {
     for (int n : count) common *= n;
     int[] weights = new int[CAT_GRADE.length];
     for (int i = 0; i < weights.length; i++) {
-      weights[i] = GRADE_PERCENT[CAT_GRADE[i]] * (common / count[CAT_GRADE[i]]);
+      weights[i] = GRADE_PER_THOUSAND[CAT_GRADE[i]] * (common / count[CAT_GRADE[i]]);
     }
     return weights;
   }
@@ -331,15 +340,15 @@ class IdleEngine {
 
   private static final double[] CAT_FIRE = {
     1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1,
-    1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1
+    1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1, 1.25, 1.1, 1.4, 1.1, 1.25
   };
   private static final double[] CAT_DAMAGE = {
     1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.1, 1.1,
-    1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1
+    1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.1, 1.1, 1, 1, 1.25, 1, 1.25, 1, 1.1, 1, 1.1, 1.25
   };
   private static final double[] CAT_CRITICAL = {
     1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1,
-    1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5
+    1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1, 1.25, 1, 1, 1, 1.5, 1.25, 1, 1.25, 1, 1.5, 1.5
   };
   // Each cat's own skills, as indexes into CODES (501, 561). C and B grade cats have none, an A
   // grade cat has one and an S grade cat has two.
@@ -357,7 +366,13 @@ class IdleEngine {
           Map.entry("star", new int[] {11, 8}),
           Map.entry("silver", new int[] {2, 14}),
           Map.entry("wisteria", new int[] {7, 9}),
-          Map.entry("frost", new int[] {12, 6}));
+          Map.entry("frost", new int[] {12, 6}),
+          Map.entry("ruby", new int[] {6, 1}),
+          Map.entry("abyss", new int[] {0, 4}),
+          Map.entry("dune", new int[] {10, 5}),
+          Map.entry("veil", new int[] {9, 2}),
+          Map.entry("flora", new int[] {13, 7}),
+          Map.entry("aurora", new int[] {11, 8, 2}));
   private static final int[] NO_SKILLS = {};
   private static final int[][] CAT_SKILLS =
       CATS.stream().map(code -> SKILLED.getOrDefault(code, NO_SKILLS)).toArray(int[][]::new);
@@ -1306,7 +1321,7 @@ class IdleEngine {
 
   static final long MAX_JUMP_WALL = 100_000;
 
-  /** 테스트판 (499번): 동료 고양이 39종을 모두 그 레벨로 주고, 빈 출전 칸을 차례대로 채운다. */
+  /** 테스트판 (499번): 동료 고양이 45종을 모두 그 레벨로 주고, 빈 출전 칸을 차례대로 채운다. */
   void grantCats(CompanyState c, int level) {
     CompanyState.Idle s = state(c);
     for (String code : CATS) {

@@ -47,7 +47,7 @@ try {
     document.body.replaceChildren()
     document.body.style.cssText = 'margin:0;background:#fff3df'
     const frames = []
-    for (let page = 0; page < 4; page++) {
+    for (let page = 0; page < Math.ceil(cats.length / 10); page++) {
       const cv = document.createElement('canvas')
       cv.width = 1600
       cv.height = 1400
@@ -57,7 +57,7 @@ try {
       const c = cv.getContext('2d')
       c.fillStyle = '#fff3df'
       c.fillRect(0, 0, cv.width, cv.height)
-      for (let row = 0; row < 10; row++) {
+      for (let row = 0; row < Math.min(10, cats.length - page * 10); row++) {
         const index = page * 10 + row,
           cat = cats[index],
           source = await load(STAGE_ASSETS[cat.poses])
@@ -108,18 +108,18 @@ try {
     }
     return { count: cats.length, newCount: NEW_CATS.length, frames }
   })
-  assert.equal(result.count, 40)
-  assert.equal(result.newCount, 33)
-  assert.equal(result.frames.length, 297)
+  assert.equal(result.count, 46)
+  assert.equal(result.newCount, 39)
+  assert.equal(result.frames.length, result.newCount * 9)
   assert.ok(
     result.frames.every((f) => f.width > 20 && f.height > 20),
     'Every new combat cell contains a sprite',
   )
-  for (let i = 0; i < 4; i++)
+  for (let i = 0; i < Math.ceil(result.count / 10); i++)
     await page
       .locator(`#roster-${i}`)
       .screenshot({ path: resolve(output, `in-game-${i * 10 + 1}-${i * 10 + 10}.png`) })
-  console.log('PASS: 40 portraits, 360 composed aiming poses; all 297 new combat cells contain art')
+  console.log('PASS: 46 portraits, 414 composed aiming poses; all 351 new combat cells contain art')
 } finally {
   await browser.close()
 }
