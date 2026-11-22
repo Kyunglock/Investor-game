@@ -47,7 +47,9 @@ describe('상점 (541번)', () => {
     const cash = item({ priceMoney: 1000 })
     expect(shopBlock(company({ capital: 999 }), cash)).toBe('short')
     expect(shopBlock(company({ capital: 1000 }), cash)).toBeNull()
-    expect(shopBlock(company({ infinite: true }), cash)).toBeNull()
+    // 테스트판의 무한 다이아는 다이아 값만 채운다: 돈은 무한이 아니다 (650번).
+    expect(shopBlock(company({ infinite: true }), paid)).toBeNull()
+    expect(shopBlock(company({ infinite: true }), cash)).toBe('short')
   })
 
   it('무료 상품이 남아 있으면 상점 탭에 점을 단다', () => {

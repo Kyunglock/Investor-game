@@ -91,7 +91,7 @@ class SandboxApiTest {
   }
 
   @Test
-  void 테스트판은_본_게임과_따로이고_지갑이_떨어지지_않는다() throws Exception {
+  void 테스트판은_본_게임과_따로이고_다이아가_떨어지지_않는다() throws Exception {
     DocumentContext main = json(mvc.perform(post("/api/company").cookie(session)).andReturn());
     String mainId = main.read("$.companyId");
     long mainCapital = main.read("$.capital", Long.class);
@@ -104,11 +104,15 @@ class SandboxApiTest {
     DocumentContext trial = json(entered);
     String trialId = trial.read("$.companyId");
     long trialCapital = trial.read("$.capital", Long.class);
+    long trialDiamonds = trial.read("$.diamonds.amount", Long.class);
     assertThat(trialId).isNotEqualTo(mainId);
     assertThat(trial.read("$.sandbox", Boolean.class)).isTrue();
-    assertThat(trialCapital).isGreaterThan(mainCapital);
+    assertThat(trial.read("$.sandboxInfinite", Boolean.class)).isTrue();
+    // 650번: 돈은 무한이 아니다. 회사를 차릴 때의 돈에서 시작하고, 다이아만 채워진다.
+    assertThat(trialCapital).isEqualTo(mainCapital);
+    assertThat(trialDiamonds).isGreaterThan(main.read("$.diamonds.amount", Long.class));
 
-    // 테스트판 쿠키가 있는 동안 회사 요청은 테스트판 회사로 간다. 뽑고 강화해도 다음 요청에 다시 채워진다.
+    // 테스트판 쿠키가 있는 동안 회사 요청은 테스트판 회사로 간다. 뽑아도 다이아는 다음 요청에 다시 채워진다.
     Cookie in = new Cookie(sandbox.getName(), sandbox.getValue());
     for (int i = 0; i < 3; i++) {
       mvc.perform(post("/api/company/cat/draw").cookie(session, in)).andExpect(status().isOk());
@@ -119,15 +123,17 @@ class SandboxApiTest {
                     post("/api/company/battle-upgrade")
                         .cookie(session, in)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"kind\":\"damage\",\"levels\":50}"))
+                        .content("{\"kind\":\"damage\",\"levels\":1}"))
                 .andExpect(status().isOk())
                 .andReturn());
     assertThat(upgraded.read("$.companyId", String.class)).isEqualTo(trialId);
     DocumentContext again = json(mvc.perform(enter("cat-test").cookie(session, in)).andReturn());
     assertThat(again.read("$.companyId", String.class)).isEqualTo(trialId);
-    assertThat(again.read("$.capital", Long.class)).isEqualTo(trialCapital);
+    assertThat(again.read("$.diamonds.amount", Long.class)).isEqualTo(trialDiamonds);
+    // 강화에 쓴 돈은 다시 채워지지 않는다 (650번): 첫 단계 100만.
+    assertThat(again.read("$.capital", Long.class)).isEqualTo(trialCapital - 1_000_000L);
     assertThat(again.read("$.battleUpgrades[?(@.kind=='damage')].level").toString())
-        .isEqualTo("[50]"); // 648번: 단계마다 5%, 50단계는 약 2억
+        .isEqualTo("[1]");
 
     // 쿠키 없이는 본 게임 그대로다.
     DocumentContext untouched = json(mvc.perform(get("/api/company").cookie(session)).andReturn());
@@ -201,7 +207,7 @@ class SandboxApiTest {
     assertThat(armed.read("$.weapons[?(@.equipped == true)].count").toString()).isEqualTo("[6]");
     mvc.perform(tool("weapon", "{\"grade\":\"ZZ\"}", in)).andExpect(status().isBadRequest());
 
-    // 무한 지갑을 끄면 처음 돈과 뽑기권 0에서 시작해 다시 채워지지 않고, 켜면 다시 채워진다.
+    // 무한 다이아를 끄면 다이아 0에서 시작해 다시 채워지지 않고, 켜면 다시 채워진다. 돈은 어느 쪽이든 그대로다 (650번).
     DocumentContext finite =
         json(
             mvc.perform(tool("wallet", "{\"infinite\":false}", in))
@@ -223,7 +229,8 @@ class SandboxApiTest {
                 .andExpect(status().isOk())
                 .andReturn());
     assertThat(refilled.read("$.sandboxInfinite", Boolean.class)).isTrue();
-    assertThat(refilled.read("$.capital", Long.class)).isGreaterThan(pocket);
+    assertThat(refilled.read("$.diamonds.amount", Long.class)).isPositive();
+    assertThat(refilled.read("$.capital", Long.class)).isEqualTo(pocket);
 
     // 본 게임의 회사는 그대로다.
     DocumentContext main = json(mvc.perform(get("/api/company").cookie(session)).andReturn());

@@ -18,11 +18,10 @@ export function minutesText(minutes: number): string {
   return rest === 0 ? `${minutes / 60}시간` : `${Math.floor(minutes / 60)}시간 ${rest}분`
 }
 
-/** 살 수 없는 까닭: 오늘 다 샀다(sold), 다이아나 돈이 모자라다(short). 살 수 있으면 null. 테스트판의 무한 지갑은 모자라지 않다. */
+/** 살 수 없는 까닭: 오늘 다 샀다(sold), 다이아나 돈이 모자라다(short). 살 수 있으면 null. 테스트판의 무한 다이아는 모자라지 않다(돈은 모자랄 수 있다, 650번). */
 export function shopBlock(company: Company, item: ShopItem): 'sold' | 'short' | null {
   if (item.left < 1) return 'sold'
-  if (company.sandboxInfinite) return null
-  if (company.diamonds.amount < item.priceDiamonds) return 'short'
+  if (!company.sandboxInfinite && company.diamonds.amount < item.priceDiamonds) return 'short'
   if ((item.priceMoney ?? 0) > company.capital) return 'short'
   return null
 }
