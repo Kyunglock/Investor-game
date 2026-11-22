@@ -9,6 +9,7 @@ export const MATE_LOOKS = [
   { color: '#5b6388', name: '밤냥', poses: 'nightPoses' },
   { color: '#bfe6ff', name: '눈꽃냥', poses: 'snowPoses' },
   ...NEW_CATS.map((cat) => ({
+    code: cat.code,
     color: cat.color,
     name: cat.name,
     poses: `roster${cat.atlas}`,
