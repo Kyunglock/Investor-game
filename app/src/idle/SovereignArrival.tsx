@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalBack } from '../app/useModalBack'
 import { sfx } from '../fx/sound'
-import leap from './assets/aurora-leap.webp'
+import face from './assets/aurora-face.webp'
 import './sovereign-arrival.css'
 
 export function SovereignArrival({ onFinish }: { onFinish: () => void }) {
@@ -38,8 +38,8 @@ export function SovereignArrival({ onFinish }: { onFinish: () => void }) {
       <div className="sovereign-sky">
         <div className="sovereign-lake" aria-hidden="true" />
         <div className="sovereign-comet" aria-hidden="true" />
-        <div className="sovereign-flight">
-          <img src={leap} alt="오로라 위로 뛰어올라 오른쪽 앞발로 별빛을 건드리는 극광냥" />
+        <div className="sovereign-face">
+          <img src={face} alt="오른쪽을 바라보는 극광냥의 얼굴과 이마에서 빛나는 금별" />
           <div className="sovereign-impact" aria-hidden="true">
             <i />
           </div>

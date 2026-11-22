@@ -32,14 +32,14 @@
     url("./assets/aurora-lake.webp") center / cover;
   animation: sovereign-dawn 5s both;
 }
-.sovereign-flight {
+.sovereign-face {
   position: relative;
   width: min(92%, 66dvh);
   aspect-ratio: 1;
   margin-bottom: 8dvh;
-  animation: sovereign-leap 5s both;
+  animation: sovereign-approach 5s both;
 }
-.sovereign-flight img {
+.sovereign-face img {
   display: block;
   width: 100%;
   animation: sovereign-illuminate 5s both;
@@ -57,8 +57,8 @@
 }
 .sovereign-impact {
   position: absolute;
-  left: 94%;
-  top: 34%;
+  left: 69%;
+  top: 32%;
   width: 1px;
   height: 1px;
   display: grid;
@@ -143,18 +143,18 @@
     transform: translate(50%, -85px) rotate(-28deg) scaleX(1);
   }
 }
-@keyframes sovereign-leap {
+@keyframes sovereign-approach {
   0%,
   12% {
     opacity: 0;
-    transform: translate(-62%, 24%) scale(0.5) rotate(10deg);
+    transform: translate(-8%, 5%) scale(0.78) rotate(-4deg);
   }
   28% {
     opacity: 0.9;
   }
   42% {
     opacity: 1;
-    transform: translate(-5%, 4%) scale(0.91) rotate(-3deg);
+    transform: translate(-1%, 1%) scale(0.95) rotate(-1deg);
   }
   50% {
     transform: translate(0, 0) scale(1.02);
