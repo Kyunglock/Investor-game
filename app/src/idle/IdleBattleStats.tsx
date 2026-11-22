@@ -46,8 +46,8 @@ function fieldedCats(company: Company): StatsCat[] {
 }
 
 /**
- * 전투 통계 (decisions.md 645번): 오른쪽 스킬 줄 위의 통계 단추와 10분 창의 통계 시트. 서버에 실려 갈 명중(idle-hit-counted)을 쏜 곳마다 모으고,
- * 서버가 넘어간 벽을 센다.
+ * 전투 통계 (decisions.md 645번): 오른쪽 스킬 줄 위의 통계 단추와 10분 창의 통계 시트. 서버에 실려 갈 명중(idle-hit-counted)과
+ * 매도벽이 아닌 것을 맞힌 피해(idle-stats-hit, 647번)를 쏜 곳마다 모으고, 서버가 넘어간 벽을 센다.
  */
 export function IdleBattleStats({ company }: { company: Company }) {
   const [open, setOpen] = useState(false)
@@ -60,6 +60,7 @@ export function IdleBattleStats({ company }: { company: Company }) {
         damage?: number
         owner?: string | null
         crit?: boolean
+        order?: boolean
       }
       if (!detail?.kind || detail.damage === undefined) return
       stats = record(stats, Date.now(), {
@@ -67,12 +68,16 @@ export function IdleBattleStats({ company }: { company: Company }) {
         damage: detail.damage,
         owner: detail.owner ?? null,
         crit: Boolean(detail.crit),
+        order: Boolean(detail.order),
       })
     }
     window.addEventListener('idle-hit-counted', hit)
+    // 647번: 매도 물량·큰손·몬스터를 맞힌 피해. 서버에는 가지 않는다.
+    window.addEventListener('idle-stats-hit', hit)
     const timer = window.setInterval(save, 5000)
     return () => {
       window.removeEventListener('idle-hit-counted', hit)
+      window.removeEventListener('idle-stats-hit', hit)
       window.clearInterval(timer)
       save()
     }
@@ -134,6 +139,14 @@ function StatsSheet({ company, onClose }: { company: Company; onClose: () => voi
           <dd data-testid="stats-dps">{sharesText(s.perSecond)}</dd>
         </div>
         <div>
+          <dt>매도벽 피해</dt>
+          <dd data-testid="stats-wall">{sharesText(s.wall)}</dd>
+        </div>
+        <div>
+          <dt>물량 피해</dt>
+          <dd data-testid="stats-orders">{sharesText(s.orders)}</dd>
+        </div>
+        <div>
           <dt>깬 매도벽</dt>
           <dd data-testid="stats-walls">{s.walls.toLocaleString()}개</dd>
         </div>
@@ -170,14 +183,17 @@ function StatsSheet({ company, onClose }: { company: Company; onClose: () => voi
               <div className="idle-stats-bar" aria-hidden="true">
                 <i style={{ width: `${top > 0 ? (row.damage / top) * 100 : 0}%` }} />
               </div>
-              {row.skill > 0 && (
-                <small className="idle-stats-skill">스킬 {sharesText(row.skill)}</small>
+              {row.damage > 0 && (
+                <small className="idle-stats-skill">
+                  매도벽 {sharesText(row.wall)} · 물량 {sharesText(row.damage - row.wall)}
+                  {row.skill > 0 && ` · 스킬 ${sharesText(row.skill)}`}
+                </small>
               )}
             </li>
           ))}
         </ol>
       )}
-      <p className="idle-stats-note">화면을 켜 둔 동안 서버에 보낸 명중만 세요.</p>
+      <p className="idle-stats-note">화면을 켜 둔 동안 매도벽과 매도 물량에 넣은 피해를 세요.</p>
     </Sheet>
   )
 }

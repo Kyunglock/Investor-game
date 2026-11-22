@@ -415,6 +415,9 @@ try {
     await expect(bossRow).toContainText('사장냥')
     await expect(bossRow).toContainText(/[\d,.]+[만억조]?주/)
     await expect(page.getByTestId('stats-total')).not.toHaveText('0주')
+    // 647번: 매도벽 피해와 물량 피해를 나눠 적는다. 물량은 실제 전장의 고양이들이 맞힌다.
+    await expect(page.getByTestId('stats-wall')).toContainText('주')
+    await expect(page.getByTestId('stats-orders')).not.toHaveText('0주')
     await expect(page.getByTestId('stats-crits')).toContainText(/[1-9][\d,]*번/)
     await expect(page.getByTestId('stats-best')).toContainText('주')
     const statsBox = await page.getByTestId('stats').boundingBox()

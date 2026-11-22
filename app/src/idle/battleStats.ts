@@ -3,6 +3,7 @@ import { sharesOf } from '../mental/shares'
 /**
  * 전투 통계 (decisions.md 645번): 화면이 서버에 보낸 명중을 쏜 곳마다 모아 10분 창으로 보인다. 창은 시계에 맞춘 10분(14:00~14:10)이고
  * 경계를 넘으면 처음부터 센다. 전투의 피해(1이 벽 체력 1)를 그대로 더하고, 보일 때 벽처럼 주로 바꾼다.
+ * 647번: 매도벽이 아닌 것(길 위의 매도 물량·큰손·몬스터)을 맞힌 피해도 따로 센다. 고양이들은 물량을 맡아 벽에 쏠 일이 적다.
  */
 export const STATS_WINDOW_MS = 10 * 60_000
 
@@ -18,6 +19,8 @@ export interface StatsHit {
   /** 총알을 쏜 고양이: 'boss'는 사장냥, 그 밖은 고양이 코드. 스킬·매수 주문과 모르는 총알은 null. */
   owner: string | null
   crit: boolean
+  /** 매도벽이 아닌 것(물량·큰손·몬스터)을 맞혔다 (647번). 없으면 매도벽이다. */
+  order?: boolean
 }
 
 export interface BattleStats {
@@ -25,6 +28,8 @@ export interface BattleStats {
   start: number
   /** 쏜 곳마다의 피해: 'gun:boss'·'gun:<고양이>'·'skill:<스킬>'·'buy'·'gun:?'. */
   damage: Record<string, number>
+  /** 매도벽이 아닌 것을 맞힌 피해 (647번): 열쇠는 damage와 같다. 넘친 피해(남은 체력보다 큰 몫)는 빼고 센다. */
+  orders: Record<string, number>
   /** 총알 명중 수와 그 가운데 치명타 수. 관통으로 뒤 벽을 맞힌 것도 한 번씩 센다. */
   shots: number
   crits: number
@@ -46,6 +51,7 @@ export function emptyStats(now: number): BattleStats {
   return {
     start: windowStart(now),
     damage: {},
+    orders: {},
     shots: 0,
     crits: 0,
     best: 0,
@@ -57,7 +63,8 @@ export function emptyStats(now: number): BattleStats {
 
 /** 지금의 창: 창이 바뀌었으면 새로 비운다. */
 export function current(stats: BattleStats | null, now: number): BattleStats {
-  return stats && stats.start === windowStart(now) ? stats : emptyStats(now)
+  // 647번 전에 기기에 남은 통계(orders가 없다)는 버린다.
+  return stats && stats.start === windowStart(now) && stats.orders ? stats : emptyStats(now)
 }
 
 function sourceOf(hit: StatsHit): string {
@@ -71,7 +78,8 @@ export function record(stats: BattleStats | null, now: number, hit: StatsHit): B
   const next = current(stats, now)
   if (!Number.isFinite(hit.damage) || hit.damage <= 0) return next
   const source = sourceOf(hit)
-  next.damage[source] = (next.damage[source] ?? 0) + hit.damage
+  const into = hit.order ? next.orders : next.damage
+  into[source] = (into[source] ?? 0) + hit.damage
   if (hit.kind === 'bullet') {
     next.shots++
     if (hit.crit) next.crits++
@@ -98,15 +106,19 @@ export interface StatsCat {
 export interface StatsRow {
   code: string
   name: string
-  /** 총 피해와 그 가운데 스킬 피해. */
+  /** 총 피해와 그 가운데 매도벽에 넣은 피해, 스킬 피해. */
   damage: number
+  wall: number
   skill: number
   /** 이 창의 모든 피해에서 차지하는 몫(0~1). */
   share: number
 }
 
 export interface StatsSummary {
+  /** 모든 피해와 그 가운데 매도벽·물량에 넣은 피해 (647번). */
   total: number
+  wall: number
+  orders: number
   /** 출전 고양이(사장냥 포함)의 피해 순위: 많이 넣은 차례. */
   rows: StatsRow[]
   /** 매수 주문과 스킬이 모든 피해에서 차지하는 몫(0~1). */
@@ -129,20 +141,27 @@ export function summarize(
   cats: readonly StatsCat[],
 ): StatsSummary {
   const s = current(stats, now)
-  const total = Object.values(s.damage).reduce((sum, n) => sum + n, 0)
-  const of = (key: string) => s.damage[key] ?? 0
-  const skillTotal = Object.entries(s.damage)
-    .filter(([key]) => key.startsWith('skill:'))
-    .reduce((sum, [, n]) => sum + n, 0)
+  const sum = (map: Record<string, number>) => Object.values(map).reduce((a, n) => a + n, 0)
+  const wallTotal = sum(s.damage)
+  const orderTotal = sum(s.orders)
+  const total = wallTotal + orderTotal
+  const wallOf = (key: string) => s.damage[key] ?? 0
+  const of = (key: string) => wallOf(key) + (s.orders[key] ?? 0)
+  const skillTotal = [...Object.keys(s.damage), ...Object.keys(s.orders)]
+    .filter((key, i, keys) => key.startsWith('skill:') && keys.indexOf(key) === i)
+    .reduce((n, key) => n + of(key), 0)
   const team: StatsCat[] = [{ code: 'boss', name: '사장냥', skills: [] }, ...cats]
   const rows = team
     .map((cat) => {
-      const skill = cat.skills.reduce((sum, k) => sum + of(`skill:${k.code}`), 0)
+      const skill = cat.skills.reduce((n, k) => n + of(`skill:${k.code}`), 0)
       const damage = of(`gun:${cat.code}`) + skill
+      const wall =
+        wallOf(`gun:${cat.code}`) + cat.skills.reduce((n, k) => n + wallOf(`skill:${k.code}`), 0)
       return {
         code: cat.code,
         name: cat.name,
         damage,
+        wall,
         skill,
         share: total > 0 ? damage / total : 0,
       }
@@ -150,6 +169,8 @@ export function summarize(
     .sort((a, b) => b.damage - a.damage)
   return {
     total,
+    wall: wallTotal,
+    orders: orderTotal,
     rows,
     buyShare: total > 0 ? of('buy') / total : 0,
     skillShare: total > 0 ? skillTotal / total : 0,
