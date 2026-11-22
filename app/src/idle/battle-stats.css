@@ -29,7 +29,7 @@
   position: absolute;
   inset: -3px;
 }
-/* 전투 통계 (645번): 10분 창의 요약 칸 여섯과 출전 고양이의 기여 순위. */
+/* 전투 통계 (645·647번): 10분 창의 요약 칸 여덟과 출전 고양이의 기여 순위. */
 .idle-stats-sheet > section {
   min-height: 0;
   max-height: 88dvh;
