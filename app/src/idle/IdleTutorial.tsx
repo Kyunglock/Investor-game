@@ -98,9 +98,10 @@ export function IdleTutorial({
       : step === -1
         ? '함께 시작하기'
         : step === 0
-          ? ready
+          ? // 652번: 돌파하기 전에는 누를 수 없는 "첫 매도벽 돌파를 기다려요" 단추를 두지 않는다.
+            ready
             ? '첫 돌파 확인했어요'
-            : '첫 매도벽 돌파를 기다려요'
+            : null
           : step === 7
             ? '안내 마치기'
             : skillGuide && menu === 'skills' && !skillUse
