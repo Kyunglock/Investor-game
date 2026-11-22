@@ -127,6 +127,16 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
               )
             }
           },
+          // 전투 통계 (647번): 매도벽이 아닌 것을 맞힌 피해. 서버로 가지 않고 통계에만 쌓인다.
+          onIdleStatsHit: (kind, damage, source) => {
+            if (!disposed && foreground && nativeActive && latest.current.connected) {
+              window.dispatchEvent(
+                new CustomEvent('idle-stats-hit', {
+                  detail: { kind, damage, owner: source.owner, crit: source.crit, order: true },
+                }),
+              )
+            }
+          },
           // 몬스터 습격만 알린다 (decisions.md 500번). 그 밖의 전투 알림은 자동 전투에서 띄우지 않는다.
           onIdleRaid: (text, color) => setRaid((old) => ({ text, color, id: (old?.id ?? 0) + 1 })),
           // 매수벽이 무너져도 지금 벽에 그대로 머문다 (584번): 다시 설 때까지 공격이 멈출 뿐이다.

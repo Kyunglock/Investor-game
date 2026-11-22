@@ -290,6 +290,15 @@ export interface BattleOptions {
     /** 전투 통계 (645번): 쏜 고양이('boss'는 사장냥, 그 밖은 고양이 코드)와 치명타. 서버에는 보내지 않는다. */
     source?: { owner: string | null; crit: boolean },
   ) => void
+  /**
+   * 전투 통계 (647번): 자동 전투에서 매도벽이 아닌 것(길 위의 매도 물량·큰손·몬스터)을 맞힌 피해. 남은 체력을 넘친 몫은 뺀다.
+   * 통계에만 쓰고 서버에는 보내지 않는다.
+   */
+  onIdleStatsHit?: (
+    kind: IdleAttackKind,
+    damage: number,
+    source: { owner: string | null; crit: boolean },
+  ) => void
   /** 자동 전투의 몬스터 습격 알림 (500번). */
   onIdleRaid?: (text: string, color: string) => void
   /** 자동 전투에서 고양이를 눌렀다: 그 고양이의 정보를 띄운다. code는 고양이의 코드, 사장냥은 'boss'. */
@@ -3283,7 +3292,12 @@ class BattleScene extends Phaser.Scene {
     } else if (vault?.score && (e.cell || e.boss)) {
       // 피해량을 겨루는 보스전: 수호냥과 금고벽은 쓰러지지 않고 맞은 만큼 점수가 된다.
       this.vaultDamage += dmg
-    } else e.hp -= dmg
+    } else {
+      if (this.opts.idle && !this.idleTransition) {
+        this.reportStatsHit(kind, Math.min(dmg, Math.max(0, e.hp)))
+      }
+      e.hp -= dmg
+    }
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
     if (e.cell) e.clearTint()
     else e.setTintFill(0xffffff)
@@ -4789,7 +4803,27 @@ class BattleScene extends Phaser.Scene {
   /** 범위 피해 (decisions.md 362번): 맞은 적을 뺀, 터진 자리 반지름 안의 적이 함께 맞는다. 바깥으로 밀어내는 각도로 맞는다. */
   private reportIdleHit(wall: number, kind: DamageKind, damage: number, depth: number) {
     if (!Number.isFinite(damage) || damage <= 0) return
-    const code: IdleAttackKind =
+    const code = this.idleCode(kind)
+    // 전투 통계 (645번): 총알만 쏜 고양이가 있다. 스킬과 매수 주문은 종류(code)로 가린다.
+    this.opts.onIdleHit?.(wall, code, damage, depth, this.hitSource(code))
+  }
+
+  /** 전투 통계 (647번): 매도벽이 아닌 것을 맞힌 피해. 서버에는 가지 않는다. */
+  private reportStatsHit(kind: DamageKind, damage: number) {
+    if (!Number.isFinite(damage) || damage <= 0) return
+    const code = this.idleCode(kind)
+    this.opts.onIdleStatsHit?.(code, damage, this.hitSource(code))
+  }
+
+  /** 총알이면 쏜 고양이와 치명타, 아니면 없다 (645번). */
+  private hitSource(code: IdleAttackKind) {
+    const bullet = code === 'bullet'
+    return { owner: bullet ? this.hitOwner : null, crit: bullet && this.hitCrit }
+  }
+
+  /** 피해의 종류를 서버가 아는 공격 종류로 바꾼다. */
+  private idleCode(kind: DamageKind): IdleAttackKind {
+    return (
       this.reportAs ??
       (kind === 'water' ||
       kind === 'meteor' ||
@@ -4802,12 +4836,7 @@ class BattleScene extends Phaser.Scene {
           : kind === 'earth' || kind === 'siege'
             ? 'ram'
             : 'bullet')
-    // 전투 통계 (645번): 총알만 쏜 고양이가 있다. 스킬과 매수 주문은 종류(code)로 가린다.
-    const bullet = code === 'bullet'
-    this.opts.onIdleHit?.(wall, code, damage, depth, {
-      owner: bullet ? this.hitOwner : null,
-      crit: bullet && this.hitCrit,
-    })
+    )
   }
 
   /**
