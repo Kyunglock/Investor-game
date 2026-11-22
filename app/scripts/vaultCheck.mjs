@@ -310,6 +310,9 @@ try {
     await page.getByRole('button', { name: '주간 던전' }).click()
     await expect(page.getByRole('button', { name: /층 입장/ })).toHaveCount(0)
     await expect(page.getByTestId('vault-offers').getByRole('button')).toHaveCount(3)
+    // 1층은 꼭 깨야 다음을 본다: CI의 느린 화면에서는 전장이 느려 시간 안에 못 깨는 판이 있었다(결과 요청이 오지 않아 실패). 금고
+    // 훈련을 넉넉히 줘 전투 결과에 기대지 않게 한다. 카드를 고르면 받는 회사 상태에 실린다.
+    company.vault.trainingPercent = 400
     await page.getByRole('button', { name: /금리 인하/ }).click()
     await expect(page.getByTestId('vault-picked')).toContainText('공격력 +25%')
     await expect
