@@ -435,6 +435,14 @@ export function IdleHome({
                 }
                 setWearer(code)
               }}
+              onSkills={
+                tutorialMenuLocked(company, 'skills')
+                  ? undefined
+                  : () => {
+                      setWearer(wearer)
+                      navigate('skills')
+                    }
+              }
               tab={tab}
               onTab={(nextTab) => {
                 if (weaponsAsked) {
@@ -445,7 +453,7 @@ export function IdleHome({
               }}
             />
           )}
-          {menu === 'skills' && <IdleSkills company={company} />}
+          {menu === 'skills' && <IdleSkills company={company} picked={wearer} onPick={setWearer} />}
           {menu === 'shop' && (
             <IdleShop
               key={shopKind}

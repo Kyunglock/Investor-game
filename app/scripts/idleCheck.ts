@@ -556,15 +556,28 @@ try {
     await pickCat('sky')
     const detail = page.getByTestId('cat-detail')
     await expect(detail).toHaveAttribute('data-code', 'sky')
-    await detail.locator('summary').click()
+    await detail.getByRole('button', { name: '하늘냥 스킬 보기' }).click()
+    const skills = page.getByTestId('skills')
     // The cat's own skill starts at level 1 and says when it levels up (decisions.md 515).
     // Picking a cat explains its skill (decisions.md 530): what it does, how it grows, the next level.
-    await expect(detail.getByTestId('cat-skill')).toContainText('고유 스킬 메테오 스킬 Lv.1')
-    await expect(detail.getByTestId('cat-skill')).toContainText('운석 → 대운석 → 유성우')
+    await expect(skills.getByTestId('cat-skill')).toContainText('고유 스킬 메테오 스킬 Lv.1')
+    await expect(skills.getByTestId('cat-skill')).toContainText('운석 → 대운석 → 유성우')
     // The skill wears its badge (decisions.md 531): large here, small on the slot and the grid cell.
-    const badge = detail.getByTestId('cat-skill').getByTestId('skill-badge').first()
+    const badge = skills.getByTestId('cat-skill').getByTestId('skill-badge').first()
     await expect(badge).toHaveAttribute('data-skill', 'meteor')
     await expect(badge).toHaveAttribute('data-level', '1')
+    // The glint twinkles gently, and stays still when motion is reduced.
+    assert.equal(
+      await badge
+        .locator('.skill-badge-glints path')
+        .first()
+        .evaluate((el) => getComputedStyle(el).animationName),
+      width === 390 ? 'skill-badge-glint' : 'none',
+    )
+    await expect(skills.getByTestId('cat-skill-next')).toHaveText(
+      '고양이 Lv.10에 스킬 Lv.2 · 앞으로 9레벨',
+    )
+    await toCats()
     await expect(
       page.locator('[data-testid=cat-slot][data-code=sky]').getByTestId('skill-badge'),
     ).toHaveAttribute('data-skill', 'meteor')
@@ -580,17 +593,6 @@ try {
     await expect(twin).toHaveCount(2)
     await expect(twin.first()).toHaveAttribute('data-skill', 'ice')
     await expect(twin.last()).toHaveAttribute('data-skill', 'wind')
-    // The glint twinkles gently, and stays still when motion is reduced.
-    assert.equal(
-      await badge
-        .locator('.skill-badge-glints path')
-        .first()
-        .evaluate((el) => getComputedStyle(el).animationName),
-      width === 390 ? 'skill-badge-glint' : 'none',
-    )
-    await expect(detail.getByTestId('cat-skill-next')).toHaveText(
-      '고양이 Lv.10에 스킬 Lv.2 · 앞으로 9레벨',
-    )
     await expect(detail.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('[data-testid=cat-slot][data-code=sky]')).toBeVisible()
     const mates = () =>
