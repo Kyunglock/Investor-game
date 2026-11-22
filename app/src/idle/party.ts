@@ -4,7 +4,7 @@ import { fieldedInOrder } from './seats'
 import { bossScale, teamDps, type Vault, vaultLoadout } from './vaultBattle'
 
 /**
- * 파티 (decisions.md 653번): 금고 도전(보스전·주간 던전)에 데려갈 고양이를 돌파의 출전 칸과 따로 저장하고, 상대에 맞춰 추천 편성을 고른다.
+ * 파티 (decisions.md 654번): 금고 도전(보스전·주간 던전)에 데려갈 고양이를 돌파의 출전 칸과 따로 저장하고, 상대에 맞춰 추천 편성을 고른다.
  *
  * - 금고 전투는 화면이 판을 차리므로(641번) 파티는 이 기기에 저장한다. 회사마다, 보스전·던전마다 따로다. 저장한 적이 없으면 출전 칸의 고양이다.
  * - 추천은 팀 화력의 어림(teamDps)으로 고른다. 사장냥의 총은 누구를 데려가도 같고 고양이의 몫은 서로 더해지므로, 고양이마다 따로 잰 몫이 큰 차례로
@@ -99,7 +99,7 @@ export function bossMarks(cat: Pick<Cat, 'code' | 'skills'>, boss: Vault['boss']
 export const MARK_NAMES: Record<Mark, string> = { weak: '약점', resist: '내성', rival: '천적' }
 
 /**
- * 돌파의 출전 칸을 target으로 바꾸는 차례 (653번): 서버의 출전 요청을 하나씩 보낸다. 빈 칸이 있으면 세우고, 칸이 다 찼으면 target에 없는
+ * 돌파의 출전 칸을 target으로 바꾸는 차례 (654번): 서버의 출전 요청을 하나씩 보낸다. 빈 칸이 있으면 세우고, 칸이 다 찼으면 target에 없는
  * 고양이와 바꾼다. target에 없는 고양이가 남으면 마지막에 뺀다.
  */
 export type FieldStep = { code: string; fielded: boolean; replaceCode?: string }

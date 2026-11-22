@@ -34,18 +34,25 @@ function server(
 const bullet = (wall: number, damage: number, depth = 0) => ({ wall, depth, damage })
 
 describe('idleMaxHp', () => {
-  it('is IdleEngine.maxHp: 10 + 2d + 0.00000000009065d⁴, three times that on every 50th wall', () => {
-    // Values from the Java formula (HP_BASE 10, HP_LINEAR 2, HP_QUARTIC 9.065e-11, BOSS_HP 3,
-    // decisions.md 646).
+  it('is IdleEngine.maxHp: (10 + 2d + 1.010571e-10·d⁴) × (1 + 4d ÷ (d + 625)), three times that on every 50th wall', () => {
+    // Values from the Java formula (HP_BASE 10, HP_LINEAR 2, HP_QUARTIC 1.010571e-10,
+    // HP_UPGRADE_DEPTH 625, BOSS_HP 3, decisions.md 653).
+    const java = (wall: number) => {
+      const d = wall - 1
+      return (
+        (10 + 2 * d + 1.010571e-10 * d ** 4) * (1 + (4 * d) / (d + 625)) * (wall % 50 === 0 ? 3 : 1)
+      )
+    }
     expect(idleMaxHp(1)).toBe(10)
-    expect(idleMaxHp(2)).toBeCloseTo(12.00000000009065, 9)
-    expect(idleMaxHp(11)).toBeCloseTo(30.0000009065, 9)
-    expect(idleMaxHp(50)).toBeCloseTo(324.00156773763194, 6)
-    expect(idleMaxHp(201)).toBeCloseTo(410.14504, 6)
-    expect(Math.round(idleMaxHp(101))).toBe(210)
-    expect(Math.round(idleMaxHp(1001))).toBe(2101)
-    // 5,001번째 벽은 화면에 1,000만주(체력 66,666 × 150주)다. 644번에는 5억주였다.
-    expect(Math.round(idleMaxHp(5001))).toBe(66666)
+    for (const wall of [2, 11, 50, 101, 201, 1001, 5001]) {
+      expect(idleMaxHp(wall)).toBeCloseTo(java(wall), 6)
+    }
+    expect(idleMaxHp(2)).toBeCloseTo(12.0766773, 6)
+    expect(Math.round(idleMaxHp(101))).toBe(326)
+    expect(Math.round(idleMaxHp(1001))).toBe(7308)
+    // 5,001번째 벽은 화면에 1,000만주(체력 333,333 × 30주)다. 646번에는 66,666 × 150주였다.
+    expect(Math.round(idleMaxHp(5001) * 30)).toBeGreaterThan(9_999_900)
+    expect(Math.round(idleMaxHp(5001) * 30)).toBeLessThanOrEqual(10_000_000)
   })
 })
 

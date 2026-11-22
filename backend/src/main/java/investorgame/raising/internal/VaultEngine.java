@@ -235,7 +235,7 @@ class VaultEngine {
     reportBoss(c, damage, null);
   }
 
-  /** 저장한 파티로 싸운 보스전 (653번): 상한을 그 파티(null이면 지금 출전한 팀)로 잰다. */
+  /** 저장한 파티로 싸운 보스전 (654번): 상한을 그 파티(null이면 지금 출전한 팀)로 잰다. */
   void reportBoss(CompanyState c, double damage, List<String> party) {
     if (!Double.isFinite(damage) || damage < 0) {
       throw new InvalidRequestException("피해량이 올바르지 않아요");

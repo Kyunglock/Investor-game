@@ -281,7 +281,7 @@
   opacity: 0.45;
 }
 
-/* 파티 (653번): 금고 도전에 데려갈 고양이. */
+/* 파티 (654번): 금고 도전에 데려갈 고양이. */
 .vault-party {
   display: grid;
   gap: 8px;
@@ -421,7 +421,7 @@
   color: #5b3f8a;
 }
 
-/* 클리어 화면 (653번). */
+/* 클리어 화면 (654번). */
 .vault-result[open] {
   position: fixed;
   inset: 0;

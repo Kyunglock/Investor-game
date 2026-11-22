@@ -107,7 +107,7 @@ class VaultEngineTest {
 
   @Test
   void 저장한_파티로_싸운_보스전은_그_파티가_낼_수_있는_상한까지_받는다() {
-    // 653번: 출전 칸과 따로 저장한 파티로 싸우면 상한을 그 파티로 잰다. 출전 칸은 바뀌지 않는다.
+    // 654번: 출전 칸과 따로 저장한 파티로 싸우면 상한을 그 파티로 잰다. 출전 칸은 바뀌지 않는다.
     CompanyState c = opened();
     double field = idle.fieldDps(c);
     List<String> fielded = List.copyOf(c.idle.fielded);

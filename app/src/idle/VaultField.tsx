@@ -34,7 +34,7 @@ export function VaultField({
   vault: Vault
   boss: boolean
   floor: number
-  /** 데려간 파티 (653번). 없으면 출전 칸의 고양이. */
+  /** 데려간 파티 (654번). 없으면 출전 칸의 고양이. */
   party?: string[]
   onDone: (result: Outcome) => void
   onExit: () => void

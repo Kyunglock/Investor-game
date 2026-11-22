@@ -18,7 +18,7 @@ import { scoreText, VAULT_SIM, type Vault } from './vaultBattle'
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
 /**
- * 금고 도전의 파티 칸 (decisions.md 653번): 입장하기 전에 데려갈 고양이를 고르고 저장한다. 보스전에서는 고양이마다 약점·내성·천적을 표시하고,
+ * 금고 도전의 파티 칸 (decisions.md 654번): 입장하기 전에 데려갈 고양이를 고르고 저장한다. 보스전에서는 고양이마다 약점·내성·천적을 표시하고,
  * 상대의 배율을 넣은 예상 피해량과 추천 편성을 보여 준다.
  */
 export function VaultParty({

@@ -81,12 +81,12 @@ class EconomySimTest {
     stuckSec = dbl("SIM_STUCK", 30);
     System.out.printf(
         "SIM shares wall 101 %.0f | 1001 %.0f | 2001 %.0f | 5001 %.0f | 5000boss %.0f | 10001 %.0f %n",
-        150 * IdleEngine.maxHp(101),
-        150 * IdleEngine.maxHp(1001),
-        150 * IdleEngine.maxHp(2001),
-        150 * IdleEngine.maxHp(5001),
-        150 * IdleEngine.maxHp(5000),
-        150 * IdleEngine.maxHp(10001));
+        IdleEngine.SHARES_PER_HP * IdleEngine.maxHp(101),
+        IdleEngine.SHARES_PER_HP * IdleEngine.maxHp(1001),
+        IdleEngine.SHARES_PER_HP * IdleEngine.maxHp(2001),
+        IdleEngine.SHARES_PER_HP * IdleEngine.maxHp(5001),
+        IdleEngine.SHARES_PER_HP * IdleEngine.maxHp(5000),
+        IdleEngine.SHARES_PER_HP * IdleEngine.maxHp(10001));
     int seeds = intProp("SIM_SEEDS", 1);
     for (int seed = 1; seed <= seeds; seed++) run(seed, seeds == 1);
   }

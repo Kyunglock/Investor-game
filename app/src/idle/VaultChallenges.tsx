@@ -45,12 +45,12 @@ export function VaultChallenges({
     vault: Vault
     party: string[]
   } | null>(null)
-  // 저장한 파티 (653번): 보스전·던전마다 따로. 저장한 적이 없으면 null이고, 그때는 출전 칸의 고양이를 데려간다.
+  // 저장한 파티 (654번): 보스전·던전마다 따로. 저장한 적이 없으면 null이고, 그때는 출전 칸의 고양이를 데려간다.
   const [saved, setSaved] = useState<Record<PartyMode, string[] | null>>(() => ({
     boss: readParty(company.companyId, 'boss'),
     dungeon: readParty(company.companyId, 'dungeon'),
   }))
-  // 클리어 화면 (653번): 던전 층을 깨거나 보스전을 마치면 받은 것을 크게 보여 준다.
+  // 클리어 화면 (654번): 던전 층을 깨거나 보스전을 마치면 받은 것을 크게 보여 준다.
   const [result, setResult] = useState<VaultClear | null>(null)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)

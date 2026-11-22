@@ -92,7 +92,7 @@ public interface CompanyService {
     return reportVaultBoss(sessionId, damage, null);
   }
 
-  /** 저장한 파티로 싸운 보스전 (653번): cats(null이면 지금 출전한 팀)가 낼 수 있는 상한까지 받아 준다. */
+  /** 저장한 파티로 싸운 보스전 (654번): cats(null이면 지금 출전한 팀)가 낼 수 있는 상한까지 받아 준다. */
   CompanyView reportVaultBoss(UUID sessionId, double damage, java.util.List<String> cats);
 
   /** 주간 던전의 floor층을 깼다 (641번): 차례가 아니거나 그 층의 카드를 고르지 않았으면 400. */

@@ -146,10 +146,10 @@ export function IdleHome({
   const halted = shown.circuitSeconds > 0
   // 보스 도전 (547번): 50번째 벽마다 저절로 나오고 서킷브레이커로 시작한다.
   const bossFight = idleBossChallenge(shown.wall)
-  // 최고 기록 (653번): 통과한 가장 높은 벽. 지금 선 벽이 그보다 높으면 기록을 갱신하는 중이다.
+  // 최고 기록 (654번): 통과한 가장 높은 벽. 지금 선 벽이 그보다 높으면 기록을 갱신하는 중이다.
   const best = idle?.bestWall ?? 0
   const recordRun = best > 0 && shown.wall > best
-  // 지정 자동 강화 (653번): 성장 탭에서 고른 능력치를 돈이 모이는 대로 산다.
+  // 지정 자동 강화 (654번): 성장 탭에서 고른 능력치를 돈이 모이는 대로 산다.
   useAutoUpgradeLoop(company, connected)
   // 자본은 1초마다 서버에서 새로 온다 (#803): 숫자가 그 사이를 굴러가며 계속 불어난다.
   const capital = useCountUp(company.capital)

@@ -427,10 +427,10 @@ class MentalEngineTest {
         .as("고양이 속도 강화는 뺐고(394번) 체력(410번)을 넣었다. 치명타 피해는 없앴다(556번)")
         .containsExactly("damage", "fire", "hp", "buy");
     assertThat(rule.stepPercent())
-        .as("공격력·연사·체력 모두 0.2% (648번). 치명타 피해는 없앴다 (556번)")
-        .containsEntry("damage", 0.2)
-        .containsEntry("fire", 0.2)
-        .containsEntry("hp", 0.2)
+        .as("공격력·연사·체력 모두 1% (653번, 648번에는 0.2%). 치명타 피해는 없앴다 (556번)")
+        .containsEntry("damage", 1.0)
+        .containsEntry("fire", 1.0)
+        .containsEntry("hp", 1.0)
         .doesNotContainKey("buy")
         .doesNotContainKey("crit");
     assertThat(rule.buyStepShares())
@@ -458,8 +458,8 @@ class MentalEngineTest {
         .isGreaterThan(1e90);
     CompanyView.BattleUpgrade damage = view(c, "damage");
     assertThat(damage.level()).isEqualTo(1);
-    assertThat(damage.bonusPercent()).as("한 단계 0.2% (648번)").isEqualTo(0.2);
-    assertThat(damage.nextBonusPercent()).isEqualTo(0.4);
+    assertThat(damage.bonusPercent()).as("한 단계 1% (653번)").isEqualTo(1.0);
+    assertThat(damage.nextBonusPercent()).isEqualTo(2.0);
     assertThat(damage.price().longValue()).isEqualTo((long) ENGINE.mental.upgradePrice(1));
     assertThat(damage.priceGrowthPercent()).isEqualTo(rule.priceGrowthPercent());
 
@@ -475,33 +475,31 @@ class MentalEngineTest {
     assertThat(ENGINE.mental.buyUpgrade(c, "hp", 30)).isEqualTo(30);
     assertThat(c.battleLevels.get("hp")).isEqualTo(80);
     assertThat(wallet - c.capital).as("묶어 사도 한 단계씩 산 값의 합").isEqualTo(expected);
-    assertThat(view(c, "hp").bonusPercent()).isEqualTo(16);
+    assertThat(view(c, "hp").bonusPercent()).isEqualTo(80);
     assertThat(view(c, "hp").maxLevel()).as("0이면 끝없이 산다").isZero();
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", 0))
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", rule.maxBatch() + 1))
         .isInstanceOf(InvalidRequestException.class);
 
-    // 연사는 100%(0.2% × 500단계, 648번)에서 멈춘다 (487번): 넘치게 보내도 상한까지만 사고, 닿은 뒤에는 400.
-    // 500단계 값의 합은 100만 × (1.05^500 − 1) ÷ 0.05 ≈ 7.8 × 10^17로 2^53을 넘어, 실수의 정밀도 안에서 견준다.
-    c.capital = 1e18;
-    for (int i = 0; i < 4; i++) assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).isEqualTo(100);
+    // 연사는 100%(1% × 100단계, 653번)에서 멈춘다 (487번): 넘치게 보내도 상한까지만 사고, 닿은 뒤에는 400.
+    c.capital = 4_000_000_000L;
     assertThat(ENGINE.mental.buyUpgrade(c, "fire", 80)).isEqualTo(80);
     double atThirty = c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).as("남은 20단계만 산다").isEqualTo(20);
     double twenty = 0;
-    for (int level = 480; level < 500; level++) {
+    for (int level = 80; level < 100; level++) {
       twenty += ENGINE.mental.upgradePrice(level);
     }
-    assertThat(atThirty - c.capital).isCloseTo(twenty, withinPercentage(1e-9));
+    assertThat(atThirty - c.capital).isCloseTo(twenty, withinPercentage(1e-6));
     assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);
     assertThat(view(c, "fire").nextBonusPercent()).isEqualTo(100);
-    assertThat(view(c, "fire").maxLevel()).isEqualTo(500);
+    assertThat(view(c, "fire").maxLevel()).isEqualTo(100);
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", 1))
         .isInstanceOf(InvalidRequestException.class);
     // 상한이 생기기 전에 넘겨 산 단계는 상한으로 읽는다.
-    c.battleLevels.put("fire", 1_250);
-    assertThat(view(c, "fire").level()).isEqualTo(500);
+    c.battleLevels.put("fire", 250);
+    assertThat(view(c, "fire").level()).isEqualTo(100);
     assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);
 
     // 치명타 피해 강화는 없앴다 (556번): 살 수 없고, 저장에 남은 단계는 쓴 돈을 돌려주고 지운다.
@@ -533,7 +531,7 @@ class MentalEngineTest {
     // 체력(최대 멘탈)도 같은 규칙으로 산다 (410번).
     CompanyState tough = company(7);
     assertThat(ENGINE.mental.buyUpgrade(tough, "hp", 3)).isEqualTo(3);
-    assertThat(view(tough, "hp").bonusPercent()).isEqualTo(0.6);
+    assertThat(view(tough, "hp").bonusPercent()).isEqualTo(3.0);
     assertThat(view(tough, "hp").price().longValue())
         .isEqualTo((long) ENGINE.mental.upgradePrice(3));
   }

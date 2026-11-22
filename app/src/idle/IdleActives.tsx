@@ -98,7 +98,7 @@ export function IdleActives({ company, connected }: { company: Company; connecte
       setPending(null)
     }
   }
-  // 스킬 자동 사용 (653번): 켜 두면 장착한 고유 스킬을 쓸 수 있게 되는 대로 쓴다. 광고 스킬은 저절로 쓰지 않는다. 이 기기에 기억한다.
+  // 스킬 자동 사용 (654번): 켜 두면 장착한 고유 스킬을 쓸 수 있게 되는 대로 쓴다. 광고 스킬은 저절로 쓰지 않는다. 이 기기에 기억한다.
   const [auto, setAuto] = useState(readAutoSkill)
   const tried = useRef(new Map<string, number>())
   const autoUse = useEffectEvent(() => {

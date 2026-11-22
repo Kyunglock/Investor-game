@@ -5,7 +5,7 @@ import { create } from 'zustand'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 
 /**
- * 지정 자동 강화 (decisions.md 653번): 성장 탭에서 고른 능력치를 돈이 모이는 대로 저절로 강화한다. 고른 것은 이 기기에 회사마다 저장한다.
+ * 지정 자동 강화 (decisions.md 654번): 성장 탭에서 고른 능력치를 돈이 모이는 대로 저절로 강화한다. 고른 것은 이 기기에 회사마다 저장한다.
  * 고른 것 가운데 지금 가장 싼 것부터 사서 고루 오른다.
  */
 export type UpgradeKind = NonNullable<Company['battleUpgrades']>[number]['kind']

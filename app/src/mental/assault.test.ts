@@ -126,10 +126,10 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     expect(wallCols(320)).toBe(ASSAULT_COLS - 1)
   })
 
-  it('칸의 물량은 체력에 비례하고 100주 단위, 맞을수록 깎이고 부서지면 0', () => {
-    expect(cellShares(8, 8)).toBe(1200)
-    expect(cellShares(8, 4)).toBe(600)
-    expect(cellShares(8, 0.01)).toBe(100)
+  it('칸의 물량은 체력에 비례하고 10주 단위, 맞을수록 깎이고 부서지면 0', () => {
+    expect(cellShares(8, 8)).toBe(240)
+    expect(cellShares(8, 4)).toBe(120)
+    expect(cellShares(8, 0.01)).toBe(10)
     expect(cellShares(8, 0)).toBe(0)
   })
 

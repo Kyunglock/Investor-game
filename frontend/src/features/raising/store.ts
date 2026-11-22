@@ -100,7 +100,7 @@ interface RaisingState {
    * 금고 도전 (decisions.md 641번): 보스전의 피해량을 알리고, 던전의 층을 깼다고 알리고, 다음 층의 카드를 고르고, 금괴로 금고 상점의 상품을
    * 산다. 받은 것은 company.vault.lastNote. 바뀐 회사(거절되거나 끊겼으면 null)를 돌려준다. 전투를 멈추지 않게 busy를 켜지 않는다.
    */
-  /** cats: 데려간 파티(653번). 없으면 지금 출전한 팀으로 상한을 잰다. */
+  /** cats: 데려간 파티(654번). 없으면 지금 출전한 팀으로 상한을 잰다. */
   reportVaultBoss: (damage: number, cats?: string[]) => Promise<Company | null>
   clearVaultFloor: (floor: number) => Promise<Company | null>
   pickVaultCard: (code: string) => Promise<Company | null>

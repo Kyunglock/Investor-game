@@ -304,7 +304,7 @@ try {
     await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(4)
     await expect(traits).toContainText('은빛냥 · 출전 중')
     await expect(page.getByTestId('vault-sheet')).toContainText('새 금고까지 3일 4시간')
-    // 파티 (653번): 저장한 적이 없으면 출전 칸의 고양이를 데려간다. 고양이마다 약점·내성·천적을 표시하고 예상 피해량을 적는다.
+    // 파티 (654번): 저장한 적이 없으면 출전 칸의 고양이를 데려간다. 고양이마다 약점·내성·천적을 표시하고 예상 피해량을 적는다.
     const party = page.getByTestId('vault-party-boss')
     await expect(party.locator('.vault-party-row li:not(.is-empty)')).toHaveCount(4)
     await expect(party.locator('.vault-mark.is-rival')).toHaveCount(2)
@@ -329,10 +329,10 @@ try {
     await fight(page)
     const boss = calls.find((call) => call.path.endsWith('/vault/boss'))
     assert.ok(boss.body.damage > 1000, `피해량 ${boss.body.damage}`)
-    // 데려간 파티를 함께 보내 서버가 그 파티로 상한을 잰다 (653번).
+    // 데려간 파티를 함께 보내 서버가 그 파티로 상한을 잰다 (654번).
     assert.deepEqual([...boss.body.cats].sort(), ['mocha', 'night', 'silver', 'sky'])
     await expect(page.getByTestId('vault-note')).toContainText('금괴 +')
-    // 결과 화면 (653번): 피해량과 받은 금괴를 보여 주고 확인을 누르면 닫힌다.
+    // 결과 화면 (654번): 피해량과 받은 금괴를 보여 주고 확인을 누르면 닫힌다.
     const result = page.getByTestId('vault-result')
     await expect(result).toBeVisible()
     await expect(result).toHaveAttribute('data-kind', 'boss')

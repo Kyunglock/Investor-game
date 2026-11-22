@@ -59,7 +59,7 @@ const boss = (over: Partial<Vault['boss']> = {}) =>
   }) as Vault['boss']
 const vault = (b = boss()) => ({ trainingPercent: 0, boss: b }) as unknown as Vault
 
-describe('파티 (653번)', () => {
+describe('파티 (654번)', () => {
   it('파티를 주면 출전 칸 대신 그 고양이들로 팀을 꾸린다', () => {
     const c = company([
       { code: 'sky', fielded: true },
@@ -152,7 +152,7 @@ describe('파티 (653번)', () => {
   })
 })
 
-describe('지정 자동 강화 (653번)', () => {
+describe('지정 자동 강화 (654번)', () => {
   const up = (kind: string, price: number, level = 1, maxLevel = 0) => ({
     kind,
     price,

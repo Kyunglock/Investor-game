@@ -70,7 +70,7 @@ export function IdleCats({
   // 교체 (#910): 출전 칸이 다 찼을 때 쉬는 고양이를 세우려면 뺄 고양이를 출전 칸에서 고른다. 사장냥은 출전 칸이 아니라 고를 수 없다.
   // 누구를 세우려는지 적어 둔다: 밖에서 다른 고양이를 골라 주거나 교체가 끝나 그 고양이가 출전하면 저절로 풀린다.
   const [swapFor, setSwapFor] = useState<CatCode | null>(null)
-  // 고른 고양이의 설명은 목록을 내려도 출전 칸 바로 아래에 붙는다 (653번): 출전 칸 높이를 재어 그 아래에 세운다.
+  // 고른 고양이의 설명은 목록을 내려도 출전 칸 바로 아래에 붙는다 (654번): 출전 칸 높이를 재어 그 아래에 세운다.
   // 시트가 고양이 칸을 스크롤해 보일 때 고정된 두 칸 아래로 오도록 스크롤 여백도 그 높이로 맞춘다(끌어 놓기가 설명창에 막히지 않게).
   const team = useRef<HTMLDivElement>(null)
   const detail = useRef<HTMLElement>(null)
@@ -96,7 +96,7 @@ export function IdleCats({
       if (scroller) scroller.style.scrollPaddingTop = ''
     }
   }, [sticky])
-  // 추천 편성 (653번): 팀 화력의 어림이 가장 큰 고양이들로 출전 칸을 바꾼다.
+  // 추천 편성 (654번): 팀 화력의 어림이 가장 큰 고양이들로 출전 칸을 바꾼다.
   const recommended = recommendParty(company)
   const alreadyBest =
     recommended.length === fielded.length &&

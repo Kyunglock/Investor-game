@@ -109,9 +109,10 @@ describe('전투 통계 (645번)', () => {
 
   it('피해는 벽처럼 주로, 만 단위로 끊어 적는다', () => {
     expect(sharesText(0)).toBe('0주')
-    expect(sharesText(10)).toBe('1,500주')
-    expect(sharesText(100)).toBe('1.5만주')
-    expect(sharesText(1_000_000)).toBe('1.5억주')
-    expect(sharesText(2e10)).toBe('3조주')
+    // 653번: 체력 1이 30주다(전에는 150주).
+    expect(sharesText(10)).toBe('300주')
+    expect(sharesText(500)).toBe('1.5만주')
+    expect(sharesText(5_000_000)).toBe('1.5억주')
+    expect(sharesText(1e11)).toBe('3조주')
   })
 })

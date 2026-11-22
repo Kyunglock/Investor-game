@@ -33,7 +33,7 @@ const SKILL_MAGIC = {
 
 /**
  * 전투에 나가는 팀의 수치. party를 주면 출전 칸 대신 그 고양이들(가진 고양이만, 준 차례대로)로 팀을 꾸린다: 금고 도전의 저장한 파티와
- * 추천 편성의 어림에 쓴다 (653번).
+ * 추천 편성의 어림에 쓴다 (654번).
  */
 export function idleLoadout(company: Company, party?: readonly string[]) {
   const hero = heroOf(company)

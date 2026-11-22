@@ -24,7 +24,7 @@ export type VaultClear =
     }
 
 /**
- * 금고 도전의 클리어 화면 (decisions.md 653번): 던전 층을 깨거나 보스전을 마치면 결과와 받은 보상을 크게 보여 준다. 확인을 누르면 금고로
+ * 금고 도전의 클리어 화면 (decisions.md 654번): 던전 층을 깨거나 보스전을 마치면 결과와 받은 보상을 크게 보여 준다. 확인을 누르면 금고로
  * 돌아간다. 뒤로 가기는 VaultChallenges가 받는다.
  */
 export function VaultResult({ result, onClose }: { result: VaultClear; onClose: () => void }) {
