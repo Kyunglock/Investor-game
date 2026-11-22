@@ -24,7 +24,7 @@ function outfitPainter(c: CanvasRenderingContext2D) {
   }
   function gradient(x: number, y: number, endX: number, endY: number, colors: string[]) {
     const paint = c.createLinearGradient(x, y, endX, endY)
-    colors.forEach((color, i) => paint.addColorStop(i / (colors.length - 1), color))
+    for (const [i, color] of colors.entries()) paint.addColorStop(i / (colors.length - 1), color)
     return paint
   }
   return { c, shape, line, gradient }
