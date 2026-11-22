@@ -3,7 +3,15 @@ import { type AssaultSpec, assaultSpec, IDLE_GAME_SPEED } from '../mental/assaul
 import { BASE_LOADOUT, bulletStats, type Loadout, type Spell } from '../mental/cards'
 import type { DamageKind } from '../mental/damageNumbers'
 import { simScale } from '../mental/gameSpeed'
-import { earthStats, fallStats, flowStats, isFall, isFlow, lightningStats } from '../mental/magic'
+import {
+  auroraNightStats,
+  earthStats,
+  fallStats,
+  flowStats,
+  isFall,
+  isFlow,
+  lightningStats,
+} from '../mental/magic'
 
 /**
  * 금고 도전의 화면 규칙 (decisions.md 641번). 보상과 주마다 바뀌는 것(약점·내성·천적·카드)은 서버가 정해 company.vault로 주고,
@@ -23,6 +31,10 @@ export const VAULT_SIM = simScale(IDLE_GAME_SPEED)
 
 /** 스킬 하나의 초당 피해 배율(스킬 피해 바탕에 곱한다). */
 function spellRate(spell: Spell, level: number): number {
+  if (spell === 'auroraNight') {
+    const stats = auroraNightStats(level)
+    return stats.damage / stats.cooldown
+  }
   if (isFlow(spell)) {
     const s = flowStats(spell, level)
     return s.damage / s.cooldown
