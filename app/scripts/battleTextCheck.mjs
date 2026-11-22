@@ -132,9 +132,9 @@ async function run(browser, width, height) {
       for (let i = 0; i < 5; i++) window.__mentalBuyWallHit(1 + i, x)
       return window.__mentalMarket().buyWall.lossNote
     }, x)
-    // 다섯 번에 15(2,250주)를 깎았다. 바로 앞에 닿은 매도 물량이 있으면 그것도 같은 글자에 합쳐진다.
+    // 다섯 번에 15(450주, 653번 전에는 2,250주)를 깎았다. 바로 앞에 닿은 매도 물량이 있으면 그것도 같은 글자에 합쳐진다.
     const shares = Number(note.text.match(/^매수 -([\d,]+)주$/)?.[1].replaceAll(',', ''))
-    assert.ok(shares >= 2250, `one note carries all five hits: ${note.text}`)
+    assert.ok(shares >= 450, `one note carries all five hits: ${note.text}`)
     assert.ok(
       note.left >= 0 && note.right <= layout.view,
       `the note stays on screen: ${note.left}~${note.right}`,
