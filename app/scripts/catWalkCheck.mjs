@@ -99,7 +99,7 @@ try {
       maxCachedMs: Math.max(...cached),
     }
   })
-  assert.equal(report.count, 40 * 3 * 8)
+  assert.equal(report.count, 46 * 3 * 8)
   assert.equal(report.upperStable, true, 'Head and gun-gripping hands remain stationary')
   assert.equal(report.shadowStable, true, 'Ground shadow remains intact and stationary')
   await page.locator('#walk-preview').screenshot({ path: resolve(output, 'walk-frames.png') })

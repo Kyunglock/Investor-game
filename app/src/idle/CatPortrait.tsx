@@ -3,16 +3,33 @@ import type { CatCode } from '@web/features/raising/store'
 import { useId } from 'react'
 import faces from './assets/cat-face-rects.json'
 import facesUrl from './assets/cat-faces.webp'
+import abyss from './assets/portrait-abyss.webp'
+import aurora from './assets/portrait-aurora.webp'
+import dune from './assets/portrait-dune.webp'
+import flora from './assets/portrait-flora.webp'
 import frost from './assets/portrait-frost.webp'
+import ruby from './assets/portrait-ruby.webp'
 import silver from './assets/portrait-silver.webp'
 import star from './assets/portrait-star.webp'
+import veil from './assets/portrait-veil.webp'
 import wisteria from './assets/portrait-wisteria.webp'
 import type { CatGrade } from './catGrade'
 import { IdleIcon } from './icons'
 
 /** 카드 초상화 아틀라스(scripts/catFaceAtlas.py가 만든다). 전투 원본 대신 이 작은 그림 하나만 받는다. */
 export const CAT_FACES_URL = facesUrl
-const SPECIAL_PORTRAITS: Partial<Record<CatCode, string>> = { star, silver, wisteria, frost }
+const SPECIAL_PORTRAITS: Partial<Record<CatCode, string>> = {
+  star,
+  silver,
+  wisteria,
+  frost,
+  ruby,
+  abyss,
+  dune,
+  veil,
+  flora,
+  aurora,
+}
 const FACES: Record<string, { x: number; y: number; w: number; h: number }> = faces.faces
 
 /** 카드·출전 칸·뽑기 결과가 같은 얼굴을 사용한다. code가 없으면 사장냥이다. */
@@ -31,7 +48,7 @@ export function CatPortrait({
   return (
     <span
       className={`idle-cat-portrait ${locked ? 'is-locked' : ''}`}
-      data-starlight={(grade === 'S' && !locked) || undefined}
+      data-starlight={((grade === 'S' || grade === 'SS') && !locked) || undefined}
       aria-hidden="true"
     >
       {portrait ? (

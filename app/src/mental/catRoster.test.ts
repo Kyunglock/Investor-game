@@ -7,11 +7,11 @@ import { ROSTER_ASSETS } from './catRosterAssets'
 import { MATE_LOOKS } from './mates'
 
 /** Contract IDs, inventory selection, and combat lookup must agree for every cat. */
-describe('40종 고양이', () => {
-  it('사장냥 한 종과 동료 39종의 코드·전투 모습이 일치한다', () => {
-    expect(MATE_LOOKS).toHaveLength(39)
-    expect(NEW_CATS).toHaveLength(33)
-    expect(Object.keys(CAT_LOOKS)).toHaveLength(39)
+describe('46종 고양이', () => {
+  it('사장냥 한 종과 동료 45종의 코드·전투 모습이 일치한다', () => {
+    expect(MATE_LOOKS).toHaveLength(45)
+    expect(NEW_CATS).toHaveLength(39)
+    expect(Object.keys(CAT_LOOKS)).toHaveLength(45)
     expect(CAT_LOOKS.sky).toBe(0)
     expect(CAT_LOOKS.snow).toBe(5)
     for (const cat of NEW_CATS) {

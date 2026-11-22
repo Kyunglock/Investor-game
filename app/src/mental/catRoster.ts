@@ -36,6 +36,12 @@ export const NEW_CATS = [
   { code: 'blush', name: '볼터치냥', model: 'fluffy', color: '#ebc9b9', atlas: 10, slot: 0 },
   { code: 'petrol', name: '청록냥', model: 'fold', color: '#7194a3', atlas: 10, slot: 1 },
   { code: 'oat', name: '오트냥', model: 'fluffy', color: '#c6a185', atlas: 10, slot: 2 },
+  { code: 'ruby', name: '홍염냥', color: '#d85733', model: 'fluffy', atlas: 11, slot: 0 },
+  { code: 'abyss', name: '심해냥', color: '#338fc2', model: 'hero', atlas: 11, slot: 1 },
+  { code: 'dune', name: '사막별냥', color: '#c79b53', model: 'fold', atlas: 11, slot: 2 },
+  { code: 'veil', name: '그림자냥', color: '#70508f', model: 'hero', atlas: 12, slot: 0 },
+  { code: 'flora', name: '봄꽃냥', color: '#90a965', model: 'hero', atlas: 12, slot: 1 },
+  { code: 'aurora', name: '극광냥', color: '#a7cdeb', model: 'fluffy', atlas: 12, slot: 2 },
 ] as const satisfies readonly {
   code: CatCode
   name: string
@@ -46,7 +52,7 @@ export const NEW_CATS = [
 }[]
 
 /** 생성 원본은 보존한다. 승인한 개별 그림 경계로 읽어 인접 행이 섞이지 않게 한다. */
-export const ROSTER_FRAMES = frames
+export const ROSTER_FRAMES = [...frames, frames[1], frames[3]]
 export function rosterCell(
   source: { width: number; height: number },
   atlas: number,

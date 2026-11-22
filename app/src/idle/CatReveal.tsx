@@ -93,7 +93,7 @@ export function CatReveal({
       data-testid="cat-reveal"
       data-phase={phase}
       data-grade={result ? plan.sound : undefined}
-      data-starlight={result?.cat.grade === 'S' || undefined}
+      data-starlight={result?.cat.grade === 'S' || result?.cat.grade === 'SS' || undefined}
       data-power={plan.power}
       data-shiny={result ? shinyCat(result.cat.grade) : false}
       style={{ '--reveal-color': plan.color } as CSSProperties}
