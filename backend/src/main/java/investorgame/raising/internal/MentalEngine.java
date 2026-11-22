@@ -254,6 +254,55 @@ class MentalEngine {
     return bought;
   }
 
+  /** 지금 강화 곡선 (648번): 값이 단계마다 5% 오르고 한 단계 효과가 0.2%·매수 4주다. */
+  static final int UPGRADE_CURVE = 648;
+
+  /** 옛 곡선(1%·20주)의 한 단계는 지금 곡선의 다섯 단계와 효과가 같다. */
+  static final int OLD_CURVE_LEVELS = 5;
+
+  /** 옛 곡선으로 산 강화를 지금 곡선으로 옮겨야 하는가 (648번). */
+  boolean needsUpgradeCurve(CompanyState c) {
+    return c.upgradeCurve != UPGRADE_CURVE;
+  }
+
+  /**
+   * 옛 곡선으로 산 강화를 지금 곡선으로 옮긴다 (648번). 효과가 같도록 단계를 다섯 배로 늘리되, 그 벽까지 벌 수 있는 돈으로 살 수 있는 단계(fairLevel)를
+   * 넘지 않는다. 값 오름폭이 4%·8%이던 때(553·644번)에 산 단계는 지금 벽에 견주어 너무 많아, 그대로 두면 다음 단계 값이 영영 닿지 않는다. 넘친 단계의 돈은
+   * 돌려주지 않는다(그때의 싼 값으로 산 것이다). 옮겼으면 true.
+   */
+  boolean adoptUpgradeCurve(CompanyState c) {
+    if (!needsUpgradeCurve(c)) {
+      return false;
+    }
+    int fair = fairLevel(c.idle == null ? 1 : c.idle.wall);
+    for (String kind : UPGRADES) {
+      int level = c.battleLevels.getOrDefault(kind, 0);
+      if (level <= 0) {
+        continue;
+      }
+      long scaled = (long) level * OLD_CURVE_LEVELS;
+      c.battleLevels.put(kind, (int) Math.min(Math.min(scaled, fair), maxLevel(kind)));
+    }
+    c.upgradeCurve = UPGRADE_CURVE;
+    return true;
+  }
+
+  /**
+   * wall번째 벽까지 버는 돈(벽 보상의 세 배: 시간 수입과 보스 벽을 넉넉히 셈)으로 강화 한 종류를 올릴 수 있는 단계 (648번). 옛 저장을 옮길 때의 상한이다.
+   */
+  int fairLevel(long wall) {
+    double earned = 0;
+    double price = 1;
+    for (long w = 1; w <= wall; w++) {
+      earned += price;
+      if (w < 6_000) price *= CompanyEngine.INFLATION;
+    }
+    earned *= 3 * IdleEngine.REWARD_UPGRADES * upgradePrice(0);
+    double growth = 1 + properties.mental().upgrades().priceGrowthPercent() / 100.0;
+    double levels = Math.log(1 + earned * (growth - 1) / upgradePrice(0)) / Math.log(growth);
+    return (int) Math.min(Integer.MAX_VALUE, Math.floor(levels));
+  }
+
   /** 없앤 강화의 단계가 저장에 남아 있는가 (556번). */
   boolean hasRemovedUpgrades(CompanyState c) {
     return REMOVED_UPGRADES.stream().anyMatch(c.battleLevels::containsKey);
@@ -279,7 +328,9 @@ class MentalEngine {
   private int maxLevel(String kind) {
     CompanyProperties.Upgrades rule = properties.mental().upgrades();
     Integer cap = rule.maxPercent().get(kind);
-    return cap == null ? Integer.MAX_VALUE : cap / rule.stepPercent().get(kind);
+    return cap == null
+        ? Integer.MAX_VALUE
+        : (int) Math.floor(cap / rule.stepPercent().get(kind) + 1e-9);
   }
 
   /** 지금 단계. 상한이 생기기 전에 넘겨 산 단계는 상한으로 읽는다 (487번). */
@@ -330,6 +381,15 @@ class MentalEngine {
     return (int) Math.min(Integer.MAX_VALUE, (100L + percent) * (100L + fishPercent) / 100 - 100);
   }
 
+  /**
+   * 소수 효과(648번: 한 단계 0.2%)에 영구 강화를 곱해 얹는다. 정수 효과의 withFish와 같은 셈이고, 소수 둘째 자리에서 내린다(0.2 × 3이
+   * 0.6000…01로 보이지 않게).
+   */
+  static double withFish(double percent, int fishPercent) {
+    double v = (100 + percent) * (100 + fishPercent) / 100 - 100;
+    return Math.floor(v * 100 + 1e-6) / 100;
+  }
+
   /** 전투 강화의 화면 값 (367·394번): 강화마다 지금 단계·다음 값·효과. 효과에는 영구 강화(600번)가 곱해져 있다(636번, 매수벽 공격의 주는 더한다). */
   List<CompanyView.BattleUpgrade> upgradeViews(CompanyState c) {
     CompanyProperties.Upgrades rule = properties.mental().upgrades();
@@ -337,7 +397,7 @@ class MentalEngine {
         .map(
             kind -> {
               int level = upgradeLevel(c, kind);
-              int step = rule.stepPercent().getOrDefault(kind, 0);
+              double step = rule.stepPercent().getOrDefault(kind, 0.0);
               int max = maxLevel(kind);
               // 매수벽 공격은 %가 아니라 수량(주)으로 오른다 (579번).
               int shares = "buy".equals(kind) ? rule.buyStepShares() : 0;

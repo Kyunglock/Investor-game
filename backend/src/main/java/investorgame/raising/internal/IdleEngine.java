@@ -811,7 +811,8 @@ class IdleEngine {
    */
   static final double BUY_TEAM_SHARE = 0.5;
 
-  static final int BUY_TEAM_STEP_SHARES = 2;
+  // 648번: 강화 단계가 다섯 배로 많아져 2주에서 0.4주로 낮췄다(매수 4주와 같은 비율).
+  static final double BUY_TEAM_STEP_SHARES = 0.4;
 
   /** 팀 화력 배율 (638번): 강화를 뺀 모든 총의 (한 발 × 초당 발수 × 탄 강화)를 처음 권총의 그것으로 나눈 값. 처음 권총뿐이면 1. */
   double teamScale(CompanyState c) {
@@ -828,7 +829,7 @@ class IdleEngine {
     double shares =
         Math.max(0, teamScale(c) - 1)
             * BUY_TEAM_SHARE
-            * (BUY_ORDER_DAMAGE * SHARES_PER_HP + (double) BUY_TEAM_STEP_SHARES * level)
+            * (BUY_ORDER_DAMAGE * SHARES_PER_HP + BUY_TEAM_STEP_SHARES * level)
             * (1 + MentalEngine.FISH_STEP_PERCENT / 100.0 * fish);
     return (long) Math.min(Long.MAX_VALUE / 4, Math.floor(shares));
   }

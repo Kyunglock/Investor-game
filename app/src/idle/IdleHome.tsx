@@ -66,6 +66,11 @@ const menus: { key: Exclude<Menu, 'rebirth'>; label: string }[] = (
   ] as const
 ).filter((m) => COMPANY_ENABLED || m.key !== 'company')
 type Upgrade = NonNullable<Company['battleUpgrades']>[number]
+
+/** 강화 효과(%)는 한 단계 0.2%라 소수가 있다 (648번): 소수 첫째 자리까지, 끝의 0은 뺀다. */
+function percentText(percent: number) {
+  return Number(percent.toFixed(1)).toLocaleString('ko-KR')
+}
 /** 능력치 (487번): 공격력·공격 속도·매수벽(체력 강화, 410번: 최대 멘탈과 그 절반인 매수벽 체력이 함께 오른다). 치명타 피해 강화는 없앴다 (556번). */
 const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
   damage: { name: '공격력', note: '탄 공격력' },
@@ -655,9 +660,9 @@ function IdleStats({ company }: { company: Company }) {
                   // 매수벽 공격은 %가 아니라 수량으로 오른다 (579번).
                   `+${(u.bonusShares ?? 0).toLocaleString()}주 → +${((u.bonusShares ?? 0) + ((u.nextBonusShares ?? 0) - (u.bonusShares ?? 0)) * levels).toLocaleString()}주`
                 ) : full ? (
-                  `+${u.bonusPercent}% · 최대`
+                  `+${percentText(u.bonusPercent)}% · 최대`
                 ) : (
-                  `+${u.bonusPercent}% → +${u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels}%`
+                  `+${percentText(u.bonusPercent)}% → +${percentText(u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels)}%`
                 )}
               </p>
             </div>

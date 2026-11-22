@@ -350,6 +350,12 @@ class CompanyState {
    */
   Map<String, Integer> battleLevels = new LinkedHashMap<>();
 
+  /**
+   * 전투 강화의 단계가 어느 곡선으로 산 것인가 (648번). 0이면 옛 곡선(한 단계 1%·매수 20주)이고, 불러올 때 지금 곡선(0.2%·4주)으로
+   * 바꾼다(MentalEngine.adoptUpgradeCurve). 새 회사는 지금 곡선으로 시작한다.
+   */
+  int upgradeCurve;
+
   /** 깬 스테이지의 별 (decisions.md 369번): 1번 스테이지부터 차례로. 길이가 곧 깬 최고 스테이지다. */
   List<Integer> stageStars = new ArrayList<>();
 
