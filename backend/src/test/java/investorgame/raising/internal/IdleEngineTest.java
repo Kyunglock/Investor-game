@@ -673,17 +673,17 @@ class IdleEngineTest {
             "sand", "star", "hail", "blossom", "bomb");
     // 열다섯 가지 스킬이 열다섯 칸에 하나씩이다 (563번): 같은 스킬을 가진 고양이는 없다.
     assertThat(cats.stream().mapToInt(c -> c.skills().size()).sum()).isEqualTo(15);
-    // 뽑기: 등급의 몫은 C 60 · B 28 · A 10 · S 2%이고 등급 안에서는 고르다.
+    // 뽑기: 등급의 몫은 C 61 · B 28 · A 10 · S 1%(651번, 전에는 C 60 · S 2%)이고 등급 안에서는 고르다.
     var random = new HashSeededRandom(7);
     java.util.Map<String, Integer> drawn = new java.util.HashMap<>();
     int draws = 20_000;
     for (int i = 0; i < draws; i++) {
       drawn.merge(IdleEngine.catGrade(engine.grantCat(state, random).kind), 1, Integer::sum);
     }
-    assertThat(drawn.get("C") * 100.0 / draws).isCloseTo(60, offset(2.0));
+    assertThat(drawn.get("C") * 100.0 / draws).isCloseTo(61, offset(2.0));
     assertThat(drawn.get("B") * 100.0 / draws).isCloseTo(28, offset(2.0));
     assertThat(drawn.get("A") * 100.0 / draws).isCloseTo(10, offset(1.5));
-    assertThat(drawn.get("S") * 100.0 / draws).isCloseTo(2, offset(0.7));
+    assertThat(drawn.get("S") * 100.0 / draws).isCloseTo(1, offset(0.4));
     assertThat(engine.view(state).lastDraws()).isEmpty();
   }
 

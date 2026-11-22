@@ -300,8 +300,9 @@ class IdleEngine {
           "caramel", "mocha", "peach", "biscuit", "lemon", "cocoa", "cloud", "tilt", "russet",
           "plum", "coral", "truffle");
   // A grade's share of the draws (percent) and its cats' gun damage (x the level's power). The
-  // damage was {1, 1.4, 2, 3} before 644 and {1, 1.15, 1.35, 1.6} in 644.
-  private static final int[] GRADE_PERCENT = {60, 28, 10, 2};
+  // damage was {1, 1.4, 2, 3} before 644 and {1, 1.15, 1.35, 1.6} in 644. S was 2% before 651
+  // (its lost share went to C, 60%).
+  private static final int[] GRADE_PERCENT = {61, 28, 10, 1};
   private static final double[] GRADE_DAMAGE = {1, 1.05, 1.1, 1.2};
   private static final int[] CAT_GRADE = CATS.stream().mapToInt(IdleEngine::gradeIndex).toArray();
   // Each grade's share is split evenly over its cats: percent x (all cats' common multiple) / n.
