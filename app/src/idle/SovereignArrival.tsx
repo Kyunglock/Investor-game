@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalBack } from '../app/useModalBack'
 import { sfx } from '../fx/sound'
-import aurora from './assets/portrait-aurora.webp'
+import face from './assets/aurora-face.webp'
 import './sovereign-arrival.css'
 
 export function SovereignArrival({ onFinish }: { onFinish: () => void }) {
@@ -12,10 +12,12 @@ export function SovereignArrival({ onFinish }: { onFinish: () => void }) {
   useEffect(() => {
     const el = dialog.current
     el?.showModal()
-    const music = window.setTimeout(() => sfx.fanfare(), 1150)
+    const charge = window.setTimeout(() => sfx.charge(), 1490)
+    const music = window.setTimeout(() => sfx.fanfare(), 2150)
     const timer = window.setTimeout(() => finish(), 5000)
     return () => {
       clearTimeout(timer)
+      clearTimeout(charge)
       clearTimeout(music)
       el?.close()
     }
@@ -34,9 +36,14 @@ export function SovereignArrival({ onFinish }: { onFinish: () => void }) {
       }}
     >
       <div className="sovereign-sky">
-        <div className="sovereign-rays" aria-hidden="true" />
-        <img src={aurora} alt="민트색과 연보라색 털에 작은 금빛 별을 단 극광냥" />
-        <div className="sovereign-halo" aria-hidden="true" />
+        <div className="sovereign-lake" aria-hidden="true" />
+        <div className="sovereign-comet" aria-hidden="true" />
+        <div className="sovereign-face">
+          <img src={face} alt="오른쪽을 바라보는 극광냥의 얼굴과 이마에서 빛나는 금별" />
+          <div className="sovereign-impact" aria-hidden="true">
+            <i />
+          </div>
+        </div>
         <div className="sovereign-title">
           <b>SS</b>
           <h2>극광냥</h2>
