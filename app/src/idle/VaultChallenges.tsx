@@ -8,7 +8,10 @@ import { sfx } from '../fx/sound'
 import type { Outcome } from '../mental/battle'
 import guardian from './assets/vault-guardian.webp'
 import dungeonArt from './assets/weekly-vault.webp'
+import { type PartyMode, partyOf, readParty, saveParty } from './party'
 import { VaultField } from './VaultField'
+import { VaultParty } from './VaultParty'
+import { type VaultClear, VaultResult } from './VaultResult'
 import { GUARDIAN, leftText, scoreText, type Vault, type VaultCard, vaults } from './vaultBattle'
 import './vault-challenges.css'
 
@@ -36,7 +39,19 @@ export function VaultChallenges({
   const vault = company.vault
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('boss')
-  const [run, setRun] = useState<{ boss: boolean; floor: number; vault: Vault } | null>(null)
+  const [run, setRun] = useState<{
+    boss: boolean
+    floor: number
+    vault: Vault
+    party: string[]
+  } | null>(null)
+  // 저장한 파티 (654번): 보스전·던전마다 따로. 저장한 적이 없으면 null이고, 그때는 출전 칸의 고양이를 데려간다.
+  const [saved, setSaved] = useState<Record<PartyMode, string[] | null>>(() => ({
+    boss: readParty(company.companyId, 'boss'),
+    dungeon: readParty(company.companyId, 'dungeon'),
+  }))
+  // 클리어 화면 (654번): 던전 층을 깨거나 보스전을 마치면 받은 것을 크게 보여 준다.
+  const [result, setResult] = useState<VaultClear | null>(null)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [now, setNow] = useState(() => Date.now())
@@ -53,7 +68,8 @@ export function VaultChallenges({
     onBattleChange(false)
   }
   useModalBack(() => {
-    if (run) leaveField()
+    if (result) setResult(null)
+    else if (run) leaveField()
     else setOpen(false)
   }, open)
   if (!vault) return null
@@ -76,17 +92,28 @@ export function VaultChallenges({
 
   function end(outcome: Outcome) {
     if (!run) return
-    const { boss, floor } = run
+    const { boss, floor, party } = run
     const gold = vault?.gold ?? 0
+    const tier = vault?.boss.tier ?? 0
     leaveField()
     const store = useRaisingStore.getState()
     if (boss) {
       const early = outcome.reason === 'mental' ? ' (멘탈 소진)' : ''
       void send(
-        () => store.reportVaultBoss(outcome.damage),
+        () => store.reportVaultBoss(outcome.damage, party),
         (after) => {
           const gained = after.gold - gold
           if (gained > 0) sfx.levelUp()
+          setResult({
+            kind: 'boss',
+            damage: outcome.damage,
+            early: outcome.reason === 'mental',
+            best: after.boss.best,
+            tierName: after.boss.tier > tier ? after.boss.tierName : null,
+            nextTierName: after.boss.nextTierName,
+            nextScore: after.boss.nextScore,
+            gold: gained,
+          })
           return `피해량 ${scoreText(outcome.damage)}${early}${gained > 0 ? ` · ${after.boss.tierName} 달성 · 금괴 +${gained}` : ''}`
         },
       )
@@ -95,6 +122,14 @@ export function VaultChallenges({
         () => store.clearVaultFloor(floor),
         (after) => {
           sfx.levelUp()
+          setResult({
+            kind: 'floor',
+            floor,
+            floors: after.dungeon.floors,
+            gold: after.gold - gold,
+            totalGold: after.gold,
+            cards: after.dungeon.cards.map((card) => card.name),
+          })
           return `${floor}층 돌파 · 금괴 +${after.gold - gold}`
         },
       )
@@ -107,10 +142,22 @@ export function VaultChallenges({
     }
   }
 
+  const partyFor = (mode: PartyMode) => partyOf(company, saved[mode])
+  const changeParty = (mode: PartyMode, codes: string[]) => {
+    saveParty(company.companyId, mode, codes)
+    setSaved((now) => ({ ...now, [mode]: codes }))
+  }
+
   function start(boss: boolean) {
     if (!vault) return
     setNote('')
-    setRun({ boss, floor: vault.dungeon.cleared + 1, vault })
+    setResult(null)
+    setRun({
+      boss,
+      floor: vault.dungeon.cleared + 1,
+      vault,
+      party: partyFor(boss ? 'boss' : 'dungeon'),
+    })
     onBattleChange(true)
   }
 
@@ -141,12 +188,14 @@ export function VaultChallenges({
       >
         금고 도전
       </button>
+      {result && !run && <VaultResult result={result} onClose={() => setResult(null)} />}
       {run ? (
         <VaultField
           company={company}
           vault={run.vault}
           boss={run.boss}
           floor={run.floor}
+          party={run.party}
           onDone={end}
           onExit={leaveField}
         />
@@ -235,6 +284,13 @@ export function VaultChallenges({
                       ))}
                     </dd>
                   </dl>
+                  <VaultParty
+                    company={company}
+                    vault={vault}
+                    mode="boss"
+                    party={partyFor('boss')}
+                    onChange={(codes) => changeParty('boss', codes)}
+                  />
                   <button
                     type="button"
                     className="vault-start"
@@ -299,14 +355,23 @@ export function VaultChallenges({
                       </div>
                     </>
                   ) : (
-                    <button
-                      type="button"
-                      className="vault-start"
-                      disabled={busy}
-                      onClick={() => start(false)}
-                    >
-                      {floor}층 입장 · 금괴 +{dungeon.floorGold[floor - 1]}
-                    </button>
+                    <>
+                      <VaultParty
+                        company={company}
+                        vault={vault}
+                        mode="dungeon"
+                        party={partyFor('dungeon')}
+                        onChange={(codes) => changeParty('dungeon', codes)}
+                      />
+                      <button
+                        type="button"
+                        className="vault-start"
+                        disabled={busy}
+                        onClick={() => start(false)}
+                      >
+                        {floor}층 입장 · 금괴 +{dungeon.floorGold[floor - 1]}
+                      </button>
+                    </>
                   )}
                 </>
               )}

@@ -720,6 +720,25 @@ class IdleEngine {
     return dps(c);
   }
 
+  /**
+   * 금고 보스전의 파티 (654번): 출전 칸 대신 party의 고양이(가진 고양이만, 겹치지 않게, 출전 칸 수까지)가 나갔을 때의 초당 피해. 출전 칸은 바꾸지 않는다.
+   */
+  double partyDps(CompanyState c, List<String> party) {
+    CompanyState.Idle s = state(c);
+    List<String> fielded = s.fielded;
+    s.fielded =
+        party.stream()
+            .filter(code -> CATS.contains(code) && s.cats.getOrDefault(code, 0) > 0)
+            .distinct()
+            .limit(FIELD_SLOTS)
+            .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+    try {
+      return dps(c);
+    } finally {
+      s.fielded = fielded;
+    }
+  }
+
   private double dps(CompanyState c) {
     CompanyState.Idle s = state(c);
     List<Shooter> shooters = shooters(c);
@@ -1768,6 +1787,8 @@ class IdleEngine {
             c.tutorialCatClaimed,
             c.tutorialWeaponClaimed,
             skillsUnlocked(c),
-            c.skillGuideSeen));
+            c.skillGuideSeen),
+        // 최고 기록 (654번): 통과한 가장 높은 벽. 환생해도 남는다(best와 같은 셈).
+        Math.max(s.best, Math.max(s.wall - 1, s.bossCleared)));
   }
 }

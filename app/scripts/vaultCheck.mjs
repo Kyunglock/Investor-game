@@ -265,6 +265,10 @@ try {
         calls.at(-1)?.body,
         await page.getByTestId('vault-note').textContent(),
       )
+      await page
+        .getByTestId('vault-result-ok')
+        .click({ timeout: 5000 })
+        .catch(() => {})
       await page.getByRole('button', { name: '주간 던전' }).click()
       for (const floor of [1, 2, 3]) {
         company.vault.dungeon.cleared = floor - 1
@@ -281,6 +285,10 @@ try {
           left,
           await page.getByTestId('vault-note').textContent(),
         )
+        await page
+          .getByTestId('vault-result-ok')
+          .click({ timeout: 5000 })
+          .catch(() => {})
       }
       await page.close()
     }
@@ -296,13 +304,42 @@ try {
     await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(4)
     await expect(traits).toContainText('은빛냥 · 출전 중')
     await expect(page.getByTestId('vault-sheet')).toContainText('새 금고까지 3일 4시간')
+    // 파티 (654번): 저장한 적이 없으면 출전 칸의 고양이를 데려간다. 고양이마다 약점·내성·천적을 표시하고 예상 피해량을 적는다.
+    const party = page.getByTestId('vault-party-boss')
+    await expect(party.locator('.vault-party-row li:not(.is-empty)')).toHaveCount(4)
+    await expect(party.locator('.vault-mark.is-rival')).toHaveCount(2)
+    await expect(party.locator('.vault-mark.is-weak')).toHaveCount(1)
+    await expect(party.locator('.vault-mark.is-resist')).toHaveCount(1)
+    await expect(page.getByTestId('vault-party-estimate')).toContainText('예상 피해량')
+    // 가진 고양이가 넷뿐이라 지금 파티가 곧 추천 편성이다.
+    await expect(page.getByTestId('vault-party-recommend')).toBeDisabled()
+    // 편성을 펴서 한 마리를 빼면 그 파티가 저장되고, 추천 편성으로 되돌릴 수 있다.
+    await page.getByTestId('vault-party-edit').click()
+    await page.getByTestId('vault-party-pick').locator('[data-code="night"]').click()
+    await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(1)
+    await page.reload()
+    await expect(page.getByTestId('idle-canvas-loading')).toHaveCount(0, { timeout: 30000 })
+    await page.getByTestId('vault-entry').click()
+    await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(1)
+    await page.getByTestId('vault-party-recommend').click()
+    await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(0)
     await page.getByRole('button', { name: '보스 도전' }).click()
     const score = page.getByTestId('vault-score')
     await expect(score).toContainText('피해량')
     await fight(page)
     const boss = calls.find((call) => call.path.endsWith('/vault/boss'))
     assert.ok(boss.body.damage > 1000, `피해량 ${boss.body.damage}`)
+    // 데려간 파티를 함께 보내 서버가 그 파티로 상한을 잰다 (654번).
+    assert.deepEqual([...boss.body.cats].sort(), ['mocha', 'night', 'silver', 'sky'])
     await expect(page.getByTestId('vault-note')).toContainText('금괴 +')
+    // 결과 화면 (654번): 피해량과 받은 금괴를 보여 주고 확인을 누르면 닫힌다.
+    const result = page.getByTestId('vault-result')
+    await expect(result).toBeVisible()
+    await expect(result).toHaveAttribute('data-kind', 'boss')
+    await expect(page.getByTestId('vault-result-reward')).toContainText('금괴 +')
+    await page.screenshot({ path: '/tmp/vault-result-boss.png' })
+    await page.getByTestId('vault-result-ok').click()
+    await expect(result).toHaveCount(0)
     assert.ok(company.vault.gold > 0)
     const afterBoss = company.vault.gold
     await expect(page.getByTestId('vault-gold')).toContainText(String(afterBoss))
@@ -325,6 +362,12 @@ try {
       .poll(() => calls.at(-1))
       .toEqual({ path: '/api/company/vault/floor', body: { floor: 1 } })
     await expect(page.getByTestId('vault-note')).toContainText('1층 돌파 · 금괴 +30')
+    await expect(result).toHaveAttribute('data-kind', 'floor')
+    await expect(result).toContainText('1층 클리어!')
+    await expect(page.getByTestId('vault-result-reward')).toContainText('금괴 +30')
+    await page.screenshot({ path: '/tmp/vault-result-floor.png' })
+    await page.getByTestId('vault-result-ok').click()
+    await expect(result).toHaveCount(0)
     await expect(page.getByTestId('vault-sheet')).toContainText('2층에 들고 갈 카드를 고르세요')
     // 금고 상점: 금괴로 산다. 모자라면 누를 수 없다.
     await page.getByRole('button', { name: '금고 상점' }).click()

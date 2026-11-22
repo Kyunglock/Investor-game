@@ -31,7 +31,11 @@ const SKILL_MAGIC = {
   }),
 } as const
 
-export function idleLoadout(company: Company) {
+/**
+ * 전투에 나가는 팀의 수치. party를 주면 출전 칸 대신 그 고양이들(가진 고양이만, 준 차례대로)로 팀을 꾸린다: 금고 도전의 저장한 파티와
+ * 추천 편성의 어림에 쓴다 (654번).
+ */
+export function idleLoadout(company: Company, party?: readonly string[]) {
   const hero = heroOf(company)
   const loadout = loadoutOf(hero.weapon, hero.upgrades)
   // 스킬은 사장냥 무기의 실효 화력을 따른다 (636번, 서버 IdleEngine과 같다).
@@ -40,7 +44,10 @@ export function idleLoadout(company: Company) {
   // 스킬은 고양이의 고유 능력이다 (501번): 출전한 고양이가 제 총을 쏘고 제 스킬을 쓴다. 스킬은 A등급부터 있고 S등급은 둘이다 (561번).
   // 총이 없으면 기본 권총이다(서버 IdleEngine과 같다).
   // 출전 칸의 번호순으로 줄을 선다 (599번).
-  const cats = fieldedInOrder(company.idle?.cats ?? [])
+  const all = company.idle?.cats ?? []
+  const cats = party
+    ? party.flatMap((code) => all.filter((cat) => cat.code === code && cat.level > 0))
+    : fieldedInOrder(all)
   loadout.mateMagic = cats.map((cat) => cat.skills.map((skill) => SKILL_MAGIC[skill.code]))
   // 스킬 레벨은 고양이마다 다르다 (515번). 마법 칸(loadout.water 등)에는 그 스킬의 가장 높은 레벨을 둔다.
   loadout.mateMagicLevels = cats.map((cat) => cat.skillLevel)

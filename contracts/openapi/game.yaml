@@ -429,7 +429,8 @@ paths:
       description: |
         보스전은 vault.boss.seconds초 동안 수호냥에게 넣은 피해량을 겨룬다. 전투는 화면이 돌리고 넣은 피해량을 보낸다.
         이번 주 최고 기록(vault.boss.best)과 역대 기록(record)을 고치고, 새로 닿은 등급마다 금괴(tierGold)를 준다. 한 주에 등급마다 한 번이다.
-        피해량은 지금 출전한 팀이 낼 수 있는 상한까지만 받아 준다(넘으면 상한으로 적는다). 받은 것은 vault.lastNote에 담긴다.
+        피해량은 싸운 팀이 낼 수 있는 상한까지만 받아 준다(넘으면 상한으로 적는다). 받은 것은 vault.lastNote에 담긴다.
+        cats를 주면 그 파티(가진 고양이만, 출전 칸 수까지)로 상한을 잰다. 없으면 지금 출전한 팀이다 (654번).
       requestBody:
         required: true
         content:
@@ -439,6 +440,11 @@ paths:
               required: [damage]
               properties:
                 damage: { type: number, minimum: 0, description: 수호냥과 금고벽에 넣은 피해량 }
+                cats:
+                  type: array
+                  maxItems: 16
+                  items: { type: string }
+                  description: 보스전에 데려간 파티의 고양이 코드 (654번). 없으면 지금 출전한 팀
       responses:
         '200':
           description: 기록한 뒤의 회사
@@ -1787,6 +1793,7 @@ components:
             bakingPercent: { type: integer, minimum: 0, maximum: 99 }
             fieldSlots: { type: integer, description: 한 번에 출전하는 고양이 수 (492·493번, 넷) }
             wallDps: { type: number, description: 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 }
+            bestWall: { type: integer, format: int64, minimum: 0, description: 최고 기록 (654번). 통과한 가장 높은 매도벽이고 환생해도 남는다. 지금 선 벽이 이보다 높으면 최고 기록을 갱신하고 있다 }
             rebirth:
               type: object
               description: 환생 (571번). 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다

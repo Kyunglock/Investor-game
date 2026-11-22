@@ -106,6 +106,25 @@ class VaultEngineTest {
   }
 
   @Test
+  void 저장한_파티로_싸운_보스전은_그_파티가_낼_수_있는_상한까지_받는다() {
+    // 654번: 출전 칸과 따로 저장한 파티로 싸우면 상한을 그 파티로 잰다. 출전 칸은 바뀌지 않는다.
+    CompanyState c = opened();
+    double field = idle.fieldDps(c);
+    List<String> fielded = List.copyOf(c.idle.fielded);
+    c.idle.cats.put("sky", 10);
+    c.idle.cats.put("mint", 10);
+    // 없는 고양이·가지지 않은 고양이·겹친 고양이는 빼고 잰다.
+    double party = idle.partyDps(c, List.of("sky", "mint", "sky", "nope", "lilac"));
+    assertThat(party).isEqualTo(idle.partyDps(c, List.of("sky", "mint")));
+    assertThat(party).isGreaterThan(field);
+    assertThat(c.idle.fielded).isEqualTo(fielded);
+    assertThat(idle.fieldDps(c)).isEqualTo(field);
+    vault.reportBoss(c, 1e30, List.of("sky", "mint"));
+    assertThat(vault.view(c).boss().best())
+        .isEqualTo(party * VaultEngine.BOSS_SECONDS * VaultEngine.SCORE_SLACK);
+  }
+
+  @Test
   void 약점과_내성은_겹치지_않고_천적은_스킬_없는_고양이다() {
     for (long week = 2960; week < 3000; week++) {
       List<Integer> order = VaultEngine.skillOrder(week);

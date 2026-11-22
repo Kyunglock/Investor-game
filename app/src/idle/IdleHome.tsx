@@ -18,6 +18,7 @@ import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
 import { idleBuyOrderDamage } from '../mental/buyWall'
 import { SHARES_PER_HP, sharesOf } from '../mental/shares'
+import { useAutoUpgrade, useAutoUpgradeLoop } from './autoUpgrade'
 import { BossReward } from './BossReward'
 import { CatInfoCard } from './CatInfoCard'
 import { FishIcon } from './FishIcon'
@@ -145,6 +146,11 @@ export function IdleHome({
   const halted = shown.circuitSeconds > 0
   // 보스 도전 (547번): 50번째 벽마다 저절로 나오고 서킷브레이커로 시작한다.
   const bossFight = idleBossChallenge(shown.wall)
+  // 최고 기록 (654번): 통과한 가장 높은 벽. 지금 선 벽이 그보다 높으면 기록을 갱신하는 중이다.
+  const best = idle?.bestWall ?? 0
+  const recordRun = best > 0 && shown.wall > best
+  // 지정 자동 강화 (654번): 성장 탭에서 고른 능력치를 돈이 모이는 대로 산다.
+  useAutoUpgradeLoop(company, connected)
   // 자본은 1초마다 서버에서 새로 온다 (#803): 숫자가 그 사이를 굴러가며 계속 불어난다.
   const capital = useCountUp(company.capital)
   // 종목회의를 열거나 이어 갈 수 있으면 회사 메뉴에 점을 단다 (#803).
@@ -301,6 +307,26 @@ export function IdleHome({
                   : `${bossFight ? '보스 ' : '매도벽 '}${shown.wall.toLocaleString()}`
                 : '연결 대기'}
             </strong>
+            {connected && best > 0 && (
+              <small
+                className="idle-wall-best"
+                data-testid="idle-wall-best"
+                data-record={recordRun || undefined}
+                title={
+                  idle?.bossReward
+                    ? `보석 보상을 받은 보스: ${idle.bossReward.wall.toLocaleString()}번째 벽까지`
+                    : undefined
+                }
+              >
+                {recordRun ? '최고기록 갱신중!' : `최고 ${best.toLocaleString()}`}
+                {idle?.bossReward && (
+                  <span className="idle-wall-best-boss">
+                    {' '}
+                    · 보석 보상 보스 {idle.bossReward.wall.toLocaleString()}
+                  </span>
+                )}
+              </small>
+            )}
             {/* 다이아 (526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. */}
             <div
               className="idle-cash idle-diamonds"
@@ -607,9 +633,14 @@ function IdleStats({ company }: { company: Company }) {
     return () => window.clearTimeout(timer)
   }, [receipt])
   const [error, setError] = useState<string | null>(null)
+  const autoKinds = useAutoUpgrade((s) => s.kinds)
+  const toggleAuto = useAutoUpgrade((s) => s.toggle)
   return (
     <>
       <IdlePower power={company.idle?.power ?? 0} />
+      <p className="idle-auto-note">
+        <b>자동</b>을 켠 능력치는 돈이 모이는 대로 저절로 강화돼요(가장 싼 것부터)
+      </p>
       <div className="idle-buy-count">
         <span>강화 횟수</span>
         <div>
@@ -714,6 +745,20 @@ function IdleStats({ company }: { company: Company }) {
               {buying === u.kind ? '강화 중…' : full ? 'MAX' : `강화 ×${levels}`}
               {!full && <small>{money(price)}</small>}
             </button>
+            <label className="idle-auto-toggle" data-on={autoKinds.includes(u.kind) || undefined}>
+              <input
+                type="checkbox"
+                data-testid="auto-upgrade"
+                data-kind={u.kind}
+                checked={autoKinds.includes(u.kind)}
+                disabled={full}
+                onChange={() => {
+                  sfx.tap()
+                  toggleAuto(u.kind)
+                }}
+              />
+              자동
+            </label>
           </article>
         )
       })}

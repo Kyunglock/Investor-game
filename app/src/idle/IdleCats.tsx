@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
@@ -13,6 +13,7 @@ import { CatBakery } from './CatBakery'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { sortCats } from './catGrade'
+import { fieldSteps, recommendParty } from './party'
 import { SkillBadge } from './SkillBadge'
 import { fieldSeats } from './seats'
 import { SKILLS, skillNames } from './skills'
@@ -69,6 +70,59 @@ export function IdleCats({
   // 교체 (#910): 출전 칸이 다 찼을 때 쉬는 고양이를 세우려면 뺄 고양이를 출전 칸에서 고른다. 사장냥은 출전 칸이 아니라 고를 수 없다.
   // 누구를 세우려는지 적어 둔다: 밖에서 다른 고양이를 골라 주거나 교체가 끝나 그 고양이가 출전하면 저절로 풀린다.
   const [swapFor, setSwapFor] = useState<CatCode | null>(null)
+  // 고른 고양이의 설명은 목록을 내려도 출전 칸 바로 아래에 붙는다 (654번): 출전 칸 높이를 재어 그 아래에 세운다.
+  // 시트가 고양이 칸을 스크롤해 보일 때 고정된 두 칸 아래로 오도록 스크롤 여백도 그 높이로 맞춘다(끌어 놓기가 설명창에 막히지 않게).
+  const team = useRef<HTMLDivElement>(null)
+  const detail = useRef<HTMLElement>(null)
+  const [teamHeight, setTeamHeight] = useState(0)
+  const sticky = tab !== '식빵 공방'
+  useEffect(() => {
+    const el = team.current
+    if (!sticky || !el || typeof ResizeObserver === 'undefined') return
+    const scroller = el.parentElement
+    const measure = () => {
+      setTeamHeight(el.offsetHeight)
+      const pinned = detail.current && getComputedStyle(detail.current).position === 'sticky'
+      if (scroller)
+        scroller.style.scrollPaddingTop = pinned
+          ? `${el.offsetHeight + (detail.current?.offsetHeight ?? 0) + 8}px`
+          : ''
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    if (detail.current) observer.observe(detail.current)
+    return () => {
+      observer.disconnect()
+      if (scroller) scroller.style.scrollPaddingTop = ''
+    }
+  }, [sticky])
+  // 추천 편성 (654번): 팀 화력의 어림이 가장 큰 고양이들로 출전 칸을 바꾼다.
+  const recommended = recommendParty(company)
+  const alreadyBest =
+    recommended.length === fielded.length &&
+    recommended.every((code) => fielded.some((c) => c.code === code))
+  const [arranging, setArranging] = useState(false)
+  const applyRecommended = async () => {
+    if (arranging) return
+    setArranging(true)
+    sfx.tap()
+    try {
+      const store = useRaisingStore.getState()
+      const cats = store.company?.idle?.cats ?? []
+      const steps = fieldSteps(cats, store.company?.idle?.fieldSlots ?? 0, recommended)
+      for (const step of steps) {
+        await store.fieldCat(
+          step.code as CatCode,
+          step.fielded,
+          step.replaceCode as CatCode | undefined,
+        )
+        if (useRaisingStore.getState().error) break
+      }
+      if (!useRaisingStore.getState().error) haptic.light()
+    } finally {
+      setArranging(false)
+    }
+  }
   const swapping = cat !== null && !cat.fielded && full && swapFor === cat.code
   const gun = cat
     ? (company.weapons?.find((w) => same(w, cat.weapon)) ?? DEFAULT_WEAPON)
@@ -185,7 +239,7 @@ export function IdleCats({
     )
   return (
     <>
-      <div className="loadout-team">
+      <div className="loadout-team" ref={team}>
         {tabs}
         <p className="idle-subtitle idle-team-line">
           {swapping ? (
@@ -196,6 +250,18 @@ export function IdleCats({
             <span>
               출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 윗줄은 고양이, 아랫줄은 그 고양이의
               무기
+              {recommended.length > 0 && (
+                <button
+                  type="button"
+                  className="loadout-recommend"
+                  data-testid="field-recommend"
+                  disabled={busy || arranging || alreadyBest}
+                  title="팀 화력(총·스킬의 초당 피해 어림)이 가장 큰 고양이들로 출전 칸을 바꿔요"
+                  onClick={() => void applyRecommended()}
+                >
+                  {alreadyBest ? '추천 편성 중' : arranging ? '편성 중…' : '추천 편성'}
+                </button>
+              )}
             </span>
           )}
         </p>
@@ -249,6 +315,9 @@ export function IdleCats({
                     </span>
                   )}
                   <em className={`idle-cat-grade idle-cat-grade-tag is-${c.grade}`}>{c.grade}</em>
+                  <i className="idle-cat-slot-lv" data-testid="cat-slot-level">
+                    Lv.{c.level}
+                  </i>
                 </button>
               ) : (
                 <button
@@ -289,6 +358,8 @@ export function IdleCats({
           className="idle-cat owned"
           data-testid="cat-detail"
           data-code={cat?.code ?? 'boss'}
+          ref={detail}
+          style={teamHeight ? { top: teamHeight - 6 } : undefined}
         >
           <Portrait code={cat?.code} grade={cat?.grade} />
           <div className="idle-cat-info">

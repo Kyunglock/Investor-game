@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -317,7 +318,7 @@ class CompanyController {
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody VaultBossRequest request) {
     UUID sessionId = cookies.requirePlayer(token);
-    CompanyView company = companies.reportVaultBoss(sessionId, request.damage());
+    CompanyView company = companies.reportVaultBoss(sessionId, request.damage(), request.cats());
     PLAY.info(
         "company-vault-boss session={} company={} damage={} best={} tier={} gold={} ip={}",
         sessionId,
@@ -330,7 +331,8 @@ class CompanyController {
     return company;
   }
 
-  record VaultBossRequest(@NotNull @PositiveOrZero Double damage) {}
+  record VaultBossRequest(
+      @NotNull @PositiveOrZero Double damage, @Size(max = 16) List<String> cats) {}
 
   /** 주간 던전의 한 층을 깼다 (641번). 차례가 아니거나 그 층의 카드를 고르지 않았으면 400. */
   @PostMapping("/vault/floor")

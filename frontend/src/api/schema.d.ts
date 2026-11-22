@@ -422,7 +422,8 @@ export interface paths {
          * 금고 보스전의 결과를 알린다 (decisions.md 641번)
          * @description 보스전은 vault.boss.seconds초 동안 수호냥에게 넣은 피해량을 겨룬다. 전투는 화면이 돌리고 넣은 피해량을 보낸다.
          *     이번 주 최고 기록(vault.boss.best)과 역대 기록(record)을 고치고, 새로 닿은 등급마다 금괴(tierGold)를 준다. 한 주에 등급마다 한 번이다.
-         *     피해량은 지금 출전한 팀이 낼 수 있는 상한까지만 받아 준다(넘으면 상한으로 적는다). 받은 것은 vault.lastNote에 담긴다.
+         *     피해량은 싸운 팀이 낼 수 있는 상한까지만 받아 준다(넘으면 상한으로 적는다). 받은 것은 vault.lastNote에 담긴다.
+         *     cats를 주면 그 파티(가진 고양이만, 출전 칸 수까지)로 상한을 잰다. 없으면 지금 출전한 팀이다 (654번).
          */
         post: operations["reportVaultBoss"];
         delete?: never;
@@ -1839,6 +1840,11 @@ export interface components {
                 fieldSlots: number;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
+                /**
+                 * Format: int64
+                 * @description 최고 기록 (654번). 통과한 가장 높은 매도벽이고 환생해도 남는다. 지금 선 벽이 이보다 높으면 최고 기록을 갱신하고 있다
+                 */
+                bestWall?: number;
                 /** @description 환생 (571번). 매도벽 1로 돌아가 전투 강화와 돈을 처음으로 되돌리고 생선을 받는다 */
                 rebirth?: {
                     /** @description 환생한 횟수 */
@@ -2601,6 +2607,8 @@ export interface operations {
                 "application/json": {
                     /** @description 수호냥과 금고벽에 넣은 피해량 */
                     damage: number;
+                    /** @description 보스전에 데려간 파티의 고양이 코드 (654번). 없으면 지금 출전한 팀 */
+                    cats?: string[];
                 };
             };
         };
