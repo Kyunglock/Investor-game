@@ -50,9 +50,9 @@
   animation: sovereign-rise 5s ease-out both;
 }
 .sovereign-sky img {
-  width: 89%;
+  width: 100%;
   z-index: 1;
-  filter: drop-shadow(0 8px 24px #100b2c88);
+  mask-image: linear-gradient(transparent, black 10% 87%, transparent);
   animation: sovereign-unveil 5s both;
 }
 .sovereign-halo {
