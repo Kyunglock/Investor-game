@@ -9,126 +9,219 @@
   padding: 0;
   border: 0;
   overflow: hidden;
-  color: white;
-  background: #090921;
+  color: #fff8db;
+  background: #080c22;
 }
 .sovereign-arrival::backdrop {
-  background: #09091df5;
+  background: #080c22f5;
 }
 .sovereign-sky {
   position: relative;
   isolation: isolate;
-  height: 100%;
   display: grid;
   place-items: center;
-  background: radial-gradient(ellipse, #373572, #100b2c 70%);
+  height: 100%;
+  overflow: hidden;
+  background: #080c22;
 }
-.sovereign-sky::before {
+.sovereign-lake {
+  position: absolute;
+  inset: -3%;
+  background:
+    linear-gradient(0deg, #080c22 0%, transparent 35%),
+    url("./assets/aurora-lake.webp") center / cover;
+  animation: sovereign-dawn 5s both;
+}
+.sovereign-flight {
+  position: relative;
+  width: min(92%, 66dvh);
+  aspect-ratio: 1;
+  margin-bottom: 8dvh;
+  animation: sovereign-leap 5s both;
+}
+.sovereign-flight img {
+  display: block;
+  width: 100%;
+  animation: sovereign-illuminate 5s both;
+}
+.sovereign-comet {
+  position: absolute;
+  left: 12%;
+  top: 62%;
+  width: 55%;
+  height: 3px;
+  transform-origin: right center;
+  background: linear-gradient(90deg, transparent, #7fe6ff 70%, #ffedbe);
+  box-shadow: 2px 2px 10px #a9ecff;
+  animation: sovereign-streak 5s both;
+}
+.sovereign-impact {
+  position: absolute;
+  left: 94%;
+  top: 34%;
+  width: 1px;
+  height: 1px;
+  display: grid;
+  place-content: center;
+}
+.sovereign-impact::before,
+.sovereign-impact::after,
+.sovereign-impact i {
   content: "";
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 8% 34%, #82ffd655, transparent 44%),
-    radial-gradient(ellipse at 95% 58%, #d9abff55, transparent 48%);
-  pointer-events: none;
+  place-self: center;
 }
-.sovereign-rays,
-.sovereign-halo {
-  position: absolute;
-  pointer-events: none;
-}
-.sovereign-rays {
-  width: 165vmax;
+.sovereign-impact::before {
+  width: 42vmin;
   aspect-ratio: 1;
-  background: repeating-conic-gradient(
-    from 20deg,
-    transparent 0 17deg,
-    #a2fff45e 18deg,
-    #daabff70 20deg,
-    transparent 24deg
-  );
-  animation: sovereign-rise 5s ease-out both;
-}
-.sovereign-sky img {
-  width: 100%;
-  z-index: 1;
-  mask-image: linear-gradient(transparent, black 10% 87%, transparent);
-  animation: sovereign-unveil 5s both;
-}
-.sovereign-halo {
-  z-index: 2;
-  width: 65%;
-  aspect-ratio: 1;
+  border: 2px solid #c4fff7;
   border-radius: 50%;
   box-shadow:
-    0 0 25px #95fff2,
-    inset 0 0 20px #ffd488;
-  animation: sovereign-halo 5s both;
+    0 0 16px #6dffe4,
+    inset 0 0 9px #e6e4ff;
+  animation: sovereign-ripple 5s both;
+}
+.sovereign-impact::after {
+  width: 33vmin;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, #fff9db 0 4%, #fff5bdad 9%, #86f9ff55 27%, transparent 65%);
+  animation: sovereign-spark 5s both;
+}
+.sovereign-impact i {
+  width: 18vmin;
+  aspect-ratio: 1;
+  background: #fff2bb;
+  clip-path: polygon(50% 0, 56% 40%, 100% 50%, 57% 56%, 50% 100%, 44% 57%, 0 50%, 42% 43%);
+  animation: sovereign-spark 5s both;
 }
 .sovereign-title {
   position: absolute;
-  z-index: 3;
-  bottom: 12%;
+  bottom: max(7%, env(safe-area-inset-bottom));
   text-align: center;
-  text-shadow: 0 2px 8px #160831;
-  animation: sovereign-title 5s both;
+  text-shadow: 0 2px 12px #09132c;
+  animation: sovereign-name 5s both;
 }
 .sovereign-title b {
   font:
-    900 clamp(54px, 18vw, 86px) / 1 Georgia,
+    italic 900 clamp(40px, 10vmin, 64px) / 1 Georgia,
     serif;
-  color: #ffe49c;
+  color: #ffe5a4;
 }
 .sovereign-title h2 {
-  font-size: 30px;
+  margin: 4px 0;
+  font-size: clamp(27px, 7vmin, 42px);
   color: white;
 }
-@keyframes sovereign-rise {
-  from {
-    transform: rotate(-35deg) scale(0.25);
-    opacity: 0.2;
+@keyframes sovereign-dawn {
+  0% {
+    opacity: 0.32;
+    transform: scale(1.13) translateY(-3%);
   }
-  to {
-    transform: rotate(30deg) scale(1);
-    opacity: 0.85;
+  39% {
+    opacity: 0.58;
   }
-}
-@keyframes sovereign-unveil {
-  0%,
-  18% {
-    transform: scale(0.84);
-    filter: brightness(0);
-    opacity: 0.1;
-  }
-  48% {
-    filter: brightness(1.28);
+  47% {
     opacity: 1;
   }
   100% {
-    transform: scale(1.07);
-    filter: brightness(1);
+    opacity: 0.95;
+    transform: scale(1.03);
   }
 }
-@keyframes sovereign-halo {
+@keyframes sovereign-streak {
   0%,
-  18% {
-    transform: scale(0.15);
+  7% {
     opacity: 0;
+    transform: translate(-80%, 55px) rotate(-28deg) scaleX(0.1);
   }
-  30% {
+  21% {
+    opacity: 1;
+  }
+  38%,
+  100% {
+    opacity: 0;
+    transform: translate(50%, -85px) rotate(-28deg) scaleX(1);
+  }
+}
+@keyframes sovereign-leap {
+  0%,
+  12% {
+    opacity: 0;
+    transform: translate(-62%, 24%) scale(0.5) rotate(10deg);
+  }
+  28% {
     opacity: 0.9;
   }
-  63%,
+  42% {
+    opacity: 1;
+    transform: translate(-5%, 4%) scale(0.91) rotate(-3deg);
+  }
+  50% {
+    transform: translate(0, 0) scale(1.02);
+  }
   100% {
-    transform: scale(2.1);
-    opacity: 0;
+    transform: translate(1%, -2%) scale(0.99);
   }
 }
-@keyframes sovereign-title {
+@keyframes sovereign-illuminate {
   0%,
-  44% {
+  32% {
+    filter: brightness(0.06) drop-shadow(1px -2px 2px #b9fcff);
+  }
+  41% {
+    filter: brightness(0.32) drop-shadow(1px -2px 4px #bdfffa);
+  }
+  47% {
+    filter: brightness(1.22) drop-shadow(0 0 14px #d4faff);
+  }
+  59%,
+  100% {
+    filter: brightness(1) drop-shadow(0 4px 13px #111027);
+  }
+}
+@keyframes sovereign-spark {
+  0%,
+  29% {
     opacity: 0;
-    transform: translateY(14px);
+    transform: scale(0.06);
+  }
+  41% {
+    opacity: 0.85;
+    transform: scale(0.35);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.65);
+  }
+  61% {
+    opacity: 0.82;
+    transform: scale(0.48);
+  }
+  100% {
+    opacity: 0.64;
+    transform: scale(0.34);
+  }
+}
+@keyframes sovereign-ripple {
+  0%,
+  42% {
+    opacity: 0;
+    transform: scale(0.05);
+  }
+  45% {
+    opacity: 0.95;
+  }
+  68%,
+  100% {
+    opacity: 0;
+    transform: scale(3.5);
+  }
+}
+@keyframes sovereign-name {
+  0%,
+  50% {
+    opacity: 0;
+    transform: translateY(10px);
   }
   65%,
   100% {
@@ -137,10 +230,16 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sovereign-sky * {
+  .sovereign-sky *,
+  .sovereign-sky ::before,
+  .sovereign-sky ::after {
     animation: none;
   }
-  .sovereign-halo {
+  .sovereign-comet,
+  .sovereign-impact::before {
     display: none;
+  }
+  .sovereign-impact {
+    transform: scale(0.35);
   }
 }
