@@ -13,7 +13,7 @@ describe('뒤 벽의 체력', () => {
     const snapshot = [wall(2, 16.1, 16.1), wall(3, 22.4, 22.4), wall(4, 28.9, 28.9)]
     const health = queuedWallHealth(2, snapshot)
     expect(health).toEqual(wall(2, 16.1, 16.1))
-    expect(queuedWallLabel(health?.maxHp ?? 0, health?.hp ?? 0)).toBe('2,400주')
+    expect(queuedWallLabel(health?.maxHp ?? 0, health?.hp ?? 0)).toBe('480주')
   })
 
   it('받은 값에 없으면 이미 그리던 값을 그대로 둔다', () => {

@@ -29,7 +29,7 @@ export function idleWallLayout(laneWidth: number, viewportHeight: number) {
   return { bottom, height, spacing: height + IDLE_WALL_GAP }
 }
 
-/** 뒤 벽에 적는 남은 물량: 맨 앞 벽의 칸과 같은 환산(100주 단위)으로 "7,200주"만 적는다 (542번). */
+/** 뒤 벽에 적는 남은 물량: 맨 앞 벽의 칸과 같은 환산(10주 단위)으로 "7,200주"만 적는다 (542번). */
 export function queuedWallLabel(maxHp: number, hp: number) {
   return `${cellShares(maxHp, hp).toLocaleString()}주`
 }

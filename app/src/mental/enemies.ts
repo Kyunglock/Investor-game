@@ -44,7 +44,7 @@ export interface OrderSpec extends EnemySpec {
 }
 
 export const ORDERS: Record<OrderKind, OrderSpec> = {
-  /** 매도 주문(100주): 천천히 사장냥 쪽으로 다가온다 */
+  /** 매도 주문(20주, 653번 전에는 100주): 천천히 사장냥 쪽으로 다가온다 */
   order: {
     r: 17,
     fill: '#3a7bea',
@@ -54,7 +54,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 6,
     reward: 12,
     scale: 1.45,
-    shares: 100,
+    shares: 20,
   },
   /** 시장가 매도(1,000주): 작고 빠르게 떼로 쏟아진다 */
   market: {
@@ -66,7 +66,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 4,
     reward: 6,
     scale: 1.3,
-    shares: 200,
+    shares: 40,
   },
   /** 대량 매도(5,000주): 묵직하고 느리고 단단하다. 빠르기를 30에서 올렸다 (597번): 그래도 매도 주문보다 느리다 */
   bulk: {
@@ -78,7 +78,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 13,
     reward: 55,
     scale: 1.55,
-    shares: 1500,
+    shares: 300,
   },
   /** 허매도: 맞히면 그냥 사라지는 가짜 물량(체결이 아니라 경험치·처치가 없다) */
   fake: {
@@ -90,7 +90,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 4,
     reward: 0,
     scale: 1.45,
-    shares: 3000,
+    shares: 600,
   },
   /** 매도벽의 한 칸(층): 움직이지 않고 벽과 함께 내려온다. 체력·물량은 판(assault.ts)이 정한다. 경험치는 층 하나에 30(#700, 전에는 5) */
   cell: {
@@ -102,7 +102,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 0,
     reward: 30,
     scale: 1,
-    shares: 1000,
+    shares: 200,
   },
   /** 마지막 대량 매도벽 앞의 큰손 보스: 체력은 판이 정한다 */
   whale: {
@@ -114,7 +114,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 15,
     reward: 200,
     scale: 2.3,
-    shares: 50000,
+    shares: 10000,
   },
 }
 

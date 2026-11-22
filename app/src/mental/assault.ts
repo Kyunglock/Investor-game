@@ -404,11 +404,11 @@ export function rowHps(cellHp: number, cols: number, random: () => number = Math
 /** 칸 체력이 얼마면 약한 칸으로 보이나: 바탕 칸 체력의 이 비율 밑. */
 export const WEAK_CELL = 0.7
 
-/** 칸에 적힌 물량(주): 체력에 비례하고 100주 단위. 맞을수록 남은 체력만큼 깎여 보인다(0이 되기 전엔 적어도 100주). */
+/** 칸에 적힌 물량(주): 체력에 비례하고 10주 단위(653번: 체력 1이 30주가 되어 100주 단위는 첫 벽들에 너무 거칠다). 맞을수록 남은 체력만큼 깎여 보인다(0이 되기 전엔 적어도 100주). */
 export function cellShares(maxHp: number, hpLeft: number): number {
-  const full = Math.max(1, Math.round((maxHp * SHARES_PER_HP) / 100)) * 100
+  const full = Math.max(1, Math.round((maxHp * SHARES_PER_HP) / 10)) * 10
   if (hpLeft <= 0) return 0
-  return Math.max(100, Math.ceil((full * Math.min(1, hpLeft / maxHp)) / 100) * 100)
+  return Math.max(10, Math.ceil((full * Math.min(1, hpLeft / maxHp)) / 10) * 10)
 }
 
 /**

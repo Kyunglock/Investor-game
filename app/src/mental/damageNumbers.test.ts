@@ -18,9 +18,9 @@ describe('데미지 숫자 (decisions.md 391번)', () => {
   })
 
   it('매도벽 돌파에서는 일반·치명타·지속 공격을 매도벽과 같은 주 단위로 표시한다', () => {
-    expect(damageLabel('bullet', 8, true)).toBe('1,200주')
-    expect(damageLabel('crit', 2, true)).toBe('300주!')
-    expect(damageLabel('meteor', 0.01, true)).toBe('2주')
+    expect(damageLabel('bullet', 8, true)).toBe('240주')
+    expect(damageLabel('crit', 2, true)).toBe('60주!')
+    expect(damageLabel('meteor', 0.01, true)).toBe('1주')
     expect(damageLabel('bullet', 2)).toBe('20')
   })
 

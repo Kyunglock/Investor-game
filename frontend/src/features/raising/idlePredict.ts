@@ -4,15 +4,19 @@
  * not handled yet gives the wall and health to show.
  */
 
-/** IdleEngine.HP_QUARTIC (decisions.md 646): the depth^4 term. Wall 5001 shows ten million shares (66,666 x 150). */
-export const IDLE_HP_QUARTIC = 9.065e-11
+/** IdleEngine.HP_QUARTIC (decisions.md 646, 653): the depth^4 term. Wall 5001 shows ten million shares (333,333 x 30). */
+export const IDLE_HP_QUARTIC = 1.010571e-10
+/** IdleEngine.HP_UPGRADE_DEPTH (653): the health is multiplied by 1 + 4d / (d + this), the 1% upgrade step's share. */
+export const IDLE_HP_UPGRADE_DEPTH = 625
 
 /** IdleEngine.maxHp: the same curve, or the two sides disagree about when a wall breaks. */
 export function idleMaxHp(wall: number) {
   const depth = wall - 1
   const square = depth * depth
   return (
-    (10 + 2 * depth + IDLE_HP_QUARTIC * square * square) * (wall % IDLE_BOSS_EVERY === 0 ? 3 : 1)
+    (10 + 2 * depth + IDLE_HP_QUARTIC * square * square) *
+    (1 + (4 * depth) / (depth + IDLE_HP_UPGRADE_DEPTH)) *
+    (wall % IDLE_BOSS_EVERY === 0 ? 3 : 1)
   )
 }
 

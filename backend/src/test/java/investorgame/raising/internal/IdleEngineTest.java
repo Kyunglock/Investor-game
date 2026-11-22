@@ -707,16 +707,20 @@ class IdleEngineTest {
     // The tenth wall is an ordinary wall now (550): no three-fold reward.
     double tenth = 1_000_000 * IdleEngine.REWARD_UPGRADES * StrictMath.pow(1.04, 9);
     assertThat(state.capital).isBetween(tenth, tenth * 1.05);
-    // 10 + 2d + 9.065e-11·d⁴ (646; 10 + 5d + 0.035d² + 3.897e-9·d⁴ in 644, × 1.003^d before, 636):
-    // d = 9: 10 + 18 + 9.065e-11 × 6,561 = 28.00000059475465.
-    assertThat(IdleEngine.maxHp(10)).isCloseTo(28.00000059475465, offset(1e-9));
+    // (10 + 2d + 1.010571e-10·d⁴) × (1 + 4d ÷ (d + 625)) (653; 10 + 2d + 9.065e-11·d⁴ in 646,
+    // 10 + 5d + 0.035d² + 3.897e-9·d⁴ in 644, × 1.003^d before, 636). The first wall is still 10.
+    assertThat(IdleEngine.maxHp(1)).isEqualTo(10);
+    // d = 9: (10 + 18 + 1.010571e-10 × 6,561) × (1 + 36 ÷ 634) = 28.00000066 × 1.0567823.
+    assertThat(IdleEngine.maxHp(10))
+        .isCloseTo((28 + 1.010571e-10 * 6_561) * (1 + 36.0 / 634), offset(1e-9));
     // The boss wall (every 50th) has three times the health and pays three times the reward.
-    // d = 49: 10 + 98 + 9.065e-11 × 5,764,801 = 108.00052257921065.
-    assertThat(IdleEngine.maxHp(50)).isCloseTo(3 * 108.00052257921065, offset(1e-9));
-    // The 5,001st wall (a plain wall) shows ten million shares (646: health 66,666 x 150 shares;
-    // 644 put ten million in the health itself): d = 5,000, 10 + 10,000 + 9.065e-11 × 5,000⁴
-    // = 10,010 + 56,656.25 = 66,666.25.
-    assertThat(IdleEngine.maxHp(5001)).isCloseTo(66_666.25, offset(1e-6));
+    // d = 49: (10 + 98 + 1.010571e-10 × 5,764,801) × (1 + 196 ÷ 674).
+    assertThat(IdleEngine.maxHp(50))
+        .isCloseTo(3 * (108 + 1.010571e-10 * 5_764_801) * (1 + 196.0 / 674), offset(1e-9));
+    // The 5,001st wall (a plain wall) shows ten million shares (653: health 333,333 x 30 shares;
+    // 646: 66,666 x 150): d = 5,000, (10,010 + 63,160.69) × (1 + 20,000 ÷ 5,625) = 333,333.1.
+    assertThat(IdleEngine.maxHp(5001) * IdleEngine.SHARES_PER_HP).isCloseTo(1e7, offset(10.0));
+    assertThat(IdleEngine.SHARES_PER_HP).isEqualTo(30);
     state.idle.wall = 50;
     state.idle.damage = IdleEngine.maxHp(50) - 1;
     // Its own clear reward (549) was paid before: only the wall reward is counted here.
@@ -1508,9 +1512,10 @@ class IdleEngineTest {
     // A deep wall does not make a buy order stronger (573): the order scale is not in it.
     double order = 1.5;
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
-    // The order scale follows the wall's health (10 + 2d + 9.065e-11·d⁴, 646; 3.2 in 644, 4.0 with
-    // × 1.003^d before): d = 99, 1 + 208.0087 / 380 = 1.547, two digits 1.5.
-    assertThat(IdleEngine.threat(100)).isEqualTo(1.5);
+    // The order scale follows the wall's health (653; 1.5 in 646, 3.2 in 644, 4.0 with × 1.003^d
+    // before): d = 99, health 208.0097 × (1 + 396 ÷ 724) = 321.78, 1 + 321.78 / 380 = 1.847, two
+    // digits 1.8.
+    assertThat(IdleEngine.threat(100)).isEqualTo(1.8);
     // A buy order is capped at its own damage, whatever the screen reports.
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
@@ -1526,7 +1531,7 @@ class IdleEngineTest {
     assertThat(buyBonus()).isZero();
     company.mental.buyUpgrade(state, "buy", 50);
     assertThat(buyBonus()).isEqualTo(200);
-    double up = (order + 200 / 150.0) / order;
+    double up = (order + 200 / 30.0) / order;
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order * up, offset(1e-9));
@@ -1554,30 +1559,31 @@ class IdleEngineTest {
     assertThat(buyBonus()).isZero();
     // A level 4 C cat with the starting pistol shoots 25% x 4^0.1 = 29% of the boss cat, 25%
     // faster (sky, 646; 4^0.3 = 38% in 644, as hard as the boss cat before): the team is 1.359
-    // pistols, and (1.359 - 1) x 0.5 x 225 = 40.38, 40 shares come on top (53 in 644, 140 before).
+    // pistols, and (1.359 - 1) x 0.5 x 45 = 8.08, 8 shares come on top (653: one order is 45
+    // shares at 30 shares a health point; 40 of 225 in 646, 53 in 644, 140 before).
     double cat = 1.25 * 0.25 * Math.pow(4, 0.1);
     state.idle.cats.put("sky", 4);
     engine.fieldCat(state, "sky", true);
     assertThat(engine.teamScale(state)).isCloseTo(1 + cat, offset(1e-9));
-    assertThat(buyBonus()).isEqualTo(40);
+    assertThat(buyBonus()).isEqualTo(8);
     // The attack and fire upgrades are not in it: the team's share follows gear, not upgrades.
     state.capital = 1e18;
     company.mental.buyUpgrade(state, "damage", 20);
     company.mental.buyUpgrade(state, "fire", 20);
-    assertThat(buyBonus()).isEqualTo(40);
+    assertThat(buyBonus()).isEqualTo(8);
     // Fifty buy levels: 200 fixed shares, and the team's part grows by 0.4 shares a level (648).
     company.mental.buyUpgrade(state, "buy", 50);
-    assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(cat * 0.5 * 245));
+    assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(cat * 0.5 * 65));
     // The wall's depth changes nothing (573), and the server accepts an order of that size.
     state.idle.wall = 100;
-    // 0.359 x 0.5 x 245 = 43.97 (646; 0.474 x 0.5 x 245 = 58.02 in 644).
-    assertThat(buyBonus()).isEqualTo(200 + 43);
+    // 0.359 x 0.5 x (45 + 0.4 x 50) = 11.67 (653; 0.359 x 0.5 x 245 = 43.97 in 646).
+    assertThat(buyBonus()).isEqualTo(200 + 11);
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 1, 1e9));
-    assertThat(state.idle.damage).isCloseTo(1.5 + 243 / 150.0, offset(1e-9));
-    // 영구 강화(생선)는 고정 수량에 30주를 더하고 팀의 몫에는 한 단계에 1%를 곱한다 (644번, 전에는 3%).
+    assertThat(state.idle.damage).isCloseTo(1.5 + 211 / 30.0, offset(1e-9));
+    // 영구 강화(생선)는 고정 수량에 6주(653번, 전에는 30주: 피해로는 같다)를 더하고 팀의 몫에는 한 단계에 1%를 곱한다 (644번).
     state.fishLevels.put("buy", 10);
-    assertThat(buyBonus()).isEqualTo(200 + 300 + (long) Math.floor(cat * 0.5 * 245 * 1.1));
+    assertThat(buyBonus()).isEqualTo(200 + 60 + (long) Math.floor(cat * 0.5 * 65 * 1.1));
   }
 
   private long buyBonus() {
@@ -1865,7 +1871,7 @@ class IdleEngineTest {
     engine.buyFishUpgrade(c, "hp");
     engine.buyFishUpgrade(c, "buy");
     assertThat(upgrade(c, "hp").bonusPercent()).isEqualTo(1);
-    assertThat(upgrade(c, "buy").bonusShares()).isEqualTo(30);
+    assertThat(upgrade(c, "buy").bonusShares()).isEqualTo(6);
     assertThat(upgrade(c, "fire").bonusPercent()).as("공격 속도는 영구 강화가 없다").isZero();
     assertThat(c.fish).isEqualTo(25);
     assertThat(c.idle.cats.get("sky")).isEqualTo(3);
@@ -1881,13 +1887,13 @@ class IdleEngineTest {
     assertThatThrownBy(() -> engine.buyFishUpgrade(c, "damage"))
         .isInstanceOf(InvalidRequestException.class);
     assertThat(c.fish).isEqualTo(2);
-    // 영구 강화는 전투 강화에 곱한다 (636번): 전투 강화 50단계(+10%, 648번) × 영구 강화 2단계(+2%, 644번) = +12.2%.
+    // 영구 강화는 전투 강화에 곱한다 (636번): 전투 강화 10단계(+10%, 653번) × 영구 강화 2단계(+2%, 644번) = +12.2%.
     c.capital = 1e18;
-    company.mental.buyUpgrade(c, "damage", 50);
+    company.mental.buyUpgrade(c, "damage", 10);
     assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(12.2);
     assertThat(upgrade(c, "damage").nextBonusPercent())
-        .as("51단계 +10.2% × 1.02 = +12.404% → 소수 둘째 자리에서 내려 12.4")
-        .isEqualTo(12.4);
+        .as("11단계 +11% × 1.02 = +13.22%")
+        .isEqualTo(13.22);
     // 벽 1,000쯤(+3,000%)에서 영구 강화 +300%는 네 배다: 더하면 +3,300%뿐이었다.
     assertThat(MentalEngine.withFish(3000, 300)).isEqualTo(12_300);
     assertThat(c.fishLevels).containsEntry("damage", 2);
@@ -1921,10 +1927,11 @@ class IdleEngineTest {
     assertThat(company.mental.adoptUpgradeCurve(state)).isTrue();
     assertThat(state.battleLevels)
         .containsEntry("damage", 750)
-        .containsEntry("fire", 500)
+        .containsEntry("fire", 100)
         .containsEntry("hp", fair)
         .containsEntry("buy", 0);
-    assertThat(upgrade(state, "damage").bonusPercent()).as("효과는 그대로 +150%").isEqualTo(150);
+    // 653번: 한 단계가 다시 1%라 750단계는 +750%다. 벽 체력도 그만큼 커졌다(벽 1,000에서 3.5배).
+    assertThat(upgrade(state, "damage").bonusPercent()).isEqualTo(750);
     assertThat(upgrade(state, "fire").bonusPercent()).isEqualTo(100);
     assertThat(company.mental.adoptUpgradeCurve(state)).as("한 번만 옮긴다").isFalse();
     // 옮긴 뒤에는 벽 몇 개 어치로 다음 단계를 산다: 다음 공격력 값이 벽 보상의 10배를 넘지 않는다.
