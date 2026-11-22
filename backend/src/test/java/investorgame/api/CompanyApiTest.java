@@ -575,14 +575,14 @@ class CompanyApiTest {
     assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
     assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
     assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Double.class))
-        .as("한 단계 0.2% (648번)")
-        .isEqualTo(0.2);
+        .as("한 단계 1% (653번)")
+        .isEqualTo(1.0);
     assertThat(opened.read("$.battleUpgrades[0].maxLevel", Integer.class))
         .as("공격력은 끝없이 산다")
         .isZero();
     assertThat(opened.read("$.battleUpgrades[1].maxLevel", Integer.class))
-        .as("연사는 100%(0.2% × 500단계)에서 멈춘다 (487·640·648번)")
-        .isEqualTo(500);
+        .as("연사는 100%(1% × 100단계)에서 멈춘다 (487·640·653번)")
+        .isEqualTo(100);
     long capital = opened.read("$.capital", Long.class);
 
     DocumentContext one =
@@ -596,7 +596,7 @@ class CompanyApiTest {
             postJson("/api/company/battle-upgrade", "{\"kind\":\"fire\",\"levels\":5}")
                 .andExpect(status().isOk()));
     assertThat(five.read("$.battleUpgrades[1].level", Integer.class)).isEqualTo(5);
-    assertThat(five.read("$.battleUpgrades[1].bonusPercent", Double.class)).isEqualTo(1.0);
+    assertThat(five.read("$.battleUpgrades[1].bonusPercent", Double.class)).isEqualTo(5.0);
     long spent = capital - five.read("$.capital", Long.class);
     // 648번(단계마다 5%): 100만 + (100만 + 105만 + 110.25만 + 115.7625만 + 121.5506만) = 652.5631만.
     assertThat(spent).as("1b + 연사 다섯 단계").isEqualTo(6_525_631L);

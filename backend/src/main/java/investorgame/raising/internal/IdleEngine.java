@@ -131,10 +131,18 @@ class IdleEngine {
   private static final double HP_LINEAR = 2;
 
   /**
-   * 벽 체력의 4차 항 (644·646번): 벽 체력 = 10 + 2d + 이 값 × d⁴. 5,001번째 벽(d = 5,000)이 화면에 1,000만주(체력 66,666 ×
-   * 150주)다. 644번에는 체력값 자체를 5,000벽 1,000만으로 맞춰 화면에는 5억주였다. 화면 idlePredict.ts의 idleMaxHp와 같이 바꾼다.
+   * 벽 체력의 4차 항 (644·646·653번): 벽 체력 = (10 + 2d + 이 값 × d⁴) × (1 + 4d ÷ (d + 625)). 5,001번째 벽(d =
+   * 5,000)이 화면에 1,000만주(체력 333,333 × 30주)다. 646번에는 66,666 × 150주였다. 화면 idlePredict.ts의 idleMaxHp와
+   * 같이 바꾼다.
    */
-  private static final double HP_QUARTIC = 9.065e-11;
+  private static final double HP_QUARTIC = 1.010571e-10;
+
+  /**
+   * 강화의 몫 (653번): 공격력 강화가 한 단계 1%로(값 오름폭 5% 그대로) 646·648번의 다섯 배가 되어, 벽 체력에 (1 + 4d ÷ (d + 625))를
+   * 곱한다. 벽 번호의 0.8배쯤 단계를 사므로 강화의 화력은 (1 + 0.008d)이고 전에는 (1 + 0.0016d)였다: 그 비가 이 값이다(첫 벽 1, 깊을수록 5에
+   * 가까워진다).
+   */
+  private static final double HP_UPGRADE_DEPTH = 625;
 
   private static final double BOSS_HP = 3;
 
@@ -690,7 +698,8 @@ class IdleEngine {
   private static double plainHp(long wall) {
     long depth = wall - 1;
     double square = (double) depth * depth;
-    return HP_BASE + HP_LINEAR * depth + HP_QUARTIC * square * square;
+    return (HP_BASE + HP_LINEAR * depth + HP_QUARTIC * square * square)
+        * (1 + 4.0 * depth / (depth + HP_UPGRADE_DEPTH));
   }
 
   /** 금고 도전 (641번): 스킬의 수, 그 등급의 고양이들, 스킬 하나의 코드와 이름("물 스킬"의 "물"). */
@@ -801,7 +810,9 @@ class IdleEngine {
   }
 
   // Matches the app's mental/shares.ts SHARES_PER_HP: shares shown per point of damage.
-  static final double SHARES_PER_HP = 150;
+  // 653: 30 (150 before). The walls' health grew with the 1% upgrade step, and the 5,001st wall
+  // still shows ten million shares.
+  static final double SHARES_PER_HP = 30;
 
   /**
    * One buy order's damage (514, 573, 579, 638). The wall's depth is not in it. The buy wall attack
@@ -827,7 +838,7 @@ class IdleEngine {
    */
   static final double BUY_TEAM_SHARE = 0.5;
 
-  // 648번: 강화 단계가 다섯 배로 많아져 2주에서 0.4주로 낮췄다(매수 4주와 같은 비율).
+  // 648번: 강화 단계가 다섯 배로 많아져 2주에서 0.4주로 낮췄다(매수 4주와 같은 비율). 653번에 주의 크기가 5분의 1이 되어 피해로는 646번과 같다.
   static final double BUY_TEAM_STEP_SHARES = 0.4;
 
   /** 팀 화력 배율 (638번): 강화를 뺀 모든 총의 (한 발 × 초당 발수 × 탄 강화)를 처음 권총의 그것으로 나눈 값. 처음 권총뿐이면 1. */
