@@ -317,6 +317,9 @@ try {
     await page.getByTestId('vault-party-edit').click()
     await page.getByTestId('vault-party-pick').locator('[data-code="night"]').click()
     await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(1)
+    // 약점·내성·천적 칸의 "출전 중"은 보스전 파티를 따른다 (655번): 파티에서 뺀 밤냥은 대기다.
+    await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(3)
+    await expect(traits).toContainText('밤냥 · 대기')
     await page.reload()
     await expect(page.getByTestId('idle-canvas-loading')).toHaveCount(0, { timeout: 30000 })
     await page.getByTestId('vault-entry').click()

@@ -175,6 +175,19 @@ describe('지정 자동 강화 (654번)', () => {
     expect(nextAutoBuy(ups, 40, ['damage', 'fire'])).toBeNull()
   })
 
+  it('고른 것이 여럿이면 값이 다음으로 싼 것을 넘기 전까지만 사서 번갈아 오른다 (655번)', () => {
+    const grow = (kind: string, price: number) => ({ ...up(kind, price), priceGrowthPercent: 10 })
+    const two = [grow('damage', 100), grow('fire', 150)] as unknown as Parameters<
+      typeof nextAutoBuy
+    >[0]
+    // 100 → 110 → 121 → 133 → 146까지는 150 아래다: 다섯 단계만 산다.
+    expect(nextAutoBuy(two, 1e9, ['damage', 'fire'])).toEqual({ kind: 'damage', levels: 5 })
+    // 하나만 골랐으면 가진 돈만큼 산다.
+    expect(nextAutoBuy(two, 1e9, ['damage'])).toEqual({ kind: 'damage', levels: 100 })
+    // 가장 싼 것을 살 돈이 없으면 기다린다(비싼 것으로 건너뛰지 않는다).
+    expect(nextAutoBuy(two, 90, ['damage', 'fire'])).toBeNull()
+  })
+
   it('한 번에 100단계까지만 산다', () => {
     expect(nextAutoBuy(ups, 1e9, ['fire'])).toEqual({ kind: 'fire', levels: 100 })
   })

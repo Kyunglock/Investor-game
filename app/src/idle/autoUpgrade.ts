@@ -6,7 +6,7 @@ import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 
 /**
  * 지정 자동 강화 (decisions.md 654번): 성장 탭에서 고른 능력치를 돈이 모이는 대로 저절로 강화한다. 고른 것은 이 기기에 회사마다 저장한다.
- * 고른 것 가운데 지금 가장 싼 것부터 사서 고루 오른다.
+ * 고른 것 가운데 지금 가장 싼 것부터, 그 값이 다음으로 싼 것의 값을 넘기 전까지만 사서 고루 오른다 (655번).
  */
 export type UpgradeKind = NonNullable<Company['battleUpgrades']>[number]['kind']
 type Upgrade = NonNullable<Company['battleUpgrades']>[number]
@@ -48,19 +48,26 @@ export const useAutoUpgrade = create<AutoUpgrade>((set, get) => ({
   },
 }))
 
-/** 지금 살 것: 고른 능력치 가운데 끝까지 오르지 않았고 한 단계라도 살 수 있는 것 중 가장 싼 것을, 가진 돈으로 살 수 있는 만큼(최대 100단계). */
+/**
+ * 지금 살 것: 고른 능력치 가운데 끝까지 오르지 않은 것 중 가장 싼 것을, 가진 돈으로 살 수 있는 만큼(최대 100단계). 고른 것이 여럿이면 그 값이
+ * 다음으로 싼 것의 값을 넘기 전까지만 산다: 싼 하나에 돈을 다 쓰지 않고 번갈아 오른다.
+ */
 export function nextAutoBuy(
   upgrades: readonly Upgrade[],
   capital: number,
   kinds: readonly UpgradeKind[],
 ): { kind: UpgradeKind; levels: number } | null {
-  const pick = upgrades
-    .filter((u) => kinds.includes(u.kind))
-    .filter((u) => !(u.maxLevel > 0 && u.level >= u.maxLevel) && u.price <= capital)
-    .sort((a, b) => a.price - b.price)[0]
-  if (!pick) return null
+  const [pick, next] = upgrades
+    .filter((u) => kinds.includes(u.kind) && !(u.maxLevel > 0 && u.level >= u.maxLevel))
+    .sort((a, b) => a.price - b.price)
+  if (!pick || pick.price > capital) return null
   let levels = pick.maxLevel > 0 ? Math.min(MAX_BATCH, pick.maxLevel - pick.level) : MAX_BATCH
-  while (levels > 1 && queuedCost(pick.price, pick.priceGrowthPercent, 0, levels) > capital)
+  const growth = 1 + pick.priceGrowthPercent / 100
+  while (
+    levels > 1 &&
+    (queuedCost(pick.price, pick.priceGrowthPercent, 0, levels) > capital ||
+      (next && pick.price * growth ** (levels - 1) > next.price))
+  )
     levels--
   return { kind: pick.kind, levels }
 }
