@@ -1,6 +1,14 @@
 import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
-import { freeCopies, gearCells, holdersOf, mergeable, mergeBlock } from './armory'
+import {
+  freeCopies,
+  gearCells,
+  holdersOf,
+  mergeable,
+  mergeBlock,
+  mergeResult,
+  mergeResultText,
+} from './armory'
 
 const KIND = { F: 'pistol', E: 'pistol', D: 'revolver', S: 'rifle', LR: 'rifle' } as const
 type Grade = keyof typeof KIND
@@ -127,6 +135,34 @@ describe('장비 목록 (530번)', () => {
       [3, undefined],
       [1, undefined],
     ])
+  })
+
+  it('일괄 합성의 결과는 처음과 끝의 차이로, 높은 등급부터 적는다 (649번)', () => {
+    // F 둘이 E가 되고, 그 E가 원래 있던 E와 합쳐져 D가 된다: 한 개뿐이던 E도 재료로 쓰인다.
+    const before = company(
+      [
+        ['F', 3],
+        ['E', 1],
+      ],
+      'F',
+    )
+    const after = company(
+      [
+        ['F', 1],
+        ['D', 1],
+      ],
+      'F',
+    )
+    const result = mergeResult(before, after)
+    expect(result.used.map((c) => [c.weapon.grade, c.count])).toEqual([
+      ['E', 1],
+      ['F', 2],
+    ])
+    expect(result.made.map((c) => [c.weapon.grade, c.count])).toEqual([['D', 1]])
+    expect(mergeResultText(result)).toBe(
+      '쓴 무기: pistol E ×1 · pistol F ×2 → 얻은 무기: revolver D ×1',
+    )
+    expect(mergeResultText(mergeResult(before, before))).toBeNull()
   })
 
   it('무기 전에 차린 회사는 사장냥이 든 권총 한 칸이다', () => {
