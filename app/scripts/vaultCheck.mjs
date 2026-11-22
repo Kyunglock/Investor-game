@@ -332,9 +332,10 @@ try {
     await expect(page.getByTestId('vault-gold')).toContainText(String(afterBoss))
     await expect(items.nth(0)).toContainText('이번 주 4/5')
     company.vault.gold = 0
-    // 금괴가 바닥나면 누를 수 없다. 화면이 접속 신호로 먼저 새 상태를 받았으면 이미 꺼져 있다: 그때 누르려고 기다리면 30초를 넘겨 실패했다.
+    // 금괴가 바닥나면 누를 수 없다. 화면은 누른 뒤의 응답으로도, 접속 신호로 먼저 받은 새 상태로도 단추를 끈다: 언제 꺼질지 모르므로
+    // 누르기는 짧게만 기다린다(켜져 있는지 본 뒤 누르는 사이에 꺼져 30초를 기다리다 실패했다).
     const buy = items.nth(0).getByRole('button')
-    if (await buy.isEnabled()) await buy.click()
+    await buy.click({ timeout: 2000 }).catch(() => {})
     await expect(buy).toBeDisabled()
     // 좁은 화면에서도 시트가 가로로 넘치지 않는다.
     await page.setViewportSize({ width: 320, height: 568 })
