@@ -229,8 +229,10 @@ try {
     const canvas = page.getByTestId('idle-canvas')
     await expect(canvas).toHaveCSS('border-left-width', '0px')
     await expect(canvas).toHaveCSS('border-right-width', '0px')
+    // 652번: 첫 돌파 전에는 기다리라는 단추가 없다.
+    await expect(guide.getByRole('button', { name: /기다려요/ })).toHaveCount(0)
     if (width === 320)
-      await expect(guide.getByRole('button', { name: '첫 매도벽 돌파를 기다려요' })).toBeDisabled()
+      await expect(guide.getByRole('button', { name: '첫 돌파 확인했어요' })).toHaveCount(0)
     await page.screenshot({ path: `/tmp/tutorial-existing-${width}.png` })
     c.idle.wall = 2
     c.idle.cleared = 1
