@@ -281,8 +281,8 @@ export function IdleHome({
                 ₩
               </span>
               <span className="idle-cash-lines">
-                {/* 테스트판의 지갑은 떨어지지 않는다 (499번). */}
-                <b>{company.sandboxInfinite ? '∞' : money(capital)}</b>
+                {/* 테스트판도 자본은 무한이 아니다 (650번): 다이아만 ∞다. */}
+                <b>{money(capital)}</b>
                 {/* 회사가 1초에 버는 돈 (#803). */}
                 {idle?.income && (
                   <small data-testid="idle-income">+{rate(idle.income.perSecond)}/초</small>

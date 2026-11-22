@@ -234,15 +234,22 @@ class DefaultCompanyService implements CompanyService {
     return row;
   }
 
-  // 테스트판의 지갑 (499번): 요청마다 다시 채우므로 한 번에 쓸 만큼이면 되고, 곱셈에도 넘치지 않는 크기.
-  private static final long SANDBOX_CAPITAL = 1_000_000_000_000_000L;
+  // 테스트판의 다이아 (499번): 요청마다 다시 채우므로 한 번에 쓸 만큼이면 된다.
   private static final long SANDBOX_DIAMONDS = 100_000_000L;
 
-  /** 테스트판 회사면 자본·다이아를 다시 채운다. 요청 끝에 함께 저장된다. */
-  private static void refill(CompanyState c) {
-    if (!c.sandbox || c.sandboxFinite) return;
-    // 그 벽의 물가(505번)만큼 채운다: 깊은 벽에서 버는 돈의 크기와 맞춘다.
-    c.capital = Math.max(c.capital, SANDBOX_CAPITAL * CompanyEngine.inflation(c));
+  // 650번 전의 무한 자본(1,000조 × 물가): 이만큼(의 절반) 넘게 가진 테스트판 회사는 그 돈을 거둔다.
+  private static final double OLD_SANDBOX_CAPITAL = 1e18;
+
+  /**
+   * 테스트판 회사면 다이아를 다시 채운다 (499번). 요청 끝에 함께 저장된다. 자본은 채우지 않는다 (650번): 본 게임처럼 벽에서 번 돈으로만 강화한다. 650번 전에
+   * 채워 둔 무한 자본이 남아 있으면 회사를 차릴 때의 돈(그 벽의 물가만큼)으로 되돌린다.
+   */
+  private void refill(CompanyState c) {
+    if (!c.sandbox) return;
+    if (c.capital >= OLD_SANDBOX_CAPITAL / 2 * CompanyEngine.inflation(c)) {
+      c.capital = Math.floor(engine.openingCapital() * CompanyEngine.inflation(c));
+    }
+    if (c.sandboxFinite) return;
     c.diamonds = Math.max(c.diamonds, SANDBOX_DIAMONDS);
   }
 
@@ -294,10 +301,10 @@ class DefaultCompanyService implements CompanyService {
     CompanyRepository.Row row = lockSandbox(sessionId);
     CompanyState c = row.state();
     c.sandboxFinite = !infinite;
+    // 무한 다이아만 켜고 끈다 (650번): 자본은 늘 벽에서 번 만큼이다.
     if (infinite) {
       refill(c);
     } else {
-      c.capital = Math.floor(engine.openingCapital() * CompanyEngine.inflation(c));
       c.diamonds = 0;
     }
     companies.update(row.id(), c, false);

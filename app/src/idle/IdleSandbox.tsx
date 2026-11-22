@@ -342,11 +342,11 @@ export function IdleSandbox({ company }: { company: Company }) {
                 onChange={(e) => void run(() => store().setSandboxWallet(e.target.checked))}
               />
               <span>
-                무한 지갑
+                무한 다이아
                 <small className="idle-sandbox-hint">
                   {company.sandboxInfinite
-                    ? '자본과 다이아가 쓸 때마다 다시 채워져요'
-                    : '꺼짐: 이 벽에서 버는 돈으로만 강화해요'}
+                    ? '다이아가 쓸 때마다 다시 채워져요. 돈은 벽에서 번 만큼이에요'
+                    : '꺼짐: 다이아도 모은 만큼만 써요'}
                 </small>
               </span>
             </label>
