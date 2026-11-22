@@ -667,10 +667,11 @@ class IdleEngineTest {
         code ->
             engine.view(state).cats().stream().filter(c -> c.code().equals(code)).findFirst().get();
     // 특성으로 공격력이 붙지 않은 고양이끼리 견준다: 하늘냥 C, 카라멜냥 B, 바다냥 A, 별빛냥 S.
+    // 등급 배수 (656번): C 1 · B 1.15 · A 1.35 · S 1.6 · SS 2.
     assertThat(cat.apply("sky").damagePercent()).isEqualTo(25);
-    assertThat(cat.apply("caramel").damagePercent()).isEqualTo(26);
-    assertThat(cat.apply("ocean").damagePercent()).isEqualTo(28);
-    assertThat(cat.apply("star").damagePercent()).isEqualTo(30);
+    assertThat(cat.apply("caramel").damagePercent()).isEqualTo(29);
+    assertThat(cat.apply("ocean").damagePercent()).isEqualTo(34);
+    assertThat(cat.apply("star").damagePercent()).isEqualTo(40);
     // 마법은 A등급부터다 (561번): C·B는 없고 A는 하나, S는 둘이다. 모든 스킬이 쓰인다.
     for (var c : cats) {
       int want =

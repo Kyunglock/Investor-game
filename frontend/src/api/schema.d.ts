@@ -1914,7 +1914,7 @@ export interface components {
                     /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
                     skillNextLevel: number;
                     /**
-                     * @description 등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.05배 · A 1.1배 · S 1.2배 · SS 1.4배) 뽑기에서 드물다
+                     * @description 등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.15배 · A 1.35배 · S 1.6배 · SS 2배) 뽑기에서 드물다
                      * @enum {string}
                      */
                     grade: "C" | "B" | "A" | "S" | "SS";
