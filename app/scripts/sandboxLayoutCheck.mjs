@@ -1,4 +1,4 @@
-// 테스트판 (decisions.md 499번, #919): 테스트판 단추와 프레임 표시가 환생·광고 스킬·스킬 단추와 겹치지 않고 눌리며, 무한 지갑은 상점에서도 ∞다.
+// 테스트판 (decisions.md 499번, #919): 테스트판 단추와 프레임 표시가 환생·광고 스킬·스킬 단추와 겹치지 않고 눌리며, 무한 다이아는 상점에서도 ∞다(돈은 무한이 아니다, 650번).
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
@@ -18,7 +18,7 @@ try {
       ...structuredClone(fixture),
       sandbox: true,
       sandboxInfinite: true,
-      capital: 1.04e32,
+      capital: 1.04e10,
       idle: {
         wall: 120,
         hp: 1000000,
@@ -115,10 +115,11 @@ try {
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('rebirth')).toHaveCount(0)
 
-    // 무한 지갑은 머리띠와 상점 위 줄 모두 ∞다: 돈 단위가 붙은 수(104j · 100b)가 보이지 않는다.
+    // 무한 다이아는 머리띠와 상점 위 줄 모두 ∞다. 돈은 무한이 아니라 가진 만큼 적는다 (650번).
     await expect(page.getByTestId('idle-diamonds')).toHaveText('∞')
     await page.locator('.idle-nav button', { hasText: '상점' }).click()
-    await expect(page.getByTestId('shop-wallet')).toHaveText('게임 재화 전용∞다이아 ∞')
+    await expect(page.getByTestId('shop-wallet')).toContainText('다이아 ∞')
+    await expect(page.getByTestId('shop-wallet')).not.toContainText('게임 재화 전용∞')
     assert.deepEqual(errors, [])
     await page.close()
     console.log(`sandbox layout ok (${width}x${height})`)

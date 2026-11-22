@@ -1612,7 +1612,7 @@ export interface components {
             };
             /** @description 테스트판의 회사다 (decisions.md 499번) */
             sandbox?: boolean;
-            /** @description 테스트판의 무한 지갑이 켜져 있다. 자본과 다이아가 떨어지지 않는다 */
+            /** @description 테스트판의 무한 다이아가 켜져 있다: 다이아가 떨어지지 않는다. 자본은 무한이 아니다 (650번) */
             sandboxInfinite?: boolean;
             /** @description 금고 도전 (decisions.md 641번). 보스전과 주간 던전에서 금괴를 얻어 금고 상점에서 쓴다. 한 주의 경계는 한국 시간 월요일 0시다 */
             vault?: {

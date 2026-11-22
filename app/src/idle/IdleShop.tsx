@@ -48,8 +48,8 @@ export function IdleShop({
     <div className="idle-shop">
       <div className="idle-shop-wallet" data-testid="shop-wallet">
         <span>게임 재화 전용</span>
-        {/* 테스트판의 무한 지갑은 머리띠처럼 ∞로 적는다 (#919). */}
-        <b>{company.sandboxInfinite ? '∞' : money(company.capital)}</b>
+        {/* 테스트판의 무한 다이아는 머리띠처럼 ∞로 적는다 (#919). 자본은 무한이 아니다 (650번). */}
+        <b>{money(company.capital)}</b>
         {company.sandboxInfinite ? (
           <span className="whitespace-nowrap">
             <DiamondIcon />
