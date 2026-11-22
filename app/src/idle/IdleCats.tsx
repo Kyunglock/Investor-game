@@ -7,16 +7,16 @@ import { sfx } from '../fx/sound'
 import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
-import { magicTier } from '../mental/magic'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
 import { CatBakery } from './CatBakery'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
+import { CompanionSkills } from './CompanionSkills'
 import { sortCats } from './catGrade'
 import { fieldSteps, recommendParty } from './party'
 import { SkillBadge } from './SkillBadge'
 import { fieldSeats } from './seats'
-import { SKILLS, skillNames } from './skills'
+import { skillNames } from './skills'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
 export type LoadoutTab = '고양이' | '무기' | '식빵 공방'
@@ -41,11 +41,13 @@ export function IdleCats({
   onPick,
   tab,
   onTab,
+  onSkills,
 }: {
   company: Company
   /** 메뉴를 오가도 선택한 고양이를 유지한다. null은 사장냥이다. */
   picked: CatCode | null
   onPick: (code: CatCode | null) => void
+  onSkills?: () => void
   tab: LoadoutTab
   onTab: (tab: LoadoutTab) => void
 }) {
@@ -408,63 +410,17 @@ export function IdleCats({
           ) : (
             <span className="idle-cat-field idle-cat-always">늘 출전</span>
           )}
-          {/* 스킬 설명 (530번): 하는 일, 레벨이 오르면 달라지는 점, 다음 스킬 레벨까지 필요한 고양이 레벨. 스킬은 A등급부터 있고 S등급은 둘이다 (561번). */}
-          {cat && cat.skills.length === 0 && (
-            <p className="idle-cat-noskill" data-testid="cat-noskill">
-              고유 스킬 없음 · 스킬은 A등급 고양이부터 있어요
-            </p>
-          )}
-          {cat && cat.skills.length > 0 && (
-            <details>
-              <summary>
-                고유 스킬 · {skillNames(cat)} Lv.{cat.skillLevel}
-              </summary>
-              {cat.skills.map((own) => {
-                const skill = SKILLS[own.code]
-                return (
-                  <section
-                    key={own.code}
-                    className="idle-cat-skill"
-                    data-testid="cat-skill"
-                    data-skill={own.code}
-                  >
-                    <SkillBadge skill={own.code} level={cat.skillLevel} size={60} />
-                    <div className="idle-skill-text">
-                      <b className="idle-skill-title">
-                        고유 스킬 {own.name}{' '}
-                        <small className="idle-skill-lv">Lv.{cat.skillLevel}</small>
-                      </b>
-                      <p className="idle-skill-line">{skill.does}</p>
-                      <p className="idle-skill-line">{skill.grows}</p>
-                      {/* 레벨에 따라 바뀌는 모습 (531번): 지금 단계에 테를 두른다. */}
-                      <ol className="idle-skill-tiers" aria-label="레벨에 따라 바뀌는 모습">
-                        {skill.tiers.map((name, i) => {
-                          const now = magicTier(cat.skillLevel) === i + 1
-                          return (
-                            <li
-                              key={name}
-                              className={`idle-skill-tier ${now ? 'is-now' : ''}`}
-                              aria-current={now || undefined}
-                            >
-                              <SkillBadge skill={own.code} level={i + 1} size={24} />
-                              {name}
-                            </li>
-                          )
-                        })}
-                      </ol>
-                    </div>
-                  </section>
-                )
-              })}
-              <p className="idle-skill-line idle-skill-next" data-testid="cat-skill-next">
-                {cat.skillNextLevel > 0
-                  ? `고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1} · 앞으로 ${cat.skillNextLevel - cat.level}레벨`
-                  : '스킬 최고 레벨이에요'}
-              </p>
-              <p className="idle-skill-line">
-                {cat.fielded ? '출전 중이라 발동하고 있어요' : '출전하면 발동해요'}
-              </p>
-            </details>
+          {onSkills ? (
+            <button type="button" className="cat-skills-link" onClick={onSkills}>
+              {cat?.name ?? hero.name} 스킬 보기
+            </button>
+          ) : (
+            cat && (
+              <details>
+                <summary>고유 스킬 · {skillNames(cat) || '없음'}</summary>
+                <CompanionSkills cat={cat} />
+              </details>
+            )
           )}
           <button
             type="button"

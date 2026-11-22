@@ -263,15 +263,18 @@ try {
       await detail.getByTestId('cat-gun').click()
       await page.locator('[data-testid=cat][data-code=sky]').click()
       await expect(detail).toHaveAttribute('data-code', 'sky')
-      const skill = detail.getByTestId('cat-skill')
+      await detail.getByRole('button', { name: '하늘냥 스킬 보기' }).click()
+      const skills = page.getByTestId('skills')
+      const skill = skills.getByTestId('cat-skill')
       await expect(skill).toContainText('고유 스킬 메테오 스킬 Lv.1')
       await expect(skill).toContainText('운석이 떨어져')
       await expect(skill).toContainText('운석 → 대운석 → 유성우')
-      await expect(detail.getByTestId('cat-skill-next')).toHaveText(
+      await expect(skills.getByTestId('cat-skill-next')).toHaveText(
         '고양이 Lv.2에 스킬 Lv.2 · 앞으로 1레벨',
       )
-      await page.locator('[data-testid=cat][data-code=night]').click()
-      await expect(detail.getByTestId('cat-skill-next')).toHaveText('스킬 최고 레벨이에요')
+      await skills.getByRole('combobox').selectOption('night')
+      await expect(skills.getByTestId('cat-skill-next')).toHaveText('스킬 최고 레벨이에요')
+      await tab(CAT_MENU).click()
       await page.locator('[data-testid=cat][data-code=sky]').click()
 
       // 하늘냥의 무기를 누르면 하늘냥의 장비 목록이 펴진다: 든 것, 남이 든 것, 남은 것.
