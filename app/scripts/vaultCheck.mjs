@@ -312,10 +312,15 @@ try {
     await expect(page.getByTestId('vault-offers').getByRole('button')).toHaveCount(3)
     await page.getByRole('button', { name: /금리 인하/ }).click()
     await expect(page.getByTestId('vault-picked')).toContainText('공격력 +25%')
-    assert.deepEqual(calls.at(-1), { path: '/api/company/vault/card', body: { code: 'rate-cut' } })
+    await expect
+      .poll(() => calls.at(-1))
+      .toEqual({ path: '/api/company/vault/card', body: { code: 'rate-cut' } })
     await page.getByRole('button', { name: '1층 입장 · 금괴 +30' }).click()
     await fight(page)
-    assert.deepEqual(calls.at(-1), { path: '/api/company/vault/floor', body: { floor: 1 } })
+    // 전장이 닫힌 뒤에 결과를 보낸다: 보낸 요청이 잡힐 때까지 기다린다(바로 견주면 아직 카드 요청이 마지막이라 실패했다).
+    await expect
+      .poll(() => calls.at(-1))
+      .toEqual({ path: '/api/company/vault/floor', body: { floor: 1 } })
     await expect(page.getByTestId('vault-note')).toContainText('1층 돌파 · 금괴 +30')
     await expect(page.getByTestId('vault-sheet')).toContainText('2층에 들고 갈 카드를 고르세요')
     // 금고 상점: 금괴로 산다. 모자라면 누를 수 없다.
