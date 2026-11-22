@@ -36,7 +36,16 @@ function writeAutoSkill(on: boolean) {
  * 오른쪽에는 장착한 고유 스킬이 선다 (587번): 스킬 탭에서 세 개까지 장착한다. 왼쪽에는 광고 스킬이 선다 (588번): 광고를 본 뒤에 쓴다. 광고를
  * 불러오지 못하면 알림을 띄운다 (589번, app/ads.ts).
  */
-export function IdleActives({ company, connected }: { company: Company; connected: boolean }) {
+export function IdleActives({
+  company,
+  connected,
+  autoPaused = false,
+}: {
+  company: Company
+  connected: boolean
+  /** 돌파 전투가 화면에 없다(금고 전투·다른 전투 창): 자동 사용을 쉰다 (655번). */
+  autoPaused?: boolean
+}) {
   const [selectedAd, setSelectedAd] = useState<ActiveCode | null>(null)
   const running = useRef(false)
   const [pending, setPending] = useState<ActiveCode | null>(null)
@@ -102,7 +111,7 @@ export function IdleActives({ company, connected }: { company: Company; connecte
   const [auto, setAuto] = useState(readAutoSkill)
   const tried = useRef(new Map<string, number>())
   const autoUse = useEffectEvent(() => {
-    if (!auto || running.current) return
+    if (!auto || autoPaused || running.current) return
     const now = Date.now()
     const ready = unique.find(
       (active) => !unavailable(active) && now - (tried.current.get(active.code) ?? 0) > 3000,

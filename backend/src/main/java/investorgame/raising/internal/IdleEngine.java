@@ -728,7 +728,7 @@ class IdleEngine {
     List<String> fielded = s.fielded;
     s.fielded =
         party.stream()
-            .filter(code -> CATS.contains(code) && s.cats.getOrDefault(code, 0) > 0)
+            .filter(code -> code != null && CATS.contains(code) && s.cats.getOrDefault(code, 0) > 0)
             .distinct()
             .limit(FIELD_SLOTS)
             .collect(java.util.stream.Collectors.toCollection(ArrayList::new));

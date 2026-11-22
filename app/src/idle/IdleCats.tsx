@@ -250,7 +250,7 @@ export function IdleCats({
             <span>
               출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 윗줄은 고양이, 아랫줄은 그 고양이의
               무기
-              {recommended.length > 0 && (
+              {recommended.length > 0 && !gearLocked && (idle?.onboarding?.step ?? 8) >= 8 && (
                 <button
                   type="button"
                   className="loadout-recommend"
@@ -259,7 +259,7 @@ export function IdleCats({
                   title="팀 화력(총·스킬의 초당 피해 어림)이 가장 큰 고양이들로 출전 칸을 바꿔요"
                   onClick={() => void applyRecommended()}
                 >
-                  {alreadyBest ? '추천 편성 중' : arranging ? '편성 중…' : '추천 편성'}
+                  {alreadyBest ? '추천 편성됨' : arranging ? '편성 중…' : '추천 편성'}
                 </button>
               )}
             </span>

@@ -164,8 +164,10 @@ export function VaultChallenges({
   const store = useRaisingStore.getState()
   const cats = company.idle?.cats ?? []
   const { boss, dungeon } = vault
-  const status = (cat?: { level: number; fielded: boolean }) =>
-    !cat || cat.level <= 0 ? '없음' : cat.fielded ? '출전 중' : '대기'
+  // 약점·내성·천적 칸의 "출전 중"은 돌파의 출전 칸이 아니라 보스전에 데려갈 파티를 따른다 (655번).
+  const bossParty = partyOf(company, saved.boss)
+  const status = (cat?: { code: string; level: number }) =>
+    !cat || cat.level <= 0 ? '없음' : bossParty.includes(cat.code) ? '출전 중' : '대기'
   /** 그 스킬을 가진 고양이와 그 고양이의 상태. */
   const owner = (code: string) => {
     const cat = cats.find((c) => c.skills.some((skill) => skill.code === code))

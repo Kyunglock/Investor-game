@@ -114,7 +114,8 @@ class VaultEngineTest {
     c.idle.cats.put("sky", 10);
     c.idle.cats.put("mint", 10);
     // 없는 고양이·가지지 않은 고양이·겹친 고양이는 빼고 잰다.
-    double party = idle.partyDps(c, List.of("sky", "mint", "sky", "nope", "lilac"));
+    double party =
+        idle.partyDps(c, java.util.Arrays.asList("sky", "mint", "sky", "nope", null, "lilac"));
     assertThat(party).isEqualTo(idle.partyDps(c, List.of("sky", "mint")));
     assertThat(party).isGreaterThan(field);
     assertThat(c.idle.fielded).isEqualTo(fielded);
