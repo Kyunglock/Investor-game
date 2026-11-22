@@ -113,3 +113,42 @@ export function gearCells(company: Company): GearCell[] {
     return [...held, ...spare]
   })
 }
+
+export interface MergeChange {
+  weapon: Weapon
+  count: number
+}
+
+/**
+ * 일괄 합성의 결과 (649번): 합치기 전과 뒤의 가진 수를 견주어, 줄어든 무기(쓴 것)와 늘어난 무기(얻은 것)를 높은 등급부터. 합성은 낮은 등급부터
+ * 이어지므로(F 둘이 E가 되면 그 E가 원래 있던 E와 또 합쳐진다) 중간에 생겼다 다시 쓰인 무기는 보이지 않고, 처음 가진 것과 마지막에 남은 것의 차이만 보인다.
+ */
+export function mergeResult(before: Company, after: Company) {
+  const key = (w: Pick<Weapon, 'kind' | 'grade'>) => `${w.kind}-${w.grade}`
+  const counts = new Map<string, { weapon: Weapon; before: number; after: number }>()
+  for (const w of before.weapons ?? []) counts.set(key(w), { weapon: w, before: w.count, after: 0 })
+  for (const w of after.weapons ?? []) {
+    const seen = counts.get(key(w))
+    if (seen) seen.after = w.count
+    else counts.set(key(w), { weapon: w, before: 0, after: w.count })
+  }
+  const rows = [...counts.values()].sort(
+    (a, b) => GUN_GRADES.indexOf(b.weapon.grade) - GUN_GRADES.indexOf(a.weapon.grade),
+  )
+  return {
+    used: rows
+      .filter((r) => r.before > r.after)
+      .map((r) => ({ weapon: r.weapon, count: r.before - r.after })),
+    made: rows
+      .filter((r) => r.after > r.before)
+      .map((r) => ({ weapon: r.weapon, count: r.after - r.before })),
+  }
+}
+
+/** 일괄 합성의 결과 글: "쓴 무기: 권총 E ×1 · 권총 F ×2 → 얻은 무기: 리볼버 D ×1". 바뀐 것이 없으면 null. */
+export function mergeResultText(result: { used: MergeChange[]; made: MergeChange[] }) {
+  if (result.used.length === 0 && result.made.length === 0) return null
+  const list = (items: MergeChange[]) =>
+    items.map((c) => `${c.weapon.name} ${c.weapon.gradeName} ×${c.count}`).join(' · ')
+  return `쓴 무기: ${list(result.used)} → 얻은 무기: ${list(result.made)}`
+}
