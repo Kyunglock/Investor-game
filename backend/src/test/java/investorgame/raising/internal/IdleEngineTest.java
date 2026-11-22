@@ -636,8 +636,7 @@ class IdleEngineTest {
 
   @Test
   void catsHaveAFixedGradeThatStrengthensTheirGunAndMakesThemRarer() {
-    // 고양이 등급 (539번): C 16 · B 12 · A 7 · S 9 · SS 1종. 총 공격력 C 1배 · B 1.05배 · A 1.1배 · S 1.2배(646번, 644번에는
-    // 1 · 1.15 · 1.35 · 1.6배, 그 전에는 1 · 1.4 · 2 · 3배). 레벨 1이면 25%에 곱한다: 25 · 26.25 · 27.5 · 30.
+    // 등급별 종 수와 총 공격력 배율을 확인한다.
     start(1);
     var cats = engine.view(state).cats();
     assertThat(cats).hasSize(45);
@@ -673,16 +672,16 @@ class IdleEngineTest {
         .containsExactlyInAnyOrder(
             "water", "meteor", "bolt", "ram", "ice", "wind", "fire", "poison", "light", "dark",
             "sand", "star", "hail", "blossom", "bomb");
-    // 열다섯 가지 스킬이 열다섯 칸에 하나씩이다 (563번): 같은 스킬을 가진 고양이는 없다.
+    // 동료 45종의 고유 스킬은 모두 28칸이다.
     assertThat(cats.stream().mapToInt(c -> c.skills().size()).sum()).isEqualTo(28);
-    // 뽑기: 등급의 몫은 C 60 · B 28 · A 10 · S 2%이고 등급 안에서는 고르다.
+    // 뽑기: 등급의 몫은 C 59.8 · B 28 · A 10 · S 2 · SS 0.2%이고 등급 안에서는 고르다.
     var random = new HashSeededRandom(7);
     java.util.Map<String, Integer> drawn = new java.util.HashMap<>();
     int draws = 20_000;
     for (int i = 0; i < draws; i++) {
       drawn.merge(IdleEngine.catGrade(engine.grantCat(state, random).kind), 1, Integer::sum);
     }
-    assertThat(drawn.get("C") * 100.0 / draws).isCloseTo(60, offset(2.0));
+    assertThat(drawn.get("C") * 100.0 / draws).isCloseTo(59.8, offset(2.0));
     assertThat(drawn.get("B") * 100.0 / draws).isCloseTo(28, offset(2.0));
     assertThat(drawn.get("A") * 100.0 / draws).isCloseTo(10, offset(1.5));
     assertThat(drawn.get("SS") * 100.0 / draws).isCloseTo(0.2, offset(0.15));
