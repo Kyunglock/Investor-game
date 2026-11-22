@@ -88,7 +88,12 @@ public interface CompanyService {
   CompanyView buyShop(UUID sessionId, String code);
 
   /** 금고 보스전을 마쳤다 (decisions.md 641번): 넣은 피해량을 받아 기록을 고치고 새로 닿은 등급의 금괴를 준다. */
-  CompanyView reportVaultBoss(UUID sessionId, double damage);
+  default CompanyView reportVaultBoss(UUID sessionId, double damage) {
+    return reportVaultBoss(sessionId, damage, null);
+  }
+
+  /** 저장한 파티로 싸운 보스전 (653번): cats(null이면 지금 출전한 팀)가 낼 수 있는 상한까지 받아 준다. */
+  CompanyView reportVaultBoss(UUID sessionId, double damage, java.util.List<String> cats);
 
   /** 주간 던전의 floor층을 깼다 (641번): 차례가 아니거나 그 층의 카드를 고르지 않았으면 400. */
   CompanyView clearVaultFloor(UUID sessionId, int floor);

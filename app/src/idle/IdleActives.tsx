@@ -13,6 +13,22 @@ import { ActiveBadge } from './ActiveBadge'
 
 type Active = NonNullable<NonNullable<Company['idle']>['actives']>[number]
 
+const AUTO_KEY = 'idle-auto-skill'
+function readAutoSkill() {
+  try {
+    return localStorage.getItem(AUTO_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function writeAutoSkill(on: boolean) {
+  try {
+    localStorage.setItem(AUTO_KEY, on ? '1' : '0')
+  } catch {
+    // 기억하지 못해도 지금은 그대로 쓴다.
+  }
+}
+
 /**
  * 액티브 스킬 단추 (decisions.md 503번). 누르면 서버가 대기 시간을 보고 받아 주고, 받아 준 뒤에 전투가 효과를 낸다. 남은 대기 시간은 접속
  * 신호마다 서버가 다시 알려 준다.
@@ -46,13 +62,15 @@ export function IdleActives({ company, connected }: { company: Company; connecte
     if (active.readyIn > 0) return `${Math.ceil(active.readyIn)}초 뒤에 쓸 수 있어요`
     return null
   }
-  const use = async (active: Active) => {
+  const use = async (active: Active, auto = false) => {
     if (running.current || unavailable(active)) return
     running.current = true
     setPending(active.code)
     setNotice(null)
-    sfx.tap()
-    haptic.light()
+    if (!auto) {
+      sfx.tap()
+      haptic.light()
+    }
     try {
       if (active.ad) {
         const watched = await watchRewardedAd('active')
@@ -69,7 +87,7 @@ export function IdleActives({ company, connected }: { company: Company; connecte
       if (ok) {
         window.dispatchEvent(new CustomEvent('idle-active', { detail: active.code }))
         setSelectedAd(null)
-      } else
+      } else if (!auto)
         setNotice(
           useRaisingStore.getState().error ?? '스킬을 사용하지 못했어요. 다시 시도해 주세요.',
         )
@@ -80,6 +98,23 @@ export function IdleActives({ company, connected }: { company: Company; connecte
       setPending(null)
     }
   }
+  // 스킬 자동 사용 (653번): 켜 두면 장착한 고유 스킬을 쓸 수 있게 되는 대로 쓴다. 광고 스킬은 저절로 쓰지 않는다. 이 기기에 기억한다.
+  const [auto, setAuto] = useState(readAutoSkill)
+  const tried = useRef(new Map<string, number>())
+  const autoUse = useEffectEvent(() => {
+    if (!auto || running.current) return
+    const now = Date.now()
+    const ready = unique.find(
+      (active) => !unavailable(active) && now - (tried.current.get(active.code) ?? 0) > 3000,
+    )
+    if (!ready) return
+    tried.current.set(ready.code, now)
+    void use(ready, true)
+  })
+  // 서버가 남은 대기 시간을 1초마다 알려 주므로 화면이 바뀔 때마다 살핀다.
+  useEffect(() => {
+    autoUse()
+  })
   const selected = ads.find((active) => active.code === selectedAd)
   const button = (active: Active) => {
     const blockedByAd = active.ad && !!activeAd && activeAd.code !== active.code
@@ -156,6 +191,22 @@ export function IdleActives({ company, connected }: { company: Company; connecte
       )}
       {unique.length > 0 && (
         <div className="idle-actives" data-testid="idle-actives">
+          <button
+            type="button"
+            className="idle-auto-skill"
+            data-testid="idle-auto-skill"
+            aria-pressed={auto}
+            aria-label={auto ? '스킬 자동 사용 끄기' : '스킬 자동 사용 켜기'}
+            title="스킬 자동 사용"
+            onClick={() => {
+              sfx.tap()
+              const next = !auto
+              setAuto(next)
+              writeAutoSkill(next)
+            }}
+          >
+            AUTO
+          </button>
           {unique.map(button)}
         </div>
       )}

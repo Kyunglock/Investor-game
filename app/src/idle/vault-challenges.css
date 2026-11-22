@@ -280,3 +280,228 @@
 .vault-room button:disabled {
   opacity: 0.45;
 }
+
+/* 파티 (653번): 금고 도전에 데려갈 고양이. */
+.vault-party {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1.5px solid #d7c9e6;
+  border-radius: 12px;
+  background: #faf6ff;
+}
+.vault-party header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.vault-party header span {
+  color: #5b3f8a;
+  font-weight: 800;
+}
+.vault-party-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 6px;
+}
+.vault-party-row li {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 2px;
+  border: 1.5px solid #c8b6dd;
+  border-radius: 10px;
+  background: #fff;
+}
+.vault-party-row li.is-empty {
+  align-content: center;
+  min-height: 64px;
+  border-style: dashed;
+  color: #9a8fae;
+}
+.vault-party-row .idle-cat-portrait {
+  width: 44px;
+  height: 44px;
+}
+.vault-party .vault-party-row small {
+  font-size: 11px;
+  font-weight: 800;
+  color: #6b4f2a;
+}
+.vault-marks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+.vault-mark {
+  padding: 0 4px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 15px;
+  color: #fff;
+}
+.vault-mark.is-weak {
+  background: #d4533d;
+}
+.vault-mark.is-resist {
+  background: #4f74b5;
+}
+.vault-mark.is-rival {
+  background: #b0761b;
+}
+.vault-party-actions {
+  display: flex;
+  gap: 6px;
+}
+.vault-room .vault-party-actions button {
+  min-height: 38px;
+  font-size: 13px;
+}
+.vault-room .vault-party-actions button[data-testid="vault-party-recommend"]:not(:disabled) {
+  background: #6a49a8;
+  color: #fff;
+}
+.vault-party-note {
+  margin: 0;
+  font-size: 11px;
+  color: #6d6380;
+}
+.vault-party-pick {
+  display: grid;
+  gap: 4px;
+  max-height: 46dvh;
+  overflow-y: auto;
+}
+.vault-room .vault-party-pick button {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 4px 8px;
+  text-align: left;
+  background: #fff;
+  border: 1.5px solid #ddd2ea;
+}
+.vault-room .vault-party-pick button[aria-pressed="true"] {
+  border-color: #6a49a8;
+  background: #efe7fb;
+}
+.vault-party-pick .idle-cat-portrait {
+  width: 40px;
+  height: 40px;
+}
+.vault-party .vault-party-pick span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.vault-party-pick span .vault-marks {
+  display: flex;
+  justify-content: flex-start;
+}
+.vault-party-pick b {
+  font-size: 13px;
+}
+.vault-party .vault-party-pick small {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6d6380;
+}
+.vault-party-pick i {
+  font-size: 11px;
+  font-style: normal;
+  color: #5b3f8a;
+}
+
+/* 클리어 화면 (653번). */
+.vault-result[open] {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 22px 18px 18px;
+  border: 3px solid #ffdb83;
+  border-radius: 18px;
+  background: linear-gradient(#352e50, #1c1830);
+  color: #fff;
+  text-align: center;
+  animation: vault-result-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.vault-result::backdrop {
+  background: #0c0a18b8;
+}
+.vault-result-kicker {
+  margin: 0;
+  font-size: 12px;
+  color: #c9bde6;
+}
+.vault-result h2 {
+  margin: 0;
+  font-family: Jua, sans-serif;
+  font-size: 30px;
+  color: #ffe399;
+  text-shadow: 0 2px 0 #7a4f12;
+}
+.vault-result p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.vault-result-reward {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  background: #ffffff14;
+}
+.vault-result-reward b {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  color: #ffe399;
+}
+.vault-result .vault-result-reward small {
+  font-size: 11px;
+  color: #c9bde6;
+}
+.vault-result p.vault-result-cards {
+  font-size: 12px;
+  color: #d9d0ee;
+}
+.vault-result .vault-result-ok {
+  min-height: 44px;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  background: #ffdb83;
+  color: #352e50;
+  font-weight: 800;
+}
+@keyframes vault-result-in {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vault-result[open] {
+    animation: none;
+  }
+}

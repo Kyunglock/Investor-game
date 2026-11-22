@@ -232,12 +232,17 @@ class VaultEngine {
    * 보스전을 마쳤다: 넣은 피해량을 받아 이번 주 최고 기록과 역대 기록을 고치고, 새로 닿은 등급마다 금괴를 준다. 피해량은 지금 팀이 낼 수 있는 상한까지만 받아 준다.
    */
   void reportBoss(CompanyState c, double damage) {
+    reportBoss(c, damage, null);
+  }
+
+  /** 저장한 파티로 싸운 보스전 (653번): 상한을 그 파티(null이면 지금 출전한 팀)로 잰다. */
+  void reportBoss(CompanyState c, double damage, List<String> party) {
     if (!Double.isFinite(damage) || damage < 0) {
       throw new InvalidRequestException("피해량이 올바르지 않아요");
     }
     CompanyState.Vault v = state(c);
     double cap =
-        idle.fieldDps(c)
+        (party == null ? idle.fieldDps(c) : idle.partyDps(c, party))
             * BOSS_SECONDS
             * SCORE_SLACK
             * (1 + v.training * TRAINING_STEP_PERCENT / 100.0);

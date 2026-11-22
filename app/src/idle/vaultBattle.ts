@@ -39,8 +39,11 @@ function spellRate(spell: Spell, level: number): number {
   return (s.damage * s.bolts) / s.cooldown
 }
 
-/** 팀이 전투 1초에 내는 피해의 어림: 사장냥과 고양이들의 총, 고양이 스킬. 치명타와 범위 피해는 세지 않는다. */
-export function teamDps(loadout: Loadout): number {
+/**
+ * 팀이 전투 1초에 내는 피해의 어림: 사장냥과 고양이들의 총, 고양이 스킬. 치명타와 범위 피해는 세지 않는다. scale을 주면 스킬 피해에
+ * 그 종류의 배율(보스의 약점·내성)을 곱한다.
+ */
+export function teamDps(loadout: Loadout, scale?: (kind: DamageKind) => number): number {
   const gun = (g: Pick<Loadout, 'damage' | 'bulletPower' | 'fireMs'>) =>
     (bulletStats(g).damage * 1000) / g.fireMs
   let total = gun(loadout)
@@ -48,7 +51,8 @@ export function teamDps(loadout: Loadout): number {
   const base = loadout.skillDamage ?? loadout.damage
   loadout.mateMagic?.forEach((spells, i) => {
     const level = loadout.mateMagicLevels?.[i] ?? 1
-    for (const spell of spells) total += base * spellRate(spell, level)
+    for (const spell of spells)
+      total += base * spellRate(spell, level) * (scale?.(spell as DamageKind) ?? 1)
   })
   return total
 }

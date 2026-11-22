@@ -26,6 +26,7 @@ export function VaultField({
   vault,
   boss,
   floor,
+  party,
   onDone,
   onExit,
 }: {
@@ -33,12 +34,14 @@ export function VaultField({
   vault: Vault
   boss: boolean
   floor: number
+  /** 데려간 파티 (653번). 없으면 출전 칸의 고양이. */
+  party?: string[]
   onDone: (result: Outcome) => void
   onExit: () => void
 }) {
   const [setup] = useState(() => {
     const hero = heroOf(company)
-    const team = idleLoadout(company)
+    const team = idleLoadout(company, party)
     const scale = teamScale(team)
     const training = 1 + vault.trainingPercent / 100
     if (boss) {

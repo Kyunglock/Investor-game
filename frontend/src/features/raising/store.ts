@@ -100,7 +100,8 @@ interface RaisingState {
    * 금고 도전 (decisions.md 641번): 보스전의 피해량을 알리고, 던전의 층을 깼다고 알리고, 다음 층의 카드를 고르고, 금괴로 금고 상점의 상품을
    * 산다. 받은 것은 company.vault.lastNote. 바뀐 회사(거절되거나 끊겼으면 null)를 돌려준다. 전투를 멈추지 않게 busy를 켜지 않는다.
    */
-  reportVaultBoss: (damage: number) => Promise<Company | null>
+  /** cats: 데려간 파티(653번). 없으면 지금 출전한 팀으로 상한을 잰다. */
+  reportVaultBoss: (damage: number, cats?: string[]) => Promise<Company | null>
   clearVaultFloor: (floor: number) => Promise<Company | null>
   pickVaultCard: (code: string) => Promise<Company | null>
   buyVaultItem: (code: string) => Promise<Company | null>
@@ -292,8 +293,10 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       set({ company: res?.data ?? get().company, error: reason(res?.error) })
       return res?.data ?? null
     },
-    reportVaultBoss: async (damage) => {
-      const res = await safely(api.POST('/api/company/vault/boss', { body: { damage } }))
+    reportVaultBoss: async (damage, cats) => {
+      const res = await safely(
+        api.POST('/api/company/vault/boss', { body: cats ? { damage, cats } : { damage } }),
+      )
       set({ company: res?.data ?? get().company, error: reason(res?.error) })
       return res?.data ?? null
     },

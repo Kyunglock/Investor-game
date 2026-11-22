@@ -365,7 +365,8 @@ public record CompanyView(
       Offline offline,
       double power,
       Rebirth rebirth,
-      Onboarding onboarding) {}
+      Onboarding onboarding,
+      long bestWall) {}
 
   public record Onboarding(
       int step,

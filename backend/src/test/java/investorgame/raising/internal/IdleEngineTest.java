@@ -439,6 +439,17 @@ class IdleEngineTest {
   }
 
   @Test
+  void theBestWallSurvivesARebirthAndIsShown() {
+    // 최고 기록 (653번): 통과한 가장 높은 벽을 화면에 보인다. 환생해 벽 1로 돌아가도 남는다.
+    start(1);
+    state.idle.best = 120;
+    state.idle.wall = 5;
+    assertThat(engine.view(state).bestWall()).isEqualTo(120);
+    state.idle.wall = 140;
+    assertThat(engine.view(state).bestWall()).isEqualTo(139);
+  }
+
+  @Test
   void aBossWallCannotBePierced() {
     // 대량 매도벽(보스, 50번째 벽마다)은 뚫리지 않는다: 맞지도 않고 그 뒤로 가지도 않는다.
     assertThat(IdleEngine.pierceBlocked(50, 1)).isTrue();

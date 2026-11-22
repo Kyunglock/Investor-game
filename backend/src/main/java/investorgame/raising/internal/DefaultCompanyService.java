@@ -428,9 +428,9 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView reportVaultBoss(UUID sessionId, double damage) {
+  public CompanyView reportVaultBoss(UUID sessionId, double damage, java.util.List<String> cats) {
     CompanyRepository.Row row = lockActive(sessionId);
-    vault.reportBoss(row.state(), damage);
+    vault.reportBoss(row.state(), damage, cats);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
