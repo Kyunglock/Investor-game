@@ -23,6 +23,15 @@
   place-items: center;
   background: radial-gradient(ellipse, #373572, #100b2c 70%);
 }
+.sovereign-sky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 8% 34%, #82ffd655, transparent 44%),
+    radial-gradient(ellipse at 95% 58%, #d9abff55, transparent 48%);
+  pointer-events: none;
+}
 .sovereign-rays,
 .sovereign-halo {
   position: absolute;
@@ -41,9 +50,9 @@
   animation: sovereign-rise 5s ease-out both;
 }
 .sovereign-sky img {
-  width: 100%;
+  width: 89%;
   z-index: 1;
-  mask-image: linear-gradient(transparent, black 14% 82%, transparent);
+  filter: drop-shadow(0 8px 24px #100b2c88);
   animation: sovereign-unveil 5s both;
 }
 .sovereign-halo {

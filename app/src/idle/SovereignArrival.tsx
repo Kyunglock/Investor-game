@@ -35,7 +35,7 @@ export function SovereignArrival({ onFinish }: { onFinish: () => void }) {
     >
       <div className="sovereign-sky">
         <div className="sovereign-rays" aria-hidden="true" />
-        <img src={aurora} alt="오로라 왕관을 쓴 극광냥" />
+        <img src={aurora} alt="민트색과 연보라색 털에 작은 금빛 별을 단 극광냥" />
         <div className="sovereign-halo" aria-hidden="true" />
         <div className="sovereign-title">
           <b>SS</b>
