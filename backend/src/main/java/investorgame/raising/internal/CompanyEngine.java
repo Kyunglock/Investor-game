@@ -159,6 +159,7 @@ class CompanyEngine {
             Map.of("capital", money((long) company.capital)));
     mental.initWeapons(company);
     mental.initWeaponGacha(company);
+    company.upgradeCurve = MentalEngine.UPGRADE_CURVE;
     begin(company);
     history.opened(company);
     return company;
@@ -356,6 +357,7 @@ class CompanyEngine {
       throw new InvalidRequestException("공동창업자가 너무 많다");
     }
     CompanyState next = new CompanyState();
+    next.upgradeCurve = MentalEngine.UPGRADE_CURVE;
     next.number = sold.number + 1;
     next.hired = sold.hired;
     next.met = sold.met;
@@ -1254,8 +1256,8 @@ class CompanyEngine {
   /**
    * 자동 전투의 물가 (decisions.md 505·553번): 벽 하나를 돌파할 때마다 벽 보상·시간 수입이 함께 이만큼 곱해진다. 전투 강화의 값이 단계마다 오르는
    * 비율(application.yml upgrades.price-growth-percent)과 함께 정한다. 553번에는 둘 다 4%라 N번째 벽에서 버는 돈과 N단계 강화의
-   * 값이 나란히 컸고, 644번에 8%, 646번에 30%로 올려 강화가 벽 번호의 7분의 1쯤을 따라간다. 전에는 1.1이라 돈이 강화 값보다 훨씬 빨리 컸다. 강화 값
-   * 자체는 물가를 따르지 않고 단계로만 정한다 (519번). 지수는 6,000벽에서 멈춘다.
+   * 값이 나란히 컸고, 644번에 8%, 646번에 30%로 올렸다가 648번에 5%로 낮춰 강화가 벽 번호의 0.8배쯤을 따라간다(벽 1.2개에 한 단계). 전에는
+   * 1.1이라 돈이 강화 값보다 훨씬 빨리 컸다. 강화 값 자체는 물가를 따르지 않고 단계로만 정한다 (519번). 지수는 6,000벽에서 멈춘다.
    */
   static final double INFLATION = 1.04;
 

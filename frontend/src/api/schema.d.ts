@@ -1964,7 +1964,7 @@ export interface components {
                 price: number;
                 /** @description 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버) */
                 priceGrowthPercent: number;
-                /** @description 지금 단계의 효과(%). buy는 0이다 (579번) */
+                /** @description 지금 단계의 효과(%). 한 단계 0.2%라 소수가 있다 (648번). buy는 0이다 (579번) */
                 bonusPercent: number;
                 /** @description 다음 단계의 효과(%) */
                 nextBonusPercent: number;

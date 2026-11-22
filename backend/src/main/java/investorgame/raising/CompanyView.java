@@ -544,8 +544,8 @@ public record CompanyView(
       int level,
       java.math.BigDecimal price,
       int priceGrowthPercent,
-      int bonusPercent,
-      int nextBonusPercent,
+      double bonusPercent,
+      double nextBonusPercent,
       long bonusShares,
       long nextBonusShares,
       int maxLevel) {}

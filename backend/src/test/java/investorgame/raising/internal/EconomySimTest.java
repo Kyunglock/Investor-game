@@ -297,10 +297,15 @@ class EconomySimTest {
   void manage(CompanyState c, HashSeededRandom random) {
     CompanyState.Idle s = c.idle;
     // Upgrades: the cheaper of attack and fire (fire stops at its maximum).
+    int fireMax =
+        (int)
+            Math.round(
+                P.mental().upgrades().maxPercent().get("fire")
+                    / P.mental().upgrades().stepPercent().get("fire"));
     for (int i = 0; i < 50; i++) {
       int dl = c.battleLevels.getOrDefault("damage", 0);
       int fl = c.battleLevels.getOrDefault("fire", 0);
-      String k = fl < 100 && fl < dl ? "fire" : "damage";
+      String k = fl < fireMax && fl < dl ? "fire" : "damage";
       try {
         company.mental.buyUpgrade(c, k, 100);
       } catch (Exception e) {

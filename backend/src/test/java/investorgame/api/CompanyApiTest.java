@@ -574,13 +574,15 @@ class CompanyApiTest {
     assertThat(kinds).containsExactly("damage", "fire", "hp", "buy");
     assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
     assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
-    assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(1);
+    assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Double.class))
+        .as("한 단계 0.2% (648번)")
+        .isEqualTo(0.2);
     assertThat(opened.read("$.battleUpgrades[0].maxLevel", Integer.class))
         .as("공격력은 끝없이 산다")
         .isZero();
     assertThat(opened.read("$.battleUpgrades[1].maxLevel", Integer.class))
-        .as("연사는 100%(100단계)에서 멈춘다 (487·640번)")
-        .isEqualTo(100);
+        .as("연사는 100%(0.2% × 500단계)에서 멈춘다 (487·640·648번)")
+        .isEqualTo(500);
     long capital = opened.read("$.capital", Long.class);
 
     DocumentContext one =
@@ -594,10 +596,10 @@ class CompanyApiTest {
             postJson("/api/company/battle-upgrade", "{\"kind\":\"fire\",\"levels\":5}")
                 .andExpect(status().isOk()));
     assertThat(five.read("$.battleUpgrades[1].level", Integer.class)).isEqualTo(5);
-    assertThat(five.read("$.battleUpgrades[1].bonusPercent", Integer.class)).isEqualTo(5);
+    assertThat(five.read("$.battleUpgrades[1].bonusPercent", Double.class)).isEqualTo(1.0);
     long spent = capital - five.read("$.capital", Long.class);
-    // 646번(단계마다 30%): 100만 + (100만 + 130만 + 169만 + 219.7만 + 285.61만) = 1,004.31만.
-    assertThat(spent).as("1b + 연사 다섯 단계").isEqualTo(10_043_100L);
+    // 648번(단계마다 5%): 100만 + (100만 + 105만 + 110.25만 + 115.7625만 + 121.5506만) = 652.5631만.
+    assertThat(spent).as("1b + 연사 다섯 단계").isEqualTo(6_525_631L);
 
     postJson("/api/company/battle-upgrade", "{\"kind\":\"speed\"}")
         .andExpect(status().isBadRequest());
@@ -617,8 +619,8 @@ class CompanyApiTest {
             postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\",\"levels\":10}")
                 .andExpect(status().isOk()));
     assertThat(partial.read("$.battleUpgrades[0].level", Integer.class)).isEqualTo(2);
-    // 두 번째 단계는 100만 × 1.3 (646번, 644번에는 1.08, 전에는 1.04).
-    assertThat(partial.read("$.capital", Long.class)).isEqualTo(1_500_000L - 1_300_000L);
+    // 두 번째 단계는 100만 × 1.05 (648번, 646번에는 1.3, 644번에는 1.08, 전에는 1.04).
+    assertThat(partial.read("$.capital", Long.class)).isEqualTo(1_500_000L - 1_050_000L);
     postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\"}")
         .andExpect(status().isBadRequest());
   }

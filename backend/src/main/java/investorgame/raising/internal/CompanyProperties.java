@@ -263,7 +263,7 @@ public record CompanyProperties(
       long basePrice,
       int priceGrowthPercent,
       int maxBatch,
-      Map<String, Integer> stepPercent,
+      Map<String, Double> stepPercent,
       int buyStepShares,
       Map<String, Integer> maxPercent) {}
 

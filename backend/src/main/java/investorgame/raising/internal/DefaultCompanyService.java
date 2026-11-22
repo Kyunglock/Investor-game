@@ -61,7 +61,8 @@ class DefaultCompanyService implements CompanyService {
         && c.weaponGachaReady
         && !resting
         && !engine.mental.needsWeaponReset(c)
-        && !engine.mental.hasRemovedUpgrades(c)) {
+        && !engine.mental.hasRemovedUpgrades(c)
+        && !engine.mental.needsUpgradeCurve(c)) {
       return row;
     }
     CompanyRepository.Row locked = companies.lockActive(row.sessionId()).orElse(row);
@@ -73,7 +74,9 @@ class DefaultCompanyService implements CompanyService {
     boolean diamonds = engine.adoptDiamonds(locked.state());
     // 없앤 강화(치명타 피해, 556번)는 쓴 돈을 돌려주고 지운다.
     boolean refunded = engine.mental.refundRemovedUpgrades(locked.state());
-    if (gacha || mental || moved || seated || diamonds || refunded) {
+    // 옛 강화 곡선(1%·20주)으로 산 단계를 지금 곡선으로 옮긴다 (648번).
+    boolean curve = engine.mental.adoptUpgradeCurve(locked.state());
+    if (gacha || mental || moved || seated || diamonds || refunded || curve) {
       companies.update(locked.id(), locked.state(), false);
     }
     return locked;

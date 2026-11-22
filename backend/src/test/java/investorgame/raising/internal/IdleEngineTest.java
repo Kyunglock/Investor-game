@@ -1518,10 +1518,11 @@ class IdleEngineTest {
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
-    // Only the buy upgrade raises it, by a fixed twenty shares a level and not by a percentage
-    // (579, 590, 594, halved in 632): ten levels add two hundred shares to the 225 of one order.
+    // Only the buy upgrade raises it, by a fixed four shares a level and not by a percentage
+    // (579, 590, 594, 632, a fifth in 648): fifty levels add two hundred shares to the 225 of one
+    // order.
     assertThat(buyBonus()).isZero();
-    company.mental.buyUpgrade(state, "buy", 10);
+    company.mental.buyUpgrade(state, "buy", 50);
     assertThat(buyBonus()).isEqualTo(200);
     double up = (order + 200 / 150.0) / order;
     state.idle.damage = 0;
@@ -1562,8 +1563,8 @@ class IdleEngineTest {
     company.mental.buyUpgrade(state, "damage", 20);
     company.mental.buyUpgrade(state, "fire", 20);
     assertThat(buyBonus()).isEqualTo(40);
-    // Ten buy levels: 200 fixed shares, and the team's part grows by two shares a level.
-    company.mental.buyUpgrade(state, "buy", 10);
+    // Fifty buy levels: 200 fixed shares, and the team's part grows by 0.4 shares a level (648).
+    company.mental.buyUpgrade(state, "buy", 50);
     assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(cat * 0.5 * 245));
     // The wall's depth changes nothing (573), and the server accepts an order of that size.
     state.idle.wall = 100;
@@ -1878,13 +1879,13 @@ class IdleEngineTest {
     assertThatThrownBy(() -> engine.buyFishUpgrade(c, "damage"))
         .isInstanceOf(InvalidRequestException.class);
     assertThat(c.fish).isEqualTo(2);
-    // 영구 강화는 전투 강화에 곱한다 (636번): 전투 강화 10단계(+10%, 637번) × 영구 강화 2단계(+2%, 644번) = +12.2% → 12.
+    // 영구 강화는 전투 강화에 곱한다 (636번): 전투 강화 50단계(+10%, 648번) × 영구 강화 2단계(+2%, 644번) = +12.2%.
     c.capital = 1e18;
-    company.mental.buyUpgrade(c, "damage", 10);
-    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(12);
+    company.mental.buyUpgrade(c, "damage", 50);
+    assertThat(upgrade(c, "damage").bonusPercent()).isEqualTo(12.2);
     assertThat(upgrade(c, "damage").nextBonusPercent())
-        .as("11단계 +11% × 1.02 = +13.22%")
-        .isEqualTo(13);
+        .as("51단계 +10.2% × 1.02 = +12.404% → 소수 둘째 자리에서 내려 12.4")
+        .isEqualTo(12.4);
     // 벽 1,000쯤(+3,000%)에서 영구 강화 +300%는 네 배다: 더하면 +3,300%뿐이었다.
     assertThat(MentalEngine.withFish(3000, 300)).isEqualTo(12_300);
     assertThat(c.fishLevels).containsEntry("damage", 2);
@@ -1895,6 +1896,38 @@ class IdleEngineTest {
         .filter(u -> u.kind().equals(kind))
         .findFirst()
         .orElseThrow();
+  }
+
+  @Test
+  void 옛_강화_곡선의_단계는_효과가_같게_옮기고_벽에_견주어_넘친_단계는_줄인다() {
+    // 648번: 새 회사는 지금 곡선(값 5%, 한 단계 0.2%)으로 시작한다.
+    CompanyState fresh = company.open(new HashSeededRandom(4), company.openingCapital());
+    assertThat(company.mental.needsUpgradeCurve(fresh)).isFalse();
+    assertThat(company.mental.adoptUpgradeCurve(fresh)).isFalse();
+
+    start(1000);
+    assertThat(company.mental.needsUpgradeCurve(state)).as("곡선 칸이 없는 옛 저장").isTrue();
+    // 벽 1,000까지 버는 돈으로 한 종류를 올릴 수 있는 단계: 840쯤.
+    int fair = company.mental.fairLevel(1000);
+    assertThat(fair).isBetween(800, 900);
+    assertThat(company.mental.fairLevel(1)).isBetween(1, 5);
+    // 30% 때(646번) 벽 1,000에서 산 공격력 150단계(+150%), 상한까지 산 연사, 4% 때(553번)처럼 너무 많이 산 체력.
+    state.battleLevels.put("damage", 150);
+    state.battleLevels.put("fire", 100);
+    state.battleLevels.put("hp", 2_000);
+    state.battleLevels.put("buy", 0);
+    assertThat(company.mental.adoptUpgradeCurve(state)).isTrue();
+    assertThat(state.battleLevels)
+        .containsEntry("damage", 750)
+        .containsEntry("fire", 500)
+        .containsEntry("hp", fair)
+        .containsEntry("buy", 0);
+    assertThat(upgrade(state, "damage").bonusPercent()).as("효과는 그대로 +150%").isEqualTo(150);
+    assertThat(upgrade(state, "fire").bonusPercent()).isEqualTo(100);
+    assertThat(company.mental.adoptUpgradeCurve(state)).as("한 번만 옮긴다").isFalse();
+    // 옮긴 뒤에는 벽 몇 개 어치로 다음 단계를 산다: 다음 공격력 값이 벽 보상의 10배를 넘지 않는다.
+    assertThat(company.mental.upgradePrice(750))
+        .isLessThan(10 * IdleEngine.REWARD_UPGRADES * 1e6 * CompanyEngine.inflation(state));
   }
 
   private investorgame.raising.CompanyView.BattleUpgrade upgrade(CompanyState c, String kind) {
