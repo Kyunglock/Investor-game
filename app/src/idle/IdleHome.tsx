@@ -227,11 +227,7 @@ export function IdleHome({
           className={activeMenu === item.key ? 'on' : ''}
           disabled={tutorialMenuLocked(company, item.key)}
           title={
-            tutorialMenuLocked(company, item.key)
-              ? item.key === 'skills'
-                ? '100 매도벽 돌파 시 해금'
-                : '첫 출근 안내를 진행하면 열려요'
-              : undefined
+            tutorialMenuLocked(company, item.key) ? '첫 출근 안내를 진행하면 열려요' : undefined
           }
           aria-current={activeMenu === item.key ? 'page' : undefined}
           onClick={() => navigate(item.key)}
@@ -452,8 +448,9 @@ export function IdleHome({
           {menu === 'stage' && (
             <div data-testid="stage-select">
               <p className="idle-stage-note">
-                한 판씩 깨는 전투예요. 매도벽을 부숴 레벨이 오를 때마다 카드 석 장 가운데 한 장을
-                골라요. 사장냥의 스킬과 고양이 마법 강화가 카드로 나와요.
+                한 판씩 깨는 전투예요. 레벨이 오를 때마다 카드 석 장 가운데 한 장을 골라요. 출전
+                탭에서 출전시킨 고양이가 고양이 카드로 차례로 나오고, 사장냥의 스킬과 고양이 스킬
+                강화도 카드로 나와요.
               </p>
               <AssaultSelect company={company} />
             </div>

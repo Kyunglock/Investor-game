@@ -9,6 +9,7 @@ import { type BattleEntry, useAppUi } from '../app/ui'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { stageLoadout, stageTeamOf } from '../idle/stageTeam'
 
 import {
   type BattleMode,
@@ -35,10 +36,14 @@ import {
   type Card,
   GRADE_NAMES,
   isSkillCard,
+  type Loadout,
   loadoutOf,
   mateMagicUpCard,
   pickCards,
   skillCard,
+  stageCatCard,
+  stageSkillCard,
+  stageSkillTargets,
 } from './cards'
 import { ENEMIES } from './enemies'
 import { FirstClear } from './FirstClear'
@@ -74,6 +79,8 @@ export function MentalWindow({
   const [hero, setHero] = useState<Hero | null>(() => (tutorial ? heroOf(company) : null))
   const [celebrated, setCelebrated] = useState(false)
   const started = hero !== null
+  // 매도벽 돌파 스테이지 (669번): 출전 탭에서 출전시킨 고양이를 데려간다. 출전을 누르는 순간 굳힌다.
+  const [start, setStart] = useState<Loadout | undefined>(undefined)
   const [picked, setPicked] = useState<Card[]>([])
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const [sending, setSending] = useState(false)
@@ -223,6 +230,7 @@ export function MentalWindow({
             assault={assault}
             genre={genre}
             hero={hero}
+            start={start}
             cards={picked}
             pauseRequest={pauseRequest}
             onPick={(card) => setPicked((p) => [...p, card])}
@@ -332,6 +340,9 @@ export function MentalWindow({
               onClick={() => {
                 sfx.stamp()
                 haptic.medium()
+                if (entry.kind === 'assault') {
+                  setStart(stageLoadout(company, stageTeamOf(company)))
+                }
                 setHero(heroOf(company))
               }}
             >
@@ -645,6 +656,7 @@ const CARD_ROLES: Record<Card['code'], string> = {
   cat: '동료',
   'cat-magic': '동료 마법',
   'cat-up': '동료 마법',
+  'cat-skill': '동료 스킬',
   barrage: '사장냥 스킬',
   rally: '사장냥 스킬',
   fortify: '사장냥 스킬',
@@ -696,9 +708,15 @@ function CardPick({
       ? (window as { __mentalCards?: string[] }).__mentalCards
       : undefined
     if (forced && skills) {
-      return forced.map((code) =>
-        code === 'cat-up' ? mateMagicUpCard() : skillCard(code as Parameters<typeof skillCard>[0]),
-      )
+      return forced.flatMap((code) => {
+        if (code === 'cat') return stageCatCard(levels) ?? []
+        if (code === 'cat-skill') {
+          const [target] = stageSkillTargets(levels)
+          return target === undefined ? [] : stageSkillCard(levels, target)
+        }
+        if (code === 'cat-up') return mateMagicUpCard()
+        return skillCard(code as Parameters<typeof skillCard>[0])
+      })
     }
     return pickCards(levels, Math.random, skills)
   })
@@ -1005,6 +1023,7 @@ function Battle({
   assault,
   genre,
   hero,
+  start,
   cards,
   pauseRequest,
   onPick,
@@ -1017,6 +1036,8 @@ function Battle({
   assault?: AssaultSpec
   genre: Genre
   hero: Hero
+  /** 처음 수치. 매도벽 돌파 스테이지는 데려온 고양이를 실어 둔다 (669번, idle/stageTeam.ts). 없으면 사장냥의 총만. */
+  start?: Loadout
   cards: Card[]
   pauseRequest: number
   onPick: (card: Card) => void
@@ -1026,7 +1047,7 @@ function Battle({
 }) {
   const host = useRef<HTMLDivElement>(null)
   const handle = useRef<BattleHandle | null>(null)
-  const loadout = useRef(loadoutOf(hero.weapon, hero.upgrades))
+  const loadout = useRef(start ?? loadoutOf(hero.weapon, hero.upgrades))
   const [hud, setHud] = useState<Hud | null>(null)
   const [gains, setGains] = useState<WallGain[]>([])
   const gainId = useRef(0)

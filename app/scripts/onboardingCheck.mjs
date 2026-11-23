@@ -328,12 +328,11 @@ try {
     await guide.getByRole('button', { name: '안내 마치기' }).click()
     await expect(guide).toHaveCount(0)
     await expect(shade).toHaveCount(0)
-    await expect(nav('skills')).toBeDisabled()
-    c.idle.wall = 101
-    c.idle.onboarding.skillsUnlocked = true
-    await refresh()
-    // 100벽의 스킬 안내는 없앴다 (667번): 사장냥의 스킬은 레벨업 카드로 켠다. 스킬 탭만 열린다.
+    // 스킬 탭의 100벽 잠금은 없앴다 (670번): 100벽 전에도 열려 있다. 100벽의 스킬 안내도 없다 (667번).
     await expect(nav('skills')).toBeEnabled()
+    await nav('skills').click()
+    await expect(page.getByTestId('skills')).toBeVisible()
+    await nav('battle').click()
     await expect(guide).toHaveCount(0)
     await expect(page.getByTestId('idle-active')).toHaveCount(0)
     await page.getByTestId('idle-options').click()

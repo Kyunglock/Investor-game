@@ -591,6 +591,8 @@ export interface DamageStats {
   awakenedMates: number
   /** 자동 전투 (557·561번): 고양이마다 머리 위에 뜬 스킬 그림들(없으면 빈 배열). 스킬 표식이 없는 판에서는 비어 있다. */
   skillMarks: Spell[][]
+  /** 고양이마다 제 스킬의 레벨 (515·669번). 제 스킬을 쓰지 않는 판에서는 비어 있다. */
+  mateSkillLevels: number[]
   mateShots: number
   mates: number
 }
@@ -777,6 +779,7 @@ class BattleScene extends Phaser.Scene {
     mateCasts: [0, 0, 0],
     awakenedMates: 0,
     skillMarks: [],
+    mateSkillLevels: [],
     mateShots: 0,
     mates: 0,
   }
@@ -1373,6 +1376,9 @@ class BattleScene extends Phaser.Scene {
     })
     this.damageStats.awakenedMates = awake
     this.damageStats.skillMarks = own ? this.mates.map((_, index) => own[index] ?? []) : []
+    this.damageStats.mateSkillLevels = own
+      ? this.mates.map((_, index) => this.loadout.mateMagicLevels?.[index] ?? 1)
+      : []
   }
 
   /** 고양이 한 마리가 제자리 위에서 떨어져 내려와 합류한다: 쿵, 고리, 이름. */
@@ -3448,6 +3454,11 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 경험치: 적의 값만큼. 다음 레벨에 닿으면 전투를 멈추고 카드를 고르게 한다 (330번). */
+  /** 개발 서버의 확인 스크립트: 다음 레벨까지 남은 경험치를 한 번에 준다. */
+  devLevelUp() {
+    this.gainXp(xpToNext(this.level) - this.xp)
+  }
+
   private gainXp(amount: number) {
     if (this.opts.idle) return
     this.xp += amount
@@ -4152,15 +4163,20 @@ class BattleScene extends Phaser.Scene {
   /** 시전자마다 주기가 된 마법을 쏜다. 노릴 적이 없거나 풀이 다 날고 있으면 잠시 뒤 다시 본다. */
   private castMagic() {
     // 자동 전투 (501번): 고양이는 제 고유 스킬만 쓰고 사장냥은 쓰지 않는다.
+    // 스테이지에 데려온 고양이 (669번)도 제 고유 스킬만 쓰지만, 사장냥은 전처럼 카드로 배운 마법을 쓴다.
     const own = this.loadout.mateMagic
     for (const caster of this.casters) {
       if (caster.mate !== undefined && this.mates[caster.mate].drop !== 0) continue
-      if (own && caster.mate === undefined) continue
-      for (const m of own ? SPELLS : MAGICS) {
-        if (own && caster.mate !== undefined && !own[caster.mate]?.includes(m)) continue
+      const boss = caster.mate === undefined
+      if (own && boss && this.opts.idle) continue
+      const ownCat = own && !boss
+      for (const m of ownCat ? SPELLS : MAGICS) {
+        if (ownCat && caster.mate !== undefined && !own[caster.mate]?.includes(m)) continue
         // 자동 전투의 스킬 레벨은 고양이마다 다르다 (515번): 같은 스킬의 두 마리도 저마다 제 레벨로 쓴다.
         const level =
-          (own && caster.mate !== undefined ? this.loadout.mateMagicLevels?.[caster.mate] : null) ??
+          (ownCat && caster.mate !== undefined
+            ? this.loadout.mateMagicLevels?.[caster.mate]
+            : null) ??
           (m === 'water' || m === 'meteor' || m === 'lightning' || m === 'earth'
             ? this.loadout[m]
             : 0)
@@ -5729,6 +5745,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
       __mentalWalls?: () => ReturnType<BattleScene['inspectWalls']>
       __mentalBuyWallHit?: (damage: number, x?: number) => void
       __mentalMarket?: () => ReturnType<BattleScene['inspectMarket']>
+      __mentalLevelUp?: () => void
     }
     dev.__mentalDamage = scene.damageStats
     // 공격 판(413번)을 자동으로 돌려 강화 단계별로 걸린 시간을 재는 데 쓴다.
@@ -5738,6 +5755,8 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     dev.__mentalSpeed = (k) => scene.setSimSpeed(k)
     dev.__mentalWalls = () => scene.inspectWalls()
     dev.__mentalMarket = () => scene.inspectMarket()
+    // 확인 스크립트가 다음 레벨업(카드 고르기)을 바로 부른다 (stageCardCheck.mjs).
+    dev.__mentalLevelUp = () => scene.devLevelUp()
     dev.__mentalBuyWallHit = (damage, x = parent.clientWidth / 2) => scene.hitBuyWall(damage, x)
     dev.__mentalMagic = (levels) => scene.applyLoadout({ ...scene.loadout, ...levels })
     dev.__mentalMates = (mates) => scene.applyLoadout({ ...scene.loadout, mates })

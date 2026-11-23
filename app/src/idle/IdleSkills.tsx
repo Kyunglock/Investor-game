@@ -115,16 +115,16 @@ export function IdleSkills({
                 </details>
               </li>
             ))}
-            <li data-testid="unique-skill" data-code="cat-up">
+            <li data-testid="unique-skill" data-code="cat-skill">
               <div className="boss-skill-main">
                 <span className="boss-skill-art boss-skill-magic" aria-hidden="true">
                   ✦
                 </span>
                 <div className="boss-skill-info">
                   <div className="boss-skill-title">
-                    <b>고양이 마법 강화</b>
+                    <b>고양이 스킬 강화</b>
                   </div>
-                  <p>함께 싸우는 고양이 모두가 마법을 쓰고 · 배운 마법 레벨 +1</p>
+                  <p>스테이지에 나온 고양이의 고유 스킬 레벨 +1 · 최고 Lv.5</p>
                 </div>
               </div>
             </li>

@@ -20,6 +20,9 @@ import {
   SIMPLE_CARDS,
   skillCard,
   skillPower,
+  stageCatCard,
+  stageSkillCard,
+  stageSkillTargets,
   xpToNext,
 } from './cards'
 import { MAGIC_MAX_LEVEL } from './magic'
@@ -323,5 +326,62 @@ describe('매도벽 돌파 스테이지의 카드 (667번)', () => {
       if (pickCards(ready, rng(seed), true).some((c) => c.code === 'cat-up')) offered++
     }
     expect(offered).toBeGreaterThan(0)
+  })
+})
+
+describe('스테이지에 데려온 고양이 (669번)', () => {
+  const team = [
+    { name: '밤냥', skills: ['메테오'] },
+    { name: '하늘냥', skills: [] },
+    { name: '눈꽃냥', skills: ['얼음', '바람'] },
+  ]
+  const base = { ...BASE_LOADOUT, stageCats: team, mateMagicLevels: [1, 1, 1] }
+  it('고양이 카드는 고른 차례대로 그 고양이를 부른다', () => {
+    expect(stageCatCard(base)).toMatchObject({ code: 'cat', name: '밤냥 출전' })
+    expect(stageCatCard(base)?.effect).toContain('메테오 Lv.1')
+    let loadout = applyCard(
+      base,
+      stageCatCard(base) as NonNullable<ReturnType<typeof stageCatCard>>,
+    )
+    expect(loadout.mates).toBe(1)
+    expect(stageCatCard(loadout)).toMatchObject({ name: '하늘냥 출전' })
+    expect(stageCatCard(loadout)?.effect).toContain('고유 스킬 없음')
+    loadout = { ...loadout, mates: 3 }
+    expect(stageCatCard(loadout)).toBeNull()
+    // 메인 화면처럼 네 마리까지 데려간다.
+    const four = { ...base, stageCats: [...team, { name: '민트냥', skills: [] }], mates: 3 }
+    expect(stageCatCard(four)).toMatchObject({ name: '민트냥 출전' })
+    expect(applyCard(four, mateCard(3)).mates).toBe(4)
+    expect(stageCatCard({ ...four, mates: 4 })).toBeNull()
+    // 두 마리만 데려왔으면 두 마리까지만 나온다.
+    const two = { ...base, stageCats: team.slice(0, 2), mates: 2 }
+    expect(stageCatCard(two)).toBeNull()
+    expect(applyCard(two, mateCard(2)).mates).toBe(2)
+  })
+  it('스킬 강화는 나와 있고 스킬이 있는 고양이만, 최고 레벨까지', () => {
+    expect(stageSkillTargets(base)).toEqual([])
+    expect(stageSkillTargets({ ...base, mates: 2 })).toEqual([0])
+    expect(stageSkillTargets({ ...base, mates: 3 })).toEqual([0, 2])
+    const out = { ...base, mates: 3, mateMagicLevels: [MAGIC_MAX_LEVEL, 1, 2] }
+    expect(stageSkillTargets(out)).toEqual([2])
+    const card = stageSkillCard(out, 2)
+    expect(card).toMatchObject({ code: 'cat-skill', name: '눈꽃냥 스킬 강화', target: 2 })
+    expect(card.level).toEqual({ from: 2, to: 3 })
+    expect(applyCard(out, card).mateMagicLevels).toEqual([MAGIC_MAX_LEVEL, 1, 3])
+    // 최고 레벨인 고양이는 더 오르지 않는다.
+    expect(applyCard(out, { ...card, target: 0 }).mateMagicLevels).toEqual(out.mateMagicLevels)
+  })
+  it('데려온 고양이가 있으면 각성·마법 강화 카드 대신 고양이와 스킬 강화가 나온다', () => {
+    const state = { ...base, mates: 1 }
+    const seen = new Set<string>()
+    for (let seed = 0; seed < 400; seed++) {
+      for (const c of pickCards(state, rng(seed), true)) {
+        seen.add(c.code)
+        if (c.code === 'cat') expect(c.name).toBe('하늘냥 출전')
+        if (c.code === 'cat-skill') expect(c.name).toBe('밤냥 스킬 강화')
+      }
+    }
+    expect(seen.has('cat') && seen.has('cat-skill') && seen.has('rally')).toBe(true)
+    expect(seen.has('cat-magic') || seen.has('cat-up')).toBe(false)
   })
 })
