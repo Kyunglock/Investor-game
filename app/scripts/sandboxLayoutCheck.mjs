@@ -36,7 +36,15 @@ try {
         power: 1,
         income: { perSecond: 0, staffPerSecond: 0, bonusPercent: 0 },
         offline: null,
-        levelUp: { level: 1, xp: 0, next: 5, pending: 0, offer: [], magicBonus: 0, cardSeconds: 60 },
+        levelUp: {
+          level: 1,
+          xp: 0,
+          next: 5,
+          pending: 0,
+          offer: [],
+          magicBonus: 0,
+          cardSeconds: 60,
+        },
         rebirth: { count: 0, fish: 0, gain: 5, fromWall: 51, adGain: 15, upgrades: [] },
         actives: [
           ['barrage', '매수세례', false],
