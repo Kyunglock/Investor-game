@@ -135,6 +135,22 @@ class MentalEngineTest {
 
   @Test
   void 무기_수치는_등급이_오를수록_세고_빨라진다() {
+    // 등급별 실효 화력 (660번): F 500을 기준으로 한 비율. 646번에는 한 등급 1.18배(LR이 F의 6배)였다.
+    Map<String, Integer> target =
+        Map.ofEntries(
+            Map.entry("F", 500),
+            Map.entry("E", 700),
+            Map.entry("D", 1000),
+            Map.entry("C", 1400),
+            Map.entry("B", 1800),
+            Map.entry("A", 2500),
+            Map.entry("S", 3500),
+            Map.entry("SS", 5000),
+            Map.entry("SSS", 7500),
+            Map.entry("SR", 10000),
+            Map.entry("UR", 12500),
+            Map.entry("LR", 15000));
+    double pistol = 0;
     double previous = 0;
     for (String grade : MentalEngine.WEAPON_GRADES) {
       String kind = PROPERTIES.mental().weaponGrades().get(grade).kind();
@@ -144,9 +160,10 @@ class MentalEngineTest {
       if (kind.equals("revolver"))
         dps *= 1.8 * (6.0 * stats.fireMs()) / (6.0 * stats.fireMs() + 1000);
       assertThat(dps).as(grade + " 지속 화력").isGreaterThan(previous);
-      // 모든 등급이 한 등급에 1.18배쯤이다 (646번, F 385 → LR 2,377). 전에는 S까지 1.6~1.9배(461번), S 위로
-      // 1.3배쯤(644번)이었다.
-      if (previous > 0) assertThat(dps / previous).as(grade + " 한 등급 오름폭").isBetween(1.15, 1.21);
+      if (pistol == 0) pistol = dps;
+      assertThat(dps / pistol * 500)
+          .as(grade + " F 500에 견준 화력")
+          .isCloseTo(target.get(grade), org.assertj.core.data.Percentage.withPercentage(1));
       previous = dps;
     }
     assertThat(ENGINE.mental.stats("shotgun", "A").power()).isEqualTo(2);
