@@ -41,9 +41,9 @@ test('회사를 차려 뽑으면 바로 앉아 1초마다 벌고, 기회를 써�
   // 새 회사는 다이아 1,000개로 시작한다 (526번).
   expect(company.diamonds.amount).toBe(START_DIAMONDS)
   expect(company.diamonds.hire).toBeGreaterThan(0)
-  // 다이아 미션 (527번): 첫 스테이지의 별 셋에 100, EX 디펜스는 하루 한 번 300.
-  expect(company.stages?.diamondsLeft[0]).toBe(100)
-  expect(company.stages?.exDiamonds).toBe(300)
+  // 다이아 미션 (527번): 첫 스테이지의 별 셋에 400, EX 디펜스는 하루 한 번 1,200 (659번에 네 배로).
+  expect(company.stages?.diamondsLeft[0]).toBe(400)
+  expect(company.stages?.exDiamonds).toBe(1200)
 
   // 다이아로 뽑는다 (store.draw: 지금까지 뽑은 횟수를 함께 보낸다). 한 명에 diamonds.hire가 든다.
   const count = Math.min(affordable(company), company.gacha.maxDraws, company.seats)
@@ -328,21 +328,21 @@ test('출석 보상은 하루에 한 번 받는다 (#799)', async ({ page }) => 
   const api = page.request
   expect((await api.post('/api/sessions')).ok()).toBe(true)
   const opened = await companyOf(await api.post('/api/company'))
-  // 새 회사는 1일 차를 받을 수 있다. 출석판은 일곱 칸이고 모두 다이아다 (566번). 한 주기 250 (644번, 전에는 750).
+  // 새 회사는 1일 차를 받을 수 있다. 출석판은 일곱 칸이고 모두 다이아다 (566번). 한 주기 1,000 (659번, 644번에는 250).
   expect(opened.attendance.claimable).toBe(true)
   expect(opened.attendance.today).toBe(1)
   expect(opened.attendance.board.map((cell) => cell.diamonds)).toEqual([
-    20, 20, 30, 20, 30, 30, 100,
+    80, 80, 120, 80, 120, 120, 400,
   ])
   expect(opened.attendance.board.every((cell) => cell.money == null)).toBe(true)
   expect(opened.attendance.board.every((cell) => !cell.claimed)).toBe(true)
 
   const claimed = await companyOf(await api.post('/api/company/attendance'))
-  expect(claimed.diamonds.amount).toBe(opened.diamonds.amount + 20)
+  expect(claimed.diamonds.amount).toBe(opened.diamonds.amount + 80)
   expect(claimed.attendance.claimable).toBe(false)
   expect(claimed.attendance.today).toBe(1)
   expect(claimed.attendance.board[0].claimed).toBe(true)
-  expect(claimed.attendance.lastReward).toMatchObject({ day: 1, diamonds: 20 })
+  expect(claimed.attendance.lastReward).toMatchObject({ day: 1, diamonds: 80 })
 
   // 같은 날 다시 받으면 400이고 다이아는 그대로다.
   const again = await api.post('/api/company/attendance')

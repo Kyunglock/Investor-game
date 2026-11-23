@@ -713,17 +713,17 @@ class CompanyApiTest {
     assertThat(opened.read("$.attendance.claimable", Boolean.class)).isTrue();
     assertThat(opened.read("$.attendance.today", Integer.class)).isEqualTo(1);
     List<Integer> board = opened.read("$.attendance.board[*].diamonds");
-    // 644번: 한 주기 250 (전에는 50, 50, 100, 50, 100, 100, 300으로 750).
-    assertThat(board).containsExactly(20, 20, 30, 20, 30, 30, 100);
+    // 659번: 한 주기 1,000 (644번에는 250, 그 전에는 750).
+    assertThat(board).containsExactly(80, 80, 120, 80, 120, 120, 400);
     long diamonds = opened.read("$.diamonds.amount", Long.class);
     DocumentContext claimed =
         json(
             mvc.perform(post("/api/company/attendance").cookie(session))
                 .andExpect(status().isOk()));
-    assertThat(claimed.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 20);
+    assertThat(claimed.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 80);
     assertThat(claimed.read("$.attendance.claimable", Boolean.class)).isFalse();
     assertThat(claimed.read("$.attendance.board[0].claimed", Boolean.class)).isTrue();
-    assertThat(claimed.read("$.attendance.lastReward.diamonds", Long.class)).isEqualTo(20);
+    assertThat(claimed.read("$.attendance.lastReward.diamonds", Long.class)).isEqualTo(80);
     mvc.perform(post("/api/company/attendance").cookie(session)).andExpect(status().isBadRequest());
     // 본 게임에서는 날짜를 넘기는 길이 없다.
     mvc.perform(post("/api/sandbox/next-day").cookie(session)).andExpect(status().isBadRequest());
@@ -767,13 +767,13 @@ class CompanyApiTest {
     assertThat(cleared.read("$.vault.dungeon.cleared", Integer.class)).isEqualTo(1);
     assertThat(cleared.read("$.vault.gold", Long.class)).isEqualTo(48);
     assertThat(cleared.<List<String>>read("$.vault.dungeon.offers[*].code")).hasSize(3);
-    // 금고 상점: 다이아 100개는 금괴 30 (644번, 전에는 다이아 300개).
+    // 금고 상점: 다이아 400개는 금괴 30 (659번, 644번에는 100개).
     long diamonds = cleared.read("$.diamonds.amount", Long.class);
     DocumentContext bought =
         json(
             mvc.perform(post("/api/company/vault/shop/diamonds").cookie(session))
                 .andExpect(status().isOk()));
-    assertThat(bought.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 100);
+    assertThat(bought.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 400);
     assertThat(bought.read("$.vault.gold", Long.class)).isEqualTo(18);
     assertThat(bought.read("$.vault.shop[0].left", Integer.class)).isEqualTo(4);
     mvc.perform(post("/api/company/vault/shop/diamonds").cookie(session))
@@ -795,10 +795,10 @@ class CompanyApiTest {
     DocumentContext free =
         json(
             mvc.perform(post("/api/company/shop/free").cookie(session)).andExpect(status().isOk()));
-    // 644번: 하루 10 (전에는 20).
-    assertThat(free.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 10);
+    // 659번: 하루 40 (644번에는 10).
+    assertThat(free.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 40);
     assertThat(free.read("$.shop.items[0].left", Integer.class)).isZero();
-    assertThat(free.read("$.shop.lastReceipt.diamonds", Long.class)).isEqualTo(10);
+    assertThat(free.read("$.shop.lastReceipt.diamonds", Long.class)).isEqualTo(40);
     mvc.perform(post("/api/company/shop/free").cookie(session)).andExpect(status().isBadRequest());
     mvc.perform(post("/api/company/shop/nothing").cookie(session))
         .andExpect(status().isBadRequest());

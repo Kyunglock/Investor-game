@@ -42,9 +42,9 @@ class IdleEngine {
 
   /**
    * 보스를 처음 깨면 따로 주는 보상 (549번): 다이아, 그리고 그 벽 보상(대량 매도벽의 3배가 든 값)의 이 배수만큼의 돈. 같은 보스는 한 번만 준다. 다이아는
-   * 100에서 10으로 줄였다 (644번): 한 달에 백 개 넘는 보스를 깨 다이아의 절반 넘게가 여기서 나왔다.
+   * 100에서 10으로 줄였다 (644번): 한 달에 백 개 넘는 보스를 깨 다이아의 절반 넘게가 여기서 나왔다. 다이아를 모두 네 배로 올리며 40이 되었다 (659번).
    */
-  static final long BOSS_CLEAR_DIAMONDS = 10;
+  static final long BOSS_CLEAR_DIAMONDS = 40;
 
   static final double BOSS_CLEAR_REWARDS = 5;
 
@@ -163,8 +163,10 @@ class IdleEngine {
   // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
   // silence is a closed or sleeping app and pays nothing.
-  // 식빵 공방 (644번에 줄임): 쉬는 고양이 하나가 5분에 식빵 하나(전에는 1분), 팔 때 굽던 30분마다 다이아 하나(전에는 10분).
+  // 식빵 공방 (644번에 줄임): 쉬는 고양이 하나가 5분에 식빵 하나(전에는 1분), 팔 때 굽던 30분마다 다이아 넷(659번에 하나에서 네 배로.
+  // 644번 전에는 10분에 하나).
   private static final long DIAMOND_MILLIS = 1_800_000;
+  private static final long BAKERY_DIAMONDS = 4;
   private static final long LOAF_MILLIS = 300_000;
   private static final long GRACE_MS = 10_000;
   // Attack kinds after the bullet (kind 0): skills. A cat's skills are its own and it casts them
@@ -1470,7 +1472,7 @@ class IdleEngine {
     CompanyState.Idle s = state(c);
     if (s.bread < 1) throw new InvalidRequestException("팔 식빵이 없어요.");
     c.capital += bundlePrice(s);
-    c.diamonds += s.bundleMillis / DIAMOND_MILLIS;
+    c.diamonds += BAKERY_DIAMONDS * (s.bundleMillis / DIAMOND_MILLIS);
     s.bundleMillis %= DIAMOND_MILLIS;
     s.bread = 0;
   }
@@ -1737,7 +1739,7 @@ class IdleEngine {
         FIELD_SLOTS,
         s.bread,
         CompanyView.money(bundlePrice(s)),
-        s.bundleMillis / DIAMOND_MILLIS,
+        BAKERY_DIAMONDS * (s.bundleMillis / DIAMOND_MILLIS),
         (DIAMOND_MILLIS - s.bundleMillis % DIAMOND_MILLIS + 999) / 1000,
         (int) (100 * s.bakingMillis / LOAF_MILLIS),
         SPEED * s.wallDps,

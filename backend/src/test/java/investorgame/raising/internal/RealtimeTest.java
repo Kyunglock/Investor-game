@@ -303,15 +303,15 @@ class RealtimeTest {
     assertThat(company.mental.stagesView(c, idle.today()).exAvailable()).isTrue();
     long diamonds = c.diamonds;
     company.mental.reportEx(c, 80, idle.today());
-    assertThat(c.diamonds).isEqualTo(diamonds + 300);
+    assertThat(c.diamonds).isEqualTo(diamonds + 1200);
     assertThat(company.mental.stagesView(c, idle.today()).exAvailable()).isFalse();
     company.mental.reportEx(c, 80, idle.today());
-    assertThat(c.diamonds).as("같은 날 또 해도 보상은 없다").isEqualTo(diamonds + 300);
+    assertThat(c.diamonds).as("같은 날 또 해도 보상은 없다").isEqualTo(diamonds + 1200);
     // 31분 뒤는 한국 시간으로 다음 날이다.
     clock.now += 31 * 60_000L;
     assertThat(idle.today()).isEqualTo("2026-11-15");
     assertThat(company.mental.stagesView(c, idle.today()).exAvailable()).isTrue();
     company.mental.reportEx(c, 80, idle.today());
-    assertThat(c.diamonds).isEqualTo(diamonds + 600);
+    assertThat(c.diamonds).isEqualTo(diamonds + 2400);
   }
 }
