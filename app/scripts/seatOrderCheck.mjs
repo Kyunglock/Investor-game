@@ -127,8 +127,9 @@ try {
   await page.getByTestId('cat-info-close').click()
   // 출전 칸에도 같은 차례로 보인다.
   await page
-    .getByRole('button', { name: /고양이/ })
-    .first()
+    .getByRole('navigation', { name: '게임 메뉴' })
+    .last()
+    .getByRole('button', { name: /^출전/ })
     .click()
   await expect
     .poll(() =>
