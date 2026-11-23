@@ -32,6 +32,8 @@ import { ARENA_FRAME, ARENA_MAPS, arenaMap } from './arenaMaps'
 import {
   bakeCatBody,
   bakeCatGun,
+  auroraEdge,
+  auroraFold,
   bakeEnemies,
   bakeHero,
   bakeMagic,
@@ -358,6 +360,11 @@ const recoilDecay = (kick: number, dt: number) =>
   kick < 0.01 ? 0 : kick * Math.exp(-RECOIL.decay * dt)
 /** 자동 전투에서 벽 앞에 막힌 시간으로 셈하는 상한(초): 물량 간격이 바탕의 절반까지만 줄어든다 (assault.ts spawnSeconds, 494번). */
 const IDLE_STUCK_MAX = 25
+
+// 전투 시계 기준 120단계/초. 겹치는 동안에는 정확히 30단계마다 피해를 준다.
+const AURORA_STEPS_PER_SECOND = 120
+const AURORA_TICK_STEPS = AURORA_STEPS_PER_SECOND / 4
+const AURORA_CONTACT_SPEED = 0.16
 
 type Enemy = Phaser.Physics.Arcade.Image & {
   kind: UnitKind
@@ -801,7 +808,16 @@ class BattleScene extends Phaser.Scene {
   private mental = 100
   private score = 0
   private kills = 0
-  private auroraImpact: { at: number; level: number } | null = null
+  private auroraSweep: {
+    released: boolean
+    started: number
+    origin: { x: number; y: number }
+    ribbon: Phaser.GameObjects.Image
+    damage: number
+    step: number
+    distance: number
+    nextHit: Map<Enemy | WallState, { step: number; born: number }>
+  } | null = null
   private elapsed = 0
   private lastFire = 0
   /** 사장냥이 쏜 탄 수(재장전, #587). */
@@ -4140,7 +4156,7 @@ class BattleScene extends Phaser.Scene {
         const from = caster.at()
         const cast =
           m === 'auroraNight'
-            ? this.castAuroraNight(from, level)
+            ? this.castAuroraNight(from, level, caster.mate)
             : isFlow(m)
               ? this.castWater(from, level, m)
               : isFall(m)
@@ -4165,52 +4181,167 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  private castAuroraNight(from: { x: number; y: number }, level: number) {
-    if (this.auroraImpact || !this.magicTargets(true, true).length) return false
-    this.auroraImpact = { at: this.elapsed + 0.45, level }
-    this.auroraStar(from.x, from.y - 25, 14)
-    if (!this.reducedMotion) {
-      const { w, h } = this.view()
-      const curtain = this.add
-        .image(w / 2, h / 2, 'aurora-curtain')
-        .setDisplaySize(w, h)
-        .setDepth(5)
-        .setAlpha(0)
+  private castAuroraNight(from: { x: number; y: number }, level: number, mateIndex?: number) {
+    if (this.auroraSweep || !this.magicTargets(true, true).length) return false
+    const body = mateIndex === undefined ? undefined : this.mates[mateIndex]?.body
+    const origin = body ? { x: body.x, y: body.y + 4 } : { x: from.x, y: from.y }
+    if (body && !this.reducedMotion) {
       this.tweens.add({
-        targets: curtain,
-        alpha: 0.52,
-        duration: 230,
-        hold: 100,
+        targets: body,
+        scaleY: body.scaleY * 1.08,
+        delay: 290,
+        duration: 95,
         yoyo: true,
-        onComplete: () => curtain.destroy(),
       })
     }
+    const focus = { x: origin.x, y: origin.y - 40 }
+    sfx.charge()
+    this.auroraFlare(focus.x, focus.y, 50, 360)
+    if (!this.reducedMotion) {
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3
+        const spark = this.add
+          .image(
+            focus.x + 55 * Math.cos(angle),
+            focus.y + 32 * Math.sin(angle),
+            'aurora-polar-star',
+          )
+          .setDisplaySize(13, 13)
+          .setDepth(7)
+        this.tweens.add({
+          targets: spark,
+          x: focus.x,
+          y: focus.y,
+          duration: 310,
+          ease: 'Quad.easeIn',
+          onComplete: () => spark.destroy(),
+        })
+      }
+    }
+    const ribbon = this.add
+      .image(origin.x, origin.y, 'aurora-ribbon')
+      .setOrigin(0.5, 0)
+      .setDisplaySize(8, 4)
+      .setDepth(6)
+    this.auroraSweep = {
+      released: false,
+      started: this.elapsed,
+      origin,
+      ribbon,
+      damage: auroraNightStats(level).damage * this.attackDamage,
+      step: 0,
+      distance: 0,
+      nextHit: new Map(),
+    }
+    const { w } = this.view()
+    const title = this.add
+      .text(
+        Phaser.Math.Clamp(from.x, 57, w - 57),
+        Math.max(16, from.y - 54),
+        SPELLBOOK.auroraNight.name,
+        {
+          ...WALL_LABEL_STYLE,
+          color: '#fff3bc',
+          stroke: '#383058',
+          strokeThickness: 5,
+        },
+      )
+      .setOrigin(0.5)
+      .setDepth(9)
+    this.tweens.add({
+      targets: title,
+      alpha: 0,
+      delay: 640,
+      duration: 240,
+      onComplete: () => title.destroy(),
+    })
     return true
   }
 
-  private auroraStar(x: number, y: number, size: number) {
-    const star = this.add
-      .star(x, y, 4, size * 0.26, size, 0xffdf83)
-      .setStrokeStyle(1, 0xfff8d1)
-      .setDepth(8)
-    this.tweens.add({ targets: star, alpha: 0, duration: 280, onComplete: () => star.destroy() })
+  private auroraFlare(x: number, y: number, size: number, duration: number) {
+    const star = this.add.image(x, y, 'aurora-polar-star').setDisplaySize(size, size).setDepth(7)
+    if (!this.reducedMotion) {
+      this.tweens.add({
+        targets: star,
+        scale: { from: star.scaleX * 0.4, to: star.scaleX },
+        angle: 30,
+        duration: duration * 0.55,
+        ease: 'Cubic.easeOut',
+      })
+    }
+    this.tweens.add({
+      targets: star,
+      alpha: 0,
+      delay: duration * 0.55,
+      duration: duration * 0.45,
+      onComplete: () => star.destroy(),
+    })
+  }
+
+  private advanceAuroraSweep() {
+    const sweep = this.auroraSweep
+    if (!sweep) return
+    const age = this.elapsed - sweep.started
+    const { w, h } = this.view()
+    const height = 113
+    const bottom = h - (36 * height) / 72
+    if (age < 0.38) {
+      const spread = Phaser.Math.SmoothStep(age, 0, 0.38)
+      sweep.ribbon
+        .setPosition(
+          Phaser.Math.Linear(sweep.origin.x, w / 2, spread),
+          Phaser.Math.Linear(sweep.origin.y, bottom, spread),
+        )
+        .setDisplaySize(8 + (w - 8) * spread, 4 + (height - 4) * spread)
+      return
+    }
+    if (!sweep.released) {
+      sweep.released = true
+      sfx.auroraRelease()
+    }
+    const endStep = Math.floor((age - 0.38) * AURORA_STEPS_PER_SECOND)
+    const freeStep = (bottom + height) / (0.72 * AURORA_STEPS_PER_SECOND)
+    if (sweep.step >= endStep) return
+    const targets = this.magicTargets(true, true).map((enemy) => {
+      const u = enemy.x / w
+      const back = auroraFold(u, true)
+      const radius = Math.min(18, enemy.displayHeight * 0.25)
+      return {
+        enemy,
+        leading: ((back.edge - 0.8 * back.height) * height) / 72 - radius,
+        trailing: (auroraEdge(u) * height) / 72 + radius,
+      }
+    })
+    while (sweep.step < endStep && sweep.distance < bottom + height) {
+      sweep.step++
+      const top = bottom - sweep.distance
+      let contact = false
+      for (const { enemy, leading, trailing } of targets) {
+        if (!enemy.active || enemy.dying || enemy.y < top + leading || enemy.y > top + trailing)
+          continue
+        const wall = enemy.cell?.wall
+        const target = wall ? this.frontLayer(wall) : enemy
+        if (!target) continue
+        contact = true
+        const key = wall ?? enemy
+        const born = wall ? 0 : enemy.born
+        const next = sweep.nextHit.get(key)
+        if (next && next.born === born && sweep.step < next.step) continue
+        sweep.nextHit.set(key, { step: sweep.step + AURORA_TICK_STEPS, born })
+        this.auroraFlare(enemy.x, enemy.y, enemy.boss || wall ? 68 : 44, 210)
+        this.hit(target, sweep.damage, -Math.PI / 2, 'auroraNight', true)
+      }
+      sweep.distance += freeStep * (contact ? AURORA_CONTACT_SPEED : 1)
+    }
+    sweep.ribbon.setPosition(w / 2, bottom - sweep.distance).setDisplaySize(w, height)
+    if (sweep.distance >= bottom + height) {
+      sweep.ribbon.destroy()
+      this.auroraSweep = null
+    }
   }
 
   private updateMagic(dt: number) {
-    if (this.auroraImpact && this.elapsed >= this.auroraImpact.at) {
-      const damage = auroraNightStats(this.auroraImpact.level).damage * this.attackDamage
-      this.auroraImpact = null
-      const walls = new Set<WallState>()
-      for (const enemy of [...this.magicTargets(true, true)]) {
-        if (enemy.cell) {
-          const wall = enemy.cell.wall
-          if (walls.has(wall) || this.behindLayer(enemy)) continue
-          walls.add(wall)
-        }
-        this.auroraStar(enemy.x, enemy.y, 12)
-        this.hit(enemy, damage, -Math.PI / 2, 'auroraNight', true)
-      }
-    }
+    this.advanceAuroraSweep()
     for (const s of this.waters) if (s.active) this.moveWater(s, dt)
     for (const s of this.meteors) if (s.active) this.moveMeteor(s, dt)
     for (const r of this.rams) if (r.active) this.moveRam(r, dt)

@@ -31,6 +31,19 @@ import { BULLET_ART, drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from '.
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
 
 /** 화면 배율. 텍스처를 이만큼 크게 굽고 캔버스도 이만큼 크다(battle.ts). 그림 크기(setDisplaySize)는 배율과 상관없이 아래 상수(CSS px)를 쓴다. */
+/** 띠 텍스처 윗변에서 크림빛 명중선까지의 거리(px). x는 전장 너비에 대한 비율이다. */
+export function auroraEdge(x: number) {
+  return 45 + 17 * Math.sin(Math.PI * x) + 5 * Math.sin(4 * Math.PI * x)
+}
+
+/** 뒤쪽 주름의 위치를 그림과 접촉 판정에서 함께 쓴다. */
+export function auroraFold(u: number, back: boolean) {
+  const fold = Math.sin(12 * u + 2 * Math.sin(5 * u))
+  const edge = auroraEdge(u) - (back ? 13 + 10 * fold : 0)
+  const height = Math.min(edge - 2, (back ? 21 : 18) + 15 * fold ** 2 + 6 * Math.sin(26 * u) ** 2)
+  return { fold, edge, height }
+}
+
 export const DPR = Math.min(3, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1)
 
 /** 매수벽과 매도벽의 물량 글자는 같은 서체·크기·외곽선으로 표시한다. */
@@ -466,20 +479,80 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
   bake(scene, 'magic-ice', 44, 16, drawIceLance)
   bake(scene, 'magic-gust', 44, 120, drawGust)
   // spellbook의 마법들 (563번): 모양(창·물결·구슬)과 색만으로 그린다. 떨어지는 마법은 구슬이다.
-  bake(scene, 'aurora-curtain', 192, 256, (c) => {
-    c.fillStyle = '#201843'
-    c.fillRect(0, 0, 192, 256)
-    for (const [band, color] of ['111,246,201', '184,147,255'].entries()) {
-      for (let x = 0; x < 192; x++) {
-        const y = 74 + 66 * band + 23 * Math.sin(x / 33 + band) + 8 * Math.cos(x / 12)
-        const light = c.createLinearGradient(x, y - 68, x, y + 18)
-        light.addColorStop(0, `rgba(${color},0)`)
-        light.addColorStop(0.73, `rgba(${color},0.88)`)
-        light.addColorStop(1, `rgba(${color},0)`)
+  bake(scene, 'aurora-ribbon', 512, 72, (c) => {
+    // 뒤쪽 보라색 주름과 앞쪽 비취색 주름은 서로 다른 곡률로 겹친다.
+    for (const back of [true, false]) {
+      for (let x = 0; x < 512; x++) {
+        const u = x / 512
+        const { fold, edge, height } = auroraFold(u, back)
+        const light = c.createLinearGradient(0, edge - height, 0, edge + 2)
+        light.addColorStop(0, back ? '#b090ff00' : '#8bfaff00')
+        light.addColorStop(0.42, back ? '#8768ef80' : '#2994be78')
+        light.addColorStop(0.75, back ? '#805ce3cb' : '#1dc4adce')
+        light.addColorStop(0.92, back ? '#e3c3ffeb' : '#95ffe3fa')
+        light.addColorStop(0.97, back ? '#fff0ffef' : '#fff4c7')
+        light.addColorStop(1, '#fff4c700')
         c.fillStyle = light
-        c.fillRect(x, y - 68, 1, 86)
+        c.fillRect(x, edge - height, 1, height + 2)
+        const filament = Math.sin(146 * u + 7 * fold) ** 12
+        if (filament > 0.4) {
+          c.strokeStyle = back ? '#f3d6ff70' : '#c2fff68a'
+          c.beginPath()
+          c.moveTo(x, edge - 2)
+          c.quadraticCurveTo(x + 2, edge - 7, x + 7 * fold, edge - height * filament)
+          c.stroke()
+        }
       }
     }
+    for (let i = 0; i < 24; i++) {
+      const x = (i * 137 + 12) % 512
+      const y = auroraEdge(x / 512) - 6 - ((i * 17) % 38)
+      const r = i % 4 === 0 ? 3.2 : 1.5
+      c.fillStyle = '#fff7da'
+      c.beginPath()
+      c.moveTo(x, y - r)
+      c.quadraticCurveTo(x, y, x + r, y)
+      c.quadraticCurveTo(x, y, x, y + r)
+      c.quadraticCurveTo(x, y, x - r, y)
+      c.quadraticCurveTo(x, y, x, y - r)
+      c.fill()
+    }
+  })
+  bake(scene, 'aurora-polar-star', 96, 96, (c) => {
+    c.translate(48, 48)
+    const halo = c.createRadialGradient(0, 0, 1, 0, 0, 44)
+    halo.addColorStop(0, '#fffde9')
+    halo.addColorStop(0.22, '#ffe6a8bc')
+    halo.addColorStop(0.6, '#bbabff4d')
+    halo.addColorStop(1, '#9178ed00')
+    c.fillStyle = halo
+    c.fillRect(-48, -48, 96, 96)
+    c.strokeStyle = '#fff1bf'
+    c.lineWidth = 1.4
+    for (let i = 0; i < 4; i++) {
+      c.beginPath()
+      c.arc(0, 0, 25, 0.14, 1.37)
+      c.stroke()
+      c.rotate(Math.PI / 2)
+    }
+    c.beginPath()
+    for (let i = 0; i < 16; i++) {
+      const r = i % 4 === 0 ? 46 : i % 2 === 0 ? 22 : 6
+      const a = (Math.PI * i) / 8
+      const x = Math.cos(a) * r
+      const y = Math.sin(a) * r
+      if (i === 0) c.moveTo(x, y)
+      else c.lineTo(x, y)
+    }
+    c.closePath()
+    c.fillStyle = '#fff6cd'
+    c.fill()
+    c.strokeStyle = '#b58b59'
+    c.stroke()
+    c.fillStyle = '#ffffff'
+    c.beginPath()
+    c.arc(0, 0, 5, 0, Math.PI * 2)
+    c.fill()
   })
   for (const spell of EXTRA_SPELLS) {
     const book = SPELLBOOK[spell]
