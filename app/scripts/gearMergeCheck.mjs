@@ -263,7 +263,7 @@ try {
       await detail.getByTestId('cat-gun').click()
       await page.locator('[data-testid=cat][data-code=sky]').click()
       await expect(detail).toHaveAttribute('data-code', 'sky')
-      await detail.getByRole('button', { name: '하늘냥 스킬 보기' }).click()
+      await detail.getByRole('button', { name: '하늘냥 정보·스킬 보기' }).click()
       const skills = page.getByTestId('skills')
       const skill = skills.getByTestId('cat-skill')
       await expect(skill).toContainText('고유 스킬 메테오 스킬 Lv.1')

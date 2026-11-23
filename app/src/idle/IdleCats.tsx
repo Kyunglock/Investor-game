@@ -364,20 +364,23 @@ export function IdleCats({
           style={teamHeight ? { top: teamHeight - 6 } : undefined}
         >
           <Portrait code={cat?.code} grade={cat?.grade} />
+          {/* 고양이 정보(등급·레벨·공격 특성)는 스킬 탭에서 본다 (658번): 여기는 이름과 편성 단추만 남긴다. 스킬 탭이 열리기 전에는 여기서 본다. */}
           <div className="idle-cat-info">
             <b>
-              {cat && (
+              {cat && !onSkills && (
                 <i className={`idle-cat-grade is-${cat.grade}`} data-testid="cat-grade">
                   {cat.grade}
                 </i>
               )}{' '}
-              {cat ? cat.name : hero.name} {cat && <small>Lv.{cat.level}</small>}
+              {cat ? cat.name : hero.name} {cat && !onSkills && <small>Lv.{cat.level}</small>}
             </b>
-            <small>
-              {cat
-                ? `무기 공격력의 ${cat.damagePercent}%로 쏴요 · ${catTrait(cat)}`
-                : '늘 맨 앞에서 싸워요 · 출전은 뺄 수 없어요 · 무기는 바꾸거나 뺄 수 있어요'}
-            </small>
+            {!onSkills && (
+              <small>
+                {cat
+                  ? `무기 공격력의 ${cat.damagePercent}%로 쏴요 · ${catTrait(cat)}`
+                  : '늘 맨 앞에서 싸워요 · 출전은 뺄 수 없어요 · 무기는 바꾸거나 뺄 수 있어요'}
+              </small>
+            )}
           </div>
           {cat && !cat.fielded && full ? (
             <button
@@ -412,7 +415,7 @@ export function IdleCats({
           )}
           {onSkills ? (
             <button type="button" className="cat-skills-link" onClick={onSkills}>
-              {cat?.name ?? hero.name} 스킬 보기
+              {cat?.name ?? hero.name} 정보·스킬 보기
             </button>
           ) : (
             cat && (
