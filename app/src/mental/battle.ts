@@ -30,10 +30,10 @@ import {
 } from './advance'
 import { ARENA_FRAME, ARENA_MAPS, arenaMap } from './arenaMaps'
 import {
-  bakeCatBody,
-  bakeCatGun,
   auroraEdge,
   auroraFold,
+  bakeCatBody,
+  bakeCatGun,
   bakeEnemies,
   bakeHero,
   bakeMagic,

@@ -556,10 +556,12 @@ try {
     await pickCat('sky')
     const detail = page.getByTestId('cat-detail')
     await expect(detail).toHaveAttribute('data-code', 'sky')
-    await detail.getByRole('button', { name: '하늘냥 스킬 보기' }).click()
+    await detail.getByRole('button', { name: '하늘냥 정보·스킬 보기' }).click()
     const skills = page.getByTestId('skills')
     // The cat's own skill starts at level 1 and says when it levels up (decisions.md 515).
     // Picking a cat explains its skill (decisions.md 530): what it does, how it grows, the next level.
+    // 고양이 정보는 스킬 탭에 있다 (658번): 등급·레벨과 공격 특성.
+    await expect(skills.locator('.companion-skills > header')).toContainText('무기 공격력의')
     await expect(skills.getByTestId('cat-skill')).toContainText('고유 스킬 메테오 스킬 Lv.1')
     await expect(skills.getByTestId('cat-skill')).toContainText('운석 → 대운석 → 유성우')
     // The skill wears its badge (decisions.md 531): large here, small on the slot and the grid cell.
@@ -618,12 +620,13 @@ try {
     await toCats()
     await pickCat('night')
     await expect(detail).toHaveAttribute('data-code', 'night')
-    await expect(detail.getByTestId('cat-grade')).toHaveText('A')
+    // 고양이 정보(등급·레벨·공격 특성)는 스킬 탭에서만 본다 (658번): 여기는 이름과 편성 단추만 있다.
+    await expect(detail.getByTestId('cat-grade')).toHaveCount(0)
+    await expect(detail).not.toContainText('무기 공격력의')
     // With the team full its button offers a swap instead of a dead "칸 없음" (#910).
     await expect(detail.getByTestId('cat-field')).toHaveCount(0)
     await expect(detail.getByTestId('cat-swap')).toHaveText('교체')
     await expect(detail.getByTestId('cat-swap')).toBeEnabled()
-    await expect(detail).toContainText('치명타 피해 +25%')
     await expect.poll(mates).toBe(4)
     // The last approved companion is visible below the fold and uses its own portrait/texture.
     const finalCat = company.idle.cats.at(-1)
