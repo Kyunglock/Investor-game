@@ -159,9 +159,10 @@ async function run(browser, width, height) {
     assert.equal(refilled, 0, `a broken buy wall waits for its rebuild: ${refilled}`)
   else if (halted >= full) assert.equal(refilled, full, `a full buy wall stays full: ${refilled}`)
   else assert.ok(refilled > halted, `the buy wall refills while halted: ${halted} -> ${refilled}`)
+  // 무너진 벽은 되채우지 않으니 회복 문구도 없다 (battle.ts: 매수벽이 서 있지 않으면 note가 빈다).
   assert.match(
     await page.evaluate(() => window.__mentalMarket().circuit.caption),
-    /^거래 정지 · 매수벽 회복 \+[\d,]+주$/,
+    halted === 0 ? /^거래 정지$/ : /^거래 정지 · 매수벽 (회복 \+[\d,]+주|충전 완료)$/,
   )
   await page.screenshot({ path: `/tmp/battle-text-${width}x${height}.png` })
   await page.close()
