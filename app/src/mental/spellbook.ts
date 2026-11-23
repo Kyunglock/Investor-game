@@ -15,6 +15,8 @@ export type FlowSpell = 'fire' | 'poison' | 'light' | 'dark' | 'sand' | 'star'
 export type FallSpell = 'hail' | 'blossom' | 'bomb'
 export type ExtraSpell = FlowSpell | FallSpell | 'auroraNight'
 
+export const AURORA_CAST_SPEED = 1.5
+
 export const FLOW_SPELLS: readonly FlowSpell[] = ['fire', 'poison', 'light', 'dark', 'sand', 'star']
 export const FALL_SPELLS: readonly FallSpell[] = ['hail', 'blossom', 'bomb']
 export const EXTRA_SPELLS: readonly ExtraSpell[] = [...FLOW_SPELLS, ...FALL_SPELLS, 'auroraNight']
@@ -87,7 +89,7 @@ export const SPELLBOOK: { [K in FlowSpell]: FlowSpec } & { [K in FallSpell]: Fal
     colors: { light: '#fff3bc', mid: '#77eacb', dark: '#8575cc', line: '#363165' },
     glyph: 'M24 9 Q26 21 37 24 Q26 26 24 38 Q22 27 11 24 Q22 21 24 9Z',
     number: '#ffda83',
-    cooldown: [6, 4],
+    cooldown: [6 / AURORA_CAST_SPEED, 4 / AURORA_CAST_SPEED],
     damage: [12, 28],
   },
   fire: {

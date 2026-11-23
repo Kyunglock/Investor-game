@@ -106,7 +106,10 @@ try {
       }
       scene.elapsed += 0.25
       scene.updateMagic(0)
-      const charging = enemies.every((enemy) => enemy.hp === 10000)
+      const charging = !scene.auroraSweep.released && enemies.every((enemy) => enemy.hp === 10000)
+      scene.elapsed += 0.01
+      scene.updateMagic(0)
+      const released = scene.auroraSweep.released
       const speeds = []
       for (let i = 0; i < 1200 && scene.auroraSweep; i++) {
         const sweep = scene.auroraSweep
@@ -122,6 +125,7 @@ try {
       return {
         casts,
         charging,
+        released,
         ticks,
         speeds,
         finished: !scene.auroraSweep,
@@ -131,7 +135,7 @@ try {
       }
     })
     assert.equal(result.casts, 1)
-    assert(result.charging && result.finished)
+    assert(result.charging && result.released && result.finished)
     const [far, near, boss, outside, wall] = result.ticks
     assert(near[0] < boss[0] && boss[0] < far[0])
     assert.equal(outside.length, 0)

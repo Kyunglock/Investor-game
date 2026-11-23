@@ -231,7 +231,7 @@ class IdleEngine {
     ramp(3.4, 2.6),
     ramp(3, 2.2),
     ramp(5, 3.8),
-    ramp(6, 4)
+    ramp(6 / 1.5, 4 / 1.5)
   };
   private static final double[][] SKILL_DAMAGE = {
     {1.5, 2, 2.6, 3, 3.4},
@@ -336,10 +336,10 @@ class IdleEngine {
           "plum", "coral", "truffle");
   // A grade's share of the draws (percent) and its cats' gun damage (x the level's power). The
   // damage was {1, 1.4, 2, 3} before 644, {1, 1.15, 1.35, 1.6} in 644, {1, 1.05, 1.1, 1.2, 1.4}
-  // in 646 and is back to the 644 ladder since 656 (SS 2). S was 2% before 651 (its lost share
-  // went to C, 59.8%).
+  // in 646 and returned to the 644 ladder in 656. SS now has twice the S grade multiplier.
+  // S was 2% before 651 (its lost share went to C, 59.8%).
   private static final int[] GRADE_PER_THOUSAND = {608, 280, 100, 10, 2};
-  private static final double[] GRADE_DAMAGE = {1, 1.15, 1.35, 1.6, 2};
+  private static final double[] GRADE_DAMAGE = {1, 1.15, 1.35, 1.6, 3.2};
   private static final int[] CAT_GRADE = CATS.stream().mapToInt(IdleEngine::gradeIndex).toArray();
   // Each grade's share is split evenly over its cats: percent x (all cats' common multiple) / n.
   private static final int[] CAT_WEIGHTS = catWeights();

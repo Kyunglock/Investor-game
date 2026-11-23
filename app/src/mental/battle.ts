@@ -176,7 +176,14 @@ import {
 import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
-import { EXTRA_SPELLS, type ExtraSpell, type FallSpell, isExtraSpell, SPELLBOOK } from './spellbook'
+import {
+  AURORA_CAST_SPEED,
+  EXTRA_SPELLS,
+  type ExtraSpell,
+  type FallSpell,
+  isExtraSpell,
+  SPELLBOOK,
+} from './spellbook'
 import { wallOffset } from './stageArt'
 import {
   IDLE_RAID,
@@ -364,6 +371,7 @@ const IDLE_STUCK_MAX = 25
 // 전투 시계 기준 120단계/초. 겹치는 동안에는 정확히 15단계마다 피해를 준다.
 const AURORA_STEPS_PER_SECOND = 120
 const AURORA_TICK_STEPS = AURORA_STEPS_PER_SECOND / 8
+const AURORA_CHARGE_SECONDS = 0.38 / AURORA_CAST_SPEED
 const AURORA_CONTACT_SPEED = 0.16
 
 type Enemy = Phaser.Physics.Arcade.Image & {
@@ -4189,14 +4197,14 @@ class BattleScene extends Phaser.Scene {
       this.tweens.add({
         targets: body,
         scaleY: body.scaleY * 1.08,
-        delay: 290,
-        duration: 95,
+        delay: 290 / AURORA_CAST_SPEED,
+        duration: 95 / AURORA_CAST_SPEED,
         yoyo: true,
       })
     }
     const focus = { x: origin.x, y: origin.y - 40 }
     sfx.charge()
-    this.auroraFlare(focus.x, focus.y, 50, 360)
+    this.auroraFlare(focus.x, focus.y, 50, 360 / AURORA_CAST_SPEED)
     if (!this.reducedMotion) {
       for (let i = 0; i < 6; i++) {
         const angle = (i * Math.PI) / 3
@@ -4212,7 +4220,7 @@ class BattleScene extends Phaser.Scene {
           targets: spark,
           x: focus.x,
           y: focus.y,
-          duration: 310,
+          duration: 310 / AURORA_CAST_SPEED,
           ease: 'Quad.easeIn',
           onComplete: () => spark.destroy(),
         })
@@ -4285,8 +4293,8 @@ class BattleScene extends Phaser.Scene {
     const { w, h } = this.view()
     const height = 113
     const bottom = h - (36 * height) / 72
-    if (age < 0.38) {
-      const spread = Phaser.Math.SmoothStep(age, 0, 0.38)
+    if (age < AURORA_CHARGE_SECONDS) {
+      const spread = Phaser.Math.SmoothStep(age, 0, AURORA_CHARGE_SECONDS)
       sweep.ribbon
         .setPosition(
           Phaser.Math.Linear(sweep.origin.x, w / 2, spread),
@@ -4299,7 +4307,7 @@ class BattleScene extends Phaser.Scene {
       sweep.released = true
       sfx.auroraRelease()
     }
-    const endStep = Math.floor((age - 0.38) * AURORA_STEPS_PER_SECOND)
+    const endStep = Math.floor((age - AURORA_CHARGE_SECONDS) * AURORA_STEPS_PER_SECOND)
     const freeStep = (bottom + height) / (0.72 * AURORA_STEPS_PER_SECOND)
     if (sweep.step >= endStep) return
     const targets = this.magicTargets(true, true).map((enemy) => {

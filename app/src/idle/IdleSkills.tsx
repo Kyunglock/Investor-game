@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { type CatCode, type UniqueActiveCode, useRaisingStore } from '@web/features/raising/store'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { ACTIVE_HINTS, ACTIVE_NOTES } from '../mental/actives'
@@ -25,6 +25,7 @@ export function IdleSkills({
   picked: CatCode | null
   onPick: (code: CatCode | null) => void
 }) {
+  const panel = useRef<HTMLDivElement>(null)
   const cats = sortCats(company.idle?.cats ?? [])
   const [preview, setPreview] = useState<CatCode | null>(null)
   const cat = cats.find((item) => item.code === (preview ?? picked))
@@ -32,6 +33,7 @@ export function IdleSkills({
     const locked = cats.some((item) => item.code === code && item.level < 1)
     setPreview(locked ? code : null)
     if (!locked) onPick(code)
+    requestAnimationFrame(() => panel.current?.scrollIntoView({ block: 'start' }))
     sfx.tap()
   }
   const boss = heroOf(company).name
@@ -47,17 +49,7 @@ export function IdleSkills({
     void useRaisingStore.getState().equipActive(active.code as UniqueActiveCode, !active.equipped)
   }
   return (
-    <div className="boss-skills" data-testid="skills">
-      <button
-        type="button"
-        className="skill-boss-picker"
-        aria-pressed={!cat}
-        onClick={() => pick(null)}
-      >
-        <CatPortrait /> {boss} 스킬
-      </button>
-      <CatRosterGrid cats={cats} picked={cat?.code ?? null} onPick={pick} preview />
-
+    <div ref={panel} className="boss-skills" data-testid="skills">
       {cat ? (
         <section className="companion-skills" aria-label={`${cat.name} 고유 스킬`}>
           <header>
@@ -185,6 +177,15 @@ export function IdleSkills({
           </ul>
         </>
       )}
+      <button
+        type="button"
+        className="skill-boss-picker"
+        aria-pressed={!cat}
+        onClick={() => pick(null)}
+      >
+        <CatPortrait /> {boss} 스킬
+      </button>
+      <CatRosterGrid cats={cats} picked={cat?.code ?? null} onPick={pick} preview />
       {error && <p role="alert">{error}</p>}
     </div>
   )
