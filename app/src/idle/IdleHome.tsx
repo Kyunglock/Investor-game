@@ -168,12 +168,6 @@ export function IdleHome({
   const halted = shown.circuitSeconds > 0
   // 보스 도전 (547번): 50번째 벽마다 저절로 나오고 서킷브레이커로 시작한다.
   const bossFight = idleBossChallenge(shown.wall)
-  // 최고 기록 (654번): 통과한 가장 높은 벽. 지금 선 벽이 그보다 높으면 기록을 갱신하는 중이다.
-  // 환생한 적이 없으면 지금 선 벽이 늘 최고 기록이라 적지 않는다 (655번): 그때는 다이아 보상을 받은 보스만 적는다.
-  const best = idle?.bestWall ?? 0
-  const reborn = (idle?.rebirth?.count ?? 0) > 0
-  const recordRun = reborn && best > 0 && shown.wall > best
-  const bossPaid = idle?.bossReward?.wall ?? 0
   // 지정 자동 강화 (654번): 성장 탭에서 고른 능력치를 돈이 모이는 대로 산다.
   useAutoUpgradeLoop(company, connected)
   // 자본은 1초마다 서버에서 새로 온다 (#803): 숫자가 그 사이를 굴러가며 계속 불어난다.
@@ -332,22 +326,6 @@ export function IdleHome({
                   : `${bossFight ? '보스 ' : '매도벽 '}${shown.wall.toLocaleString()}`
                 : '연결 대기'}
             </strong>
-            {connected && ((reborn && best > 0) || bossPaid > 0) && (
-              <small
-                className="idle-wall-best"
-                data-testid="idle-wall-best"
-                data-record={recordRun || undefined}
-              >
-                {recordRun
-                  ? '최고기록 갱신중!'
-                  : reborn && best > 0 && `최고 ${best.toLocaleString()}`}
-                {!recordRun && bossPaid > 0 && (
-                  <span className={reborn && best > 0 ? 'idle-wall-best-boss' : undefined}>
-                    {reborn && best > 0 && ' · '}보스 보상 {bossPaid.toLocaleString()}까지
-                  </span>
-                )}
-              </small>
-            )}
             {/* 다이아 (526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. */}
             <div
               className="idle-cash idle-diamonds"
@@ -593,49 +571,73 @@ const FOREVER: Record<FishUpgrade['kind'], { name: string; unit: string }> = {
   buy: { name: '매수벽 공격', unit: '주' },
 }
 
+/** 영구 강화를 levels단계 묶어 살 때의 생선: 첫 단계가 first개고 단계마다 하나씩 는다 (663번). */
+function fishCost(first: number, levels: number) {
+  return levels * first + (levels * (levels - 1)) / 2
+}
+
 function IdleForever({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const rebirth = company.idle?.rebirth
   const [failed, setFailed] = useState<string | null>(null)
+  // 묶어 올리기 (663번): 성장의 강화 횟수와 같은 ×1·×10·최대 100.
+  const [count, setCount] = useState(1)
   if (!rebirth) return null
   return (
     <>
       <p className="idle-subtitle">환생해서 얻은 생선으로 올려요. 환생해도 사라지지 않아요</p>
-      {(rebirth.upgrades ?? []).map((u) => (
-        <article className="idle-stat" key={u.kind} data-testid="fish-upgrade" data-kind={u.kind}>
-          <span className="idle-stat-icon" aria-hidden="true">
-            <GrowthIcon name={u.kind} />
-          </span>
-          <div className="idle-stat-info">
-            <b>
-              {FOREVER[u.kind].name} <small>Lv.{u.level}</small>
-            </b>
-            <small>환생해도 그대로예요</small>
-            <p>
-              +{u.bonus.toLocaleString()}
-              {FOREVER[u.kind].unit} → +{u.nextBonus.toLocaleString()}
-              {FOREVER[u.kind].unit}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="idle-buy idle-fish-buy"
-            disabled={busy || rebirth.fish < u.cost}
-            onClick={async () => {
-              setFailed(null)
-              await useRaisingStore.getState().buyFishUpgrade(u.kind)
-              const reason = useRaisingStore.getState().error
-              if (reason) setFailed(reason)
-              else sfx.levelUp()
-            }}
-          >
-            강화
-            <small>
-              <FishIcon /> {u.cost.toLocaleString()}
-            </small>
-          </button>
-        </article>
-      ))}
+      <div className="idle-buy-count" data-testid="fish-count">
+        <span>강화 횟수</span>
+        <div>
+          {[1, 10, MAX_BATCH].map((n) => (
+            <button key={n} type="button" aria-pressed={count === n} onClick={() => setCount(n)}>
+              {n === MAX_BATCH ? '최대 100' : `×${n}`}
+            </button>
+          ))}
+        </div>
+      </div>
+      {(rebirth.upgrades ?? []).map((u) => {
+        // 값은 다음 단계의 번호만큼이다(cost, cost + 1, …): 생선이 닿는 데까지만 묶는다.
+        let levels = count
+        while (levels > 1 && fishCost(u.cost, levels) > rebirth.fish) levels--
+        const cost = fishCost(u.cost, levels)
+        const step = u.nextBonus - u.bonus
+        return (
+          <article className="idle-stat" key={u.kind} data-testid="fish-upgrade" data-kind={u.kind}>
+            <span className="idle-stat-icon" aria-hidden="true">
+              <GrowthIcon name={u.kind} />
+            </span>
+            <div className="idle-stat-info">
+              <b>
+                {FOREVER[u.kind].name} <small>Lv.{u.level}</small>
+              </b>
+              <small>환생해도 그대로예요</small>
+              <p>
+                +{u.bonus.toLocaleString()}
+                {FOREVER[u.kind].unit} → +{(u.bonus + step * levels).toLocaleString()}
+                {FOREVER[u.kind].unit}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="idle-buy idle-fish-buy"
+              disabled={busy || rebirth.fish < u.cost}
+              onClick={async () => {
+                setFailed(null)
+                await useRaisingStore.getState().buyFishUpgrade(u.kind, levels)
+                const reason = useRaisingStore.getState().error
+                if (reason) setFailed(reason)
+                else sfx.levelUp()
+              }}
+            >
+              강화 ×{levels}
+              <small>
+                <FishIcon /> {cost.toLocaleString()}
+              </small>
+            </button>
+          </article>
+        )
+      })}
       {failed && <p role="alert">{failed}</p>}
       <IdleRebirth company={company} />
     </>

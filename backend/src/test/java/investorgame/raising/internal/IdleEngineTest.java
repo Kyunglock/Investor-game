@@ -817,6 +817,18 @@ class IdleEngineTest {
     assertThat(state.idle.circuitSeconds).isZero();
     assertThat(state.idle.wall).isEqualTo(51);
     assertThat(state.idle.damage).isCloseTo(5, offset(1e-9));
+
+    // 이미 깬 보스는 다시 지날 때 멈추지 않는다 (663번): 환생한 뒤 49번 벽에서 한 방에 보스까지 뚫는다.
+    assertThat(state.idle.bossCleared).isEqualTo(50);
+    start(49);
+    tick(1000, new IdleHit(49, "bullet", 1, IdleEngine.maxHp(49) + IdleEngine.maxHp(50) + 5, 0));
+    assertThat(state.idle.circuitSeconds).isZero();
+    assertThat(state.idle.wall).isEqualTo(51);
+    // 아직 깨지 않은 다음 보스(100)는 그대로 서킷브레이커로 시작한다.
+    start(99);
+    tick(1000, new IdleHit(99, "bullet", 1, IdleEngine.maxHp(99) + 5, 0));
+    assertThat(state.idle.wall).isEqualTo(100);
+    assertThat(state.idle.circuitSeconds).isEqualTo(IdleEngine.CIRCUIT_SECONDS);
   }
 
   @Test
@@ -1928,6 +1940,20 @@ class IdleEngineTest {
     // 성장 화면은 이 강화만의 값을 보인다 (661번): 영구 강화가 있어도 한 단계에 꼭 1%씩이다.
     assertThat(upgrade(c, "damage").stepBonusPercent()).isEqualTo(10);
     assertThat(upgrade(c, "damage").nextStepBonusPercent()).isEqualTo(11);
+    // 묶어 올리기 (663번): 2단계에서 열 단계는 3 + 4 + … + 12 = 75개. 생선이 닿는 데까지만 오르고, 한 단계도 못 사면 400.
+    c.fish = 80;
+    engine.buyFishUpgrade(c, "damage", 10);
+    assertThat(c.fishLevels).containsEntry("damage", 12);
+    assertThat(c.fish).isEqualTo(5);
+    c.fish = 30;
+    engine.buyFishUpgrade(c, "damage", 100);
+    assertThat(c.fishLevels).as("13 + 14 = 27개로 두 단계만").containsEntry("damage", 14);
+    assertThat(c.fish).isEqualTo(3);
+    assertThatThrownBy(() -> engine.buyFishUpgrade(c, "damage", 10))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.buyFishUpgrade(c, "damage", 101))
+        .isInstanceOf(InvalidRequestException.class);
+    c.fishLevels.put("damage", 2);
     // 벽 1,000쯤(+3,000%)에서 영구 강화 +300%는 네 배다: 더하면 +3,300%뿐이었다.
     assertThat(MentalEngine.withFish(3000, 300)).isEqualTo(12_300);
     assertThat(c.fishLevels).containsEntry("damage", 2);

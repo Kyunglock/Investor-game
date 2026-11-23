@@ -1283,7 +1283,8 @@ class IdleEngine {
       System.arraycopy(queued, 1, queued, 0, queued.length - 1);
       queued[queued.length - 1] = 0;
       // 보스 도전은 서킷브레이커로 시작한다 (547번): 넘친 피해는 그 벽에 얹혀 기다리고, 거래가 풀려야 들어간다.
-      if (CIRCUIT_ENABLED && bossWall(s.wall)) {
+      // 이미 깬 보스(환생한 뒤 다시 지나는 벽)는 멈추지 않고 지나간다 (663번).
+      if (CIRCUIT_ENABLED && bossWall(s.wall) && s.wall > s.bossCleared) {
         s.circuitSeconds = CIRCUIT_SECONDS;
         s.hitCredits = new double[KINDS];
       }
@@ -1454,16 +1455,30 @@ class IdleEngine {
    * 생선으로 영구 강화를 한 단계 올린다 (600번): 환생해도 남는다. 값은 다음 단계의 번호(1, 2, 3 …)만큼의 생선이다. 없는 강화이거나 생선이 모자라면 400.
    */
   void buyFishUpgrade(CompanyState c, String kind) {
+    buyFishUpgrade(c, kind, 1);
+  }
+
+  /** 한 요청에 묶어 사는 영구 강화의 최대 단계 (663번). */
+  static final int FISH_MAX_BATCH = 100;
+
+  /** 영구 강화를 levels단계까지 묶어 올린다 (663번): 생선이 닿는 데까지만 오른다. 한 단계도 못 사면 400. */
+  void buyFishUpgrade(CompanyState c, String kind, int levels) {
     state(c);
     if (!MentalEngine.FISH_UPGRADES.contains(kind)) {
       throw new InvalidRequestException("없는 영구 강화다: " + kind);
     }
+    if (levels < 1 || levels > FISH_MAX_BATCH) {
+      throw new InvalidRequestException("한 번에 1~" + FISH_MAX_BATCH + "단계를 올린다");
+    }
     int level = c.fishLevels.getOrDefault(kind, 0);
-    long cost = MentalEngine.fishUpgradeCost(level);
-    if (c.fish < cost) throw new InvalidRequestException("생선이 모자라요");
-    c.fish -= cost;
-    c.fishLevels.put(kind, level + 1);
-    engine.pass.progress(c, "forever", 1, todayDate());
+    int bought = 0;
+    while (bought < levels && c.fish >= MentalEngine.fishUpgradeCost(level + bought)) {
+      c.fish -= MentalEngine.fishUpgradeCost(level + bought);
+      bought++;
+    }
+    if (bought == 0) throw new InvalidRequestException("생선이 모자라요");
+    c.fishLevels.put(kind, level + bought);
+    engine.pass.progress(c, "forever", bought, todayDate());
   }
 
   private double bundlePrice(CompanyState.Idle s) {

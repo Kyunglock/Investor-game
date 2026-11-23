@@ -156,7 +156,7 @@ public interface CompanyService {
   CompanyView rebirth(UUID sessionId, boolean ad);
 
   /** 생선으로 영구 강화(damage·hp·buy)를 한 단계 올린다 (600번). 환생해도 남는다. 생선이 모자라거나 없는 강화면 400. */
-  CompanyView buyFishUpgrade(UUID sessionId, String kind);
+  CompanyView buyFishUpgrade(UUID sessionId, String kind, int levels);
 
   /**
    * 테스트판 (decisions.md 499번): 이 세션의 테스트판 회사를 돌려준다. 없으면 차리고, 자본·채용권·뽑기권을 채운다. 테스트판 회사는 무엇을 하든 그 전에

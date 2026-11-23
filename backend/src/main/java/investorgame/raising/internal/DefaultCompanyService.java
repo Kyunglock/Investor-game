@@ -697,9 +697,9 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView buyFishUpgrade(UUID sessionId, String kind) {
+  public CompanyView buyFishUpgrade(UUID sessionId, String kind, int levels) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.buyFishUpgrade(row.state(), kind);
+    idle.buyFishUpgrade(row.state(), kind, levels);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

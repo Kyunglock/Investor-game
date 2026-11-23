@@ -382,6 +382,9 @@ try {
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(1)
     const attend = page.locator('[data-testid=pass-mission][data-code=attend]')
     await expect(attend.getByTestId('pass-mission-claim')).toHaveText('받기 +50P')
+    // 664번: 받을 것이 있는 묶음에는 일괄 받기 단추가 서고, 받을 포인트의 합을 적는다.
+    await expect(page.getByTestId('pass-missions-claim-all')).toHaveCount(1)
+    await expect(page.getByTestId('pass-missions-claim-all')).toContainText('일괄 받기 +50P')
     await expect(attend).toContainText('출석하기')
     await expect(attend).toContainText('1/1')
     await attend.getByTestId('pass-mission-claim').click()
@@ -389,6 +392,7 @@ try {
     await expect(attend).toContainText('완료')
     await expect(attend).toHaveAttribute('data-state', 'done')
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(0)
+    await expect(page.getByTestId('pass-missions-claim-all')).toHaveCount(0)
     await expect(page.getByTestId('pass-exp')).toHaveText('170 / 300P')
     await expect(page.getByTestId('pass-badge')).toHaveCount(0)
     await expect(page.getByTestId('pass').locator('.idle-coin')).toHaveCount(0)
@@ -414,12 +418,10 @@ try {
     const bossRow = page.locator('[data-testid=stats-row][data-code=boss]')
     await expect(bossRow).toContainText('사장냥')
     await expect(bossRow).toContainText(/[\d,.]+[만억조]?주/)
-    await expect(page.getByTestId('stats-total')).not.toHaveText('0주')
-    // 647번: 매도벽 피해와 물량 피해를 나눠 적는다. 물량은 실제 전장의 고양이들이 맞힌다.
-    await expect(page.getByTestId('stats-wall')).toContainText('주')
-    await expect(page.getByTestId('stats-orders')).not.toHaveText('0주')
-    await expect(page.getByTestId('stats-crits')).toContainText(/[1-9][\d,]*번/)
-    await expect(page.getByTestId('stats-best')).toContainText('주')
+    // 662번: 총 피해 같은 여덟 칸은 없고, 최고 기록과 보스 보상만 순위 위에 있다.
+    await expect(page.getByTestId('stats-grid')).toHaveCount(0)
+    await expect(page.getByTestId('stats-best-wall')).toBeVisible()
+    await expect(page.getByTestId('stats-boss-paid')).toBeVisible()
     const statsBox = await page.getByTestId('stats').boundingBox()
     assert(
       statsBox && statsBox.x >= 0 && statsBox.x + statsBox.width <= width + 1,
@@ -454,6 +456,8 @@ try {
     await expect(page.locator('[data-testid=idle-stat]')).toHaveCount(0)
     const forever = (kind: string) => page.locator(`[data-testid=fish-upgrade][data-kind=${kind}]`)
     await expect(page.getByTestId('fish-upgrade')).toHaveCount(3)
+    // 663번: 성장과 같은 강화 횟수(×1·×10·최대 100)로 묶어 올린다.
+    await expect(page.getByTestId('fish-count').getByRole('button')).toHaveCount(3)
     await expect(forever('damage')).toContainText('공격력 Lv.0')
     await expect(forever('damage')).toContainText('+0% → +1%')
     await expect(forever('buy')).toContainText('+0주 → +10주')

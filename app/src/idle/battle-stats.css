@@ -61,6 +61,10 @@
   border-radius: 12px;
   background: #fffaf0;
 }
+.idle-stats-grid div[data-record] {
+  border-color: #c2620b;
+  background: linear-gradient(90deg, #ffde6b, #ff9d3c);
+}
 .idle-stats-grid dt {
   font-size: 11px;
   color: #947247;

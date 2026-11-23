@@ -124,8 +124,8 @@ interface RaisingState {
   /** slot: 세울 출전 칸의 번호(0부터, 599번). */
   fieldCat: (code: CatCode, fielded: boolean, replaceCode?: CatCode, slot?: number) => Promise<void>
   /** 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 571번). */
-  /** 생선으로 영구 강화를 한 단계 올린다 (600번). */
-  buyFishUpgrade: (kind: 'damage' | 'hp' | 'buy') => Promise<void>
+  /** 생선으로 영구 강화를 levels단계까지(없으면 한 단계) 올린다 (600·663번). */
+  buyFishUpgrade: (kind: 'damage' | 'hp' | 'buy', levels?: number) => Promise<void>
   /** 고양이에게 가진 무기 하나를 들린다. weapon이 null이면 뺀다 (488번). */
   equipCat: (
     code: CatCode,
@@ -357,7 +357,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     fieldCat: (code, fielded, replaceCode, slot) =>
       change(api.POST('/api/company/cat/field', { body: { code, fielded, replaceCode, slot } })),
 
-    buyFishUpgrade: (kind) => change(api.POST('/api/company/rebirth/upgrade', { body: { kind } })),
+    buyFishUpgrade: (kind, levels = 1) =>
+      change(api.POST('/api/company/rebirth/upgrade', { body: { kind, levels } })),
 
     equipCat: (code, weapon) =>
       change(api.POST('/api/company/cat/weapon', { body: { code, ...weapon } })),

@@ -519,15 +519,16 @@ class CompanyController {
 
   record RebirthRequest(Boolean ad) {}
 
-  /** 생선으로 영구 강화를 한 단계 올린다 (600번). */
+  /** 생선으로 영구 강화를 levels단계까지(없으면 한 단계) 올린다 (600·663번). */
   @PostMapping("/rebirth/upgrade")
   CompanyView buyFishUpgrade(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody FishUpgradeRequest request) {
-    return companies.buyFishUpgrade(cookies.requirePlayer(token), request.kind());
+    int levels = request.levels() == null ? 1 : request.levels();
+    return companies.buyFishUpgrade(cookies.requirePlayer(token), request.kind(), levels);
   }
 
-  record FishUpgradeRequest(@NotBlank String kind) {}
+  record FishUpgradeRequest(@NotBlank String kind, @Positive Integer levels) {}
 
   @PostMapping("/bread/sell")
   CompanyView sellBread(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
