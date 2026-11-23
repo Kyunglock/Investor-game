@@ -375,7 +375,7 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
   expect(opened.pass.missions.map((mission) => mission.code)).toEqual([
     'attend',
     'upgrade',
-    'skill',
+    'card',
     'wall',
     'boss',
     'draw',

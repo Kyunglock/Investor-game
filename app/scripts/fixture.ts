@@ -257,7 +257,14 @@ export const company = {
         points: 50,
         done: true,
       },
-      { code: 'skill', title: '스킬 20번 사용', period: 'day', count: 7, target: 20, points: 100 },
+      {
+        code: 'card',
+        title: '레벨업 카드 10장 고르기',
+        period: 'day',
+        count: 7,
+        target: 10,
+        points: 100,
+      },
       {
         code: 'wall',
         title: '매도벽 최고 기록 30개 돌파',
