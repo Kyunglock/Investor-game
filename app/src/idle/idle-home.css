@@ -2653,21 +2653,18 @@
   border-radius: 12px;
   background: #f8effd;
 }
-.skill-cat-picker,
+.skill-boss-picker,
 .companion-skills > header {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.skill-cat-picker select {
-  flex: 1;
-  min-width: 0;
-  padding: 8px;
-  font: inherit;
-  color: inherit;
-  background: white;
-  border: 1px solid #d9c2e5;
-  border-radius: 8px;
+.skill-boss-picker {
+  justify-self: start;
+}
+.skill-boss-picker .idle-cat-portrait {
+  width: 36px;
+  height: 36px;
 }
 .companion-skills {
   display: grid;

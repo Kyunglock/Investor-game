@@ -16,7 +16,7 @@ const faceRects = JSON.parse(
 // The shop tab carries a dot ("무료 상품 있음") while a free item is left (decisions.md 541).
 const SHOP_MENU = /^상점( 무료 상품 있음)?$/
 // Cats and weapons share one tab (560); it carries a dot while weapons can be merged.
-const CAT_MENU = /^고양이·무기( 합칠 수 있는 무기 있음)?$/
+const CAT_MENU = /^출전( 합칠 수 있는 무기 있음)?$/
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,

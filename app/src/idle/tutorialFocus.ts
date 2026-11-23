@@ -166,7 +166,7 @@ export function tutorialTargets(step: number, menu: string, skillUse: boolean): 
               text: '밤냥을 꾹 누른 채 빈 출전 칸으로 끌어 놓으세요.',
             },
           ]
-        : [nav('cats', '고양이·무기를 눌러 밤냥을 출전시켜요.')]
+        : [nav('cats', '출전 탭을 눌러 밤냥을 출전시켜요.')]
     case 4:
       return menu === 'shop'
         ? [
@@ -194,7 +194,7 @@ export function tutorialTargets(step: number, menu: string, skillUse: boolean): 
             },
             night,
           ]
-        : [nav('cats', '고양이·무기에서 밤냥의 무기를 바꿔봐요.')]
+        : [nav('cats', '출전 탭에서 밤냥의 무기를 바꿔봐요.')]
     case 7:
       return [nav('battle', '첫 팀 완성! 직접 쓰는 스킬은 100 매도벽 돌파 후 열려요.')]
     default:

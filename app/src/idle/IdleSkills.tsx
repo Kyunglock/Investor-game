@@ -1,11 +1,13 @@
 import type { Company } from '@web/api/client'
 import { type CatCode, type UniqueActiveCode, useRaisingStore } from '@web/features/raising/store'
+import { useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { ACTIVE_HINTS, ACTIVE_NOTES } from '../mental/actives'
 import { heroOf } from '../mental/hero'
 import { ActiveBadge, ActiveTime } from './ActiveBadge'
 import { CatPortrait, catTrait } from './CatPortrait'
+import { CatRosterGrid } from './CatRosterGrid'
 import { CompanionSkills } from './CompanionSkills'
 import { sortCats } from './catGrade'
 
@@ -23,8 +25,15 @@ export function IdleSkills({
   picked: CatCode | null
   onPick: (code: CatCode | null) => void
 }) {
-  const owned = sortCats((company.idle?.cats ?? []).filter((cat) => cat.level > 0))
-  const cat = owned.find((item) => item.code === picked)
+  const cats = sortCats(company.idle?.cats ?? [])
+  const [preview, setPreview] = useState<CatCode | null>(null)
+  const cat = cats.find((item) => item.code === (preview ?? picked))
+  const pick = (code: CatCode | null) => {
+    const locked = cats.some((item) => item.code === code && item.level < 1)
+    setPreview(locked ? code : null)
+    if (!locked) onPick(code)
+    sfx.tap()
+  }
   const boss = heroOf(company).name
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
@@ -39,30 +48,23 @@ export function IdleSkills({
   }
   return (
     <div className="boss-skills" data-testid="skills">
-      <label className="skill-cat-picker">
-        고양이 선택
-        <select
-          value={cat?.code ?? ''}
-          onChange={(event) => {
-            const next = owned.find((item) => item.code === event.target.value)
-            onPick(next?.code ?? null)
-          }}
-        >
-          <option value="">{boss}</option>
-          {owned.map((item) => (
-            <option key={item.code} value={item.code}>
-              {item.grade} · {item.name} Lv.{item.level}
-            </option>
-          ))}
-        </select>
-      </label>
+      <button
+        type="button"
+        className="skill-boss-picker"
+        aria-pressed={!cat}
+        onClick={() => pick(null)}
+      >
+        <CatPortrait /> {boss} 스킬
+      </button>
+      <CatRosterGrid cats={cats} picked={cat?.code ?? null} onPick={pick} preview />
+
       {cat ? (
         <section className="companion-skills" aria-label={`${cat.name} 고유 스킬`}>
           <header>
             <CatPortrait code={cat.code} grade={cat.grade} />
             <div>
               <b>
-                {cat.name} · {cat.grade} · Lv.{cat.level}
+                {cat.name} · {cat.grade} · {cat.level > 0 ? `Lv.${cat.level}` : '미보유'}
               </b>
               <p>
                 무기 공격력의 {cat.damagePercent}% · {catTrait(cat)}

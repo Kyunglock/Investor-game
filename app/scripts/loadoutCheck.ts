@@ -187,7 +187,7 @@ try {
       )
     }
     // Cats and weapons share one tab (560).
-    const CAT_MENU = /^고양이·무기( 합칠 수 있는 무기 있음)?$/
+    const CAT_MENU = /^출전( 합칠 수 있는 무기 있음)?$/
     for (const name of [CAT_MENU]) {
       await page.getByRole('button', { name }).last().click()
       await expectStableBattle()
