@@ -272,15 +272,16 @@ try {
       await expect(skills.getByTestId('cat-skill-next')).toHaveText(
         '고양이 Lv.2에 스킬 Lv.2 · 앞으로 1레벨',
       )
+      // 고양이 상세 보기 (668번): 목록은 가려지고, 스킬 목록으로 돌아가 다른 고양이를 누른다.
+      await expect(skills.getByTestId('skill-cat-detail')).toHaveAttribute('data-code', 'sky')
+      await expect(skills.locator('[data-testid=cat]')).toHaveCount(0)
+      await skills.getByTestId('skill-back').click()
+      await expect(skills.getByTestId('skill-cat-detail')).toHaveCount(0)
       await skills.locator('[data-testid=cat][data-code=snow]').click()
       await expect(skills.getByRole('region', { name: '눈꽃냥 고유 스킬' })).toContainText('미보유')
       await expect(skill).toContainText('물 스킬')
       await expect(skill.getByText('고유 스킬 물 스킬')).toBeInViewport()
-      const infoBounds = await skills
-        .getByRole('region', { name: '눈꽃냥 고유 스킬' })
-        .boundingBox()
-      const rosterBounds = await skills.getByRole('list', { name: /고양이 인벤토리/ }).boundingBox()
-      assert(infoBounds.y + infoBounds.height <= rosterBounds.y)
+      await skills.getByTestId('skill-back').click()
       await skills.locator('[data-testid=cat][data-code=night]').click()
       await expect(skills.getByTestId('cat-skill-next')).toHaveText('스킬 최고 레벨이에요')
       await tab(CAT_MENU).click()

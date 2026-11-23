@@ -3,14 +3,16 @@ import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useRef, useState } from 'react'
 import { sfx } from '../fx/sound'
 import { ACTIVE_HINTS, ACTIVE_NOTES, SKILL_CODES, SKILL_NAMES } from '../mental/actives'
-import { heroOf } from '../mental/hero'
 import { ActiveBadge } from './ActiveBadge'
 import { CatPortrait, catTrait } from './CatPortrait'
 import { CatRosterGrid } from './CatRosterGrid'
 import { CompanionSkills } from './CompanionSkills'
 import { sortCats } from './catGrade'
 
-/** 스킬 탭: 사장냥의 스킬은 매도벽 돌파 스테이지의 레벨업 카드로 쓰고 (667번), 고양이를 고르면 그 고양이의 고유 스킬을 본다. */
+/**
+ * 스킬 탭: 사장냥의 스킬은 매도벽 돌파 스테이지의 레벨업 카드로 쓴다 (667번). 아래 고양이 목록에서 고양이를 누르면 그 고양이의 상세 보기로
+ * 넘어간다 (668번): 목록은 가리고 그 고양이의 정보와 고유 스킬만 보이며, 위의 "스킬 목록" 단추로 돌아온다.
+ */
 export function IdleSkills({
   company,
   picked,
@@ -31,18 +33,33 @@ export function IdleSkills({
     requestAnimationFrame(() => panel.current?.scrollIntoView({ block: 'start' }))
     sfx.tap()
   }
-  const boss = heroOf(company).name
   const error = useRaisingStore((s) => s.error)
   return (
     <div ref={panel} className="boss-skills" data-testid="skills">
       {cat ? (
-        <section className="companion-skills" aria-label={`${cat.name} 고유 스킬`}>
+        <section
+          className="companion-skills"
+          aria-label={`${cat.name} 고유 스킬`}
+          data-testid="skill-cat-detail"
+          data-code={cat.code}
+        >
+          <button
+            type="button"
+            className="skill-back"
+            data-testid="skill-back"
+            onClick={() => pick(null)}
+          >
+            <span aria-hidden="true">‹</span> 스킬 목록
+          </button>
           <header>
             <CatPortrait code={cat.code} grade={cat.grade} />
             <div>
-              <b>
-                {cat.name} · {cat.grade} · {cat.level > 0 ? `Lv.${cat.level}` : '미보유'}
-              </b>
+              <b>{cat.name}</b>
+              <span className="skill-cat-chips">
+                <i>{cat.grade}등급</i>
+                <i>{cat.level > 0 ? `Lv.${cat.level}` : '미보유'}</i>
+                {cat.fielded && <i className="is-fielded">출전 중</i>}
+              </span>
               <p>
                 무기 공격력의 {cat.damagePercent}% · {catTrait(cat)}
               </p>
@@ -114,15 +131,15 @@ export function IdleSkills({
           </ul>
         </>
       )}
-      <button
-        type="button"
-        className="skill-boss-picker"
-        aria-pressed={!cat}
-        onClick={() => pick(null)}
-      >
-        <CatPortrait /> {boss} 스킬
-      </button>
-      <CatRosterGrid cats={cats} picked={cat?.code ?? null} onPick={pick} preview />
+      {!cat && (
+        <>
+          <div className="boss-skill-header">
+            <b>고양이 고유 스킬</b>
+            <span>눌러서 상세 보기</span>
+          </div>
+          <CatRosterGrid cats={cats} picked={null} onPick={pick} preview />
+        </>
+      )}
       {error && <p role="alert">{error}</p>}
     </div>
   )

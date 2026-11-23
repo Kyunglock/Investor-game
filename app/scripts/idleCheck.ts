@@ -551,6 +551,18 @@ try {
     // Picking a cat explains its skill (decisions.md 530): what it does, how it grows, the next level.
     // 고양이 정보는 스킬 탭에 있다 (658번): 등급·레벨과 공격 특성.
     await expect(skills.locator('.companion-skills > header')).toContainText('무기 공격력의')
+    // 고양이 상세 보기 (668번): 목록을 가리고 그 고양이만 보이며, 스킬 목록 단추로 돌아간다.
+    const catDetail = skills.getByTestId('skill-cat-detail')
+    await expect(catDetail).toHaveAttribute('data-code', 'sky')
+    await expect(catDetail.getByTestId('skill-back')).toBeVisible()
+    await expect(skills.getByTestId('unique-skill')).toHaveCount(0)
+    await expect(skills.locator('[data-testid=cat]')).toHaveCount(0)
+    await page.screenshot({ path: `/tmp/idle-skill-cat-${width}.png` })
+    await catDetail.getByTestId('skill-back').click()
+    await expect(catDetail).toHaveCount(0)
+    await expect(skills.getByTestId('unique-skill')).toHaveCount(7)
+    await skills.locator('[data-testid=cat][data-code=sky]').click()
+    await expect(catDetail).toHaveAttribute('data-code', 'sky')
     await expect(skills.getByTestId('cat-skill')).toContainText('고유 스킬 메테오 스킬 Lv.1')
     await expect(skills.getByTestId('cat-skill')).toContainText('운석 → 대운석 → 유성우')
     // The skill wears its badge (decisions.md 531): large here, small on the slot and the grid cell.
