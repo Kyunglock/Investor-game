@@ -119,7 +119,6 @@ interface RaisingState {
   /** 테스트판: 다음 시즌으로 넘긴다. 진행도가 비워진다 (529번). */
   skipSandboxSeason: () => Promise<void>
   sellBread: () => Promise<void>
-  feedCat: (code: CatCode) => Promise<void>
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   /** slot: 세울 출전 칸의 번호(0부터, 599번). */
   fieldCat: (code: CatCode, fielded: boolean, replaceCode?: CatCode, slot?: number) => Promise<void>
@@ -352,7 +351,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     },
 
     sellBread: () => change(api.POST('/api/company/bread/sell')),
-    feedCat: (code) => change(api.POST('/api/company/cat/feed', { body: { code } })),
 
     fieldCat: (code, fielded, replaceCode, slot) =>
       change(api.POST('/api/company/cat/field', { body: { code, fielded, replaceCode, slot } })),

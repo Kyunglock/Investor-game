@@ -1,6 +1,5 @@
 import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
-import { feedCost } from './CatBakery'
 import { multiDraw } from './IdleGacha'
 import { idleLoadout } from './loadout'
 
@@ -157,12 +156,6 @@ describe('방치형 전투 획득 상태', () => {
         tag: expect.objectContaining({ code: 'sky' }),
       },
     ])
-  })
-})
-
-describe('feedCost', () => {
-  it('costs one more bread every ten levels (636)', () => {
-    expect([1, 10, 11, 20, 21, 999].map(feedCost)).toEqual([1, 1, 2, 2, 3, 100])
   })
 })
 

@@ -233,7 +233,7 @@ class IdleEngineTest {
   }
 
   @Test
-  void restingCatsBakeTogetherAndOnlyFieldedCatsCanEat() {
+  void restingCatsBakeTogether() {
     start(1);
     state.idle.cats.put("sky", 1);
     state.idle.cats.put("mint", 1);
@@ -242,44 +242,10 @@ class IdleEngineTest {
     // 쉬는 고양이 한 마리가 5분에 식빵 하나 (644번, 전에는 1분): 둘이 150초면 하나다.
     for (int i = 0; i < 15; i++) tick(10_000);
     assertThat(engine.view(state).bread()).isEqualTo(1);
-    assertThatThrownBy(() -> engine.feedCat(state, "mint"))
-        .isInstanceOf(InvalidRequestException.class);
-    double before = engine.view(state).dps();
-    engine.feedCat(state, "sky");
-    assertThat(state.idle.cats.get("sky")).isEqualTo(2);
-    assertThat(engine.view(state).dps()).isGreaterThan(before);
-    assertThat(engine.view(state).bread()).isZero();
-    assertThatThrownBy(() -> engine.feedCat(state, "sky"))
-        .isInstanceOf(InvalidRequestException.class);
     engine.fieldCat(state, "mint", true);
     // 이제 lilac 혼자 굽는다: 30초는 5분의 10%.
     for (int i = 0; i < 3; i++) tick(10_000);
     assertThat(engine.view(state).bakingPercent()).isEqualTo(10);
-  }
-
-  @Test
-  void feedingCostsMoreBreadEveryTenLevels() {
-    // 636번: 레벨 ÷ 10 올림. Lv1~10은 1개, Lv11~20은 2개, Lv999는 100개.
-    assertThat(IdleEngine.feedCost(1)).isEqualTo(1);
-    assertThat(IdleEngine.feedCost(10)).isEqualTo(1);
-    assertThat(IdleEngine.feedCost(11)).isEqualTo(2);
-    assertThat(IdleEngine.feedCost(999)).isEqualTo(100);
-    start(1);
-    state.idle.cats.put("sky", 11);
-    engine.fieldCat(state, "sky", true);
-    state.idle.bread = 1;
-    assertThatThrownBy(() -> engine.feedCat(state, "sky"))
-        .isInstanceOf(InvalidRequestException.class);
-    assertThat(state.idle.bread).isEqualTo(1);
-    state.idle.bread = 3;
-    engine.feedCat(state, "sky");
-    assertThat(state.idle.cats.get("sky")).isEqualTo(12);
-    assertThat(state.idle.bread).isEqualTo(1);
-    // 레벨의 끝(1000)에서는 더 먹지 않는다.
-    state.idle.cats.put("sky", IdleEngine.MAX_CAT_LEVEL);
-    state.idle.bread = 1_000;
-    assertThatThrownBy(() -> engine.feedCat(state, "sky"))
-        .isInstanceOf(InvalidRequestException.class);
   }
 
   @Test

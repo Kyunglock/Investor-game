@@ -230,7 +230,7 @@ export function IdleCats({
     return (
       <>
         <div className="loadout-team">{tabs}</div>
-        <CatBakery idle={idle} bakers={bakers} fielded={fielded} />
+        <CatBakery idle={idle} bakers={bakers} />
       </>
     )
   return (

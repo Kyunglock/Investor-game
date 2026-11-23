@@ -148,8 +148,7 @@
 .bakery-counter {
   padding: 0 14px 12px;
 }
-.bakery-counter header,
-.bakery-feeding header {
+.bakery-counter header {
   padding-inline: 0;
 }
 .bakery-stock {
@@ -206,45 +205,6 @@
   background: #e5dcd0;
   color: #786a5f;
   border-color: #d6c8b7;
-}
-.bakery-feeding {
-  padding: 0 14px 12px;
-}
-.bakery-diners {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-.bakery-diners button {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 48px;
-  padding: 4px 6px;
-  border: 1px solid #d6bb95;
-  border-radius: 10px;
-  background: #fff4e0;
-  color: #604431;
-  text-align: left;
-  font: inherit;
-}
-.bakery-diners button:disabled {
-  background: #f3efe7;
-  color: #74695e;
-  border-color: #e0d7c9;
-}
-.bakery-diners .idle-cat-portrait {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-}
-.bakery-diners small,
-.bakery-diners b {
-  display: block;
-  line-height: 1.35;
-}
-.bakery-diners b {
-  font-size: 0.9rem;
 }
 .bakery-receipt {
   margin: 8px 0 0;

@@ -371,12 +371,11 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
   expect(opened.pass.steps.filter((step) => step.weapon).map((step) => step.step)).toEqual([10, 20])
   expect(opened.pass.steps.filter((step) => step.cat).map((step) => step.step)).toEqual([30])
   expect(opened.pass.steps.every((step) => step.diamonds > 0 && !('money' in step))).toBe(true)
-  // 퀘스트 (643번): 일일 넷이 먼저, 주간 여섯이 뒤에 온다. 아직 센 것이 없다.
+  // 퀘스트 (643번): 일일 셋이 먼저, 주간 여섯이 뒤에 온다. 아직 센 것이 없다.
   expect(opened.pass.missions.map((mission) => mission.code)).toEqual([
     'attend',
     'upgrade',
     'skill',
-    'feed',
     'wall',
     'boss',
     'draw',
@@ -385,7 +384,7 @@ test('시즌패스는 미션으로 포인트를 모으고 닿은 단계만 받�
     'forever',
   ])
   expect(opened.pass.missions.every((mission) => mission.count === 0)).toBe(true)
-  expect(opened.pass.missions[4]).toMatchObject({
+  expect(opened.pass.missions[3]).toMatchObject({
     title: '매도벽 최고 기록 30개 돌파',
     period: 'week',
     target: 30,

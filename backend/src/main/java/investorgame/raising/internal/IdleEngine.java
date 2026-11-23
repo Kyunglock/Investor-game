@@ -1494,27 +1494,6 @@ class IdleEngine {
     s.bread = 0;
   }
 
-  /**
-   * 식빵으로 동료를 level에서 한 단계 올리는 값 (636번): 레벨 ÷ 10을 올림한 개수. Lv1~10은 1개, Lv11~20은 2개 … 한 개로 한 단계씩이라 대기
-   * 고양이 스무 마리면 세 시간에 Lv900까지 갔다. 화면 CatBakery의 feedCost와 같다.
-   */
-  static long feedCost(int level) {
-    return Math.max(1, (level + 9) / 10);
-  }
-
-  void feedCat(CompanyState c, String code) {
-    CompanyState.Idle s = state(c);
-    if (!s.cats.containsKey(code) || !s.fielded.contains(code))
-      throw new InvalidRequestException("출전 중인 동료 고양이를 골라 주세요.");
-    int level = s.cats.get(code);
-    if (level >= MAX_CAT_LEVEL) throw new InvalidRequestException("더 키울 수 없는 동료예요.");
-    long cost = feedCost(level);
-    if (s.bread < cost) throw new InvalidRequestException("식빵이 " + cost + "개 있어야 해요.");
-    s.bread -= cost;
-    s.cats.merge(code, 1, Integer::sum);
-    engine.pass.progress(c, "feed", 1, todayDate());
-  }
-
   void fieldCat(CompanyState c, String code, boolean fielded) {
     fieldCat(c, code, fielded, null, null);
   }
