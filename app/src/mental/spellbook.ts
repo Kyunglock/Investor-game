@@ -81,7 +81,7 @@ export const SPELLBOOK: { [K in FlowSpell]: FlowSpec } & { [K in FallSpell]: Fal
   auroraNight: {
     kind: 'global',
     name: '극광의 밤',
-    does: '오로라가 펼쳐지는 순간, 전장의 모든 적에게 별빛 피해를 한 번 줘요',
+    does: '극광냥의 망토에서 펼쳐진 오로라가 적이나 매도벽에 닿으면 느려지고, 겹쳐 있는 동안 0.25초마다 피해를 줘요',
     grows: '레벨이 오르면 더 자주 발동하고 한 번에 주는 피해가 커져요',
     tiers: ['별빛', '극광', '극광의 밤'],
     colors: { light: '#fff3bc', mid: '#77eacb', dark: '#8575cc', line: '#363165' },

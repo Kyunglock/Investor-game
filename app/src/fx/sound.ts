@@ -396,6 +396,12 @@ export const sfx = {
     tone(260, 160, { wave: 'sawtooth', gain: 0.1, slide: 90 })
     noise(120, 0.08)
   },
+  auroraRelease: () => {
+    tone(147, 260, { wave: 'sine', gain: 0.12, slide: 65 })
+    for (const [i, note] of [587, 880, 1175].entries()) {
+      tone(note, 330, { wave: 'sine', gain: 0.035, at: i * 0.045 })
+    }
+  },
   /** 건물 확장 (399번): 힘 모으기. 낮은 음이 끌어올려진다. */
   charge: () => tone(180, 380, { wave: 'triangle', gain: 0.06, slide: 620 }),
   /** 건물 확장: 옆 건물과 부딪히는 쾅. 낮게 울리는 북 + 짧은 금속음 + 큰 잡음. */

@@ -77,7 +77,7 @@ try {
         scene.spawn('panic')
         const target = scene.enemies.getChildren().find((e) => e.active && !existing.has(e))
         target.setPosition(x, y)
-        target.hp = 100
+        target.hp = target.maxHp = 10000
         return target
       })
       enemies[2].boss = true
@@ -93,24 +93,64 @@ try {
       scene.mates[0].drop = 0
       scene.elapsed += 1
       scene.castMagic()
-      const curtain = scene.children.list.some((item) => item.texture?.key === 'aurora-curtain')
       const casts = scene.damageStats.casts.auroraNight
+      const damage = auroraNightStats(1).damage
+      const ticks = Array.from({ length: 5 }, () => [])
+      const hit = scene.hit.bind(scene)
+      scene.hit = (enemy, amount, angle, kind, area) => {
+        if (kind === 'auroraNight') {
+          const index = enemy.cell?.wall === wall ? 4 : enemies.indexOf(enemy)
+          if (index >= 0) ticks[index].push(scene.auroraSweep.step)
+        }
+        return hit(enemy, amount, angle, kind, area)
+      }
+      scene.elapsed += 0.25
       scene.updateMagic(0)
-      const charging = enemies.every((enemy) => enemy.hp === 100)
-      scene.elapsed += 0.5
+      const charging = enemies.every((enemy) => enemy.hp === 10000)
+      const speeds = []
+      for (let i = 0; i < 1200 && scene.auroraSweep; i++) {
+        const sweep = scene.auroraSweep
+        const previousStep = sweep.step
+        const previousDistance = sweep.distance
+        // 가끔 한 프레임이 여러 타격 주기만큼 길어져도 경과 시간을 처리한다.
+        scene.elapsed += i === 42 ? 0.52 : 1 / 60
+        scene.updateMagic(0)
+        if (sweep.step > previousStep)
+          speeds.push((sweep.distance - previousDistance) / (sweep.step - previousStep))
+      }
       scene.updateMagic(0)
-      scene.updateMagic(0)
-      const losses = enemies.map((enemy) => 100 - enemy.hp)
-      const wallLoss = before - wallHp()
-
-      return { casts, charging, curtain, losses, wallLoss, damage: auroraNightStats(1).damage }
+      return {
+        casts,
+        charging,
+        ticks,
+        speeds,
+        finished: !scene.auroraSweep,
+        damage,
+        losses: enemies.map((enemy) => 10000 - enemy.hp),
+        wallLoss: before - wallHp(),
+      }
     })
     assert.equal(result.casts, 1)
-    assert.equal(result.curtain, reducedMotion === 'no-preference')
-    assert(result.charging)
-    assert.deepEqual(result.losses, [result.damage, result.damage, result.damage, 0])
-    assert.equal(result.wallLoss, result.damage)
-    console.log('극광의 밤: 벽 뒤 적·보스·매도벽 한 묶음에 한 번씩 명중, 화면 밖 적 제외')
+    assert(result.charging && result.finished)
+    const [far, near, boss, outside, wall] = result.ticks
+    assert(near[0] < boss[0] && boss[0] < far[0])
+    assert.equal(outside.length, 0)
+    for (const times of [far, near, boss, wall]) {
+      assert(times.length >= 2)
+      for (let i = 1; i < times.length; i++) assert.equal((times[i] - times[i - 1]) / 120, 0.25)
+    }
+    assert.deepEqual(
+      result.losses,
+      result.ticks.slice(0, 4).map((times) => times.length * result.damage),
+    )
+    assert.equal(result.wallLoss, wall.length * result.damage)
+    const ratio = Math.min(...result.speeds) / Math.max(...result.speeds)
+    assert(Math.abs(ratio - 0.16) < 1e-6)
+    assert(result.speeds.at(-1) > Math.min(...result.speeds) * 5)
+    console.log(
+      '극광의 밤: 접촉 감속·이탈 가속, 몹과 장벽별 0.25초 연타 확인',
+      result.ticks.map((times) => times.length),
+    )
     await page.close()
   }
 } finally {
