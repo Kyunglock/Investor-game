@@ -275,6 +275,12 @@ try {
       await skills.locator('[data-testid=cat][data-code=snow]').click()
       await expect(skills.getByRole('region', { name: '눈꽃냥 고유 스킬' })).toContainText('미보유')
       await expect(skill).toContainText('물 스킬')
+      await expect(skill.getByText('고유 스킬 물 스킬')).toBeInViewport()
+      const infoBounds = await skills
+        .getByRole('region', { name: '눈꽃냥 고유 스킬' })
+        .boundingBox()
+      const rosterBounds = await skills.getByRole('list', { name: /고양이 인벤토리/ }).boundingBox()
+      assert(infoBounds.y + infoBounds.height <= rosterBounds.y)
       await skills.locator('[data-testid=cat][data-code=night]').click()
       await expect(skills.getByTestId('cat-skill-next')).toHaveText('스킬 최고 레벨이에요')
       await tab(CAT_MENU).click()
