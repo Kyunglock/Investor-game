@@ -651,8 +651,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 생선으로 영구 강화를 한 단계 올린다 (decisions.md 600번)
-         * @description 값은 idle.rebirth.upgrades의 cost(다음 단계의 번호만큼의 생선). 환생해도 남는다. 없는 강화이거나 생선이 모자라면 400.
+         * 생선으로 영구 강화를 올린다 (decisions.md 600·663번)
+         * @description 값은 idle.rebirth.upgrades의 cost(다음 단계의 번호만큼의 생선). 환생해도 남는다. levels를 주면 그만큼 묶어 올리되 생선이 닿는 데까지만 오른다 (663번). 없는 강화이거나 한 단계도 살 생선이 없으면 400.
          */
         post: operations["buyFishUpgrade"];
         delete?: never;
@@ -2949,6 +2949,8 @@ export interface operations {
                 "application/json": {
                     /** @enum {string} */
                     kind: "damage" | "hp" | "buy";
+                    /** @description 묶어 올릴 단계 수. 없으면 한 단계 */
+                    levels?: number;
                 };
             };
         };

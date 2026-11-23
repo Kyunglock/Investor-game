@@ -52,6 +52,8 @@ export interface IdleServer extends IdleWallHealth {
   cleared?: number
   /** Moves that broke no wall: a rebirth, the jump tool (546). */
   epoch?: number
+  /** The highest boss already beaten: a boss at or below it starts no circuit breaker (663). */
+  bossReward?: { wall: number } | null
 }
 
 /** What the renderer and the HUD show. */
@@ -222,7 +224,8 @@ export class IdlePredictor {
         queued.push(0)
         // The boss challenge starts with a circuit breaker (547): it is never passed, and what is
         // left waits on that wall.
-        if (circuitWall(front)) stopped = true
+        // A boss beaten before (passed again after a rebirth) is walked through (663).
+        if (circuitWall(front) && front > (server.bossReward?.wall ?? 0)) stopped = true
       }
     }
     breakWalls()

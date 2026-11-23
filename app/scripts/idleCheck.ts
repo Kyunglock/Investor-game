@@ -452,6 +452,8 @@ try {
     await expect(page.locator('[data-testid=idle-stat]')).toHaveCount(0)
     const forever = (kind: string) => page.locator(`[data-testid=fish-upgrade][data-kind=${kind}]`)
     await expect(page.getByTestId('fish-upgrade')).toHaveCount(3)
+    // 663번: 성장과 같은 강화 횟수(×1·×10·최대 100)로 묶어 올린다.
+    await expect(page.getByTestId('fish-count').getByRole('button')).toHaveCount(3)
     await expect(forever('damage')).toContainText('공격력 Lv.0')
     await expect(forever('damage')).toContainText('+0% → +1%')
     await expect(forever('buy')).toContainText('+0주 → +10주')

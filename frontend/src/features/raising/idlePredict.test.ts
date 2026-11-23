@@ -226,6 +226,15 @@ describe('the screen breaks the wall first (decisions.md 532)', () => {
     expect(shown.hp).toBeCloseTo(curve(51) - 30, 9)
   })
 
+  it('walks through a boss beaten before without a circuit breaker (663)', () => {
+    const p = new IdlePredictor(curve)
+    const s = server(49, 0, 0, [0, 0], 0, { cleared: 48, epoch: 1, bossReward: { wall: 100 } })
+    p.add(bullet(49, curve(49) + curve(50) + 30), 1000)
+    const shown = p.view(s, 1000)
+    expect(shown).toMatchObject({ wall: 51, circuitSeconds: 0 })
+    expect(shown.hp).toBeCloseTo(curve(51) - 30, 9)
+  })
+
   it.each([10, 40])(
     'does not halt at wall %i: only every 50th is a boss challenge (547)',
     (wall) => {
