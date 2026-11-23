@@ -22,8 +22,12 @@ describe('actual wall contacts', () => {
     ])
     expect(contacts.drain()).toEqual([])
   })
-  it('lets only bullets pierce, at most two walls deep', () => {
+  it('accepts the aurora on both queued walls and rejects other spells or deeper hits', () => {
     const contacts = new IdleContacts()
+    expect(contacts.add(11, 'auroraNight', 1, 12)).toBe(true)
+    expect(contacts.add(12, 'auroraNight', 2, 12)).toBe(true)
+    expect(contacts.drain().map((hit) => hit.damage)).toEqual([12, 12])
+    expect(contacts.add(13, 'auroraNight', 3, 12)).toBe(false)
     expect(contacts.add(11, 'meteor', 1, 2.4)).toBe(false)
     expect(contacts.add(13, 'bullet', 3, 1)).toBe(false)
     expect(contacts.add(0, 'bullet', 0, 1)).toBe(false)

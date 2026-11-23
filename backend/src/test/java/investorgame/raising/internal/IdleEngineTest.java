@@ -464,6 +464,21 @@ class IdleEngineTest {
   }
 
   @Test
+  void auroraHitsEachVisibleWallAtFullStrengthAcrossABossWall() {
+    start(49);
+    state.idle.cats.put("aurora", 1);
+    state.idle.fielded.add("aurora");
+    tick(
+        1000,
+        new IdleHit(49, "auroraNight", 2, 16.0, 0),
+        new IdleHit(50, "auroraNight", 2, 16.0, 1),
+        new IdleHit(51, "auroraNight", 2, 16.0, 2));
+    assertThat(state.idle.damage).isEqualTo(16);
+    assertThat(state.idle.nextDamage).isEqualTo(16);
+    assertThat(state.idle.afterNextDamage).isEqualTo(16);
+  }
+
+  @Test
   void piercedDamageIsCappedAtTheWallsShareOfOneBullet() {
     start(1);
     // A forged pierce report as strong as a full bullet: only 50% and 25% of the best bullet count.

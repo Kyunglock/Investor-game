@@ -1134,6 +1134,8 @@ class IdleEngine {
       if (kind > 0 && casters[kind - 1] == 0) continue;
       // A skill is cast by each fielded cat that has it, at that cat's level (515): the hit budget
       // adds up over them and one hit may be as strong as the highest level's.
+      String code = kind == 0 ? "bullet" : CODES[kind - 1];
+      boolean aurora = "auroraNight".equals(code);
       double perHit = kind == 0 ? BULLET_WEIGHT * hero.power() : 0;
       double perSecond = kind == 0 ? bulletsPerSecond : 0;
       double gained = kind == 0 ? active / (1 / bulletsPerSecond) : 0;
@@ -1142,14 +1144,15 @@ class IdleEngine {
         if (at < 0 || !casts(at, kind - 1)) continue;
         int level = skillLevel(s.cats.getOrDefault(cat, 1)) - 1;
         perHit = Math.max(perHit, SKILL_DAMAGE[kind - 1][level]);
-        perSecond += SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
-        gained += active * SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
+        // 극광은 띠가 닿은 동안 벽마다 0.25초 간격으로 명중한다.
+        double rate = aurora ? 4 : SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
+        perSecond += rate;
+        gained += active * rate;
       }
       double damage = damageBoost * (kind == 0 ? hero.damage() : hero.skill()) * perHit;
       double maxDamage = kind == 0 ? bulletMax : damage;
       s.hitCredits[kind] =
           Math.min(Math.max(2, SPEED * GRACE_MS / 1000 * perSecond), s.hitCredits[kind] + gained);
-      String code = kind == 0 ? "bullet" : CODES[kind - 1];
       // The screen breaks walls before the server hears of it (532): a direct hit (depth 0) is
       // damage to whatever wall is in front here, and a pierced hit lands on the wall it names.
       int[] counts = new int[3];
@@ -1168,19 +1171,13 @@ class IdleEngine {
           if (depth == 0 ? Math.abs(offset) > AHEAD : offset < 1 || offset > queued.length)
             continue;
         }
-        // Only a bullet's pierce reaches the queued walls (520): explosions and skills stop at the
-        // front wall.
-        if (depth > 0 && kind != 0) continue;
-        // A 대량 매도벽 (the boss, every 50th wall) cannot be pierced: not when it is the screen's front
-        // wall,
-        // and a pierced bullet neither hits it nor goes past it. Matches the app's idlePierceReach.
-        if (depth > 0 && pierceBlocked(hit.wall(), depth)) continue;
-        double reported =
-            hit.damage() == null ? damage * PIERCE[depth] * hit.count() : hit.damage();
+        if (depth > 0 && !aurora && (kind != 0 || pierceBlocked(hit.wall(), depth))) continue;
+        double scale = aurora ? 1 : PIERCE[depth];
+        double reported = hit.damage() == null ? damage * scale * hit.count() : hit.damage();
         if (!Double.isFinite(reported) || reported <= 0) continue;
         int count = Math.min(hit.count(), 1000 - counts[depth]);
         counts[depth] += count;
-        double amount = Math.min(reported / hit.count(), maxDamage * PIERCE[depth]) * count;
+        double amount = Math.min(reported / hit.count(), maxDamage * scale) * count;
         if (depth == 0) direct += amount;
         else pierced[depth][(int) offset - 1] += amount;
       }
