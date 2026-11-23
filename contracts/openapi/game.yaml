@@ -258,7 +258,7 @@ paths:
       operationId: useIdleActive
       summary: 광고 스킬을 쓴다 (decisions.md 503·588·667번)
       description: |
-        사장냥의 고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 여기서 쓰지 않고 레벨업 카드로만 켠다 (667번, /api/company/idle/card): 보내면 400.
+        사장냥의 고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 자동 전투에서 없앴다 (667번): 매도벽 돌파 스테이지의 레벨업 카드로만 나오고, 여기로 보내면 400.
         쓰면 재사용 대기 시간이 돈다. 대기 시간은 전투가 돌아가는 동안만 흐른다. 없는 스킬이거나 대기 중이거나 거래 정지 중이면 400.
         광고 스킬은 공격속도 3배(boostFire)·공격력 3배(boostDamage)·매수공격 3배(boostBuy)다 (588번): 장착하지 않고, 광고를 본 뒤(ad가 참)에만 쓴다.
         ad 없이 광고 스킬을 쓰면 400. 아직 광고를 붙이지 않아 서버는 ad를 그대로 믿는다.
@@ -270,36 +270,11 @@ paths:
               type: object
               required: [code]
               properties:
-                code: { type: string, enum: [barrage, rally, fortify, limitUp, stopLoss, averaging, boostFire, boostDamage, boostBuy] }
+                code: { type: string, enum: [boostFire, boostDamage, boostBuy] }
                 ad: { type: boolean, description: 광고를 끝까지 봤다 (588번). 광고 스킬에만 쓴다 }
       responses:
         '200':
           description: 쓴 뒤의 회사
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Company' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /api/company/idle/card:
-    post:
-      operationId: pickIdleCard
-      summary: 레벨업 카드를 고른다 (decisions.md 667번)
-      description: |
-        매도벽을 부수면 경험치가 오르고 레벨이 오를 때마다 카드 석 장(idle.levelUp.offer) 가운데 하나를 고른다. 고유 스킬 카드는 그 스킬을 1분 동안 켜고(손절은 바로 한 방),
-        catMagic은 출전한 고양이 모두의 마법 레벨을 하나 올린다(최고 5). 내민 석 장에 없는 카드거나 고를 카드가 없으면 400.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [code]
-              properties:
-                code: { type: string, enum: [barrage, rally, fortify, limitUp, stopLoss, averaging, catMagic] }
-      responses:
-        '200':
-          description: 고른 뒤의 회사
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Company' }
@@ -1172,7 +1147,7 @@ components:
                 type: object
                 required: [code, title, period, count, target, points, ready, done, resetsIn]
                 properties:
-                  code: { type: string, description: wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·card(레벨업 카드 고르기) }
+                  code: { type: string, description: wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·stage(매도벽 돌파 스테이지 한 판) }
                   title: { type: string, description: 화면에 적는 글. "강화 20번"처럼 target이 들어 있다 }
                   period: { type: string, enum: [day, week], description: day는 한국 시간 하루, week는 시즌 첫날부터 7일 }
                   count: { type: integer, format: int64, description: 이번 주기에 센 수(target까지만) }
@@ -1739,33 +1714,18 @@ components:
                   isNew: { type: boolean, description: 처음 얻은 고양이 }
             actives:
               type: array
-              description: 액티브 스킬 (decisions.md 503번). 시간은 화면에서 흐르는 실제 초다. 앞의 여섯은 사장냥의 고유 스킬로 레벨업 카드로 켜고(667번), 뒤의 셋은 광고 스킬(588번)이다
+              description: 광고 스킬 셋 (decisions.md 588번). 광고를 본 뒤에 쓴다. 시간은 화면에서 흐르는 실제 초다. 사장냥의 고유 스킬 여섯은 자동 전투에서 없앴다 (667번)
               items:
                 type: object
                 required: [code, name, cooldown, seconds, readyIn, left, ad]
                 properties:
-                  code: { type: string, enum: [barrage, rally, fortify, limitUp, stopLoss, averaging, boostFire, boostDamage, boostBuy] }
+                  code: { type: string, enum: [boostFire, boostDamage, boostBuy] }
                   name: { type: string }
                   cooldown: { type: number, description: 한 번 쓰고 다시 쓸 때까지(초) }
                   seconds: { type: number, description: 효과가 이어지는 시간(초) }
                   readyIn: { type: number, description: 다시 쓸 수 있을 때까지 남은 시간(초). 0이면 쓸 수 있다 }
-                  left: { type: number, description: 효과가 남은 시간(초). 손절처럼 바로 끝나는 것은 0 }
-                  ad: { type: boolean, description: 광고를 보면 쓰는 스킬이다 (588번). 아니면 레벨업 카드로 켜는 고유 스킬 (667번) }
-            levelUp:
-              type: object
-              description: 전투 레벨과 레벨업 카드 (decisions.md 667번). 매도벽을 부수면 경험치가 오르고 레벨이 오를 때마다 카드를 고른다. 환생하면 처음으로 돌아간다
-              required: [level, xp, next, pending, offer, magicBonus, cardSeconds]
-              properties:
-                level: { type: integer, description: 지금 전투 레벨 }
-                xp: { type: integer, description: 지금 레벨에서 모은 경험치(부순 벽의 수) }
-                next: { type: integer, description: 다음 레벨까지 드는 경험치 }
-                pending: { type: integer, description: 아직 고르지 않은 카드의 수 }
-                offer:
-                  type: array
-                  description: 지금 고를 수 있는 카드(최대 셋). 고를 것이 없으면 빈 목록
-                  items: { type: string, enum: [barrage, rally, fortify, limitUp, stopLoss, averaging, catMagic] }
-                magicBonus: { type: integer, description: 고양이 마법 카드로 더한 마법 레벨. 출전한 고양이 모두에게 붙는다 }
-                cardSeconds: { type: number, description: 고유 스킬 카드가 이어지는 시간(초, 1분) }
+                  left: { type: number, description: 효과가 남은 시간(초) }
+                  ad: { type: boolean, description: 광고를 보면 쓰는 스킬이다 (588번). 늘 참 }
             skills:
               type: array
               description: 스킬 열여섯(물·메테오·번개·충차·얼음·바람·불·독·빛·어둠·모래·별·우박·꽃비·폭탄·극광의 밤). 스킬은 고양이의 고유 능력이다 (decisions.md 501번)

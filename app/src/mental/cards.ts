@@ -1,3 +1,4 @@
+import { ACTIVE_HINTS, SKILL_CODES, SKILL_NAMES, type SkillCode } from './actives'
 import type { CatTag } from './catTag'
 import type { Weapon } from './hero'
 import {
@@ -21,7 +22,8 @@ import type { WeaponKind } from './weaponEffects'
 
 export type CardGrade = 'N' | 'R' | 'SR' | 'UR'
 export type Magic = 'water' | 'meteor' | 'lightning' | 'earth'
-export type CardCode = 'atk' | 'spd' | 'cat' | 'cat-magic' | Magic
+/** 'cat-up'과 사장냥의 스킬 여섯(SkillCode)은 매도벽 돌파 스테이지에서만 나온다 (667번). */
+export type CardCode = 'atk' | 'spd' | 'cat' | 'cat-magic' | 'cat-up' | Magic | SkillCode
 
 export interface Card {
   code: CardCode
@@ -49,6 +51,8 @@ export const MAGIC_CHANCE = 45
 /** 한 칸이 "고양이 한 마리 더"일 확률(%, 393번). 고양이가 다 차면 이 몫은 일반 카드로 간다. 나머지는 일반 카드다. */
 export const MATE_CHANCE = 8
 export const MATE_MAGIC_CHANCE = 8
+/** 한 칸이 사장냥의 스킬 카드일 확률(%, 667번): 매도벽 돌파 스테이지에서만. 일반 카드의 몫에서 나온다. */
+export const SKILL_CHANCE = 20
 /** 함께 싸우는 고양이의 최대 수(393번, 사용자 결정): 사장냥까지 모두 넷. */
 export const MAX_MATES = 3
 
@@ -194,6 +198,51 @@ export function mateMagicCard(have: number): Card {
   }
 }
 
+/** 고양이 마법 강화 (667번)를 고를 수 있나: 함께 싸우는 고양이가 있고, 배운 마법 가운데 더 오를 것이 있다. */
+export function canUpMateMagic(state: MateMagicState): boolean {
+  return (state.mates ?? 0) > 0 && MAGICS.some((m) => state[m] > 0 && state[m] < MAGIC_MAX_LEVEL)
+}
+
+/**
+ * 고양이 마법 강화 (667번): 함께 싸우는 고양이가 모두 마법을 쓰게 되고(각성), 배운 마법의 레벨이 모두 하나씩 오른다. 고양이는 사장냥과 같은 레벨의
+ * 마법을 쓰므로(452번) 사장냥의 마법도 함께 오른다.
+ */
+export function mateMagicUpCard(): Card {
+  return {
+    code: 'cat-up',
+    grade: 'UR',
+    name: '고양이 마법 강화',
+    effect: '함께 싸우는 고양이 모두가 마법을 쓰고 · 배운 마법 레벨 +1',
+    icon: '🐱⚡',
+    color: '#b48cff',
+  }
+}
+
+const SKILL_ICONS: Record<SkillCode, [string, string]> = {
+  barrage: ['🧧', '#e8434f'],
+  rally: ['🔥', '#f08a24'],
+  fortify: ['🛡️', '#2f9e74'],
+  limitUp: ['📈', '#e8434f'],
+  stopLoss: ['✂️', '#2f7fe0'],
+  averaging: ['💧', '#2f9e74'],
+}
+
+/** 사장냥의 스킬 카드 (667번): 고르면 그 스킬이 1분 동안 켜진다(손절은 바로 한 방). 수치를 쌓지 않아 또 나오면 또 고를 수 있다. */
+export function skillCard(code: SkillCode): Card {
+  const [icon, color] = SKILL_ICONS[code]
+  return {
+    code,
+    grade: 'SR',
+    name: SKILL_NAMES[code],
+    effect: `${ACTIVE_HINTS[code]} · ${code === 'stopLoss' ? '바로 발동' : '1분 동안'}`,
+    icon,
+    color,
+  }
+}
+
+export const isSkillCard = (code: CardCode): code is SkillCode =>
+  (SKILL_CODES as readonly string[]).includes(code)
+
 /** 총알 강화는 세 단계까지 쌓인다. */
 export const MAX_BULLET_POWER = 3
 
@@ -331,16 +380,35 @@ export function applyCard(loadout: Loadout, card: Card): Loadout {
       return canAwakenMate(loadout)
         ? { ...loadout, awakenedMates: awakenedMateCount(loadout) + 1 }
         : loadout
-    default:
+    case 'cat-up': {
+      if (!canUpMateMagic(loadout)) return loadout
+      const next = { ...loadout, awakenedMates: Math.min(MAX_MATES, loadout.mates) }
+      for (const m of MAGICS) if (next[m] > 0) next[m] = Math.min(MAGIC_MAX_LEVEL, next[m] + 1)
+      return next
+    }
+    case 'water':
+    case 'meteor':
+    case 'lightning':
+    case 'earth':
       return { ...loadout, [card.code]: Math.min(MAGIC_MAX_LEVEL, loadout[card.code] + 1) }
+    default:
+      // 사장냥의 스킬 카드 (667번)는 수치를 쌓지 않는다: 고른 때에 전투가 효과를 켠다(castActive).
+      return loadout
   }
 }
 
 /**
  * 고를 석 장 (377·392·393번): 칸마다 MATE_CHANCE로 "고양이 한 마리 더"(다 찼으면 일반 카드), MAGIC_CHANCE로 마법, 나머지는 일반 카드. 마법은 아직
  * 최대 레벨이 아닌 것 가운데 하나를 지금 레벨의 다음 레벨 카드로 낸다. 같은 카드는 겹치지 않는다.
+ *
+ * skills가 참이면(매도벽 돌파 스테이지, 667번) 일반 카드의 몫에서 SKILL_CHANCE만큼이 사장냥의 스킬 카드로 나오고, 각성 카드의 몫은 각성시킬 고양이가
+ * 없을 때 고양이 마법 강화가 된다.
  */
-export function pickCards(state: MateMagicState, random: () => number = Math.random): Card[] {
+export function pickCards(
+  state: MateMagicState,
+  random: () => number = Math.random,
+  skills = false,
+): Card[] {
   const open = MAGICS.filter((m) => state[m] < MAGIC_MAX_LEVEL)
   const mates = state.mates ?? 0
   const picked: Card[] = []
@@ -358,6 +426,16 @@ export function pickCards(state: MateMagicState, random: () => number = Math.ran
       canAwakenMate(state)
     ) {
       card = mateMagicCard(awakenedMateCount(state))
+    } else if (skills) {
+      const from = MATE_CHANCE + MAGIC_CHANCE
+      if (roll >= from && roll < from + MATE_MAGIC_CHANCE && canUpMateMagic(state)) {
+        card = mateMagicUpCard()
+      } else if (
+        roll >= from + MATE_MAGIC_CHANCE &&
+        roll < from + MATE_MAGIC_CHANCE + SKILL_CHANCE
+      ) {
+        card = skillCard(SKILL_CODES[Math.floor(random() * SKILL_CODES.length)])
+      }
     }
     if (!picked.some((c) => c.code === card.code)) {
       picked.push(card)

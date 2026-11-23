@@ -203,7 +203,7 @@ public record CompanyView(
   /**
    * 시즌패스의 일일·주간 퀘스트 (570·643번): 이번 주기에 센 수가 target에 닿으면 points를 한 번 받는다.
    *
-   * @param code wall·boss·upgrade·draw·merge·attend·fish·forever·card
+   * @param code wall·boss·upgrade·draw·merge·attend·fish·forever·stage
    * @param title 화면에 적는 글: "강화 20번"처럼 target이 들어 있다
    * @param period day(오늘의 퀘스트) 또는 week(이번 주의 퀘스트)
    * @param count 이번 주기에 센 수 (target까지만)
@@ -359,7 +359,6 @@ public record CompanyView(
       boolean bossChallenge,
       BossReward bossReward,
       List<IdleActive> actives,
-      LevelUp levelUp,
       List<CatDraw> lastDraws,
       Income income,
       Offline offline,
@@ -415,7 +414,7 @@ public record CompanyView(
    * @param seconds 효과가 이어지는 시간
    * @param readyIn 다시 쓸 수 있을 때까지 남은 시간. 0이면 쓸 수 있다. 전투가 돌아가는 동안만 준다
    * @param left 효과가 남은 시간. 손절처럼 바로 끝나는 것은 0이다
-   * @param ad 광고를 보면 쓰는 스킬이다 (588번). 아니면 사장냥의 고유 스킬로, 레벨업 카드로만 켠다 (667번)
+   * @param ad 광고를 보면 쓰는 스킬이다 (588번). 늘 참이다: 사장냥의 고유 스킬은 자동 전투에서 없앴다 (667번)
    */
   public record IdleActive(
       String code,
@@ -425,28 +424,6 @@ public record CompanyView(
       double readyIn,
       double left,
       boolean ad) {}
-
-  /**
-   * 전투 레벨과 레벨업 카드 (decisions.md 667번). 매도벽을 부수면 경험치가 오르고, 레벨이 오를 때마다 석 장 가운데 하나를 고른다. 환생하면 처음으로
-   * 돌아간다.
-   *
-   * @param level 지금 전투 레벨
-   * @param xp 지금 레벨에서 모은 경험치(부순 벽의 수)
-   * @param next 다음 레벨까지 드는 경험치
-   * @param pending 아직 고르지 않은 카드의 수
-   * @param offer 지금 고를 수 있는 카드: 고유 스킬 코드(barrage·rally·fortify·limitUp·stopLoss·averaging) 또는
-   *     catMagic(출전한 고양이의 마법 레벨 +1)
-   * @param magicBonus 고양이 마법 카드로 더한 마법 레벨
-   * @param cardSeconds 고유 스킬 카드가 이어지는 실제 초
-   */
-  public record LevelUp(
-      int level,
-      long xp,
-      long next,
-      int pending,
-      List<String> offer,
-      int magicBonus,
-      double cardSeconds) {}
 
   /**
    * 고양이 한 마리 (decisions.md 488·501번). 뽑기로 얻고, 출전하면 제 총으로 함께 쏘고 제 스킬을 쓴다.

@@ -30,7 +30,16 @@ import {
   revealPlan,
   topGrade,
 } from './cardReveal'
-import { applyCard, type Card, GRADE_NAMES, loadoutOf, pickCards } from './cards'
+import {
+  applyCard,
+  type Card,
+  GRADE_NAMES,
+  isSkillCard,
+  loadoutOf,
+  mateMagicUpCard,
+  pickCards,
+  skillCard,
+} from './cards'
 import { ENEMIES } from './enemies'
 import { FirstClear } from './FirstClear'
 import { GunSprite } from './GunSprite'
@@ -635,6 +644,13 @@ const CARD_ROLES: Record<Card['code'], string> = {
   spd: '연사',
   cat: '동료',
   'cat-magic': '동료 마법',
+  'cat-up': '동료 마법',
+  barrage: '사장냥 스킬',
+  rally: '사장냥 스킬',
+  fortify: '사장냥 스킬',
+  limitUp: '사장냥 스킬',
+  stopLoss: '사장냥 스킬',
+  averaging: '사장냥 스킬',
   water: '물 마법',
   meteor: '메테오',
   lightning: '번개 마법',
@@ -661,17 +677,31 @@ function CardPick({
   title,
   sub,
   levels,
+  skills,
   paused,
   onPick,
 }: {
   title: string
   sub: string
   levels: Parameters<typeof pickCards>[0]
+  /** 매도벽 돌파 스테이지 (667번): 사장냥의 스킬 카드와 고양이 마법 강화가 섞여 나온다. */
+  skills: boolean
   paused: boolean
   onPick: (card: Card) => void
 }) {
   const manual = useTutorial((s) => s.active)
-  const [cards] = useState(() => pickCards(levels))
+  const [cards] = useState(() => {
+    // 확인 스크립트(개발 서버)가 스테이지의 카드를 정해 둘 수 있다 (667번, scripts/stageCardCheck.mjs).
+    const forced = import.meta.env.DEV
+      ? (window as { __mentalCards?: string[] }).__mentalCards
+      : undefined
+    if (forced && skills) {
+      return forced.map((code) =>
+        code === 'cat-up' ? mateMagicUpCard() : skillCard(code as Parameters<typeof skillCard>[0]),
+      )
+    }
+    return pickCards(levels, Math.random, skills)
+  })
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const plan = useMemo(() => revealPlan(cards.map((c) => c.grade)), [cards])
   const [faces, setFaces] = useState<Face[]>(() => cards.map(() => (reduced ? 'front' : 'back')))
@@ -1344,12 +1374,15 @@ function Battle({
                 : '카드 한 장을 더 쌓으세요'
             }
             levels={loadout.current}
+            skills={mode === 'assault'}
             paused={asking}
             onPick={(card) => {
               loadout.current = applyCard(loadout.current, card)
               onPick(card)
               setLevelUp(null)
               handle.current?.applyLoadout(loadout.current)
+              // 사장냥의 스킬 카드 (667번): 고르면 그 스킬이 1분 동안 켜진다.
+              if (isSkillCard(card.code)) handle.current?.castActive(card.code)
             }}
           />
         </div>

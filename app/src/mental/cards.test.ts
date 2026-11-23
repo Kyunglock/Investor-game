@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SKILL_CODES } from './actives'
 import {
   applyCard,
   BASE_LOADOUT,
@@ -8,13 +9,16 @@ import {
   MAGICS,
   MAX_BULLET_POWER,
   MAX_MATES,
+  type Magic,
   magicCard,
   magicEffect,
   magicGrade,
   mateCard,
   mateMagicCard,
+  mateMagicUpCard,
   pickCards,
   SIMPLE_CARDS,
+  skillCard,
   skillPower,
   xpToNext,
 } from './cards'
@@ -52,8 +56,9 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
           continue
         }
         magics++
-        expect(c.level).toEqual({ from: levels[c.code], to: levels[c.code] + 1 })
-        expect(c).toEqual(magicCard(c.code, levels[c.code]))
+        const magic = c.code as Magic
+        expect(c.level).toEqual({ from: levels[magic], to: levels[magic] + 1 })
+        expect(c).toEqual(magicCard(magic, levels[magic]))
       }
     }
     expect(magics).toBeGreaterThan(0)
@@ -261,5 +266,62 @@ describe('skillPower', () => {
     const rifleS = skillPower({ damagePercent: 1815, fireMs: 360, power: 3 })
     expect(shotgunA).toBeCloseTo(16.55, 2)
     expect(rifleS).toBeCloseTo(28.84, 2)
+  })
+})
+
+describe('매도벽 돌파 스테이지의 카드 (667번)', () => {
+  const skills = SKILL_CODES as readonly string[]
+  it('사장냥의 스킬 여섯은 스테이지에서만 나온다', () => {
+    const levels = { water: 0, meteor: 0, lightning: 0, earth: 0, mates: 0 }
+    const seen = new Set<string>()
+    for (let seed = 0; seed < 400; seed++) {
+      expect(pickCards(levels, rng(seed)).some((c) => skills.includes(c.code))).toBe(false)
+      const cards = pickCards(levels, rng(seed), true)
+      expect(new Set(cards.map((c) => c.code)).size).toBe(3)
+      for (const c of cards) if (skills.includes(c.code)) seen.add(c.code)
+    }
+    expect([...seen].sort()).toEqual([...SKILL_CODES].sort())
+  })
+  it('스킬 카드는 수치를 쌓지 않고, 손절만 바로 발동이다', () => {
+    const loadout = { ...BASE_LOADOUT, water: 2 }
+    for (const code of SKILL_CODES) {
+      expect(applyCard(loadout, skillCard(code))).toBe(loadout)
+      expect(skillCard(code).effect).toContain(code === 'stopLoss' ? '바로 발동' : '1분 동안')
+    }
+  })
+  it('고양이 마법 강화는 고양이를 모두 각성시키고 배운 마법을 한 레벨씩 올린다', () => {
+    const before = {
+      ...BASE_LOADOUT,
+      mates: 2,
+      awakenedMates: 1,
+      water: 2,
+      meteor: MAGIC_MAX_LEVEL,
+    }
+    const after = applyCard(before, mateMagicUpCard())
+    expect(after).toMatchObject({
+      awakenedMates: 2,
+      water: 3,
+      meteor: MAGIC_MAX_LEVEL,
+      lightning: 0,
+      earth: 0,
+    })
+    // 고양이가 없거나 더 오를 마법이 없으면 나오지 않는다.
+    const none = { water: 2, meteor: 0, lightning: 0, earth: 0, mates: 0 }
+    const full = {
+      water: MAGIC_MAX_LEVEL,
+      meteor: 0,
+      lightning: 0,
+      earth: 0,
+      mates: 3,
+      awakenedMates: 3,
+    }
+    const ready = { water: 2, meteor: 0, lightning: 0, earth: 0, mates: 3, awakenedMates: 3 }
+    let offered = 0
+    for (let seed = 0; seed < 400; seed++) {
+      expect(pickCards(none, rng(seed), true).some((c) => c.code === 'cat-up')).toBe(false)
+      expect(pickCards(full, rng(seed), true).some((c) => c.code === 'cat-up')).toBe(false)
+      if (pickCards(ready, rng(seed), true).some((c) => c.code === 'cat-up')) offered++
+    }
+    expect(offered).toBeGreaterThan(0)
   })
 })

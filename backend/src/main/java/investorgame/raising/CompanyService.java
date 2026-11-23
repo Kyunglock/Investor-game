@@ -144,9 +144,6 @@ public interface CompanyService {
    */
   CompanyView useActive(UUID sessionId, String code, boolean ad);
 
-  /** 레벨업 카드를 고른다 (decisions.md 667번). 내민 석 장에 없는 카드면 400. */
-  CompanyView pickCard(UUID sessionId, String code);
-
   CompanyView tutorial(UUID sessionId, String action, int step);
 
   /**

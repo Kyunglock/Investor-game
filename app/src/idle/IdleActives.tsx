@@ -18,7 +18,7 @@ type Active = NonNullable<NonNullable<Company['idle']>['actives']>[number]
  * 신호마다 서버가 다시 알려 준다.
  *
  * 왼쪽에 광고 스킬이 선다 (588번): 광고를 본 뒤에 쓴다. 광고를 불러오지 못하면 알림을 띄운다 (589번, app/ads.ts). 사장냥의 고유 스킬은
- * 단추가 없고 레벨업 카드로 켠다 (667번, LevelUpCards).
+ * 자동 전투에서 없앴다: 매도벽 돌파 스테이지의 레벨업 카드로 나온다 (667번, mental/cards.ts).
  */
 export function IdleActives({ company, connected }: { company: Company; connected: boolean }) {
   const [selectedAd, setSelectedAd] = useState<ActiveCode | null>(null)

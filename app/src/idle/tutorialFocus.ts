@@ -196,7 +196,9 @@ export function tutorialTargets(step: number, menu: string): FocusTarget[] {
           ]
         : [nav('cats', '출전 탭에서 밤냥의 무기를 바꿔봐요.')]
     case 7:
-      return [nav('battle', '첫 팀 완성! 매도벽을 부숴 레벨이 오르면 스킬 카드를 골라요.')]
+      return [
+        nav('battle', '첫 팀 완성! 오른쪽 STAGE에서 스킬 카드를 고르는 스테이지에도 도전해 봐요.'),
+      ]
     default:
       return []
   }

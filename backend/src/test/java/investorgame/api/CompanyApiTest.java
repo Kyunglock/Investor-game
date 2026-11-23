@@ -127,52 +127,54 @@ class CompanyApiTest {
         .andExpect(jsonPath("$.idle.onboarding.weaponClaimed").value(false));
   }
 
-  /** 고유 스킬은 레벨업 카드로만 켜고 (667번), 광고 스킬은 광고를 본 뒤에 쓴다 (588번). */
+  /** 사장냥의 고유 스킬은 자동 전투에서 없앴고 (667번), 광고 스킬은 광고를 본 뒤에 쓴다 (588번). */
   @Test
-  void 고유_스킬은_레벨업_카드로_켜고_광고_스킬은_광고를_본_뒤에_쓴다() throws Exception {
+  void 고유_스킬은_없고_광고_스킬은_광고를_본_뒤에_쓴다() throws Exception {
     mvc.perform(post("/api/company").cookie(session))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.idle.actives.length()").value(9))
-        .andExpect(jsonPath("$.idle.actives[1].code").value("rally"))
-        .andExpect(jsonPath("$.idle.actives[1].ad").value(false))
-        .andExpect(jsonPath("$.idle.actives[1].seconds").value(60.0))
-        .andExpect(jsonPath("$.idle.actives[6].code").value("boostFire"))
-        .andExpect(jsonPath("$.idle.actives[6].ad").value(true))
-        .andExpect(jsonPath("$.idle.levelUp.level").value(1))
-        .andExpect(jsonPath("$.idle.levelUp.next").value(5))
-        .andExpect(jsonPath("$.idle.levelUp.offer.length()").value(0));
+        .andExpect(jsonPath("$.idle.actives.length()").value(3))
+        .andExpect(jsonPath("$.idle.actives[0].code").value("boostFire"))
+        .andExpect(jsonPath("$.idle.actives[0].ad").value(true));
     // 100벽을 아직 돌파하지 않은 계정은 서버에서도 차단한다.
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
         .andExpect(status().isBadRequest());
     jdbc.sql(
-            "UPDATE raising_company SET state = jsonb_set(state, '{idle}', '{\"best\":100,\"cardsPending\":1,\"cardOffer\":[\"rally\",\"stopLoss\",\"catMagic\"]}'::jsonb) WHERE id = CAST(:id AS uuid)")
+            "UPDATE raising_company SET state = jsonb_set(state, '{idle}', '{\"best\":100}'::jsonb) WHERE id = CAST(:id AS uuid)")
         .param(
             "id",
             json(mvc.perform(get("/api/company").cookie(session)))
                 .read("$.companyId", String.class))
         .update();
-    // 고유 스킬은 누르지 않는다: 레벨업 카드로 켠다. 내민 석 장 밖의 카드는 고르지 못한다.
     postJson("/api/company/idle/active", "{\"code\":\"rally\"}").andExpect(status().isBadRequest());
-    postJson("/api/company/idle/card", "{\"code\":\"barrage\"}").andExpect(status().isBadRequest());
-    postJson("/api/company/idle/card", "{\"code\":\"rally\"}")
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.idle.actives[1].left").value(60.0))
-        .andExpect(jsonPath("$.idle.levelUp.pending").value(0))
-        .andExpect(jsonPath("$.idle.levelUp.offer.length()").value(0));
-    postJson("/api/company/idle/card", "{\"code\":\"rally\"}").andExpect(status().isBadRequest());
     // 광고 스킬은 ad가 참이어야 한다: 180초 동안 하나만 쓰고, 끝나면 다시 선택한다.
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\"}")
         .andExpect(status().isBadRequest());
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.idle.actives[6].left").value(180.0))
-        .andExpect(jsonPath("$.idle.actives[6].readyIn").value(180.0));
+        .andExpect(jsonPath("$.idle.actives[0].left").value(180.0))
+        .andExpect(jsonPath("$.idle.actives[0].readyIn").value(180.0));
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
         .andExpect(status().isBadRequest());
     postJson("/api/company/idle/active", "{\"code\":\"boostBuy\",\"ad\":true}")
         .andExpect(status().isBadRequest());
     postJson("/api/company/idle/active", "{\"code\":\"boostDamage\",\"ad\":true}")
         .andExpect(status().isBadRequest());
+  }
+
+  /** 매도벽 돌파 스테이지를 되살렸다 (667번): 한 판의 결과를 받고, 한 판이면 일일 퀘스트가 찬다. */
+  @Test
+  void 매도벽_돌파_스테이지의_결과를_받고_일일_퀘스트를_센다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
+    postJson("/api/company/assault", "{\"stage\":2,\"cleared\":true,\"stars\":3}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/assault", "{\"stage\":1,\"cleared\":true,\"stars\":3}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.assaults.best").value(1))
+        .andExpect(jsonPath("$.assaults.stars[0]").value(3))
+        .andExpect(jsonPath("$.assaults.lastResult.firstClear").value(true))
+        .andExpect(jsonPath("$.pass.missions[2].code").value("stage"))
+        .andExpect(jsonPath("$.pass.missions[2].count").value(1))
+        .andExpect(jsonPath("$.pass.missions[2].ready").value(100));
   }
 
   @Test
@@ -806,7 +808,7 @@ class CompanyApiTest {
     List<String> missions = opened.read("$.pass.missions[*].code");
     assertThat(missions)
         .containsExactly(
-            "attend", "upgrade", "card", "wall", "boss", "draw", "merge", "fish", "forever");
+            "attend", "upgrade", "stage", "wall", "boss", "draw", "merge", "fish", "forever");
     assertThat(opened.read("$.pass.missions[3].title", String.class)).isEqualTo("매도벽 최고 기록 30개 돌파");
     assertThat(opened.read("$.pass.missions[3].period", String.class)).isEqualTo("week");
     assertThat(opened.read("$.pass.missions[0].period", String.class)).isEqualTo("day");

@@ -29,9 +29,9 @@ try {
       offline: null,
       actives: [
         {
-          code: 'barrage',
-          name: '매수세례',
-          ad: false,
+          code: 'boostFire',
+          name: '공격속도 3배',
+          ad: true,
           readyIn: 0,
           left: 0,
           cooldown: 40,

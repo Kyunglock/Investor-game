@@ -478,14 +478,6 @@ class CompanyController {
 
   record ActiveRequest(@NotBlank String code, Boolean ad) {}
 
-  /** 레벨업 카드를 고른다 (decisions.md 667번). */
-  @PostMapping("/idle/card")
-  CompanyView pickCard(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody CardRequest request) {
-    return companies.pickCard(cookies.requirePlayer(token), request.code());
-  }
-
   @PostMapping("/idle/tutorial")
   CompanyView tutorial(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -494,8 +486,6 @@ class CompanyController {
   }
 
   record TutorialRequest(@NotBlank String action, int step) {}
-
-  record CardRequest(@NotBlank String code) {}
 
   /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가고 생선을 받는다. */
   @PostMapping("/rebirth")

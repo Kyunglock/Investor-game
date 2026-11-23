@@ -2618,3 +2618,56 @@
   margin: 3px 0;
   font-size: 13px;
 }
+
+/* 매도벽 돌파 스테이지의 입구 (667번): 오른쪽, 전투 통계 단추 아래(예전 고유 스킬 줄의 자리). */
+.idle-stage-shortcut {
+  position: absolute;
+  grid-row: 1 / 2;
+  right: 6px;
+  top: var(--idle-actives-top);
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
+  padding: 0;
+  border: 2px solid #ffd98a;
+  border-radius: 14px;
+  background: linear-gradient(#ff9b4a, #e8531f 60%, #b93a12);
+  box-shadow:
+    inset 0 2px 0 #ffffff66,
+    0 3px 0 #8a2a0c;
+  color: #fff8e3;
+  cursor: pointer;
+}
+.idle-stage-word {
+  font:
+    900 9px / 1 "Noto Sans KR",
+    sans-serif;
+  letter-spacing: 0.04em;
+}
+.idle-stage-next {
+  font:
+    900 13px / 1.1 "Jua",
+    "Noto Sans KR",
+    sans-serif;
+}
+.idle-stage-shortcut:focus-visible {
+  outline: 3px solid #237bd2;
+  outline-offset: 3px;
+}
+.idle-stage-note {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6a4a2a;
+}
+.boss-skill-magic {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d9c8ff, #7a52d6 70%);
+  color: #fff7c2;
+  font-size: 22px;
+}

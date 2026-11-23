@@ -269,33 +269,12 @@ export interface paths {
         put?: never;
         /**
          * 광고 스킬을 쓴다 (decisions.md 503·588·667번)
-         * @description 사장냥의 고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 여기서 쓰지 않고 레벨업 카드로만 켠다 (667번, /api/company/idle/card): 보내면 400.
+         * @description 사장냥의 고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 자동 전투에서 없앴다 (667번): 매도벽 돌파 스테이지의 레벨업 카드로만 나오고, 여기로 보내면 400.
          *     쓰면 재사용 대기 시간이 돈다. 대기 시간은 전투가 돌아가는 동안만 흐른다. 없는 스킬이거나 대기 중이거나 거래 정지 중이면 400.
          *     광고 스킬은 공격속도 3배(boostFire)·공격력 3배(boostDamage)·매수공격 3배(boostBuy)다 (588번): 장착하지 않고, 광고를 본 뒤(ad가 참)에만 쓴다.
          *     ad 없이 광고 스킬을 쓰면 400. 아직 광고를 붙이지 않아 서버는 ad를 그대로 믿는다.
          */
         post: operations["useIdleActive"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/idle/card": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 레벨업 카드를 고른다 (decisions.md 667번)
-         * @description 매도벽을 부수면 경험치가 오르고 레벨이 오를 때마다 카드 석 장(idle.levelUp.offer) 가운데 하나를 고른다. 고유 스킬 카드는 그 스킬을 1분 동안 켜고(손절은 바로 한 방),
-         *     catMagic은 출전한 고양이 모두의 마법 레벨을 하나 올린다(최고 5). 내민 석 장에 없는 카드거나 고를 카드가 없으면 400.
-         */
-        post: operations["pickIdleCard"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1144,7 +1123,7 @@ export interface components {
                 }[];
                 /** @description 포인트를 주는 일일·주간 퀘스트와 진행도 (570·643번). 이번 주기(오늘·이번 주)에 센 수가 target에 닿으면 points를 한 번 받고, 주기가 바뀌면 처음부터 센다. 오늘의 퀘스트가 먼저 온다 */
                 missions: {
-                    /** @description wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·card(레벨업 카드 고르기) */
+                    /** @description wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·stage(매도벽 돌파 스테이지 한 판) */
                     code: string;
                     /** @description 화면에 적는 글. "강화 20번"처럼 target이 들어 있다 */
                     title: string;
@@ -1785,10 +1764,10 @@ export interface components {
                     /** @description 처음 얻은 고양이 */
                     isNew: boolean;
                 }[];
-                /** @description 액티브 스킬 (decisions.md 503번). 시간은 화면에서 흐르는 실제 초다. 앞의 여섯은 사장냥의 고유 스킬로 레벨업 카드로 켜고(667번), 뒤의 셋은 광고 스킬(588번)이다 */
+                /** @description 광고 스킬 셋 (decisions.md 588번). 광고를 본 뒤에 쓴다. 시간은 화면에서 흐르는 실제 초다. 사장냥의 고유 스킬 여섯은 자동 전투에서 없앴다 (667번) */
                 actives?: {
                     /** @enum {string} */
-                    code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "boostFire" | "boostDamage" | "boostBuy";
+                    code: "boostFire" | "boostDamage" | "boostBuy";
                     name: string;
                     /** @description 한 번 쓰고 다시 쓸 때까지(초) */
                     cooldown: number;
@@ -1796,28 +1775,11 @@ export interface components {
                     seconds: number;
                     /** @description 다시 쓸 수 있을 때까지 남은 시간(초). 0이면 쓸 수 있다 */
                     readyIn: number;
-                    /** @description 효과가 남은 시간(초). 손절처럼 바로 끝나는 것은 0 */
+                    /** @description 효과가 남은 시간(초) */
                     left: number;
-                    /** @description 광고를 보면 쓰는 스킬이다 (588번). 아니면 레벨업 카드로 켜는 고유 스킬 (667번) */
+                    /** @description 광고를 보면 쓰는 스킬이다 (588번). 늘 참 */
                     ad: boolean;
                 }[];
-                /** @description 전투 레벨과 레벨업 카드 (decisions.md 667번). 매도벽을 부수면 경험치가 오르고 레벨이 오를 때마다 카드를 고른다. 환생하면 처음으로 돌아간다 */
-                levelUp?: {
-                    /** @description 지금 전투 레벨 */
-                    level: number;
-                    /** @description 지금 레벨에서 모은 경험치(부순 벽의 수) */
-                    xp: number;
-                    /** @description 다음 레벨까지 드는 경험치 */
-                    next: number;
-                    /** @description 아직 고르지 않은 카드의 수 */
-                    pending: number;
-                    /** @description 지금 고를 수 있는 카드(최대 셋). 고를 것이 없으면 빈 목록 */
-                    offer: ("barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "catMagic")[];
-                    /** @description 고양이 마법 카드로 더한 마법 레벨. 출전한 고양이 모두에게 붙는다 */
-                    magicBonus: number;
-                    /** @description 고유 스킬 카드가 이어지는 시간(초 */
-                    cardSeconds: number;
-                };
                 /** @description 스킬 열여섯(물·메테오·번개·충차·얼음·바람·불·독·빛·어둠·모래·별·우박·꽃비·폭탄·극광의 밤). 스킬은 고양이의 고유 능력이다 (decisions.md 501번) */
                 skills: {
                     code: string;
@@ -2402,7 +2364,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "boostFire" | "boostDamage" | "boostBuy";
+                    code: "boostFire" | "boostDamage" | "boostBuy";
                     /** @description 광고를 끝까지 봤다 (588번). 광고 스킬에만 쓴다 */
                     ad?: boolean;
                 };
@@ -2410,36 +2372,6 @@ export interface operations {
         };
         responses: {
             /** @description 쓴 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    pickIdleCard: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @enum {string} */
-                    code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "catMagic";
-                };
-            };
-        };
-        responses: {
-            /** @description 고른 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

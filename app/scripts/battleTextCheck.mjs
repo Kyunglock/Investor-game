@@ -34,11 +34,7 @@ const idle = {
   power: 1038,
   income: { perSecond: 1, staffPerSecond: 0, bonusPercent: 0 },
   offline: null,
-  levelUp: { level: 1, xp: 0, next: 5, pending: 0, offer: [], magicBonus: 0, cardSeconds: 60 },
   actives: [
-    ['barrage', '매수세례', 40, 4, false],
-    ['rally', '불장', 60, 6.7, false],
-    ['fortify', '방어선 구축', 60, 4, false],
     ['boostFire', '공격속도 3배', 180, 180, true],
     ['boostDamage', '공격력 3배', 180, 180, true],
     ['boostBuy', '매수공격 3배', 180, 180, true],
@@ -85,8 +81,8 @@ async function run(browser, width, height) {
     return {
       wallTop: canvas.top + market.buyWall.feedback.top,
       sellBottom: canvas.top + window.__mentalWalls()[0].bottom,
-      // 오른쪽 열은 고유 스킬 단추였다가 전투 레벨 단추가 되었다 (667번).
-      columns: ['idle-level', 'idle-ad-actives'].map((id) => {
+      // 오른쪽 열은 고유 스킬 단추였다가 매도벽 돌파 스테이지의 입구가 되었다 (667번).
+      columns: ['stage-shortcut', 'idle-ad-actives'].map((id) => {
         const rect = box(`[data-testid=${id}]`)
         return { id, top: rect.top, bottom: rect.bottom }
       }),

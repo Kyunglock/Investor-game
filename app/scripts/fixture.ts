@@ -258,11 +258,11 @@ export const company = {
         done: true,
       },
       {
-        code: 'card',
-        title: '레벨업 카드 10장 고르기',
+        code: 'stage',
+        title: '매도벽 돌파 스테이지 1판 하기',
         period: 'day',
-        count: 7,
-        target: 10,
+        count: 0,
+        target: 1,
         points: 100,
       },
       {

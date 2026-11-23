@@ -86,9 +86,6 @@ class IdleEngine {
     "매수세례", "불장", "방어선 구축", "상한가", "손절", "물타기", "공격속도 3배", "공격력 3배", "매수공격 3배"
   };
 
-  /** 고유 스킬 여섯 (667번): 이제 레벨업 카드로만 켠다. */
-  static final List<String> CARD_SKILLS = ACTIVES.subList(0, 6);
-
   private static final double[] ACTIVE_COOLDOWN = {60, 90, 90, 90, 90, 90, 270, 270, 270};
   private static final double[] ACTIVE_SECONDS = {6, 10, 6, 12, 0, 15, 270, 270, 270};
 
@@ -100,23 +97,6 @@ class IdleEngine {
 
   /** 물타기 (591번): 매수 주문이 가장 세질 때의 배수. Matches the app's mental/actives.ts. */
   static final double AVERAGING_MAX = 3;
-
-  /**
-   * 레벨업 카드로 켠 고유 스킬이 이어지는 시간 (667번): 실제 1분, 게임 초로는 SPEED배. Matches the app's actives.ts
-   * CARD_SECONDS.
-   */
-  static final double CARD_SECONDS = 60 * SPEED;
-
-  /** 고양이 마법 강화 카드 (667번). */
-  static final String CAT_MAGIC_CARD = "catMagic";
-
-  /** 레벨업 카드 한 번에 내미는 수 (667번). */
-  static final int CARD_CHOICES = 3;
-
-  /** 다음 레벨까지 부술 벽의 수 (667번): Lv.1에서 5개, 한 레벨마다 2개씩 늘어난다. */
-  static long xpToNext(int level) {
-    return 3 + 2L * Math.max(1, level);
-  }
 
   /** 광고 스킬의 배수 (588번). Matches the app's mental/actives.ts. */
   static final double BOOST = 3;
@@ -784,7 +764,7 @@ class IdleEngine {
     for (String code : s.fielded) {
       int cat = CATS.indexOf(code);
       if (cat < 0) continue;
-      int level = castLevel(s, code) - 1;
+      int level = skillLevel(s.cats.getOrDefault(code, 1)) - 1;
       for (int skill : CAT_SKILLS[cat]) {
         total +=
             shooters.getFirst().skill()
@@ -825,7 +805,7 @@ class IdleEngine {
     for (String code : s.fielded) {
       int cat = CATS.indexOf(code);
       if (cat < 0) continue;
-      int level = castLevel(s, code) - 1;
+      int level = skillLevel(s.cats.getOrDefault(code, 1)) - 1;
       for (int skill : CAT_SKILLS[cat]) {
         total +=
             shooters.getFirst().skill()
@@ -953,7 +933,10 @@ class IdleEngine {
     if (!skillsUnlocked(c)) throw new InvalidRequestException("100 매도벽 돌파 시 해금돼요");
     int at = ACTIVES.indexOf(code);
     if (at < 0) throw new InvalidRequestException("없는 스킬이다: " + code);
-    if (at < UNIQUE) throw new InvalidRequestException("레벨업 카드로 켜는 스킬이다: " + ACTIVE_NAMES[at]);
+    // 사장냥의 고유 스킬은 자동 전투에서 없앴다 (667번): 매도벽 돌파 스테이지의 레벨업 카드로만 나온다.
+    if (at < UNIQUE) {
+      throw new InvalidRequestException("스테이지의 레벨업 카드로 쓰는 스킬이다: " + ACTIVE_NAMES[at]);
+    }
     if (at >= UNIQUE && !ad) throw new InvalidRequestException("광고를 본 뒤에 쓸 수 있다");
     if (at >= UNIQUE
         && ACTIVES.subList(UNIQUE, ACTIVES.size()).stream()
@@ -966,87 +949,6 @@ class IdleEngine {
     if (s.circuitSeconds > 0) throw new InvalidRequestException("거래 정지 중에는 쓸 수 없다");
     s.activeReady.put(code, s.activeSeconds + ACTIVE_COOLDOWN[at]);
     s.activeUntil.put(code, s.activeSeconds + ACTIVE_SECONDS[at]);
-  }
-
-  /**
-   * 레벨업 카드를 고른다 (667번). 내민 석 장 가운데 하나만 받는다. 고유 스킬 카드는 그 스킬을 1분 동안 켜고(손절은 바로 한 방), 고양이 마법 카드는 출전한
-   * 고양이 모두의 마법 레벨을 하나 올린다. 고를 카드가 남아 있으면 다음 석 장을 바로 내민다.
-   */
-  void pickCard(CompanyState c, String code) {
-    CompanyState.Idle s = state(c);
-    offerCards(c);
-    if (s.cardOffer.isEmpty()) throw new InvalidRequestException("고를 레벨업 카드가 없어요");
-    if (!s.cardOffer.contains(code)) throw new InvalidRequestException("내민 카드 가운데서 골라 주세요");
-    if (CAT_MAGIC_CARD.equals(code)) {
-      s.magicBonus = Math.min(SKILL_MAX_LEVEL - 1, s.magicBonus + 1);
-    } else {
-      castCard(s, code);
-    }
-    s.cardOffer.clear();
-    s.cardsPending = Math.max(0, s.cardsPending - 1);
-    s.cardPicks++;
-    engine.pass.progress(c, "card", 1, todayDate());
-    offerCards(c);
-  }
-
-  /** 고유 스킬 카드의 효과를 1분 동안 켠다 (667번). 이미 켜져 있으면 다시 1분부터 센다. */
-  private static void castCard(CompanyState.Idle s, String code) {
-    if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
-    double until = s.activeSeconds + CARD_SECONDS;
-    switch (code) {
-      case "barrage" -> {
-        // 매수세례는 원래 BARRAGE_SHOTS장을 ACTIVE_SECONDS[0] 동안 쏟는다: 1분 동안 같은 빠르기로 쏟는다.
-        s.hitCredits[BARRAGE] = BARRAGE_SHOTS * CARD_SECONDS / ACTIVE_SECONDS[0];
-        s.activeUntil.put(code, until);
-      }
-      case "rally" -> {
-        s.rallyUntil = until;
-        s.activeUntil.put(code, until);
-      }
-      case "stopLoss" -> s.hitCredits[STOP_LOSS] = 1;
-      default -> s.activeUntil.put(code, until);
-    }
-  }
-
-  /** 고를 카드가 남았는데 내민 카드가 없으면 석 장을 뽑는다 (667번). 같은 레벨·같은 환생이면 늘 같은 석 장이다. */
-  void offerCards(CompanyState c) {
-    CompanyState.Idle s = state(c);
-    if (s.cardOffer == null) s.cardOffer = new ArrayList<>();
-    if (s.cardsPending <= 0 || !s.cardOffer.isEmpty()) return;
-    List<String> pool = new ArrayList<>(CARD_SKILLS);
-    if (s.magicBonus < SKILL_MAX_LEVEL - 1
-        && s.fielded.stream()
-            .anyMatch(
-                k ->
-                    CATS.contains(k)
-                        && CAT_SKILLS[CATS.indexOf(k)].length > 0
-                        && castLevel(s, k) < SKILL_MAX_LEVEL)) {
-      pool.add(CAT_MAGIC_CARD);
-    }
-    java.util.SplittableRandom random =
-        new java.util.SplittableRandom(31L * (c.rebirths + 1) * 1_000_003L + s.cardPicks);
-    while (s.cardOffer.size() < CARD_CHOICES && !pool.isEmpty()) {
-      s.cardOffer.add(pool.remove(random.nextInt(pool.size())));
-    }
-  }
-
-  /** 벽 하나를 부순 경험치 (667번): 레벨이 오르면 고를 카드가 하나 는다. */
-  private void gainXp(CompanyState c) {
-    CompanyState.Idle s = state(c);
-    if (s.level < 1) s.level = 1;
-    s.xp++;
-    while (s.xp >= xpToNext(s.level)) {
-      s.xp -= xpToNext(s.level);
-      s.level++;
-      s.cardsPending++;
-    }
-    offerCards(c);
-  }
-
-  /** 출전한 고양이의 마법 레벨 (515·534·667번): 고양이 레벨로 오른 레벨에 마법 강화 카드로 더한 레벨. 최고 SKILL_MAX_LEVEL. */
-  private static int castLevel(CompanyState.Idle s, String code) {
-    int base = skillLevel(s.cats.getOrDefault(code, 1));
-    return Math.min(SKILL_MAX_LEVEL, base + (s.fielded.contains(code) ? s.magicBonus : 0));
   }
 
   boolean skillsUnlocked(CompanyState c) {
@@ -1203,7 +1105,7 @@ class IdleEngine {
       for (String cat : kind == 0 ? List.<String>of() : s.fielded) {
         int at = CATS.indexOf(cat);
         if (at < 0 || !casts(at, kind - 1)) continue;
-        int level = castLevel(s, cat) - 1;
+        int level = skillLevel(s.cats.getOrDefault(cat, 1)) - 1;
         perHit = Math.max(perHit, SKILL_DAMAGE[kind - 1][level]);
         perSecond += SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
         gained += active * SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
@@ -1338,7 +1240,6 @@ class IdleEngine {
       }
       s.cleared++;
       s.wall++;
-      gainXp(c);
       s.damage = queued[0] + left;
       System.arraycopy(queued, 1, queued, 0, queued.length - 1);
       queued[queued.length - 1] = 0;
@@ -1509,13 +1410,6 @@ class IdleEngine {
     move(s, 1);
     s.earned = 0;
     s.wallDps = 0;
-    // 레벨업 카드 (667번): 전투 레벨과 고른 카드는 환생하면 처음으로 돌아간다.
-    s.level = 1;
-    s.xp = 0;
-    s.cardsPending = 0;
-    s.cardOffer = new ArrayList<>();
-    s.cardPicks = 0;
-    s.magicBonus = 0;
   }
 
   /**
@@ -1754,7 +1648,7 @@ class IdleEngine {
                   int level =
                       s.fielded.stream()
                           .filter(k -> CATS.contains(k) && casts(CATS.indexOf(k), skill))
-                          .mapToInt(k -> castLevel(s, k))
+                          .mapToInt(k -> skillLevel(s.cats.getOrDefault(k, 1)))
                           .max()
                           .orElse(0);
                   return new CompanyView.IdleSkill(CODES[i], NAMES[i], casters[i] > 0, level);
@@ -1785,7 +1679,7 @@ class IdleEngine {
                       java.util.Arrays.stream(CAT_SKILLS[cat])
                           .mapToObj(skill -> new CompanyView.CatSkill(CODES[skill], NAMES[skill]))
                           .toList(),
-                      level > 0 ? castLevel(s, code) : skillLevel(1),
+                      skillLevel(Math.max(1, level)),
                       nextSkillAt(Math.max(1, level)),
                       CAT_GRADES.get(CAT_GRADE[cat]));
                 })
@@ -1820,31 +1714,22 @@ class IdleEngine {
             ? null
             : new CompanyView.BossReward(
                 s.bossCleared, BOSS_CLEAR_DIAMONDS, CompanyView.money(s.bossRewardMoney)),
-        java.util.stream.IntStream.range(0, ACTIVES.size())
+        // 광고 스킬 셋만 준다 (667번): 사장냥의 고유 스킬은 자동 전투에서 없앴다.
+        java.util.stream.IntStream.range(UNIQUE, ACTIVES.size())
             .mapToObj(
                 i ->
                     new CompanyView.IdleActive(
                         ACTIVES.get(i),
                         ACTIVE_NAMES[i],
-                        i < UNIQUE ? 0 : ACTIVE_COOLDOWN[i] / SPEED,
-                        i < UNIQUE
-                            ? ("stopLoss".equals(ACTIVES.get(i)) ? 0 : CARD_SECONDS / SPEED)
-                            : ACTIVE_SECONDS[i] / SPEED,
+                        ACTIVE_COOLDOWN[i] / SPEED,
+                        ACTIVE_SECONDS[i] / SPEED,
                         Math.max(
                                 0,
                                 s.activeReady.getOrDefault(ACTIVES.get(i), 0.0) - s.activeSeconds)
                             / SPEED,
                         effectLeft(s, ACTIVES.get(i)) / SPEED,
-                        i >= UNIQUE))
+                        true))
             .toList(),
-        new CompanyView.LevelUp(
-            Math.max(1, s.level),
-            s.xp,
-            xpToNext(s.level),
-            s.cardsPending,
-            s.cardOffer == null ? List.of() : List.copyOf(s.cardOffer),
-            s.magicBonus,
-            CARD_SECONDS / SPEED),
         (s.lastDraws == null ? List.<CompanyState.Pulled>of() : s.lastDraws)
             .stream()
                 .filter(d -> CATS.contains(d.kind))

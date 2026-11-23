@@ -29,7 +29,7 @@ export function IdleTutorial({
   const bubble = useRef<HTMLElement>(null)
   const [height, setHeight] = useState(110)
   const step = replay ?? progress?.step ?? 8
-  // 100벽의 스킬 안내(587번)는 없앴다: 사장냥의 스킬은 누르지 않고 레벨업 카드로 켠다 (667번).
+  // 100벽의 스킬 안내(587번)는 없앴다: 사장냥의 스킬은 매도벽 돌파 스테이지의 레벨업 카드가 되었다 (667번).
   const active = !!progress && step < 8
   const focus = useTutorialFocus(tutorialTargets(step, menu), active)
   useTutorialDragGuard(focus?.drop ? focus.target : undefined, focus?.drop?.target)

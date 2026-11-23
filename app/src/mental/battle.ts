@@ -2781,6 +2781,8 @@ class BattleScene extends Phaser.Scene {
         .filter((e) => e.active && !e.dying && e.wallPushUntil > this.elapsed)
         .map((e) => ({ y: e.y, velocityY: e.body?.velocity.y })),
       actives: {
+        rally: Math.max(0, this.rallyUntil - this.elapsed),
+        barrageLeft: this.barrageLeft,
         limitUp: Math.max(0, this.limitUpUntil - this.elapsed),
         averaging: Math.max(0, this.averagingUntil - this.elapsed),
         stopLossPending: this.stopLossPending,
@@ -3721,8 +3723,8 @@ class BattleScene extends Phaser.Scene {
    * 남은 시간만큼만 켜고 알림을 띄우지 않는다.
    */
   castActive(code: ActiveCode, left?: number) {
-    if (!this.opts.idle || this.over) return
-    // 고유 스킬은 레벨업 카드로 켜고 1분(CARD_SECONDS) 동안 이어진다 (667번).
+    if (this.over) return
+    // 고유 스킬은 매도벽 돌파 스테이지의 레벨업 카드로 켜고 1분(CARD_SECONDS) 동안 이어진다 (667번).
     if (code === 'barrage') {
       const { seconds, shots } = ACTIVES.barrage
       this.barrageLeft = Math.round(((left ?? CARD_SECONDS) * shots) / seconds)
@@ -3745,7 +3747,8 @@ class BattleScene extends Phaser.Scene {
     }
     if (left != null) return
     const [text, color] = ACTIVE_BANNERS[code]
-    this.opts.onIdleRaid?.(text, color)
+    if (this.opts.idle) this.opts.onIdleRaid?.(text, color)
+    else this.opts.onBanner(text, color)
     sfx.levelUp()
     haptic.medium()
   }

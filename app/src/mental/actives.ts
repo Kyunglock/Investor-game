@@ -1,14 +1,31 @@
-import { IDLE_GAME_SPEED } from './assault'
-
 /**
  * 액티브 스킬 (decisions.md 503번). 대기 시간과 받아 주는 피해는 서버(IdleEngine)가 정하고, 여기는 화면의 연출 수치다.
  * 시간은 전투 초(1.5배속이라 실제 시간의 1.5배)이고 서버의 ACTIVE_SECONDS와 같다.
  *
- * 앞의 여섯은 사장냥의 고유 스킬이다 (587·591번): 이제 누르지 않고, 매도벽을 부숴 레벨이 오를 때 고르는 레벨업 카드로 1분 동안 켠다 (667번).
- * 뒤의 셋은 광고 스킬이다 (588번): 광고를 보면 쓴다.
+ * 앞의 여섯은 사장냥의 고유 스킬이다 (587·591번): 자동 전투에서는 없앴고, 매도벽 돌파 스테이지에서 레벨이 오를 때 고르는 레벨업 카드로 1분 동안
+ * 켠다 (667번, cards.ts). 뒤의 셋은 광고 스킬이다 (588번): 자동 전투에서 광고를 보면 쓴다.
  */
-/** 레벨업 카드로 켠 고유 스킬이 이어지는 전투 초 (667번): 실제 1분. 서버 IdleEngine.CARD_SECONDS와 같다. */
-export const CARD_SECONDS = 60 * IDLE_GAME_SPEED
+/** 레벨업 카드로 켠 고유 스킬이 이어지는 전투 초 (667번): 1분. */
+export const CARD_SECONDS = 60
+
+/** 사장냥의 고유 스킬 여섯 (667번): 스테이지의 레벨업 카드로만 나온다. */
+export const SKILL_CODES = [
+  'barrage',
+  'rally',
+  'fortify',
+  'limitUp',
+  'stopLoss',
+  'averaging',
+] as const
+export type SkillCode = (typeof SKILL_CODES)[number]
+export const SKILL_NAMES: Record<SkillCode, string> = {
+  barrage: '매수세례',
+  rally: '불장',
+  fortify: '방어선 구축',
+  limitUp: '상한가',
+  stopLoss: '손절',
+  averaging: '물타기',
+}
 
 /** 광고 스킬의 배수 (588번, 서버 IdleEngine.BOOST). */
 export const BOOST = 3

@@ -1150,232 +1150,25 @@ class IdleEngineTest {
   }
 
   @Test
-  void theBossCatsSkillsComeFromCardsAndLastAMinute() {
+  void theBossCatsOwnSkillsAreGoneFromTheIdleBattle() {
+    // 667: the six 고유 스킬 are level-up cards of the assault stage now. Here only the three ad
+    // skills are left, and nothing a screen reports for the old ones is credited.
     start(1);
-    state.idle.best = 100; // 스킬 해금 이후의 사용·대기시간 검사.
+    state.idle.best = 100;
     state.idle.wall = 100;
     tick(1000);
-    var actives = engine.view(state).actives();
-    // The boss cat's six 고유 스킬 (587, 591), then the three 광고 스킬 (588).
-    assertThat(actives)
-        .extracting(a -> a.code())
-        .containsExactly(
-            "barrage",
-            "rally",
-            "fortify",
-            "limitUp",
-            "stopLoss",
-            "averaging",
-            "boostFire",
-            "boostDamage",
-            "boostBuy");
-    assertThat(actives).allMatch(a -> a.readyIn() == 0);
-    // Without the card, barrage hits are worth nothing.
-    tick(1000, new IdleHit(100, "barrage", 10, 22.5));
-    assertThat(state.idle.damage).isZero();
-
-    // 667: the boss cat's skills are no longer pressed. They come from level-up cards.
-    assertThatThrownBy(() -> engine.useActive(state, "barrage"))
-        .isInstanceOf(InvalidRequestException.class)
-        .hasMessageContaining("레벨업 카드");
-    assertThatThrownBy(() -> engine.useActive(state, "nope"))
-        .isInstanceOf(InvalidRequestException.class);
-    card("barrage");
-    var barrage = engine.view(state).actives().getFirst();
-    assertThat(barrage.seconds()).isEqualTo(60);
-    assertThat(barrage.left()).isEqualTo(60);
-    assertThat(barrage.cooldown()).isZero();
-    // A minute of the barrage at its old pace (forty orders in six game seconds): 600 orders, each
-    // at most one buy order (601): 1.5, whatever the wall (514, 573).
-    double order = 1.5;
-    tick(1000, new IdleHit(100, "barrage", 50, 50 * 1000.0));
-    assertThat(state.idle.damage).isCloseTo(50 * order, offset(1e-9));
-    state.idle.damage = 0;
-    for (int i = 0; i < 12; i++) tick(1000, new IdleHit(100, "barrage", 50, 50 * 1000.0));
-    assertThat(state.idle.damage).as("600 in all").isCloseTo(550 * order, offset(1e-9));
-  }
-
-  /** Offers one card and picks it (667). */
-  private void card(String code) {
-    state.idle.cardsPending = 1;
-    state.idle.cardOffer = new java.util.ArrayList<>(List.of(code));
-    engine.pickCard(state, code);
-  }
-
-  @Test
-  void rallyDoublesTheBulletBudgetWhileItBurns() {
-    start(1);
-    state.idle.best = 100; // 스킬 해금 이후의 사용·대기시간 검사.
-    state.idle.wall = 100;
-    for (int i = 0; i < 3; i++) tick(1000);
-    state.idle.hitCredits = new double[18];
-    tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
-    double plain = state.idle.damage;
-    assertThat(plain).isPositive();
-    card("rally");
-    state.idle.damage = 0;
-    state.idle.hitCredits = new double[18];
-    tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
-    assertThat(state.idle.damage).isCloseTo(2 * plain, org.assertj.core.data.Offset.offset(1e-9));
-    // A minute later it is over (667).
-    for (int i = 0; i < 60; i++) tick(1000);
-    state.idle.damage = 0;
-    state.idle.hitCredits = new double[18];
-    tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
-    assertThat(state.idle.damage).isCloseTo(plain, org.assertj.core.data.Offset.offset(1e-9));
-  }
-
-  @Test
-  void breakingWallsLevelsUpAndEachLevelOffersThreeCards() {
-    // 667: a wall is one experience point. Level 1 needs five, then two more each level.
-    start(1);
-    assertThat(IdleEngine.xpToNext(1)).isEqualTo(5);
-    assertThat(IdleEngine.xpToNext(2)).isEqualTo(7);
-    var levelUp = engine.view(state).levelUp();
-    assertThat(levelUp.level()).isEqualTo(1);
-    assertThat(levelUp.next()).isEqualTo(5);
-    assertThat(levelUp.offer()).isEmpty();
-    assertThatThrownBy(() -> engine.pickCard(state, "rally"))
-        .isInstanceOf(InvalidRequestException.class);
-    for (int i = 0; i < 4; i++) breakWall();
-    assertThat(engine.view(state).levelUp().xp()).isEqualTo(4);
-    assertThat(engine.view(state).levelUp().pending()).isZero();
-    breakWall();
-    levelUp = engine.view(state).levelUp();
-    assertThat(levelUp.level()).isEqualTo(2);
-    assertThat(levelUp.xp()).isZero();
-    assertThat(levelUp.pending()).isEqualTo(1);
-    // No fielded cat: the six skills only, three different ones.
-    assertThat(levelUp.offer()).hasSize(3).doesNotHaveDuplicates().doesNotContain("catMagic");
-    assertThat(levelUp.offer()).isSubsetOf(IdleEngine.CARD_SKILLS);
-    assertThatThrownBy(() -> engine.pickCard(state, "boostFire"))
-        .isInstanceOf(InvalidRequestException.class);
-    String chosen =
-        levelUp.offer().stream().filter(c -> !c.equals("stopLoss")).findFirst().orElseThrow();
-    engine.pickCard(state, chosen);
-    levelUp = engine.view(state).levelUp();
-    assertThat(levelUp.pending()).isZero();
-    assertThat(levelUp.offer()).isEmpty();
-    // The skill runs for a minute.
     assertThat(engine.view(state).actives())
-        .filteredOn(a -> a.code().equals(chosen))
-        .allMatch(a -> a.left() == 60);
-    // Two levels at once leave two cards to pick: the next three come right after the first.
-    for (int i = 0; i < 7 + 9; i++) breakWall();
-    assertThat(engine.view(state).levelUp().level()).isEqualTo(4);
-    assertThat(engine.view(state).levelUp().pending()).isEqualTo(2);
-    engine.pickCard(state, engine.view(state).levelUp().offer().getFirst());
-    assertThat(engine.view(state).levelUp().pending()).isEqualTo(1);
-    assertThat(engine.view(state).levelUp().offer()).hasSize(3);
-  }
-
-  @Test
-  void theCatMagicCardRaisesEveryFieldedCatsMagicLevel() {
-    start(1);
-    state.idle.cats.put("night", 1);
-    engine.fieldCat(state, "night", true);
-    state.idle.cats.put("sky", 1);
-    assertThat(catSkillLevel("night")).isEqualTo(1);
-    card("catMagic");
-    assertThat(state.idle.magicBonus).isEqualTo(1);
-    assertThat(catSkillLevel("night")).as("fielded").isEqualTo(2);
-    assertThat(catSkillLevel("sky")).as("resting").isEqualTo(1);
-    assertThat(engine.view(state).levelUp().magicBonus()).isEqualTo(1);
-    // The level is capped at five: at Lv.40 (skill Lv.5) the card is no longer offered.
-    state.idle.cats.put("night", 40);
-    state.idle.cardsPending = 1;
-    state.idle.cardOffer.clear();
-    engine.offerCards(state);
-    assertThat(state.idle.cardOffer).doesNotContain("catMagic");
-    assertThat(catSkillLevel("night")).isEqualTo(5);
-  }
-
-  @Test
-  void rebirthStartsTheLevelAndTheCardsOver() {
-    start(1);
-    state.idle.cats.put("night", 1);
-    engine.fieldCat(state, "night", true);
-    for (int i = 0; i < 12; i++) breakWall();
-    card("catMagic");
-    assertThat(state.idle.level).isEqualTo(3);
-    state.idle.wall = 501;
-    engine.rebirth(state);
-    var levelUp = engine.view(state).levelUp();
-    assertThat(levelUp.level()).isEqualTo(1);
-    assertThat(levelUp.xp()).isZero();
-    assertThat(levelUp.pending()).isZero();
-    assertThat(levelUp.offer()).isEmpty();
-    assertThat(levelUp.magicBonus()).isZero();
-    assertThat(catSkillLevel("night")).isEqualTo(1);
-  }
-
-  private int catSkillLevel(String code) {
-    return engine.view(state).cats().stream()
-        .filter(c -> c.code().equals(code))
-        .findFirst()
-        .orElseThrow()
-        .skillLevel();
-  }
-
-  /** Breaks the front wall with one hit worth its health. */
-  private void breakWall() {
-    state.idle.damage = IdleEngine.maxHp(state.idle.wall) - 1;
-    long wall = state.idle.wall;
-    tick(1000, new IdleHit(wall, "bullet", 1, 1e30));
-    assertThat(state.idle.wall).as("wall broken").isEqualTo(wall + 1);
-  }
-
-  @Test
-  void theThreeNewUniqueSkillsComeFromCards() {
-    // 591: 상한가·손절·물타기. A company starts with the first three equipped, so a new one needs a
-    // slot freed.
-    start(1);
-    state.idle.best = 100; // 스킬 해금 이후의 사용·대기시간 검사.
-    state.idle.wall = 100;
-    for (int i = 0; i < 3; i++) tick(1000);
-    assertThatThrownBy(() -> engine.useActive(state, "limitUp"))
-        .isInstanceOf(InvalidRequestException.class)
-        .hasMessageContaining("레벨업 카드");
-
-    // 상한가: a critical hit was already the most a bullet may do, so only the time is kept. A
-    // card runs it for a minute (667).
-    double bullets = accepted("bullet");
-    card("limitUp");
-    var limitUp = engine.view(state).actives().get(3);
-    assertThat(limitUp.name()).isEqualTo("상한가");
-    assertThat(limitUp.seconds()).isEqualTo(60);
-    assertThat(limitUp.left()).isEqualTo(60);
-    assertThat(limitUp.readyIn()).isZero();
-    assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
-
-    // 손절: nothing without the press, then one hit of at most 240 buy orders (1.5 each).
-    state.idle.damage = 0;
+        .extracting(a -> a.code())
+        .containsExactly("boostFire", "boostDamage", "boostBuy");
+    assertThat(engine.view(state).actives()).allMatch(a -> a.ad() && a.readyIn() == 0);
+    for (String code :
+        List.of("barrage", "rally", "fortify", "limitUp", "stopLoss", "averaging", "nope")) {
+      assertThatThrownBy(() -> engine.useActive(state, code))
+          .isInstanceOf(InvalidRequestException.class);
+    }
+    tick(1000, new IdleHit(100, "barrage", 10, 22.5));
     tick(1000, new IdleHit(100, "stoploss", 1, 1e9));
     assertThat(state.idle.damage).isZero();
-    card("stopLoss");
-    assertThat(engine.view(state).actives().get(4).seconds()).isZero();
-    tick(1000, new IdleHit(100, "stoploss", 1, 1e9));
-    assertThat(state.idle.damage).isCloseTo(240 * 1.5, offset(1e-9));
-    tick(1000, new IdleHit(100, "stoploss", 1, 1e9));
-    assertThat(state.idle.damage).as("the press is spent").isCloseTo(240 * 1.5, offset(1e-9));
-    // A smaller hit (less of the buy wall given up) is taken as reported.
-    state.idle.damage = 0;
-    card("stopLoss");
-    tick(1000, new IdleHit(100, "stoploss", 1, 45.0));
-    assertThat(state.idle.damage).isCloseTo(45, offset(1e-9));
-
-    // 물타기: buy orders may hit up to three times as hard for a minute; bullets do not.
-    for (int i = 0; i < 62; i++) tick(1000);
-    double buys = accepted("buy");
-    card("averaging");
-    assertThat(engine.view(state).actives().get(5).left()).isEqualTo(60);
-    assertThat(accepted("buy")).isCloseTo(3 * buys, offset(1e-9));
-    assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
-    // 매수공격 3배 stacks on it.
-    engine.useActive(state, "boostBuy", true);
-    assertThat(accepted("buy")).isCloseTo(9 * buys, offset(1e-9));
-    for (int i = 0; i < 182; i++) tick(1000);
-    assertThat(accepted("buy")).isCloseTo(buys, offset(1e-9));
   }
 
   /** What one beat of far too many hits of a kind is accepted for, with fresh credits. */
@@ -1425,7 +1218,7 @@ class IdleEngineTest {
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("광고");
     engine.useActive(state, "boostDamage", true);
-    var boost = engine.view(state).actives().get(7);
+    var boost = engine.view(state).actives().get(1);
     assertThat(boost.ad()).isTrue();
     assertThat(boost.seconds()).isEqualTo(180);
     assertThat(boost.left()).isEqualTo(180);
@@ -1443,22 +1236,15 @@ class IdleEngineTest {
     for (int i = 0; i < 182; i++) tick(1000);
     engine.useActive(state, "boostBuy", true);
     assertThat(accepted("buy")).isCloseTo(3 * buys, offset(1e-9));
-    // The barrage's orders are buy orders too: 매수공격 3배 triples them.
-    card("barrage");
-    state.idle.damage = 0;
-    tick(1000, new IdleHit(100, "barrage", 40, 1e9));
-    assertThat(state.idle.damage).isCloseTo(40 * 3 * 1.5, offset(1e-9));
 
-    // 공격속도 3배 triples the bullet budget, and the rally is not stacked on it.
+    // 공격속도 3배 triples the bullet budget.
     for (int i = 0; i < 182; i++) tick(1000);
     engine.useActive(state, "boostFire", true);
-    assertThat(accepted("bullet")).isCloseTo(3 * bullets, offset(1e-6));
-    card("rally");
     assertThat(accepted("bullet")).isCloseTo(3 * bullets, offset(1e-6));
 
     // Three minutes after the last press everything is back to plain.
     for (int i = 0; i < 182; i++) tick(1000);
-    assertThat(engine.view(state).actives().get(6).left()).isZero();
+    assertThat(engine.view(state).actives().get(0).left()).isZero();
     assertThat(accepted("bullet")).isCloseTo(bullets, offset(1e-9));
     assertThat(accepted("buy")).isCloseTo(buys, offset(1e-9));
   }
