@@ -183,12 +183,15 @@ export function VaultChallenges({
         type="button"
         className="vault-entry"
         data-testid="vault-entry"
+        aria-label="금고 도전"
+        title="금고 도전"
         onClick={() => {
           setNote('')
           setOpen(true)
         }}
       >
-        금고 도전
+        <b className="vault-entry-word">금고</b>
+        <small className="vault-entry-sub">도전</small>
       </button>
       {result && !run && <VaultResult result={result} onClose={() => setResult(null)} />}
       {run ? (

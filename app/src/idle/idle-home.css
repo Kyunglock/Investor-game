@@ -2619,7 +2619,7 @@
   font-size: 13px;
 }
 
-/* 매도벽 돌파 스테이지의 입구 (667번): 오른쪽, 전투 통계 단추 아래(예전 고유 스킬 줄의 자리). */
+/* 매도벽 돌파 스테이지의 입구 (667번): 오른쪽, 전투 통계 단추 아래(예전 고유 스킬 줄의 자리). 동그란 단추이고 바로 밑에 금고 도전(vault-challenges.css)이 선다. */
 .idle-stage-shortcut {
   position: absolute;
   grid-row: 1 / 2;
@@ -2633,7 +2633,7 @@
   height: var(--idle-active-size);
   padding: 0;
   border: 2px solid #ffd98a;
-  border-radius: 14px;
+  border-radius: 50%;
   background: linear-gradient(#ff9b4a, #e8531f 60%, #b93a12);
   box-shadow:
     inset 0 2px 0 #ffffff66,
