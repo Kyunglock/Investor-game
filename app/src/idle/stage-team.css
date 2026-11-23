@@ -1,0 +1,146 @@
+/* 스테이지 출전 고양이 고르기 (decisions.md 669번). */
+.stage-team {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid #ecd9b8;
+  border-radius: 16px;
+  background: #fffaf0;
+}
+.stage-team > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.stage-team > header > b {
+  font-size: 16px;
+  color: #5c3b12;
+}
+.stage-team > header > span {
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: #f5e3c2;
+  color: #6a4a2a;
+  font-size: 12px;
+  font-weight: 700;
+}
+.stage-team-help {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #7a5a36;
+}
+.stage-team-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stage-team-slots button,
+.stage-team-empty {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 104px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  font: inherit;
+  text-align: center;
+}
+.stage-team-slots button {
+  border: 2px solid #e2a44a;
+  background: linear-gradient(#fffdf6, #fbeccb);
+  box-shadow: 0 2px 0 #c98a2f;
+  color: #4a2f12;
+  cursor: pointer;
+}
+.stage-team-empty {
+  border: 2px dashed #e0cfae;
+  background: #fbf4e4;
+  color: #a08a68;
+}
+.stage-team-slots .idle-cat-portrait {
+  width: 44px;
+  height: 44px;
+}
+.stage-team-name {
+  font-size: 13px;
+}
+.stage-team-skill {
+  font-size: 11px;
+  line-height: 1.2;
+}
+.stage-team-order {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e8531f;
+  color: #fff;
+  font:
+    900 11px / 1 "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+}
+.stage-team-empty > .stage-team-order {
+  background: #d8c7a6;
+}
+.stage-team-remove {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  color: #a9793a;
+  font-size: 16px;
+  line-height: 1;
+}
+.stage-team-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 6px;
+  max-height: 148px;
+  margin: 0;
+  padding: 2px;
+  overflow-y: auto;
+  list-style: none;
+}
+.stage-team-roster button {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 66px;
+  padding: 4px 2px;
+  border: 1px solid #e6d5b5;
+  border-radius: 10px;
+  background: #fff;
+  color: #5c3b12;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.stage-team-roster button[aria-pressed="true"] {
+  border: 2px solid #e2a44a;
+  background: #fff3d8;
+}
+.stage-team-roster button:disabled {
+  opacity: 0.45;
+}
+.stage-team-roster .idle-cat-portrait {
+  width: 36px;
+  height: 36px;
+}
+.stage-team button:focus-visible {
+  outline: 3px solid #237bd2;
+  outline-offset: 2px;
+}
