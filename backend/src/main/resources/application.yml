@@ -236,22 +236,22 @@ raising:
         smg: { damage-percent: 50, fire-ms: 80, power: 0, bullet-speed: 700 }
         shotgun: { damage-percent: 220, fire-ms: 700, power: 2, bullet-speed: 640 }
         rifle: { damage-percent: 170, fire-ms: 900, power: 3, bullet-speed: 1100 }
-      # 등급 밸런스 (decisions.md 646번, 461번 고침): 한 대상에 대한 실효 초당 피해(탄 강화 1+0.4×power, 리볼버 치명타·재장전 포함)가 한 등급에
-      # 약 1.18배씩 오른다. F 385 → E 453 → D 537 → C 638 → B 750 → A 884 → S 1,039 → SS 1,222 → SSS 1,442 → SR 1,711 → UR 2,011 → LR 2,377.
-      # 전에는 한 등급에 1.75배(461번)라 LR 총이 F의 수백 배였다. 리볼버 250 → 200, 소총 330 → 170으로 낮춰 등급 덤이 0 아래로 내려가지 않게 했다
+      # 등급 밸런스 (decisions.md 660번, 646번 고침): 한 대상에 대한 실효 초당 피해(탄 강화 1+0.4×power, 리볼버 치명타·재장전 포함)를 F 권총에 견준
+      # 비율로 정한다. F 500을 기준으로 E 700 → D 1,000 → C 1,400 → B 1,800 → A 2,500 → S 3,500 → SS 5,000 → SSS 7,500 → SR 10,000 → UR 12,500
+      # → LR 15,000 (F의 30배). 실제 수치로는 F 385 → LR 11,538이다. 646번에는 한 등급 1.18배(LR이 F의 6배)라 등급 차이가 거의 안 느껴졌다
       weapon-grades:
         F: { kind: pistol, damage-percent: 0, fire-percent: 0 }
-        E: { kind: pistol, damage-percent: 6, fire-percent: 10 }
-        D: { kind: revolver, damage-percent: 1, fire-percent: 15 }
-        C: { kind: smg, damage-percent: 2, fire-percent: 0 }
-        B: { kind: smg, damage-percent: 2, fire-percent: 15 }
-        A: { kind: shotgun, damage-percent: 25, fire-percent: 20 }
-        S: { kind: rifle, damage-percent: 0, fire-percent: 60 }
-        SS: { kind: rifle, damage-percent: 18, fire-percent: 60 }
-        SSS: { kind: rifle, damage-percent: 39, fire-percent: 60 }
-        SR: { kind: rifle, damage-percent: 65, fire-percent: 60 }
-        UR: { kind: rifle, damage-percent: 94, fire-percent: 60 }
-        LR: { kind: rifle, damage-percent: 129, fire-percent: 60 }
+        E: { kind: pistol, damage-percent: 26, fire-percent: 10 }
+        D: { kind: revolver, damage-percent: 45, fire-percent: 15 }
+        C: { kind: smg, damage-percent: 72, fire-percent: 0 }
+        B: { kind: smg, damage-percent: 88, fire-percent: 15 }
+        A: { kind: shotgun, damage-percent: 172, fire-percent: 20 }
+        S: { kind: rifle, damage-percent: 159, fire-percent: 60 }
+        SS: { kind: rifle, damage-percent: 270, fire-percent: 60 }
+        SSS: { kind: rifle, damage-percent: 456, fire-percent: 60 }
+        SR: { kind: rifle, damage-percent: 641, fire-percent: 60 }
+        UR: { kind: rifle, damage-percent: 826, fire-percent: 60 }
+        LR: { kind: rifle, damage-percent: 1011, fire-percent: 60 }
       # 무기 뽑기 (decisions.md 366번): 다이아로 뽑는다(526번). 등급 가중치로 등급을, 종류는 등급에 따라 정한다. 같은 무기(종류+등급)가 merge-count개
       # 모이면 합쳐 한 등급 올린다
       weapon-gacha:
