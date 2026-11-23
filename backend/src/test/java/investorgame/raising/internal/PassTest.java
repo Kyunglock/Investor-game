@@ -112,7 +112,7 @@ class PassTest {
     assertThat(rewards.passView(c).missions())
         .extracting(m -> m.code())
         .containsExactly(
-            "attend", "upgrade", "skill", "wall", "boss", "draw", "merge", "fish", "forever");
+            "attend", "upgrade", "stage", "wall", "boss", "draw", "merge", "fish", "forever");
     assertThat(rewards.passView(c).missions())
         .extracting(m -> m.period())
         .containsExactly("day", "day", "day", "week", "week", "week", "week", "week", "week");
@@ -215,12 +215,13 @@ class PassTest {
   }
 
   @Test
-  void 환생_영구_강화_스킬도_미션이다() {
+  void 환생_영구_강화_스테이지도_미션이다() {
     CompanyState c = opened();
     idle.beat(c, "one", 0, "start");
     assertThat(mission(c, "fish").title()).isEqualTo("환생으로 생선 100마리 얻기");
     assertThat(mission(c, "forever").title()).isEqualTo("영구 강화 5번");
-    assertThat(mission(c, "skill").title()).isEqualTo("스킬 20번 사용");
+    assertThat(mission(c, "stage").title()).isEqualTo("매도벽 돌파 스테이지 1판 하기");
+    assertThat(mission(c, "stage").points()).isEqualTo(100);
     // 환생으로 얻은 생선: 광고 3배를 뺀 바탕 수로 센다. 501번째 벽은 100 × 120% = 120마리 (644번; 전에는 301번째 벽이 123마리).
     c.idle.wall = 501;
     idle.rebirth(c, true);
@@ -233,12 +234,6 @@ class PassTest {
     }
     assertThat(mission(c, "forever").count()).isEqualTo(5);
     assertThat(mission(c, "forever").ready()).isEqualTo(150);
-    // 스킬은 쓴 횟수.
-    c.idle.wall = 101;
-    c.idle.best = 100;
-    c.idle.bossCleared = 100;
-    idle.useActive(c, "barrage");
-    assertThat(mission(c, "skill").count()).isEqualTo(1);
     rewards.claimPassMission(c, null);
     assertThat(c.passExp).isEqualTo(150 + 150);
   }

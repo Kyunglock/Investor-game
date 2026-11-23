@@ -1,21 +1,18 @@
 import type { Company } from '@web/api/client'
-import { type CatCode, type UniqueActiveCode, useRaisingStore } from '@web/features/raising/store'
+import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useRef, useState } from 'react'
-import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { ACTIVE_HINTS, ACTIVE_NOTES } from '../mental/actives'
-import { heroOf } from '../mental/hero'
-import { ActiveBadge, ActiveTime } from './ActiveBadge'
+import { ACTIVE_HINTS, ACTIVE_NOTES, SKILL_CODES, SKILL_NAMES } from '../mental/actives'
+import { ActiveBadge } from './ActiveBadge'
 import { CatPortrait, catTrait } from './CatPortrait'
 import { CatRosterGrid } from './CatRosterGrid'
 import { CompanionSkills } from './CompanionSkills'
 import { sortCats } from './catGrade'
 
-type Active = NonNullable<NonNullable<Company['idle']>['actives']>[number]
-
-const seconds = (value: number) => `${Math.round(value).toLocaleString()}초`
-
-/** 장착 칸에서도 해제할 수 있어, 목록을 오가며 빈자리를 찾지 않아도 된다. */
+/**
+ * 스킬 탭: 사장냥의 스킬은 매도벽 돌파 스테이지의 레벨업 카드로 쓴다 (667번). 아래 고양이 목록에서 고양이를 누르면 그 고양이의 상세 보기로
+ * 넘어간다 (668번): 목록은 가리고 그 고양이의 정보와 고유 스킬만 보이며, 위의 "스킬 목록" 단추로 돌아온다.
+ */
 export function IdleSkills({
   company,
   picked,
@@ -36,28 +33,33 @@ export function IdleSkills({
     requestAnimationFrame(() => panel.current?.scrollIntoView({ block: 'start' }))
     sfx.tap()
   }
-  const boss = heroOf(company).name
-  const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
-  const unique = (company.idle?.actives ?? []).filter((active) => !active.ad)
-  const slots = company.idle?.activeSlots ?? 0
-  const equipped = unique.filter((active) => active.equipped)
-  const full = equipped.length >= slots
-  const toggle = (active: Active) => {
-    sfx.tap()
-    haptic.light()
-    void useRaisingStore.getState().equipActive(active.code as UniqueActiveCode, !active.equipped)
-  }
   return (
     <div ref={panel} className="boss-skills" data-testid="skills">
       {cat ? (
-        <section className="companion-skills" aria-label={`${cat.name} 고유 스킬`}>
+        <section
+          className="companion-skills"
+          aria-label={`${cat.name} 고유 스킬`}
+          data-testid="skill-cat-detail"
+          data-code={cat.code}
+        >
+          <button
+            type="button"
+            className="skill-back"
+            data-testid="skill-back"
+            onClick={() => pick(null)}
+          >
+            <span aria-hidden="true">‹</span> 스킬 목록
+          </button>
           <header>
             <CatPortrait code={cat.code} grade={cat.grade} />
             <div>
-              <b>
-                {cat.name} · {cat.grade} · {cat.level > 0 ? `Lv.${cat.level}` : '미보유'}
-              </b>
+              <b>{cat.name}</b>
+              <span className="skill-cat-chips">
+                <i>{cat.grade}등급</i>
+                <i>{cat.level > 0 ? `Lv.${cat.level}` : '미보유'}</i>
+                {cat.fielded && <i className="is-fielded">출전 중</i>}
+              </span>
               <p>
                 무기 공격력의 {cat.damagePercent}% · {catTrait(cat)}
               </p>
@@ -67,125 +69,77 @@ export function IdleSkills({
         </section>
       ) : (
         <>
-          <section className="boss-skill-loadout" aria-label="장착 중인 스킬">
+          <section
+            className="boss-skill-loadout"
+            aria-label="스테이지 레벨업 카드"
+            data-testid="skill-level"
+          >
             <div className="boss-skill-header">
-              <b>장착 중</b>
-              <span role="status" aria-label={`${slots}칸 중 ${equipped.length}칸 장착`}>
-                {equipped.length} / {slots}
-              </span>
+              <b>스테이지 레벨업 카드</b>
+              <span>{SKILL_CODES.length + 1}종</span>
             </div>
-            <ul className="boss-skill-slots" aria-label="장착 칸">
-              {Array.from({ length: slots }, (_, i) => equipped[i] ?? null).map((active, i) => (
-                <li
-                  // biome-ignore lint/suspicious/noArrayIndexKey: 장착 칸은 자리 번호가 곧 열쇠다.
-                  key={i}
-                  className={active ? 'is-filled' : ''}
-                  data-testid="skill-slot"
-                  data-code={active?.code}
-                >
-                  {active ? (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      aria-label={`${active.name} 해제`}
-                      onClick={() => toggle(active)}
-                    >
-                      <span className="boss-skill-slot-icon">
-                        <ActiveBadge code={active.code} />
-                      </span>
-                      <span className="boss-skill-slot-name">{active.name}</span>
-                      <span className="boss-skill-slot-remove" aria-hidden="true">
-                        ×
-                      </span>
-                    </button>
-                  ) : (
-                    <small>빈 칸</small>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p className="boss-skill-help" id="boss-skill-help">
-              {full
-                ? '다른 스킬을 쓰려면 위에서 하나를 눌러 해제하세요.'
-                : '아래에서 스킬을 골라 빈 칸에 장착하세요.'}
+            <p className="boss-skill-help">
+              사장냥의 스킬은 매도벽 돌파 스테이지에서 써요. 스테이지에서 매도벽을 부숴 레벨이
+              오르면 카드 석 장 가운데 한 장을 고르고, 아래 카드가 섞여 나와요. 고른 카드는 그
+              판에서만 이어져요.
             </p>
           </section>
-          <div className="boss-skill-header">
-            <b>사장냥 고유 스킬</b>
-            <span>{unique.length}종</span>
-          </div>
-          <ul className="boss-skill-list" aria-label="고유 스킬">
-            {unique.map((active) => (
-              <li
-                key={active.code}
-                className={active.equipped ? 'is-equipped' : ''}
-                data-testid="unique-skill"
-                data-code={active.code}
-                data-equipped={active.equipped}
-              >
+          <ul className="boss-skill-list" aria-label="레벨업 카드">
+            {SKILL_CODES.map((code) => (
+              <li key={code} data-testid="unique-skill" data-code={code}>
                 <div className="boss-skill-main">
                   <span
                     className="boss-skill-art"
                     role="img"
-                    aria-label={`${active.name} · ${ACTIVE_NOTES[active.code]}`}
+                    aria-label={`${SKILL_NAMES[code]} · ${ACTIVE_NOTES[code]}`}
                   >
-                    <ActiveBadge code={active.code} />
+                    <ActiveBadge code={code} />
                   </span>
                   <div className="boss-skill-info">
                     <div className="boss-skill-title">
-                      <b>{active.name}</b>
-                      {active.equipped && <span className="boss-skill-status">장착 중</span>}
+                      <b>{SKILL_NAMES[code]}</b>
                     </div>
-                    <p>{ACTIVE_HINTS[active.code]}</p>
+                    <p>
+                      {ACTIVE_HINTS[code]} · {code === 'stopLoss' ? '바로 발동' : '1분 동안'}
+                    </p>
                   </div>
-                  <button
-                    type="button"
-                    className="boss-skill-equip"
-                    data-testid="skill-equip"
-                    aria-pressed={active.equipped}
-                    aria-label={`${active.name} ${active.equipped ? '해제' : full ? '장착 칸 없음' : '장착'}`}
-                    aria-describedby={!active.equipped && full ? 'boss-skill-help' : undefined}
-                    disabled={busy || (!active.equipped && full)}
-                    onClick={() => toggle(active)}
-                  >
-                    {active.equipped ? '해제' : '장착'}
-                  </button>
                 </div>
                 <details className="boss-skill-details">
-                  <summary aria-label={`${active.name} 설명`}>
+                  <summary aria-label={`${SKILL_NAMES[code]} 설명`}>
                     효과 자세히{' '}
                     <span className="boss-skill-chevron" aria-hidden="true">
                       ⌄
                     </span>
                   </summary>
-                  <p>{ACTIVE_NOTES[active.code]}</p>
-                  <span
-                    className="boss-skill-times"
-                    role="img"
-                    aria-label={`${active.seconds > 0 ? `지속 ${seconds(active.seconds)}` : '바로 발동'} · 재사용 대기 ${seconds(active.cooldown)}`}
-                  >
-                    <span>
-                      {active.seconds > 0 ? '지속' : '즉시'} <ActiveTime seconds={active.seconds} />
-                    </span>
-                    <span>
-                      재사용 <ActiveTime seconds={active.cooldown} cooldown />
-                    </span>
-                  </span>
+                  <p>{ACTIVE_NOTES[code]}</p>
                 </details>
               </li>
             ))}
+            <li data-testid="unique-skill" data-code="cat-up">
+              <div className="boss-skill-main">
+                <span className="boss-skill-art boss-skill-magic" aria-hidden="true">
+                  ✦
+                </span>
+                <div className="boss-skill-info">
+                  <div className="boss-skill-title">
+                    <b>고양이 마법 강화</b>
+                  </div>
+                  <p>함께 싸우는 고양이 모두가 마법을 쓰고 · 배운 마법 레벨 +1</p>
+                </div>
+              </div>
+            </li>
           </ul>
         </>
       )}
-      <button
-        type="button"
-        className="skill-boss-picker"
-        aria-pressed={!cat}
-        onClick={() => pick(null)}
-      >
-        <CatPortrait /> {boss} 스킬
-      </button>
-      <CatRosterGrid cats={cats} picked={cat?.code ?? null} onPick={pick} preview />
+      {!cat && (
+        <>
+          <div className="boss-skill-header">
+            <b>고양이 고유 스킬</b>
+            <span>눌러서 상세 보기</span>
+          </div>
+          <CatRosterGrid cats={cats} picked={null} onPick={pick} preview />
+        </>
+      )}
       {error && <p role="alert">{error}</p>}
     </div>
   )

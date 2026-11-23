@@ -257,7 +257,14 @@ export const company = {
         points: 50,
         done: true,
       },
-      { code: 'skill', title: '스킬 20번 사용', period: 'day', count: 7, target: 20, points: 100 },
+      {
+        code: 'stage',
+        title: '매도벽 돌파 스테이지 1판 하기',
+        period: 'day',
+        count: 0,
+        target: 1,
+        points: 100,
+      },
       {
         code: 'wall',
         title: '매도벽 최고 기록 30개 돌파',

@@ -478,14 +478,6 @@ class CompanyController {
 
   record ActiveRequest(@NotBlank String code, Boolean ad) {}
 
-  /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). */
-  @PostMapping("/idle/active/equip")
-  CompanyView equipActive(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody ActiveEquipRequest request) {
-    return companies.equipActive(cookies.requirePlayer(token), request.code(), request.equipped());
-  }
-
   @PostMapping("/idle/tutorial")
   CompanyView tutorial(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -494,8 +486,6 @@ class CompanyController {
   }
 
   record TutorialRequest(@NotBlank String action, int step) {}
-
-  record ActiveEquipRequest(@NotBlank String code, @NotNull Boolean equipped) {}
 
   /** 환생한다 (decisions.md 571번): 매도벽 1로 돌아가고 생선을 받는다. */
   @PostMapping("/rebirth")

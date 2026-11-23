@@ -393,7 +393,7 @@ function SideGames({ company, onMental }: { company: Company; onMental: () => vo
  * 매도벽 돌파 스테이지 선택 (#698): 주 게임. 1-1부터 차례로 열리고 챕터 끝은 보스다. 스테이지 번호가 매도벽의 세기라 뒤로 갈수록 세진다. 처음 깨면
  * 자본을 받는다. 다이아는 주지 않는다 (526번).
  */
-function AssaultSelect({ company }: { company: Company }) {
+export function AssaultSelect({ company }: { company: Company }) {
   const assaults = company.assaults
   const per = assaults?.perChapter ?? 10
   const last = assaults?.last ?? per

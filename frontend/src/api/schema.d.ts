@@ -268,34 +268,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 액티브 스킬을 쓴다 (decisions.md 503·587·588번)
-         * @description 고유 스킬은 매수세례(barrage)·불장(rally)·방어선 구축(fortify)과 상한가(limitUp)·손절(stopLoss)·물타기(averaging, 591번)다 (587번): 장착한 것만 쓸 수 있다. 쓰면 재사용 대기 시간이 돈다. 대기 시간은
-         *     전투가 돌아가는 동안만 흐른다. 없는 스킬이거나 장착하지 않았거나 대기 중이거나 거래 정지 중이면 400.
+         * 광고 스킬을 쓴다 (decisions.md 503·588·667번)
+         * @description 사장냥의 고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 자동 전투에서 없앴다 (667번): 매도벽 돌파 스테이지의 레벨업 카드로만 나오고, 여기로 보내면 400.
+         *     쓰면 재사용 대기 시간이 돈다. 대기 시간은 전투가 돌아가는 동안만 흐른다. 없는 스킬이거나 대기 중이거나 거래 정지 중이면 400.
          *     광고 스킬은 공격속도 3배(boostFire)·공격력 3배(boostDamage)·매수공격 3배(boostBuy)다 (588번): 장착하지 않고, 광고를 본 뒤(ad가 참)에만 쓴다.
          *     ad 없이 광고 스킬을 쓰면 400. 아직 광고를 붙이지 않아 서버는 ad를 그대로 믿는다.
          */
         post: operations["useIdleActive"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/idle/active/equip": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 고유 스킬을 장착하거나 뺀다 (decisions.md 587번)
-         * @description 고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 idle.activeSlots개(셋)까지 장착하고, 장착한 것만 전투에서 쓴다. 이미 그 상태면 그대로 둔다.
-         *     재사용 대기 시간은 뺐다 끼워도 그대로 흐른다. 광고 스킬이거나 없는 스킬이거나 장착 칸이 꽉 찼으면 400.
-         */
-        post: operations["equipIdleActive"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1144,7 +1123,7 @@ export interface components {
                 }[];
                 /** @description 포인트를 주는 일일·주간 퀘스트와 진행도 (570·643번). 이번 주기(오늘·이번 주)에 센 수가 target에 닿으면 points를 한 번 받고, 주기가 바뀌면 처음부터 센다. 오늘의 퀘스트가 먼저 온다 */
                 missions: {
-                    /** @description wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·skill(액티브 스킬 사용) */
+                    /** @description wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·stage(매도벽 돌파 스테이지 한 판) */
                     code: string;
                     /** @description 화면에 적는 글. "강화 20번"처럼 target이 들어 있다 */
                     title: string;
@@ -1785,10 +1764,10 @@ export interface components {
                     /** @description 처음 얻은 고양이 */
                     isNew: boolean;
                 }[];
-                /** @description 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다. 앞의 여섯은 고유 스킬(587·591번), 뒤의 셋은 광고 스킬(588번)이다 */
+                /** @description 광고 스킬 셋 (decisions.md 588번). 광고를 본 뒤에 쓴다. 시간은 화면에서 흐르는 실제 초다. 사장냥의 고유 스킬 여섯은 자동 전투에서 없앴다 (667번) */
                 actives?: {
                     /** @enum {string} */
-                    code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "boostFire" | "boostDamage" | "boostBuy";
+                    code: "boostFire" | "boostDamage" | "boostBuy";
                     name: string;
                     /** @description 한 번 쓰고 다시 쓸 때까지(초) */
                     cooldown: number;
@@ -1796,15 +1775,11 @@ export interface components {
                     seconds: number;
                     /** @description 다시 쓸 수 있을 때까지 남은 시간(초). 0이면 쓸 수 있다 */
                     readyIn: number;
-                    /** @description 효과가 남은 시간(초 */
+                    /** @description 효과가 남은 시간(초) */
                     left: number;
-                    /** @description 장착한 고유 스킬이다 (587번). 장착한 것만 쓸 수 있다. 광고 스킬은 늘 거짓 */
-                    equipped: boolean;
-                    /** @description 광고를 보면 쓰는 스킬이다 (588번). 장착하지 않는다 */
+                    /** @description 광고를 보면 쓰는 스킬이다 (588번). 늘 참 */
                     ad: boolean;
                 }[];
-                /** @description 고유 스킬 장착 칸 수 (587번 */
-                activeSlots?: number;
                 /** @description 스킬 열여섯(물·메테오·번개·충차·얼음·바람·불·독·빛·어둠·모래·별·우박·꽃비·폭탄·극광의 밤). 스킬은 고양이의 고유 능력이다 (decisions.md 501번) */
                 skills: {
                     code: string;
@@ -2389,7 +2364,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "boostFire" | "boostDamage" | "boostBuy";
+                    code: "boostFire" | "boostDamage" | "boostBuy";
                     /** @description 광고를 끝까지 봤다 (588번). 광고 스킬에만 쓴다 */
                     ad?: boolean;
                 };
@@ -2397,38 +2372,6 @@ export interface operations {
         };
         responses: {
             /** @description 쓴 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    equipIdleActive: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @enum {string} */
-                    code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging";
-                    /** @description 참이면 장착하고 거짓이면 뺀다 */
-                    equipped: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description 바꾼 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

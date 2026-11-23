@@ -99,7 +99,6 @@ try {
       return route.fulfill({ json: company })
     })
 
-    company.idle.activeSlots = 3
     company.idle.actives = [
       ['boostFire', '공격속도 3배'],
       ['boostDamage', '공격력 3배'],
@@ -112,7 +111,6 @@ try {
       seconds: 180,
       readyIn: 0,
       left: 0,
-      equipped: false,
     }))
     await page.goto(process.env.APP_URL ?? 'http://localhost:5186/app/')
     await page.locator('[data-testid=idle-canvas] canvas').waitFor()

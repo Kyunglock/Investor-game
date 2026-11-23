@@ -85,23 +85,18 @@ class IdleEngine {
   private static final String[] ACTIVE_NAMES = {
     "매수세례", "불장", "방어선 구축", "상한가", "손절", "물타기", "공격속도 3배", "공격력 3배", "매수공격 3배"
   };
+
   private static final double[] ACTIVE_COOLDOWN = {60, 90, 90, 90, 90, 90, 270, 270, 270};
   private static final double[] ACTIVE_SECONDS = {6, 10, 6, 12, 0, 15, 270, 270, 270};
 
   /** The first UNIQUE actives are 고유 스킬, the rest are 광고 스킬. */
   private static final int UNIQUE = 6;
 
-  /** The 고유 스킬 a company starts with equipped (587): the first three. */
-  private static final int STARTING = 3;
-
   /** 손절 (591번): 매수벽을 가득 찬 채로 절반 버렸을 때의 한 방이 매수 주문 이만큼이다. Matches the app's mental/actives.ts. */
   static final double STOP_LOSS_ORDERS = 240;
 
   /** 물타기 (591번): 매수 주문이 가장 세질 때의 배수. Matches the app's mental/actives.ts. */
   static final double AVERAGING_MAX = 3;
-
-  /** 고유 스킬 장착 칸 (587번). */
-  static final int ACTIVE_SLOTS = 3;
 
   /** 광고 스킬의 배수 (588번). Matches the app's mental/actives.ts. */
   static final double BOOST = 3;
@@ -938,8 +933,9 @@ class IdleEngine {
     if (!skillsUnlocked(c)) throw new InvalidRequestException("100 매도벽 돌파 시 해금돼요");
     int at = ACTIVES.indexOf(code);
     if (at < 0) throw new InvalidRequestException("없는 스킬이다: " + code);
-    if (at < UNIQUE && !equipped(s).contains(code)) {
-      throw new InvalidRequestException("장착하지 않은 스킬이다: " + ACTIVE_NAMES[at]);
+    // 사장냥의 고유 스킬은 자동 전투에서 없앴다 (667번): 매도벽 돌파 스테이지의 레벨업 카드로만 나온다.
+    if (at < UNIQUE) {
+      throw new InvalidRequestException("스테이지의 레벨업 카드로 쓰는 스킬이다: " + ACTIVE_NAMES[at]);
     }
     if (at >= UNIQUE && !ad) throw new InvalidRequestException("광고를 본 뒤에 쓸 수 있다");
     if (at >= UNIQUE
@@ -952,42 +948,7 @@ class IdleEngine {
     }
     if (s.circuitSeconds > 0) throw new InvalidRequestException("거래 정지 중에는 쓸 수 없다");
     s.activeReady.put(code, s.activeSeconds + ACTIVE_COOLDOWN[at]);
-    engine.pass.progress(c, "skill", 1, todayDate());
-    if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
-    if (at == 0) s.hitCredits[BARRAGE] = BARRAGE_SHOTS;
-    if (at == 1) s.rallyUntil = s.activeSeconds + ACTIVE_SECONDS[at];
-    if ("stopLoss".equals(code)) s.hitCredits[STOP_LOSS] = 1;
-    // The timed ones after the first three keep their end in activeUntil: the screen picks the
-    // effect up again from it when it is reopened.
-    if (at >= STARTING && ACTIVE_SECONDS[at] > 0) {
-      s.activeUntil.put(code, s.activeSeconds + ACTIVE_SECONDS[at]);
-    }
-  }
-
-  /** 장착한 고유 스킬 (587번). 장착이 생기기 전의 저장은 셋을 모두 장착한 것으로 본다. */
-  private static List<String> equipped(CompanyState.Idle s) {
-    if (s.activeSlots == null) s.activeSlots = new ArrayList<>(ACTIVES.subList(0, STARTING));
-    return s.activeSlots;
-  }
-
-  /**
-   * 고유 스킬을 장착하거나 뺀다 (587번). ACTIVE_SLOTS개까지 장착한다. 광고 스킬이거나 없는 스킬이거나 칸이 꽉 찼으면 400. 재사용 대기 시간은 뺐다 끼워도
-   * 그대로 흐른다.
-   */
-  void equipActive(CompanyState c, String code, boolean equip) {
-    CompanyState.Idle s = state(c);
-    if (!skillsUnlocked(c)) throw new InvalidRequestException("100 매도벽 돌파 시 해금돼요");
-    int at = ACTIVES.indexOf(code);
-    if (at < 0 || at >= UNIQUE) throw new InvalidRequestException("장착할 수 없는 스킬이다: " + code);
-    List<String> slots = equipped(s);
-    if (!equip) {
-      slots.remove(code);
-    } else if (!slots.contains(code)) {
-      if (slots.size() >= ACTIVE_SLOTS) {
-        throw new InvalidRequestException("장착 칸이 꽉 찼다: " + ACTIVE_SLOTS + "개까지 장착한다");
-      }
-      slots.add(code);
-    }
+    s.activeUntil.put(code, s.activeSeconds + ACTIVE_SECONDS[at]);
   }
 
   boolean skillsUnlocked(CompanyState c) {
@@ -1068,7 +1029,7 @@ class IdleEngine {
     return until != null && start < until + BOOST_GRACE;
   }
 
-  /** Seconds of effect left, in game seconds: the rally and the ad skills. Zero for the others. */
+  /** Seconds of effect left, in game seconds. Zero for the instant ones. */
   private static double effectLeft(CompanyState.Idle s, String code) {
     double until = "rally".equals(code) ? s.rallyUntil : s.activeUntil.getOrDefault(code, 0.0);
     return Math.max(0, until - s.activeSeconds);
@@ -1753,7 +1714,8 @@ class IdleEngine {
             ? null
             : new CompanyView.BossReward(
                 s.bossCleared, BOSS_CLEAR_DIAMONDS, CompanyView.money(s.bossRewardMoney)),
-        java.util.stream.IntStream.range(0, ACTIVES.size())
+        // 광고 스킬 셋만 준다 (667번): 사장냥의 고유 스킬은 자동 전투에서 없앴다.
+        java.util.stream.IntStream.range(UNIQUE, ACTIVES.size())
             .mapToObj(
                 i ->
                     new CompanyView.IdleActive(
@@ -1766,10 +1728,8 @@ class IdleEngine {
                                 s.activeReady.getOrDefault(ACTIVES.get(i), 0.0) - s.activeSeconds)
                             / SPEED,
                         effectLeft(s, ACTIVES.get(i)) / SPEED,
-                        i < UNIQUE && equipped(s).contains(ACTIVES.get(i)),
-                        i >= UNIQUE))
+                        true))
             .toList(),
-        ACTIVE_SLOTS,
         (s.lastDraws == null ? List.<CompanyState.Pulled>of() : s.lastDraws)
             .stream()
                 .filter(d -> CATS.contains(d.kind))

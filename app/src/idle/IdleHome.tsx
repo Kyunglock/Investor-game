@@ -9,12 +9,14 @@ import { preloadRewardedAd } from '../app/ads'
 import { rate, readOfflineSeen, shouldShowOffline } from '../app/income'
 import { meetingReady } from '../app/meeting'
 import { Sheet } from '../app/Sheet'
+import { AssaultSelect } from '../app/toy-city/ToyCityHome'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 import { stageBadge, useAppUi } from '../app/ui'
 import { useCountUp } from '../app/useCountUp'
 import rebirthIcon from '../assets/rebirth.png'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { stageLabel } from '../mental/advance'
 import { mergeable } from '../mental/armory'
 import { idleBuyOrderDamage } from '../mental/buyWall'
 import { attackOf, heroOf } from '../mental/hero'
@@ -70,6 +72,13 @@ const menus: { key: Exclude<Menu, 'rebirth'>; label: string }[] = (
 type Upgrade = NonNullable<Company['battleUpgrades']>[number]
 
 /** 강화 효과(%)는 한 단계 0.2%라 소수가 있다 (648번): 소수 첫째 자리까지, 끝의 0은 뺀다. */
+/** 스테이지 단추에 적는, 다음에 깰 스테이지 (667번). */
+function stageName(company: Company) {
+  const a = company.assaults
+  const per = a?.perChapter ?? 10
+  return stageLabel(Math.min((a?.best ?? 0) + 1, a?.last ?? per), per)
+}
+
 function percentText(percent: number) {
   return Number(percent.toFixed(1)).toLocaleString('ko-KR')
 }
@@ -130,13 +139,14 @@ export function IdleHome({
   onBattle: () => void
   office: ReactNode
 }) {
-  const [skillUse, setSkillUse] = useState(false)
   const [replay, setReplay] = useState<number | null>(null)
   const [inVault, setInVault] = useState(false)
   const [ownMenu, setMenu] = useState<Menu>('battle')
   // 전투에서 "무기 바꾸기"로 오면(Windows) 고양이·무기 탭이 사장냥의 장비 목록으로 열린다 (530·560번). 닫거나 다른 데로 가면 그 요청을 지운다.
   const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
-  const menu = weaponsAsked ? 'cats' : ownMenu
+  // 매도벽 돌파 스테이지 (667번): 오른쪽의 스테이지 단추나 한 판을 마친 뒤(Windows)에 스테이지 고르기가 열린다.
+  const stageAsked = useAppUi((s) => s.sheet?.kind === 'toy' && s.sheet.panel === 'assault')
+  const menu: Menu | 'stage' = weaponsAsked ? 'cats' : stageAsked ? 'stage' : ownMenu
   const rebirthButton = useRef<HTMLButtonElement>(null)
   const previousMenu = useRef(menu)
   useEffect(() => {
@@ -159,7 +169,7 @@ export function IdleHome({
   const [shopKind, setShopKind] = useState<'cat' | 'weapon'>('cat')
   const go = (next: Menu) => {
     if (tutorialMenuLocked(company, next)) return
-    if (weaponsAsked) useAppUi.getState().closeSheet()
+    if (weaponsAsked || stageAsked) useAppUi.getState().closeSheet()
     setMenu(next)
   }
   const idle = company.idle
@@ -186,7 +196,7 @@ export function IdleHome({
     const previous = useAppUi.getState().modalBack
     useAppUi.getState().setModalBack(() => {
       if (document.body.dataset.tutorialDragLock) return
-      if (useAppUi.getState().sheet?.kind === 'weapons') useAppUi.getState().closeSheet()
+      if (useAppUi.getState().sheet) useAppUi.getState().closeSheet()
       setMenu('battle')
     })
     return () => useAppUi.getState().setModalBack(previous)
@@ -269,8 +279,6 @@ export function IdleHome({
       replay={replay}
       onReplay={setReplay}
       menu={menu}
-      skillUse={skillUse}
-      onSkillUse={() => setSkillUse(true)}
       onGo={(next, openGear) => {
         if (next === 'cats') {
           setWearer('night')
@@ -383,11 +391,25 @@ export function IdleHome({
             />
           )}
           {idle?.onboarding?.skillsUnlocked !== false && (
-            <IdleActives
-              company={company}
-              connected={connected}
-              autoPaused={inVault || elsewhere}
-            />
+            <IdleActives company={company} connected={connected} />
+          )}
+          {/* 매도벽 돌파 스테이지 (667번): 사장냥의 스킬을 레벨업 카드로 쓰는 별도 전투의 입구. 첫 출근 안내가 끝난 뒤에 선다. */}
+          {(idle?.onboarding?.step ?? 8) >= 8 && (
+            <button
+              type="button"
+              className="idle-stage-shortcut"
+              data-testid="stage-shortcut"
+              aria-label="매도벽 돌파 스테이지"
+              title="매도벽 돌파 스테이지"
+              onClick={() => {
+                sfx.tap()
+                setMenu('battle')
+                useAppUi.getState().openSheet({ kind: 'toy', panel: 'assault' })
+              }}
+            >
+              <b className="idle-stage-word">STAGE</b>
+              <small className="idle-stage-next">{stageName(company)}</small>
+            </button>
           )}
           {menu === 'battle' && tutorial()}
           {/* 전투 화면에서 고양이를 꾹 누르면 그 고양이의 정보가 뜬다 (605번). */}
@@ -413,7 +435,13 @@ export function IdleHome({
       <PowerSaveScreen company={company} />
       {menu !== 'battle' && menu !== 'company' && (
         <Sheet
-          title={menu === 'rebirth' ? '환생' : menus.find((m) => m.key === menu)?.label}
+          title={
+            menu === 'rebirth'
+              ? '환생'
+              : menu === 'stage'
+                ? '매도벽 돌파 스테이지'
+                : menus.find((m) => m.key === menu)?.label
+          }
           onClose={() => go('battle')}
           testId="idle-menu"
           className={`idle-sheet ${menu === 'cats' ? 'loadout-sheet' : ''}`}
@@ -421,6 +449,15 @@ export function IdleHome({
         >
           {tutorial()}
           {menu === 'rebirth' && <IdleRebirth company={company} />}
+          {menu === 'stage' && (
+            <div data-testid="stage-select">
+              <p className="idle-stage-note">
+                한 판씩 깨는 전투예요. 매도벽을 부숴 레벨이 오를 때마다 카드 석 장 가운데 한 장을
+                골라요. 사장냥의 스킬과 고양이 마법 강화가 카드로 나와요.
+              </p>
+              <AssaultSelect company={company} />
+            </div>
+          )}
           {menu === 'growth' && <IdleGrowth company={company} />}
           {menu === 'cats' && (
             <IdleCats

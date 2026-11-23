@@ -501,8 +501,12 @@ class DefaultCompanyService implements CompanyService {
   @Override
   @Transactional
   public CompanyView reportAssault(UUID sessionId, int stage, boolean cleared, int stars) {
+    // 매도벽 돌파 스테이지를 되살렸다 (667번): 레벨업 카드로 사장냥의 스킬을 쓰는 별도 전투다.
     CompanyRepository.Row row = lockActive(sessionId);
-    throw new InvalidRequestException("매도벽 돌파는 자동 전투로 변경되었습니다");
+    engine.mental.reportAssault(row.state(), stage, cleared, stars);
+    engine.pass.progress(row.state(), "stage", 1, idle.todayDate());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   @Override
@@ -673,15 +677,6 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView tutorial(UUID sessionId, String action, int step) {
     CompanyRepository.Row row = lockActive(sessionId);
     idle.tutorial(row.state(), action, step);
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
-  public CompanyView equipActive(UUID sessionId, String code, boolean equipped) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    idle.equipActive(row.state(), code, equipped);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

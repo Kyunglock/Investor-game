@@ -240,7 +240,19 @@ async function openVault(browser, company, calls) {
   await page.route(/\/api\/(company|sessions)(\/|$|\?)/, serve(company, calls))
   await page.goto(process.env.APP_URL ?? 'http://localhost:5182/app/', { timeout: 90000 })
   await expect(page.getByTestId('idle-canvas-loading')).toHaveCount(0, { timeout: 30000 })
-  await page.getByTestId('vault-entry').click()
+  // 금고 도전은 스테이지 단추 바로 밑의 동그란 단추다 (667번): 같은 열, 같은 크기, 겹치지 않는다.
+  const entry = page.getByTestId('vault-entry')
+  await expect(entry).toHaveAccessibleName('금고 도전')
+  await expect(entry).toHaveCSS('border-radius', '50%')
+  await expect(page.getByTestId('stage-shortcut')).toHaveCSS('border-radius', '50%')
+  const stage = await page.getByTestId('stage-shortcut').boundingBox()
+  const vault = await entry.boundingBox()
+  assert.ok(stage && vault, 'stage and vault buttons are on screen')
+  assert.ok(Math.abs(stage.x - vault.x) < 1 && stage.width === vault.width, 'same column and size')
+  const gap = vault.y - (stage.y + stage.height)
+  assert.ok(gap >= 0 && gap <= 12, `the vault button is right under the stage button: ${gap}`)
+  await page.screenshot({ path: '/tmp/vault-entry.png' })
+  await entry.click()
   await expect(page.getByTestId('vault-sheet')).toBeVisible()
   return { page, errors }
 }

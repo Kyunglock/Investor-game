@@ -1,15 +1,39 @@
+/* 금고 도전의 입구 (667번): 오른쪽 열, 스테이지 단추 바로 밑의 동그란 단추. */
 .vault-entry {
   position: absolute;
+  grid-row: 1 / 2;
   right: 6px;
-  top: calc(max(4px, env(safe-area-inset-top)) + 49px);
-  z-index: 1;
-  min-height: 42px;
-  padding: 4px 10px;
+  top: calc(var(--idle-actives-top) + var(--idle-active-size) + var(--idle-active-gap));
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
+  padding: 0;
   border: 2px solid #ffdb83;
-  border-radius: 12px;
-  background: linear-gradient(#453d69, #201b37);
+  border-radius: 50%;
+  background: linear-gradient(#5a4f8a, #201b37);
   color: #ffe399;
-  box-shadow: 0 3px 0 #332449;
+  box-shadow:
+    inset 0 2px 0 #ffffff33,
+    0 3px 0 #332449;
+  cursor: pointer;
+}
+.vault-entry-word {
+  font:
+    900 14px / 1.05 "Jua",
+    "Noto Sans KR",
+    sans-serif;
+}
+.vault-entry-sub {
+  font:
+    900 9px / 1 "Noto Sans KR",
+    sans-serif;
+}
+.vault-entry:focus-visible {
+  outline: 3px solid #237bd2;
+  outline-offset: 3px;
 }
 .vault-room {
   display: grid;

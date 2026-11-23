@@ -178,7 +178,7 @@ raising:
       missions:
         - { code: attend, title: "출석하기", period: day, goal: 1, points: 50 }
         - { code: upgrade, title: "강화 {n}번", period: day, goal: 20, points: 50 }
-        - { code: skill, title: "스킬 {n}번 사용", period: day, goal: 20, points: 100 }
+        - { code: stage, title: "매도벽 돌파 스테이지 {n}판 하기", period: day, goal: 1, points: 100 }
         - { code: wall, title: "매도벽 최고 기록 {n}개 돌파", period: week, goal: 30, points: 250 }
         - { code: boss, title: "보스 {n}번 처치", period: week, goal: 1, points: 150 }
         - { code: draw, title: "고양이·무기 뽑기 {n}번", period: week, goal: 20, points: 150 }

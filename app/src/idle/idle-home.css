@@ -2516,27 +2516,6 @@
 }
 
 /* 스킬 자동 사용 (654번): 스킬 열의 크기를 바꾸지 않게 열 왼쪽 옆, 첫 스킬과 같은 높이에 띄운다. */
-.idle-actives .idle-auto-skill {
-  position: absolute;
-  top: calc((var(--idle-active-size) - 26px) / 2);
-  right: calc(100% + 4px);
-  width: 46px;
-  height: 26px;
-  border: 2px solid #9162aa;
-  border-radius: 13px;
-  background: #f6e6ffd9;
-  box-shadow: 0 2px 0 #9162aa;
-  font:
-    900 11px "Noto Sans KR",
-    sans-serif;
-  letter-spacing: 0.02em;
-  color: #9162aa;
-}
-.idle-actives .idle-auto-skill[aria-pressed="true"] {
-  background: linear-gradient(#b27bdb, #7a3fae);
-  color: #fff;
-  border-color: #5d2e86;
-}
 
 /* 지정 자동 강화 (654번). */
 .idle-auto-note {
@@ -2614,28 +2593,129 @@
   border-radius: 12px;
   background: #f8effd;
 }
-.skill-boss-picker,
+/* 스킬 탭의 고양이 상세 보기 (668번): 목록을 가리고 한 마리만 보인다. 위의 단추로 목록에 돌아간다. */
+.companion-skills {
+  display: grid;
+  gap: 10px;
+}
+.skill-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 14px 0 10px;
+  border: 1px solid #d9c2e5;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 2px 0 #d9c2e5;
+  color: #59346c;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.skill-back > span {
+  font-size: 20px;
+  line-height: 1;
+}
+.skill-back:focus-visible {
+  outline: 3px solid #237bd2;
+  outline-offset: 2px;
+}
 .companion-skills > header {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-.skill-boss-picker {
-  justify-self: start;
-}
-.skill-boss-picker .idle-cat-portrait {
-  width: 36px;
-  height: 36px;
-}
-.companion-skills {
-  display: grid;
-  gap: 8px;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e6d6ee;
+  border-radius: 16px;
+  background: linear-gradient(#fbf5ff, #f3e7fb);
 }
 .companion-skills > header .idle-cat-portrait {
-  width: 48px;
-  height: 48px;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+}
+.companion-skills > header b {
+  font-size: 18px;
+  color: #43245a;
+}
+.skill-cat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.skill-cat-chips > i {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #d9c2e5;
+  color: #59346c;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+.skill-cat-chips > .is-fielded {
+  border-color: #2f9e74;
+  background: #e5f7ee;
+  color: #1c6b4c;
 }
 .companion-skills > header p {
-  margin: 3px 0;
+  margin: 6px 0 0;
   font-size: 13px;
+  color: #6b4a80;
+}
+
+/* 매도벽 돌파 스테이지의 입구 (667번): 오른쪽, 전투 통계 단추 아래(예전 고유 스킬 줄의 자리). 동그란 단추이고 바로 밑에 금고 도전(vault-challenges.css)이 선다. */
+.idle-stage-shortcut {
+  position: absolute;
+  grid-row: 1 / 2;
+  right: 6px;
+  top: var(--idle-actives-top);
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
+  padding: 0;
+  border: 2px solid #ffd98a;
+  border-radius: 50%;
+  background: linear-gradient(#ff9b4a, #e8531f 60%, #b93a12);
+  box-shadow:
+    inset 0 2px 0 #ffffff66,
+    0 3px 0 #8a2a0c;
+  color: #fff8e3;
+  cursor: pointer;
+}
+.idle-stage-word {
+  font:
+    900 9px / 1 "Noto Sans KR",
+    sans-serif;
+  letter-spacing: 0.04em;
+}
+.idle-stage-next {
+  font:
+    900 13px / 1.1 "Jua",
+    "Noto Sans KR",
+    sans-serif;
+}
+.idle-stage-shortcut:focus-visible {
+  outline: 3px solid #237bd2;
+  outline-offset: 3px;
+}
+.idle-stage-note {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6a4a2a;
+}
+.boss-skill-magic {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d9c8ff, #7a52d6 70%);
+  color: #fff7c2;
+  font-size: 22px;
 }

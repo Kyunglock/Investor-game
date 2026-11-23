@@ -1,15 +1,37 @@
 /**
- * 액티브 스킬 (decisions.md 503번): 자동 전투에서 눌러서 쓴다. 대기 시간과 받아 주는 피해는 서버(IdleEngine)가 정하고, 여기는 화면의 연출 수치다.
+ * 액티브 스킬 (decisions.md 503번). 대기 시간과 받아 주는 피해는 서버(IdleEngine)가 정하고, 여기는 화면의 연출 수치다.
  * 시간은 전투 초(1.5배속이라 실제 시간의 1.5배)이고 서버의 ACTIVE_SECONDS와 같다.
  *
- * 앞의 여섯은 사장냥의 고유 스킬이다 (587번, 상한가·손절·물타기는 591번): 스킬 탭에서 장착한 것만 전투 화면에 단추가 선다. 뒤의 셋은 광고
- * 스킬이다 (588번): 광고를 보면 쓴다.
+ * 앞의 여섯은 사장냥의 고유 스킬이다 (587·591번): 자동 전투에서는 없앴고, 매도벽 돌파 스테이지에서 레벨이 오를 때 고르는 레벨업 카드로 1분 동안
+ * 켠다 (667번, cards.ts). 뒤의 셋은 광고 스킬이다 (588번): 자동 전투에서 광고를 보면 쓴다.
  */
+/** 레벨업 카드로 켠 고유 스킬이 이어지는 전투 초 (667번): 1분. */
+export const CARD_SECONDS = 60
+
+/** 사장냥의 고유 스킬 여섯 (667번): 스테이지의 레벨업 카드로만 나온다. */
+export const SKILL_CODES = [
+  'barrage',
+  'rally',
+  'fortify',
+  'limitUp',
+  'stopLoss',
+  'averaging',
+] as const
+export type SkillCode = (typeof SKILL_CODES)[number]
+export const SKILL_NAMES: Record<SkillCode, string> = {
+  barrage: '매수세례',
+  rally: '불장',
+  fortify: '방어선 구축',
+  limitUp: '상한가',
+  stopLoss: '손절',
+  averaging: '물타기',
+}
+
 /** 광고 스킬의 배수 (588번, 서버 IdleEngine.BOOST). */
 export const BOOST = 3
 
 export const ACTIVES = {
-  /** 매수세례: 매수벽이 이 시간 동안 매수 주문 shots장을 쏟아 낸다. 한 장은 보통 매수 주문의 power배다. */
+  /** 매수세례: 매수벽이 seconds마다 매수 주문 shots장의 빠르기로 쏟아 낸다(카드는 CARD_SECONDS 동안). 한 장은 보통 매수 주문의 power배다. */
   barrage: { seconds: 6, shots: 40, power: 1 },
   /** 불장: 이 시간 동안 사장냥과 고양이의 총이 fire배 빨리 나간다. */
   rally: { seconds: 10, fire: 2 },
@@ -81,16 +103,16 @@ export const ACTIVE_HINTS: Record<ActiveCode, string> = {
   boostBuy: '매수 주문 세 배',
 }
 
-/** 스킬 탭에 적는 설명 (587번). */
+/** 레벨업 카드와 스킬 탭에 적는 설명 (587·667번). */
 export const ACTIVE_NOTES: Record<ActiveCode, string> = {
-  barrage: '매수벽이 매수 주문 40장을 한꺼번에 쏟아 내요.',
-  rally: '사장냥과 고양이의 총이 두 배 빨리 나가요.',
-  fortify: '매수벽이 바로 다시 서고, 그동안 깎이지 않아요.',
-  limitUp: '사장냥과 고양이의 총알이 모두 치명타가 돼요.',
+  barrage: '매수벽이 1분 동안 매수 주문을 쏟아 내요.',
+  rally: '1분 동안 사장냥과 고양이의 총이 두 배 빨리 나가요.',
+  fortify: '매수벽이 바로 다시 서고, 1분 동안 깎이지 않아요.',
+  limitUp: '1분 동안 사장냥과 고양이의 총알이 모두 치명타가 돼요.',
   stopLoss:
     '매수벽의 남은 체력 절반을 버리고 매도벽을 크게 한 번 쳐요. 가득 찬 매수벽에서 쓰면 매수 주문 240장어치예요.',
   averaging:
-    '매수 주문이 1.5배 세져요. 매수벽이 깎여 있을수록 더 세져 3배까지 올라요. 매수세례에도 적용돼요.',
+    '1분 동안 매수 주문이 1.5배 세져요. 매수벽이 깎여 있을수록 더 세져 3배까지 올라요. 매수세례에도 적용돼요.',
   boostFire: '사장냥과 고양이의 총이 세 배 빨리 나가요. 불장과 겹치면 세 배만 적용돼요.',
   boostDamage: '총알과 고양이 스킬의 피해가 세 배가 돼요.',
   boostBuy: '매수 주문의 피해가 세 배가 돼요. 매수세례에도 적용돼요.',
