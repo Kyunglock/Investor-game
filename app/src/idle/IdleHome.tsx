@@ -83,13 +83,25 @@ const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
 
 /** 매수 주문 한 장의 수량 (514·573·638번): 벽의 깊이는 보지 않는다. 이 강화의 고정 수량에 팀 화력을 따르는 덤이 붙는다(서버가 더해 준다). */
-/** 공격력 강화 줄: 사장냥 무기의 공격력(기본 권총 100)에 강화 %를 먹인 지금 값과 강화 뒤 값. */
+/** 이 강화만의 효과(%) (661번): 영구 강화를 곱하지 않은 값. 옛 서버 응답에는 없어 전투 값으로 대신한다. */
+function ownPercent(u: Upgrade) {
+  return u.stepBonusPercent ?? u.bonusPercent
+}
+function nextOwnPercent(u: Upgrade, levels: number) {
+  const now = ownPercent(u)
+  return now + ((u.nextStepBonusPercent ?? u.nextBonusPercent) - now) * levels
+}
+
+/**
+ * 공격력 강화 줄: 사장냥 무기의 공격력(기본 권총 100)과 강화 %. 공격력 수는 영구 강화까지 곱한 실제 값이고, %는 이 강화만의 값이라
+ * 한 단계에 꼭 1%씩 오른다 (661번).
+ */
 function damageText(company: Company, u: Upgrade, levels: number) {
   const weapon = heroOf(company).weapon
   const now = attackOf(weapon, u.bonusPercent)
-  if (levels <= 0) return `${now.toLocaleString('ko-KR')} (+${percentText(u.bonusPercent)}%) · 최대`
+  if (levels <= 0) return `${now.toLocaleString('ko-KR')} (+${percentText(ownPercent(u))}%) · 최대`
   const next = u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels
-  return `${now.toLocaleString('ko-KR')} → ${attackOf(weapon, next).toLocaleString('ko-KR')} (+${percentText(u.bonusPercent)}% → +${percentText(next)}%)`
+  return `${now.toLocaleString('ko-KR')} → ${attackOf(weapon, next).toLocaleString('ko-KR')} (+${percentText(ownPercent(u))}% → +${percentText(nextOwnPercent(u, levels))}%)`
 }
 
 function buyNote(company: Company, u: Upgrade) {
@@ -715,9 +727,9 @@ function IdleStats({ company }: { company: Company }) {
                   // 공격력은 든 무기의 공격력(기본 권총 100)에 강화 %를 먹인 수로 보인다.
                   damageText(company, u, full ? 0 : levels)
                 ) : full ? (
-                  `+${percentText(u.bonusPercent)}% · 최대`
+                  `+${percentText(ownPercent(u))}% · 최대`
                 ) : (
-                  `+${percentText(u.bonusPercent)}% → +${percentText(u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels)}%`
+                  `+${percentText(ownPercent(u))}% → +${percentText(nextOwnPercent(u, levels))}%`
                 )}
               </p>
             </div>
@@ -746,7 +758,7 @@ function IdleStats({ company }: { company: Company }) {
                       bonus:
                         u.kind === 'buy'
                           ? (after.bonusShares ?? 0) - (u.bonusShares ?? 0)
-                          : after.bonusPercent - u.bonusPercent,
+                          : ownPercent(after) - ownPercent(u),
                     })
                     sfx.levelUp()
                   } else {

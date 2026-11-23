@@ -411,6 +411,8 @@ class MentalEngine {
                   rule.priceGrowthPercent(),
                   withFish(level * step, fishPercent),
                   withFish(Math.min(level + 1, max) * step, fishPercent),
+                  withFish(level * step, 0),
+                  withFish(Math.min(level + 1, max) * step, 0),
                   level * shares + fishShares,
                   (level + 1) * shares + fishShares,
                   max == Integer.MAX_VALUE ? 0 : max);

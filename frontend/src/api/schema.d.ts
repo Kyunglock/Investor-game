@@ -1974,6 +1974,10 @@ export interface components {
                 bonusPercent: number;
                 /** @description 다음 단계의 효과(%) */
                 nextBonusPercent: number;
+                /** @description 이 강화만의 지금 효과(%): 단계 × 한 단계 효과. 영구 강화(600번)를 곱하지 않은 값이라 성장 화면은 이것을 보인다 (661번). bonusPercent는 영구 강화를 곱한 전투 값이다 */
+                stepBonusPercent?: number;
+                /** @description 다음 단계의 그 값(%) */
+                nextStepBonusPercent?: number;
                 /** @description buy(매수벽 공격)만: 지금 단계에 매수 주문 한 장이 는 수량(주, 579번). buy는 %로 오르지 않아 bonusPercent가 0이다. 다른 강화는 0. 자동 전투에서는 팀 화력을 따르는 덤(638번)이 더해져 있어 아주 커질 수 있다 */
                 bonusShares?: number;
                 /** @description 다음 단계의 그 수량(주) */

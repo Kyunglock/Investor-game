@@ -913,6 +913,8 @@ class IdleEngine {
                         u.priceGrowthPercent(),
                         u.bonusPercent(),
                         u.nextBonusPercent(),
+                        u.stepBonusPercent(),
+                        u.nextStepBonusPercent(),
                         u.bonusShares() + teamShares(c, u.level()),
                         u.nextBonusShares() + teamShares(c, u.level() + 1),
                         u.maxLevel())
