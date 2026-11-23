@@ -51,9 +51,11 @@ export function CompanionSkills({ cat }: { cat: Cat }) {
         )
       })}
       <p className="idle-skill-line idle-skill-next" data-testid="cat-skill-next">
-        {cat.skillNextLevel > 0
-          ? `고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1} · 앞으로 ${cat.skillNextLevel - cat.level}레벨`
-          : '스킬 최고 레벨이에요'}
+        {cat.level < 1
+          ? '고양이를 획득하면 스킬을 사용할 수 있어요'
+          : cat.skillNextLevel > 0
+            ? `고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1} · 앞으로 ${cat.skillNextLevel - cat.level}레벨`
+            : '스킬 최고 레벨이에요'}
       </p>
       <p className="idle-skill-line">
         {cat.fielded ? '출전 중이라 발동하고 있어요' : '출전하면 발동해요'}

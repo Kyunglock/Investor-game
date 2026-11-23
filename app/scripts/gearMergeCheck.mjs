@@ -187,7 +187,7 @@ const center = async (locator) => {
   const box = await locator.boundingBox()
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
-const CAT_MENU = /^고양이·무기( 합칠 수 있는 무기 있음)?$/
+const CAT_MENU = /^출전( 합칠 수 있는 무기 있음)?$/
 /** 누르면 비교가 뜨고, 그 단추를 눌러야 장착한다. */
 const equip = async (page, locator) => {
   await locator.click()
@@ -272,7 +272,10 @@ try {
       await expect(skills.getByTestId('cat-skill-next')).toHaveText(
         '고양이 Lv.2에 스킬 Lv.2 · 앞으로 1레벨',
       )
-      await skills.getByRole('combobox').selectOption('night')
+      await skills.locator('[data-testid=cat][data-code=snow]').click()
+      await expect(skills.getByRole('region', { name: '눈꽃냥 고유 스킬' })).toContainText('미보유')
+      await expect(skill).toContainText('물 스킬')
+      await skills.locator('[data-testid=cat][data-code=night]').click()
       await expect(skills.getByTestId('cat-skill-next')).toHaveText('스킬 최고 레벨이에요')
       await tab(CAT_MENU).click()
       await page.locator('[data-testid=cat][data-code=sky]').click()

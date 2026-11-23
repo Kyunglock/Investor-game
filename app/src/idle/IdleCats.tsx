@@ -11,6 +11,7 @@ import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
 import { CatBakery } from './CatBakery'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
+import { CatRosterGrid } from './CatRosterGrid'
 import { CompanionSkills } from './CompanionSkills'
 import { sortCats } from './catGrade'
 import { fieldSteps, recommendParty } from './party'
@@ -22,13 +23,6 @@ import { useLoadoutDrag } from './useLoadoutDrag'
 export type LoadoutTab = '고양이' | '무기' | '식빵 공방'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
-
-/** 낭독기가 읽을 스킬 (561번): 없으면 없다고 읽는다. */
-const skillLabel = (cat: Cat) =>
-  cat.skills.length > 0 ? `고유 스킬 ${skillNames(cat)}` : '고유 스킬 없음'
-
-/** 6열 격자. 보유 여부와 관계없이 전체 도감을 표시한다. */
-const COLUMNS = 6
 
 /**
  * 고양이 메뉴 (decisions.md 488·491·493·530·571번): 위의 출전 칸 넷에 세우고, 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그
@@ -462,63 +456,13 @@ export function IdleCats({
                   : '놓으면 이 칸의 고양이와 바꿔요'
                 : '집어서 끌어 출전 칸에 놓기 · 출전 칸의 고양이는 꾹 눌러 끌어 자리 바꾸기'}
             </p>
-            <ul
-              className="idle-cat-grid"
-              aria-label={`고양이 인벤토리 · 동료 ${(idle?.cats ?? []).length}종`}
-            >
-              {Array.from(
-                { length: Math.max(18, Math.ceil((idle?.cats ?? []).length / COLUMNS) * COLUMNS) },
-                (_, i) => sorted[i] ?? null,
-              ).map((c, i) =>
-                c ? (
-                  <li key={c.code}>
-                    <button
-                      type="button"
-                      className={`idle-cat-cell ${c.level > 0 ? 'owned' : ''} ${c.fielded ? 'fielded' : ''} ${picked === c.code ? 'is-picked' : ''}`}
-                      data-testid="cat"
-                      data-code={c.code}
-                      data-grade={c.grade}
-                      disabled={c.level < 1}
-                      aria-label={
-                        c.level > 0
-                          ? `${c.grade} 등급 ${c.name} 레벨 ${c.level}${c.fielded ? ' 출전 중' : ''} · ${skillLabel(c)}`
-                          : `${c.grade} 등급 ${c.name} 아직 없음 · ${skillLabel(c)}`
-                      }
-                      onPointerDown={busy || c.level < 1 || c.fielded ? undefined : down(c.code)}
-                      onContextMenu={(e) => e.preventDefault()}
-                      onClick={(event) => {
-                        if (!consumeClick(event.detail)) pick(c.code)
-                      }}
-                    >
-                      <Portrait grade={c.grade} code={c.code} locked={c.level < 1} />
-                      {/* 고유 스킬 (531번): 못 가진 고양이의 스킬은 흑백에 자물쇠다. */}
-                      {c.skills.length > 0 && (
-                        <span className="idle-cat-badge">
-                          {c.skills.map((skill) => (
-                            <SkillBadge
-                              key={skill.code}
-                              skill={skill.code}
-                              level={c.skillLevel}
-                              size={c.skills.length > 1 ? 15 : 18}
-                              locked={c.level < 1}
-                            />
-                          ))}
-                        </span>
-                      )}
-                      <em
-                        className={`idle-cat-grade idle-cat-grade-tag is-${c.grade} ${c.level < 1 ? 'is-locked' : ''}`}
-                      >
-                        {c.grade}
-                      </em>
-                      {c.level > 0 && <i>Lv.{c.level}</i>}
-                    </button>
-                  </li>
-                ) : (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: 빈 칸은 자리 번호가 곧 열쇠다.
-                  <li key={i} className="idle-cat-cell-empty" />
-                ),
-              )}
-            </ul>
+            <CatRosterGrid
+              cats={sorted}
+              picked={picked}
+              onPick={pick}
+              down={busy ? undefined : down}
+              consumeClick={consumeClick}
+            />
           </>
         )}
       </div>

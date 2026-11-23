@@ -137,7 +137,7 @@ try {
     assert.equal(outside.length, 0)
     for (const times of [far, near, boss, wall]) {
       assert(times.length >= 2)
-      for (let i = 1; i < times.length; i++) assert.equal((times[i] - times[i - 1]) / 120, 0.25)
+      for (let i = 1; i < times.length; i++) assert.equal((times[i] - times[i - 1]) / 120, 0.125)
     }
     assert.deepEqual(
       result.losses,
@@ -148,7 +148,7 @@ try {
     assert(Math.abs(ratio - 0.16) < 1e-6)
     assert(result.speeds.at(-1) > Math.min(...result.speeds) * 5)
     console.log(
-      '극광의 밤: 접촉 감속·이탈 가속, 몹과 장벽별 0.25초 연타 확인',
+      '극광의 밤: 접촉 감속·이탈 가속, 몹과 장벽별 0.125초 연타 확인',
       result.ticks.map((times) => times.length),
     )
     await page.close()

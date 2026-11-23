@@ -105,7 +105,7 @@ try {
 
     // 고양이·무기 시트는 머리띠를 덮지 않고, 안은 스크롤로 끝까지 닿는다.
     const hud = await page.locator('.idle-hud').boundingBox()
-    await menu('고양이·무기')
+    await menu('출전')
     const sheet = page.getByTestId('idle-menu')
     await expect(sheet).toBeVisible()
     await expect

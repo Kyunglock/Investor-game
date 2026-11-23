@@ -59,7 +59,7 @@ const menus: { key: Exclude<Menu, 'rebirth'>; label: string }[] = (
     { key: 'battle', label: '돌파' },
     { key: 'growth', label: '성장' },
     // 무기 탭은 고양이 탭에 합쳤다 (560번): 고양이를 고르고 그 자리에서 무기를 바꾸고 합친다.
-    { key: 'cats', label: '고양이·무기' },
+    { key: 'cats', label: '출전' },
     // 스킬 탭 (587번): 사장냥의 고유 스킬을 보고 장착한다.
     { key: 'skills', label: '스킬' },
     { key: 'shop', label: '상점' },

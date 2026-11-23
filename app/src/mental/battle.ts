@@ -361,9 +361,9 @@ const recoilDecay = (kick: number, dt: number) =>
 /** 자동 전투에서 벽 앞에 막힌 시간으로 셈하는 상한(초): 물량 간격이 바탕의 절반까지만 줄어든다 (assault.ts spawnSeconds, 494번). */
 const IDLE_STUCK_MAX = 25
 
-// 전투 시계 기준 120단계/초. 겹치는 동안에는 정확히 30단계마다 피해를 준다.
+// 전투 시계 기준 120단계/초. 겹치는 동안에는 정확히 15단계마다 피해를 준다.
 const AURORA_STEPS_PER_SECOND = 120
-const AURORA_TICK_STEPS = AURORA_STEPS_PER_SECOND / 4
+const AURORA_TICK_STEPS = AURORA_STEPS_PER_SECOND / 8
 const AURORA_CONTACT_SPEED = 0.16
 
 type Enemy = Phaser.Physics.Arcade.Image & {
