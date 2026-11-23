@@ -181,8 +181,6 @@ public interface CompanyService {
 
   CompanyView sellBread(UUID sessionId);
 
-  CompanyView feedCat(UUID sessionId, String code);
-
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   CompanyView fieldCat(
       UUID sessionId, String code, boolean fielded, String replaceCode, Integer slot);

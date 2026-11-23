@@ -203,7 +203,7 @@ public record CompanyView(
   /**
    * 시즌패스의 일일·주간 퀘스트 (570·643번): 이번 주기에 센 수가 target에 닿으면 points를 한 번 받는다.
    *
-   * @param code wall·boss·upgrade·draw·merge·attend·fish·forever·feed·skill
+   * @param code wall·boss·upgrade·draw·merge·attend·fish·forever·skill
    * @param title 화면에 적는 글: "강화 20번"처럼 target이 들어 있다
    * @param period day(오늘의 퀘스트) 또는 week(이번 주의 퀘스트)
    * @param count 이번 주기에 센 수 (target까지만)

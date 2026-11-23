@@ -257,15 +257,7 @@ export const company = {
         points: 50,
         done: true,
       },
-      { code: 'skill', title: '스킬 20번 사용', period: 'day', count: 7, target: 20, points: 50 },
-      {
-        code: 'feed',
-        title: '식빵으로 고양이 레벨업 3번',
-        period: 'day',
-        count: 0,
-        target: 3,
-        points: 50,
-      },
+      { code: 'skill', title: '스킬 20번 사용', period: 'day', count: 7, target: 20, points: 100 },
       {
         code: 'wall',
         title: '매도벽 최고 기록 30개 돌파',

@@ -175,11 +175,8 @@ class EconomySimTest {
       // Bread sold at the end of the day keeps the diamonds of the bakery.
       if (s.bread >= 1 && s.bundleMillis >= 1_800_000) {
         long before = c.diamonds;
-        feed(c);
-        if (s.bread >= 1) {
-          idle.sellBread(c);
-          got.merge("bakery", c.diamonds - before, Long::sum);
-        }
+        idle.sellBread(c);
+        got.merge("bakery", c.diamonds - before, Long::sum);
       }
       if (verbose && (day <= 3 || day % 5 == 0 || day == days)) {
         log.add(
@@ -284,16 +281,6 @@ class EconomySimTest {
     }
   }
 
-  void feed(CompanyState c) {
-    CompanyState.Idle s = c.idle;
-    while (true) {
-      String low = s.fielded.stream().min(Comparator.comparingInt(k -> s.cats.get(k))).orElse(null);
-      if (low == null || s.cats.get(low) >= IdleEngine.MAX_CAT_LEVEL) return;
-      if (s.bread < IdleEngine.feedCost(s.cats.get(low))) return;
-      idle.feedCat(c, low);
-    }
-  }
-
   void manage(CompanyState c, HashSeededRandom random) {
     CompanyState.Idle s = c.idle;
     // Upgrades: the cheaper of attack and fire (fire stops at its maximum).
@@ -328,7 +315,6 @@ class EconomySimTest {
             .toList();
     s.fielded.clear();
     s.fielded.addAll(best);
-    feed(c);
     // Weapons: take everything off, merge, then hand out from the best down.
     s.catWeapons.clear();
     c.weapon = null;

@@ -821,10 +821,9 @@ class CompanyApiTest {
     List<String> missions = opened.read("$.pass.missions[*].code");
     assertThat(missions)
         .containsExactly(
-            "attend", "upgrade", "skill", "feed", "wall", "boss", "draw", "merge", "fish",
-            "forever");
-    assertThat(opened.read("$.pass.missions[4].title", String.class)).isEqualTo("매도벽 최고 기록 30개 돌파");
-    assertThat(opened.read("$.pass.missions[4].period", String.class)).isEqualTo("week");
+            "attend", "upgrade", "skill", "wall", "boss", "draw", "merge", "fish", "forever");
+    assertThat(opened.read("$.pass.missions[3].title", String.class)).isEqualTo("매도벽 최고 기록 30개 돌파");
+    assertThat(opened.read("$.pass.missions[3].period", String.class)).isEqualTo("week");
     assertThat(opened.read("$.pass.missions[0].period", String.class)).isEqualTo("day");
     postJson("/api/company/pass/claim", "{\"step\":1}").andExpect(status().isBadRequest());
     mvc.perform(post("/api/company/pass/claim").cookie(session)).andExpect(status().isBadRequest());

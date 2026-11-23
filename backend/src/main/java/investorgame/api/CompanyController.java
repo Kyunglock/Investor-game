@@ -535,15 +535,6 @@ class CompanyController {
     return companies.sellBread(cookies.requirePlayer(token));
   }
 
-  @PostMapping("/cat/feed")
-  CompanyView feedCat(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody CatFeedRequest request) {
-    return companies.feedCat(cookies.requirePlayer(token), request.code());
-  }
-
-  record CatFeedRequest(@NotBlank String code) {}
-
   @PostMapping("/cat/field")
   CompanyView fieldCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,

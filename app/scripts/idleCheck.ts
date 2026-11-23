@@ -363,8 +363,8 @@ try {
     await expect(page.getByTestId('sound-toggle')).toHaveCount(0)
     // 시즌패스 (570·643번): 일일·주간 퀘스트와 진행도가 보이고 보상에 돈이 없다.
     await page.getByTestId('idle-pass').click()
-    await expect(page.getByTestId('pass-mission')).toHaveCount(6)
-    await expect(page.getByTestId('pass-quests-day').getByTestId('pass-mission')).toHaveCount(4)
+    await expect(page.getByTestId('pass-mission')).toHaveCount(5)
+    await expect(page.getByTestId('pass-quests-day').getByTestId('pass-mission')).toHaveCount(3)
     await expect(page.getByTestId('pass-quests-day')).toContainText('일일 퀘스트')
     await expect(page.getByTestId('pass-quests-day')).toContainText('5시간 20분 뒤 초기화')
     const weekly = page.getByTestId('pass-quests-week')

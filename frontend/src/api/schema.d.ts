@@ -678,23 +678,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/cat/feed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 식빵 하나로 출전 고양이의 레벨을 올린다 */
-        post: operations["feedCat"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/company/cat/field": {
         parameters: {
             query?: never;
@@ -1161,7 +1144,7 @@ export interface components {
                 }[];
                 /** @description 포인트를 주는 일일·주간 퀘스트와 진행도 (570·643번). 이번 주기(오늘·이번 주)에 센 수가 target에 닿으면 points를 한 번 받고, 주기가 바뀌면 처음부터 센다. 오늘의 퀘스트가 먼저 온다 */
                 missions: {
-                    /** @description wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·feed(식빵으로 고양이 레벨업)·skill(액티브 스킬 사용) */
+                    /** @description wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기 합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·skill(액티브 스킬 사용) */
                     code: string;
                     /** @description 화면에 적는 글. "강화 20번"처럼 target이 들어 있다 */
                     title: string;
@@ -2977,36 +2960,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            /** @description 바꾼 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    feedCat: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat" | "ruby" | "abyss" | "dune" | "veil" | "flora" | "aurora";
-                };
-            };
-        };
         responses: {
             /** @description 바꾼 뒤의 회사 */
             200: {

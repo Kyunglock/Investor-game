@@ -61,8 +61,8 @@ try {
         sequence: 0,
         upcoming: [],
         fieldSlots: 4,
-        bread: 3,
-        bundlePrice: 300,
+        bread: 1,
+        bundlePrice: 100,
         bundleDiamonds: 1,
         nextDiamondSeconds: 600,
         bakingPercent: 45,
@@ -104,15 +104,6 @@ try {
           })
           return
         }
-      }
-      if (path.endsWith('/cat/feed')) {
-        const recipient = required(company.idle.cats.find((cat) => cat.code === body.code))
-        // 서버 IdleEngine.feedCost처럼 레벨 ÷ 10 올림만큼 든다 (636번): Lv12 민트냥은 2개.
-        const cost = Math.max(1, Math.ceil(recipient.level / 10))
-        assert(recipient.fielded && company.idle.bread >= cost)
-        company.idle.bread -= cost
-        company.idle.bundlePrice -= 100 * cost
-        recipient.level++
       }
       if (path.endsWith('/bread/sell')) {
         assert.equal(company.idle.bread, 1)
@@ -210,11 +201,10 @@ try {
     await expect(bakeryTab).toHaveAttribute('aria-selected', 'true')
     await expect(tray.getByRole('list', { name: '식빵 굽는 고양이' })).toContainText('밤냥')
     await expect(tray.getByRole('progressbar')).toHaveAttribute('value', '45')
-    await tray.getByRole('button', { name: /민트냥에게 식빵/ }).click()
-    await expect(tray.locator('.bakery-stock')).toHaveText('1개')
+    // 식빵으로 고양이를 키우는 칸은 없다: 공방은 굽고 파는 곳이다.
+    await expect(tray.getByRole('button', { name: /에게 식빵/ })).toHaveCount(0)
     await tray.getByRole('button', { name: '꾸러미 팔기' }).click()
     await expect(tray.getByRole('button', { name: '꾸러미 팔기' })).toBeDisabled()
-    await expect(tray.getByRole('button', { name: /민트냥에게 식빵.*Lv.13/ })).toBeDisabled()
     await expect(tray.locator('.bakery-stock')).toHaveText('0개')
     await catsTab.click()
     await expect(catsTab).toHaveAttribute('aria-selected', 'true')
