@@ -46,7 +46,8 @@ function fieldedCats(company: Company): StatsCat[] {
 }
 
 /**
- * 전투 통계 (decisions.md 645번): 오른쪽 스킬 줄 위의 통계 단추와 10분 창의 통계 시트. 서버에 실려 갈 명중(idle-hit-counted)과
+ * 전투 통계 (decisions.md 645번): 오른쪽 스킬 줄 위의 통계 단추와 10분 창의 통계 시트. 시트에는 최고 기록·보스 보상과 기여 순위만
+ * 보인다 (662번: 총 피해·초당 피해 같은 여덟 칸은 뺐다). 서버에 실려 갈 명중(idle-hit-counted)과
  * 매도벽이 아닌 것을 맞힌 피해(idle-stats-hit, 647번)를 쏜 곳마다 모으고, 서버가 넘어간 벽을 센다.
  */
 export function IdleBattleStats({ company }: { company: Company }) {
@@ -116,6 +117,10 @@ function StatsSheet({ company, onClose }: { company: Company; onClose: () => voi
     }
   }, [])
   const s = summarize(stats, now, fieldedCats(company))
+  // 최고 기록: 통과한 가장 높은 벽. 지금 선 벽이 그보다 높으면 기록을 갱신하는 중이다. 보스 보상: 다이아 보상을 받은 가장 높은 보스.
+  const best = company.idle?.bestWall ?? 0
+  const recordRun = best > 0 && (company.idle?.wall ?? 0) > best
+  const bossPaid = company.idle?.bossReward?.wall ?? 0
   const top = s.rows[0]?.damage ?? 0
   const percent = (share: number) => `${(share * 100).toFixed(share > 0 && share < 0.1 ? 1 : 0)}%`
   return (
@@ -129,41 +134,18 @@ function StatsSheet({ company, onClose }: { company: Company; onClose: () => voi
         <b>최근 10분</b>
         <span data-testid="stats-reset">{resetLeft(s.left)} 뒤 초기화</span>
       </p>
-      <dl className="idle-stats-grid" data-testid="stats-grid">
-        <div>
-          <dt>총 피해</dt>
-          <dd data-testid="stats-total">{sharesText(s.total)}</dd>
-        </div>
-        <div>
-          <dt>초당 피해</dt>
-          <dd data-testid="stats-dps">{sharesText(s.perSecond)}</dd>
-        </div>
-        <div>
-          <dt>매도벽 피해</dt>
-          <dd data-testid="stats-wall">{sharesText(s.wall)}</dd>
-        </div>
-        <div>
-          <dt>물량 피해</dt>
-          <dd data-testid="stats-orders">{sharesText(s.orders)}</dd>
-        </div>
-        <div>
-          <dt>깬 매도벽</dt>
-          <dd data-testid="stats-walls">{s.walls.toLocaleString()}개</dd>
-        </div>
-        <div>
-          <dt>최고 한 방</dt>
-          <dd data-testid="stats-best">{sharesText(s.best)}</dd>
-        </div>
-        <div>
-          <dt>치명타</dt>
-          <dd data-testid="stats-crits">
-            {s.crits.toLocaleString()}번 · {percent(s.shots > 0 ? s.crits / s.shots : 0)}
+      {/* 최고 기록과 보스 보상 (654번): 벽 번호 아래에 있던 것을 여기로 옮겼다 (662번). */}
+      <dl className="idle-stats-grid" data-testid="stats-record">
+        <div data-record={recordRun || undefined}>
+          <dt>최고 기록</dt>
+          <dd data-testid="stats-best-wall">
+            {recordRun ? '갱신 중!' : best > 0 ? `매도벽 ${best.toLocaleString()}` : '아직 없어요'}
           </dd>
         </div>
         <div>
-          <dt>스킬 · 매수 주문</dt>
-          <dd data-testid="stats-parts">
-            {percent(s.skillShare)} · {percent(s.buyShare)}
+          <dt>보스 보상</dt>
+          <dd data-testid="stats-boss-paid">
+            {bossPaid > 0 ? `매도벽 ${bossPaid.toLocaleString()}까지` : '아직 없어요'}
           </dd>
         </div>
       </dl>

@@ -414,12 +414,10 @@ try {
     const bossRow = page.locator('[data-testid=stats-row][data-code=boss]')
     await expect(bossRow).toContainText('사장냥')
     await expect(bossRow).toContainText(/[\d,.]+[만억조]?주/)
-    await expect(page.getByTestId('stats-total')).not.toHaveText('0주')
-    // 647번: 매도벽 피해와 물량 피해를 나눠 적는다. 물량은 실제 전장의 고양이들이 맞힌다.
-    await expect(page.getByTestId('stats-wall')).toContainText('주')
-    await expect(page.getByTestId('stats-orders')).not.toHaveText('0주')
-    await expect(page.getByTestId('stats-crits')).toContainText(/[1-9][\d,]*번/)
-    await expect(page.getByTestId('stats-best')).toContainText('주')
+    // 662번: 총 피해 같은 여덟 칸은 없고, 최고 기록과 보스 보상만 순위 위에 있다.
+    await expect(page.getByTestId('stats-grid')).toHaveCount(0)
+    await expect(page.getByTestId('stats-best-wall')).toBeVisible()
+    await expect(page.getByTestId('stats-boss-paid')).toBeVisible()
     const statsBox = await page.getByTestId('stats').boundingBox()
     assert(
       statsBox && statsBox.x >= 0 && statsBox.x + statsBox.width <= width + 1,

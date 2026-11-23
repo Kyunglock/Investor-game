@@ -168,12 +168,6 @@ export function IdleHome({
   const halted = shown.circuitSeconds > 0
   // 보스 도전 (547번): 50번째 벽마다 저절로 나오고 서킷브레이커로 시작한다.
   const bossFight = idleBossChallenge(shown.wall)
-  // 최고 기록 (654번): 통과한 가장 높은 벽. 지금 선 벽이 그보다 높으면 기록을 갱신하는 중이다.
-  // 환생한 적이 없으면 지금 선 벽이 늘 최고 기록이라 적지 않는다 (655번): 그때는 다이아 보상을 받은 보스만 적는다.
-  const best = idle?.bestWall ?? 0
-  const reborn = (idle?.rebirth?.count ?? 0) > 0
-  const recordRun = reborn && best > 0 && shown.wall > best
-  const bossPaid = idle?.bossReward?.wall ?? 0
   // 지정 자동 강화 (654번): 성장 탭에서 고른 능력치를 돈이 모이는 대로 산다.
   useAutoUpgradeLoop(company, connected)
   // 자본은 1초마다 서버에서 새로 온다 (#803): 숫자가 그 사이를 굴러가며 계속 불어난다.
@@ -332,22 +326,6 @@ export function IdleHome({
                   : `${bossFight ? '보스 ' : '매도벽 '}${shown.wall.toLocaleString()}`
                 : '연결 대기'}
             </strong>
-            {connected && ((reborn && best > 0) || bossPaid > 0) && (
-              <small
-                className="idle-wall-best"
-                data-testid="idle-wall-best"
-                data-record={recordRun || undefined}
-              >
-                {recordRun
-                  ? '최고기록 갱신중!'
-                  : reborn && best > 0 && `최고 ${best.toLocaleString()}`}
-                {!recordRun && bossPaid > 0 && (
-                  <span className={reborn && best > 0 ? 'idle-wall-best-boss' : undefined}>
-                    {reborn && best > 0 && ' · '}보스 보상 {bossPaid.toLocaleString()}까지
-                  </span>
-                )}
-              </small>
-            )}
             {/* 다이아 (526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. */}
             <div
               className="idle-cash idle-diamonds"
