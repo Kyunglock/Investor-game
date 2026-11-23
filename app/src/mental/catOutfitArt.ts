@@ -64,7 +64,8 @@ function star({ c, shape, line, gradient }: Painter, pose: number) {
   line('M-19 19 Q-3 27 12 24 M14 18 L22 18', '#edc167', 1.7)
   // Hood drapes over the back of the head, with both ear tips and the turning cheek visible.
   c.save()
-  c.translate((4 - pose) * 0.65, 0)
+  c.translate((4 - pose) * 1.5, -1)
+  c.scale(1 - (4 - pose) * 0.05, 1.16)
   c.rotate((pose - 4) * 0.023)
   shape(
     'M-27 -32 Q-23 -49 -6 -52 Q11 -55 25 -37 Q34 -25 27 -11 Q22 -3 13 2 Q7 7 5 13 Q-9 12 -20 3 Q-31 -7 -30 -20Z',
@@ -148,7 +149,8 @@ function flora({ shape, line }: Painter) {
   shape('M13 -4 Q16 -7 19 -4 Q20 0 16 0 Q13 0 13 -4Z', '#ffe49b', null)
 }
 
-function wisteria({ shape, line }: Painter) {
+function wisteria({ c, shape, line }: Painter) {
+  c.scale(-1, 1)
   shape(
     'M-16 -5 Q-1 1 14 -5 L18 13 L24 23 Q14 26 6 21 L-1 29 Q-11 26 -14 17 L-22 20 L-20 4Z',
     '#745188',
@@ -170,26 +172,72 @@ function wisteria({ shape, line }: Painter) {
   }
 }
 
-// 극광냥의 제복은 원본 전투 스프라이트에 들어 있다.
-const outfits: Partial<Record<CatCode, (painter: Painter, pose: number) => void>> = {
-  silver,
-  frost,
-  star,
-  ruby,
-  abyss,
-  dune,
-  veil,
-  flora,
-  wisteria,
+// 꼬리가 몸 앞을 지나는 위치는 원본 아틀라스의 자세마다 다르다.
+// x는 9개 견착 자세의 꼬리 중심, y와 반지름은 높이 100으로 그린 몸 기준이다.
+type TailFit = { x: number[]; y: number; rx: number; ry: number; collar: number }
+const plumeTail = { x: [66, 65, 63, 61, 33, 33, 33, 32, 31], y: 82, rx: 18, ry: 20, collar: 63 }
+
+// 극광냥의 제복은 전투 원본에 들어 있다.
+const outfits = {
+  silver: { paint: silver, ...plumeTail },
+  ruby: { paint: ruby, ...plumeTail },
+  frost: {
+    paint: frost,
+    x: [62, 61, 59, 56, 38, 28, 27, 26, 25],
+    y: 87,
+    rx: 20,
+    ry: 16,
+    collar: 63,
+  },
+  star: { paint: star, x: [69, 71, 73, 74, 36, 36, 36, 33, 32], y: 86, rx: 14, ry: 12, collar: 70 },
+  wisteria: {
+    paint: wisteria,
+    x: [68, 70, 71, 72, 32, 30, 30, 30, 30],
+    y: 81,
+    rx: 24,
+    ry: 20,
+    collar: 62,
+  },
+  abyss: {
+    paint: abyss,
+    x: [65, 66, 63, 58, 36, 35, 31, 30, 26],
+    y: 89,
+    rx: 10,
+    ry: 11,
+    collar: 69,
+  },
+  dune: { paint: dune, x: [67, 65, 62, 59, 36, 35, 31, 24, 26], y: 90, rx: 10, ry: 10, collar: 70 },
+  veil: { paint: veil, x: [68, 68, 68, 66, 36, 36, 33, 27, 28], y: 86, rx: 15, ry: 17, collar: 66 },
+  flora: {
+    paint: flora,
+    x: [69, 70, 68, 67, 32, 32, 32, 30, 29],
+    y: 84,
+    rx: 15,
+    ry: 20,
+    collar: 66,
+  },
+} satisfies Partial<Record<CatCode, TailFit & { paint: (painter: Painter, pose: number) => void }>>
+
+function isOutfitCode(code: CatCode): code is keyof typeof outfits {
+  return Object.hasOwn(outfits, code)
 }
 
 export function drawCatOutfit(c: CanvasRenderingContext2D, code: CatCode, pose: number) {
-  const paint = outfits[code]
-  if (!paint) return
+  if (!isOutfitCode(code)) return
+  const fit = outfits[code]
   c.save()
-  c.translate(51 + (4 - pose) * 0.7, 68)
+  // 꼬리의 원본 픽셀을 남기고 그 뒤로 옷자락이 내려오게 한다.
+  c.beginPath()
+  c.rect(0, 0, 100, 110)
+  c.moveTo(fit.x[pose] + fit.rx, fit.y)
+  c.ellipse(fit.x[pose], fit.y, fit.rx, fit.ry, 0, 0, Math.PI * 2)
+  c.clip('evenodd')
+  // 고개를 돌리면 바깥 어깨가 좁아지고 비대칭 장식도 몸과 함께 돌아간다.
+  const turn = (pose - 4) / 4
+  c.translate(51.5 - 3 * turn, fit.collar)
+  c.scale((pose >= 4 ? -1 : 1) * (1.18 - 0.14 * Math.abs(turn)), (95 - fit.collar) / 29)
   c.lineJoin = 'round'
   c.lineCap = 'round'
-  paint(outfitPainter(c), pose)
+  fit.paint(outfitPainter(c), Math.min(pose, 8 - pose))
   c.restore()
 }
