@@ -108,7 +108,10 @@ export class UpgradeQueue {
   view(kind: UpgradeKind): UpgradeView | null {
     const b = this.base(kind)
     if (!b) return null
-    const step = b.u.nextBonusPercent - b.u.bonusPercent
+    // 이 강화만의 한 단계 효과 (661번): 영구 강화를 곱하지 않은 값. 옛 응답에는 없어 전투 값으로 대신한다.
+    const step =
+      (b.u.nextStepBonusPercent ?? b.u.nextBonusPercent) -
+      (b.u.stepBonusPercent ?? b.u.bonusPercent)
     const level = b.level + this.pending[kind]
     const g = 1 + b.u.priceGrowthPercent / 100
     return {

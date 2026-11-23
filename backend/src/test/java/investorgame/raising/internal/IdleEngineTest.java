@@ -1925,6 +1925,9 @@ class IdleEngineTest {
     assertThat(upgrade(c, "damage").nextBonusPercent())
         .as("11단계 +11% × 1.02 = +13.22%")
         .isEqualTo(13.22);
+    // 성장 화면은 이 강화만의 값을 보인다 (661번): 영구 강화가 있어도 한 단계에 꼭 1%씩이다.
+    assertThat(upgrade(c, "damage").stepBonusPercent()).isEqualTo(10);
+    assertThat(upgrade(c, "damage").nextStepBonusPercent()).isEqualTo(11);
     // 벽 1,000쯤(+3,000%)에서 영구 강화 +300%는 네 배다: 더하면 +3,300%뿐이었다.
     assertThat(MentalEngine.withFish(3000, 300)).isEqualTo(12_300);
     assertThat(c.fishLevels).containsEntry("damage", 2);
