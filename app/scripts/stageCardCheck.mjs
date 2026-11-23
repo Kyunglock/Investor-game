@@ -44,10 +44,11 @@ try {
       lastDraws: [],
       actives: [],
       cats: [
-        cat('sky', '하늘냥', 'C', [], true),
-        cat('night', '밤냥', 'A', [{ code: 'meteor', name: '메테오' }], false),
-        cat('mint', '민트냥', 'B', [], false),
-        cat('lilac', '라일락냥', 'B', [], false),
+        // 출전 칸의 차례(slot)대로 나온다: 밤냥 → 하늘냥 → 민트냥 → 라일락냥. 노을냥은 쉬고 있어 나오지 않는다.
+        { ...cat('sky', '하늘냥', 'C', [], true), slot: 1 },
+        { ...cat('night', '밤냥', 'A', [{ code: 'meteor', name: '메테오' }], true), slot: 0 },
+        { ...cat('mint', '민트냥', 'B', [], true), slot: 2 },
+        { ...cat('lilac', '라일락냥', 'B', [], true), slot: 3 },
         cat('sunset', '노을냥', 'C', [], false),
       ],
     }
@@ -73,41 +74,8 @@ try {
     await expect(page.getByTestId('idle-active')).toHaveCount(0)
     await expect(page.getByTestId('idle-level')).toHaveCount(0)
     await page.getByTestId('stage-shortcut').click()
-    // 출전 고양이 (669번): 고른 적이 없으면 출전 중인 하늘냥이다. 빼고, 밤냥(메테오)을 1번, 하늘냥을 2번으로 고른다.
-    const team = page.getByTestId('stage-team')
-    await expect(team.locator('[data-testid=stage-team-slot][data-code]')).toHaveCount(1)
-    await expect(team.getByTestId('stage-team-slot').first()).toHaveAttribute('data-code', 'sky')
-    await team.getByRole('button', { name: '1번 하늘냥 빼기' }).click()
-    await expect(team.locator('[data-testid=stage-team-slot][data-code]')).toHaveCount(0)
-    await team.locator('[data-testid=stage-team-cat][data-code=night]').click()
-    await team.locator('[data-testid=stage-team-cat][data-code=sky]').click()
-    await expect(team.getByTestId('stage-team-slot').first()).toHaveAttribute('data-code', 'night')
-    await expect(team.getByTestId('stage-team-slot').nth(1)).toHaveAttribute('data-code', 'sky')
-    await expect(team.getByTestId('stage-team-slot').first()).toContainText('메테오')
-    // 메인 화면처럼 네 마리까지 데려간다: 넷이 차면 다섯째는 고를 수 없다.
-    await expect(team.getByTestId('stage-team-slot')).toHaveCount(4)
-    await team.locator('[data-testid=stage-team-cat][data-code=mint]').click()
-    await team.locator('[data-testid=stage-team-cat][data-code=lilac]').click()
-    await expect(team.locator('[data-testid=stage-team-slot][data-code]')).toHaveCount(4)
-    await expect(team.locator('[data-testid=stage-team-cat][data-code=sunset]')).toBeDisabled()
-    {
-      const slots = await team
-        .getByTestId('stage-team-slot')
-        .evaluateAll((els) =>
-          els.map((el) => el.getBoundingClientRect()).map((r) => [r.left, r.right, r.top]),
-        )
-      assert.ok(
-        slots.every((r) => r[0] >= 0 && r[1] <= width),
-        'the four slots fit',
-      )
-      assert.equal(
-        new Set(slots.map((r) => Math.round(r[2]))).size,
-        1,
-        'the four slots share a row',
-      )
-    }
-    await team.scrollIntoViewIfNeeded()
-    await page.screenshot({ path: `/tmp/stage-team-${width}.png` })
+    // 출전 고양이는 출전 탭의 것이다 (669번): 스테이지 고르기에 따로 고르는 칸은 없다.
+    await expect(page.getByTestId('stage-team')).toHaveCount(0)
     await page.locator('[data-testid=assault-stage][data-stage="1"]').click()
     // 스테이지: 첫 카드 석 장에 사장냥의 스킬과 고양이 마법 강화가 나온다.
     // 출전 화면: 무기를 보고 들어간다.
@@ -185,7 +153,7 @@ try {
     assert.deepEqual(errors, [])
     await page.close()
   }
-  console.log('스테이지 320/390px: 출전 고양이 고르기·고양이 카드·스킬 강화·사장냥 스킬 통과')
+  console.log('스테이지 320/390px: 출전한 고양이의 카드·스킬 강화·사장냥 스킬 통과')
 } finally {
   await browser.close()
 }

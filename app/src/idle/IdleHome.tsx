@@ -43,7 +43,6 @@ import { MenuIcon } from './MenuIcon'
 import { OfflineIncome } from './OfflineIncome'
 import { tutorialMenuLocked } from './onboarding'
 import { PowerSaveScreen } from './PowerSaveScreen'
-import { StageTeamPicker } from './StageTeamPicker'
 import { freeLeft } from './shop'
 import { VaultChallenges } from './VaultChallenges'
 import './idle-home.css'
@@ -449,10 +448,10 @@ export function IdleHome({
           {menu === 'stage' && (
             <div data-testid="stage-select">
               <p className="idle-stage-note">
-                한 판씩 깨는 전투예요. 매도벽을 부숴 레벨이 오를 때마다 카드 석 장 가운데 한 장을
-                골라요. 사장냥의 스킬, 데려갈 고양이, 고양이 스킬 강화가 카드로 나와요.
+                한 판씩 깨는 전투예요. 레벨이 오를 때마다 카드 석 장 가운데 한 장을 골라요. 출전
+                탭에서 출전시킨 고양이가 고양이 카드로 차례로 나오고, 사장냥의 스킬과 고양이 스킬
+                강화도 카드로 나와요.
               </p>
-              <StageTeamPicker company={company} />
               <AssaultSelect company={company} />
             </div>
           )}

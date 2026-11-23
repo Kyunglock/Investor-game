@@ -9,7 +9,7 @@ import { type BattleEntry, useAppUi } from '../app/ui'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { readStageTeam, stageLoadout, stageTeamOf } from '../idle/stageTeam'
+import { stageLoadout, stageTeamOf } from '../idle/stageTeam'
 
 import {
   type BattleMode,
@@ -79,7 +79,7 @@ export function MentalWindow({
   const [hero, setHero] = useState<Hero | null>(() => (tutorial ? heroOf(company) : null))
   const [celebrated, setCelebrated] = useState(false)
   const started = hero !== null
-  // 매도벽 돌파 스테이지 (669번): 스테이지 고르기에서 정한 고양이를 데려간다. 출전을 누르는 순간 굳힌다.
+  // 매도벽 돌파 스테이지 (669번): 출전 탭에서 출전시킨 고양이를 데려간다. 출전을 누르는 순간 굳힌다.
   const [start, setStart] = useState<Loadout | undefined>(undefined)
   const [picked, setPicked] = useState<Card[]>([])
   const [outcome, setOutcome] = useState<Outcome | null>(null)
@@ -341,9 +341,7 @@ export function MentalWindow({
                 sfx.stamp()
                 haptic.medium()
                 if (entry.kind === 'assault') {
-                  setStart(
-                    stageLoadout(company, stageTeamOf(company, readStageTeam(company.companyId))),
-                  )
+                  setStart(stageLoadout(company, stageTeamOf(company)))
                 }
                 setHero(heroOf(company))
               }}
