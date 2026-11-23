@@ -98,7 +98,7 @@ export function CatBakery({
             <strong>
               <DiamondIcon /> {idle?.bundleDiamonds ?? 0}개
             </strong>
-            <small>공방 가동 30분당 1개</small>
+            <small>공방 가동 30분당 4개</small>
           </div>
         </div>
         <div className="bakery-countdown">

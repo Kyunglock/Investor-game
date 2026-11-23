@@ -224,9 +224,10 @@ class IdleEngineTest {
     assertThat(state.diamonds).isEqualTo(diamonds);
     assertThatThrownBy(() -> engine.sellBread(state)).isInstanceOf(InvalidRequestException.class);
     tick(10_000);
-    assertThat(engine.view(state).bundleDiamonds()).isEqualTo(1);
+    // 굽던 30분마다 다이아 넷 (659번, 전에는 하나).
+    assertThat(engine.view(state).bundleDiamonds()).isEqualTo(4);
     engine.sellBread(state);
-    assertThat(state.diamonds).isEqualTo(diamonds + 1);
+    assertThat(state.diamonds).isEqualTo(diamonds + 4);
     assertThat(engine.view(state).bread()).isZero();
     assertThat(engine.view(state).nextDiamondSeconds()).isEqualTo(1_800);
   }

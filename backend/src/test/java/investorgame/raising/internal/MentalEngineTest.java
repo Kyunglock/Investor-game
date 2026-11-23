@@ -100,21 +100,21 @@ class MentalEngineTest {
   }
 
   @Test
-  void EX_디펜스는_하루에_한_번_다이아_300개를_준다() {
+  void EX_디펜스는_하루에_한_번_다이아_1200개를_준다() {
     // 526번: 무기 뽑기권 대신 다이아. 잡은 적의 수와 상관없다.
     CompanyState c = company(9);
     long before = c.diamonds;
     ENGINE.mental.reportEx(c, 400, "2026-11-15");
-    assertThat(c.diamonds).isEqualTo(before + 300);
-    assertThat(c.lastStage.diamonds).isEqualTo(300);
+    assertThat(c.diamonds).isEqualTo(before + 1200);
+    assertThat(c.lastStage.diamonds).isEqualTo(1200);
     assertThat(ENGINE.mental.stagesView(c, "2026-11-15").exAvailable()).isFalse();
     ENGINE.mental.reportEx(c, 999, "2026-11-15");
-    assertThat(c.diamonds).as("두 번째는 없다").isEqualTo(before + 300);
+    assertThat(c.diamonds).as("두 번째는 없다").isEqualTo(before + 1200);
 
     CompanyState few = company(10);
     long fewBefore = few.diamonds;
     ENGINE.mental.reportEx(few, 0, "2026-11-15");
-    assertThat(few.diamonds).isEqualTo(fewBefore + 300);
+    assertThat(few.diamonds).isEqualTo(fewBefore + 1200);
   }
 
   @Test
@@ -372,32 +372,32 @@ class MentalEngineTest {
     ENGINE.mental.reportStage(c, 1, true, 2);
     assertThat(ENGINE.mental.bestStage(c)).isEqualTo(1);
     assertThat(c.capital).isEqualTo(capital + rule.capitalPerStage());
-    // 별을 처음 얻을 때마다 다이아 (526번): 1개째 30, 2개째 30.
-    assertThat(c.diamonds).isEqualTo(diamonds + 60);
-    assertThat(c.lastStage.diamonds).isEqualTo(60);
+    // 별을 처음 얻을 때마다 다이아 (526번): 1개째 120, 2개째 120 (659번에 네 배로).
+    assertThat(c.diamonds).isEqualTo(diamonds + 240);
+    assertThat(c.lastStage.diamonds).isEqualTo(240);
     assertThat(c.lastStage.firstClear).isTrue();
 
     // 다시 깨면 늘어난 별만큼만, 자본은 없다
     ENGINE.mental.reportStage(c, 1, true, 3);
     assertThat(c.capital).isEqualTo(capital + rule.capitalPerStage());
     assertThat(c.lastStage.firstClear).isFalse();
-    assertThat(c.lastStage.diamonds).as("3개째 별은 40").isEqualTo(40);
-    assertThat(c.diamonds).as("별 셋이면 100: 뽑기 한 번").isEqualTo(diamonds + 100);
+    assertThat(c.lastStage.diamonds).as("3개째 별은 160").isEqualTo(160);
+    assertThat(c.diamonds).as("별 셋이면 400: 뽑기 네 번").isEqualTo(diamonds + 400);
     assertThat(c.stageStars).containsExactly(3);
     ENGINE.mental.reportStage(c, 1, true, 1);
     assertThat(c.lastStage.diamonds).as("이미 얻은 별은 다시 깨도 주지 않는다").isZero();
     ENGINE.mental.reportStage(c, 1, true, 3);
     assertThat(c.lastStage.diamonds).isZero();
-    assertThat(c.diamonds).isEqualTo(diamonds + 100);
+    assertThat(c.diamonds).isEqualTo(diamonds + 400);
     assertThat(c.stageStars).containsExactly(3);
 
     for (int stage = 2; stage < rule.perChapter(); stage++) {
       ENGINE.mental.reportStage(c, stage, true, 1);
     }
     ENGINE.mental.reportStage(c, rule.perChapter(), true, 1);
-    assertThat(c.lastStage.diamonds).as("10의 배수 스테이지는 두 배: 별 하나 60").isEqualTo(60);
+    assertThat(c.lastStage.diamonds).as("10의 배수 스테이지는 두 배: 별 하나 240").isEqualTo(240);
     ENGINE.mental.reportStage(c, rule.perChapter(), true, 3);
-    assertThat(c.lastStage.diamonds).as("나머지 두 별 (30 + 40) × 2").isEqualTo(140);
+    assertThat(c.lastStage.diamonds).as("나머지 두 별 (120 + 160) × 2").isEqualTo(560);
     // 챕터 보스를 깨면 다음 챕터가 열린다 (407번): 2-1을 깰 수 있고, 그 다음 칸(2-3)은 아직이다.
     assertThat(ENGINE.mental.stagesView(c, "2026-11-15").last())
         .isEqualTo(rule.perChapter() * rule.chapters());

@@ -33,14 +33,14 @@ class DiamondsTest {
     assertThat(rule.cost(10)).isEqualTo(1000);
     assertThat(rule.items(10)).as("10연차는 하나 더").isEqualTo(11);
     assertThat(rule.hire()).isEqualTo(100);
-    // 별: 1개째 30, 2개째 30, 3개째 40. 10의 배수 스테이지는 두 배.
-    assertThat(rule.forStars(1, 0, 1)).isEqualTo(30);
-    assertThat(rule.forStars(1, 0, 3)).isEqualTo(100);
-    assertThat(rule.forStars(1, 2, 3)).isEqualTo(40);
+    // 별: 1개째 120, 2개째 120, 3개째 160 (659번에 네 배로). 10의 배수 스테이지는 두 배.
+    assertThat(rule.forStars(1, 0, 1)).isEqualTo(120);
+    assertThat(rule.forStars(1, 0, 3)).isEqualTo(400);
+    assertThat(rule.forStars(1, 2, 3)).isEqualTo(160);
     assertThat(rule.forStars(1, 3, 3)).isZero();
-    assertThat(rule.forStars(10, 0, 3)).isEqualTo(200);
-    assertThat(rule.forStars(20, 1, 2)).isEqualTo(60);
-    assertThat(rule.ex()).isEqualTo(300);
+    assertThat(rule.forStars(10, 0, 3)).isEqualTo(800);
+    assertThat(rule.forStars(20, 1, 2)).isEqualTo(240);
+    assertThat(rule.ex()).isEqualTo(1200);
   }
 
   @Test
@@ -114,15 +114,15 @@ class DiamondsTest {
             CompanyState.class);
     assertThat(engine.adoptDiamonds(old)).isTrue();
     assertThat(old.diamonds)
-        .as("뽑기권 100 + 별 100 + 60 + 30 + 10번째 스테이지 200")
-        .isEqualTo(100 + 100 + 60 + 30 + 200);
+        .as("뽑기권 100 + 별 400 + 240 + 120 + 10번째 스테이지 800")
+        .isEqualTo(100 + 400 + 240 + 120 + 800);
     assertThat(engine.adoptDiamonds(old)).isFalse();
-    assertThat(old.diamonds).isEqualTo(490);
+    assertThat(old.diamonds).isEqualTo(1660);
     // 옮긴 뒤에 같은 별을 다시 따도 또 주지 않는다.
     engine.mental.reportStage(old, 1, true, 3);
     assertThat(old.lastStage.diamonds).isZero();
     engine.mental.reportStage(old, 2, true, 3);
-    assertThat(old.lastStage.diamonds).as("새로 얻은 3개째 별만").isEqualTo(40);
+    assertThat(old.lastStage.diamonds).as("새로 얻은 3개째 별만").isEqualTo(160);
   }
 
   @Test
@@ -131,21 +131,21 @@ class DiamondsTest {
     CompanyState c = engine.open(random, engine.openingCapital());
     var before = engine.mental.stagesView(c, "2026-11-15");
     assertThat(before.diamondsLeft()).hasSize(before.last());
-    assertThat(before.diamondsLeft().get(0)).isEqualTo(100);
-    assertThat(before.diamondsLeft().get(9)).as("10의 배수 스테이지는 두 배").isEqualTo(200);
-    assertThat(before.diamondsLeft().get(10)).isEqualTo(100);
-    assertThat(before.exDiamonds()).isEqualTo(300);
+    assertThat(before.diamondsLeft().get(0)).isEqualTo(400);
+    assertThat(before.diamondsLeft().get(9)).as("10의 배수 스테이지는 두 배").isEqualTo(800);
+    assertThat(before.diamondsLeft().get(10)).isEqualTo(400);
+    assertThat(before.exDiamonds()).isEqualTo(1200);
     engine.mental.reportStage(c, 1, true, 2);
     var after = engine.mental.stagesView(c, "2026-11-15");
-    assertThat(after.diamondsLeft().get(0)).as("3개째 별의 40이 남았다").isEqualTo(40);
-    assertThat(after.lastResult().diamonds()).isEqualTo(60);
+    assertThat(after.diamondsLeft().get(0)).as("3개째 별의 160이 남았다").isEqualTo(160);
+    assertThat(after.lastResult().diamonds()).isEqualTo(240);
     engine.mental.reportStage(c, 1, true, 3);
     assertThat(engine.mental.stagesView(c, "2026-11-15").diamondsLeft().get(0)).isZero();
     // 서버가 판단한다: 못 깬 판은 별을 보내도 아무것도 주지 않는다.
     long diamonds = c.diamonds;
     engine.mental.reportStage(c, 2, false, 3);
     assertThat(c.diamonds).isEqualTo(diamonds);
-    assertThat(engine.mental.stagesView(c, "2026-11-15").diamondsLeft().get(1)).isEqualTo(100);
+    assertThat(engine.mental.stagesView(c, "2026-11-15").diamondsLeft().get(1)).isEqualTo(400);
   }
 
   @Test

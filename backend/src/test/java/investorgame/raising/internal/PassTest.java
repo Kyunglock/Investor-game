@@ -39,7 +39,7 @@ class PassTest {
   }
 
   @Test
-  void 시즌은_4주이고_30단계에_다이아_1060을_주며_돈은_없다() {
+  void 시즌은_4주이고_30단계에_다이아_4240을_주며_돈은_없다() {
     CompanyProperties.Pass rule = PROPERTIES.pass();
     assertThat(rule.days()).isEqualTo(28);
     assertThat(rule.steps()).isEqualTo(30);
@@ -52,15 +52,15 @@ class PassTest {
       assertThat(r.weapon()).as("무기는 10·20단계").isEqualTo(step % 10 == 0 && step < 30);
       assertThat(r.cat()).as("고양이는 30단계").isEqualTo(step == 30);
     }
-    // 644번: 보통 20 · 5의 배수 60 · 10·20단계 100 · 30단계 200 (전에는 50 · 200 · 300 · 500으로 2,900).
-    assertThat(diamonds).isEqualTo(24 * 20 + 3 * 60 + 2 * 100 + 200).isEqualTo(1_060);
-    assertThat(engine.pass.reward(1).diamonds()).isEqualTo(20);
-    assertThat(engine.pass.reward(2).diamonds()).as("돈 단계였던 자리도 다이아다").isEqualTo(20);
-    assertThat(engine.pass.reward(5).diamonds()).isEqualTo(60);
-    assertThat(engine.pass.reward(10).diamonds()).isEqualTo(100);
-    assertThat(engine.pass.reward(15).diamonds()).isEqualTo(60);
-    assertThat(engine.pass.reward(20).diamonds()).isEqualTo(100);
-    assertThat(engine.pass.reward(30).diamonds()).isEqualTo(200);
+    // 659번: 보통 80 · 5의 배수 240 · 10·20단계 400 · 30단계 800 (644번에는 20 · 60 · 100 · 200으로 1,060).
+    assertThat(diamonds).isEqualTo(24 * 80 + 3 * 240 + 2 * 400 + 800).isEqualTo(4_240);
+    assertThat(engine.pass.reward(1).diamonds()).isEqualTo(80);
+    assertThat(engine.pass.reward(2).diamonds()).as("돈 단계였던 자리도 다이아다").isEqualTo(80);
+    assertThat(engine.pass.reward(5).diamonds()).isEqualTo(240);
+    assertThat(engine.pass.reward(10).diamonds()).isEqualTo(400);
+    assertThat(engine.pass.reward(15).diamonds()).isEqualTo(240);
+    assertThat(engine.pass.reward(20).diamonds()).isEqualTo(400);
+    assertThat(engine.pass.reward(30).diamonds()).isEqualTo(800);
   }
 
   @Test
@@ -353,7 +353,7 @@ class PassTest {
     assertThat(rewards.passView(c).step()).isEqualTo(4);
     assertThat(rewards.passView(c).claimable()).isEqualTo(4);
     rewards.claimPass(c, 1, random);
-    assertThat(c.diamonds).isEqualTo(20);
+    assertThat(c.diamonds).isEqualTo(80);
     assertThat(rewards.passView(c).lastRewards()).hasSize(1);
     assertThatThrownBy(() -> rewards.claimPass(c, 1, random))
         .as("이미 받았다")
@@ -366,11 +366,11 @@ class PassTest {
     double before = c.capital;
     rewards.claimPass(c, 2, random);
     assertThat(c.capital).isEqualTo(before);
-    assertThat(c.diamonds).isEqualTo(40);
+    assertThat(c.diamonds).isEqualTo(160);
     // 모두 받기: 남은 3·4단계.
     rewards.claimPass(c, null, random);
-    // 1~4단계 모두 20씩 (644번, 전에는 50씩 200).
-    assertThat(c.diamonds).isEqualTo(4 * 20);
+    // 1~4단계 모두 80씩 (659번, 644번에는 20씩).
+    assertThat(c.diamonds).isEqualTo(4 * 80);
     assertThat(rewards.passView(c).claimable()).isZero();
     assertThat(rewards.passView(c).lastRewards()).extracting(r -> r.step()).containsExactly(3, 4);
     assertThat(rewards.passView(c).steps().get(3).claimed()).isTrue();
@@ -384,21 +384,21 @@ class PassTest {
     rewards.addPassExp(c, 9_000);
     int weapons = c.weapons.stream().mapToInt(w -> w.count).sum();
     rewards.claimPass(c, 10, random);
-    assertThat(c.diamonds).isEqualTo(100);
+    assertThat(c.diamonds).isEqualTo(400);
     assertThat(c.weapons.stream().mapToInt(w -> w.count).sum()).isEqualTo(weapons + 1);
     CompanyView.PassReward ten = rewards.passView(c).lastRewards().getFirst();
     assertThat(ten.weaponKind()).isNotNull();
     assertThat(ten.weaponGrade()).isIn(MentalEngine.DRAW_GRADES);
     assertThat(ten.cat()).isNull();
     rewards.claimPass(c, 30, random);
-    assertThat(c.diamonds).isEqualTo(100 + 200);
+    assertThat(c.diamonds).isEqualTo(400 + 800);
     CompanyView.PassReward last = rewards.passView(c).lastRewards().getFirst();
     assertThat(last.cat()).isNotNull();
     assertThat(last.catName()).isNotBlank();
     assertThat(idle.view(c).cats().stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(1);
-    // 한 시즌을 다 받으면 다이아 1,060 (644번, 전에는 2,900).
+    // 한 시즌을 다 받으면 다이아 4,240 (659번, 644번에는 1,060).
     rewards.claimPass(c, null, random);
-    assertThat(c.diamonds).isEqualTo(1_060);
+    assertThat(c.diamonds).isEqualTo(4_240);
     assertThat(c.passClaimed).hasSize(30);
   }
 
@@ -411,7 +411,7 @@ class PassTest {
     rewards.drew(c, 20);
     assertThat(rewards.passView(c).missionsReady()).isEqualTo(2);
     rewards.claimPass(c, 1, random);
-    assertThat(c.diamonds).isEqualTo(20);
+    assertThat(c.diamonds).isEqualTo(80);
     // 저장하고 다시 읽어도 그대로다.
     JsonMapper json = JsonMapper.builder().build();
     CompanyState saved = json.readValue(json.writeValueAsString(c), CompanyState.class);
@@ -428,7 +428,7 @@ class PassTest {
     assertThat(next.steps()).noneMatch(s -> s.claimed());
     assertThatThrownBy(() -> rewards.claimPass(c, 2, random))
         .isInstanceOf(InvalidRequestException.class);
-    assertThat(c.diamonds).as("받은 것은 그대로다").isEqualTo(20);
+    assertThat(c.diamonds).as("받은 것은 그대로다").isEqualTo(80);
     // 테스트판은 시즌을 넘길 수 있다.
     rewards.addPassExp(c, 200);
     rewards.nextSeason(c);
