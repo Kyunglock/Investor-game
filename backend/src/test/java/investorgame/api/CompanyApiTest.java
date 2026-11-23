@@ -127,54 +127,39 @@ class CompanyApiTest {
         .andExpect(jsonPath("$.idle.onboarding.weaponClaimed").value(false));
   }
 
-  /** 고유 스킬 장착 (587번)과 광고 스킬 (588번). */
+  /** 고유 스킬은 레벨업 카드로만 켜고 (666번), 광고 스킬은 광고를 본 뒤에 쓴다 (588번). */
   @Test
-  void 고유_스킬은_장착한_것만_쓰고_광고_스킬은_광고를_본_뒤에_쓴다() throws Exception {
+  void 고유_스킬은_레벨업_카드로_켜고_광고_스킬은_광고를_본_뒤에_쓴다() throws Exception {
     mvc.perform(post("/api/company").cookie(session))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.idle.activeSlots").value(3))
         .andExpect(jsonPath("$.idle.actives.length()").value(9))
         .andExpect(jsonPath("$.idle.actives[1].code").value("rally"))
-        .andExpect(jsonPath("$.idle.actives[1].equipped").value(true))
         .andExpect(jsonPath("$.idle.actives[1].ad").value(false))
-        // 상한가·손절·물타기 (591번)는 장착하지 않은 채로 시작한다.
-        .andExpect(jsonPath("$.idle.actives[4].code").value("stopLoss"))
-        .andExpect(jsonPath("$.idle.actives[4].equipped").value(false))
-        .andExpect(jsonPath("$.idle.actives[4].ad").value(false))
+        .andExpect(jsonPath("$.idle.actives[1].seconds").value(60.0))
         .andExpect(jsonPath("$.idle.actives[6].code").value("boostFire"))
-        .andExpect(jsonPath("$.idle.actives[6].equipped").value(false))
-        .andExpect(jsonPath("$.idle.actives[6].ad").value(true));
+        .andExpect(jsonPath("$.idle.actives[6].ad").value(true))
+        .andExpect(jsonPath("$.idle.levelUp.level").value(1))
+        .andExpect(jsonPath("$.idle.levelUp.next").value(5))
+        .andExpect(jsonPath("$.idle.levelUp.offer.length()").value(0));
     // 100벽을 아직 돌파하지 않은 계정은 서버에서도 차단한다.
-    postJson("/api/company/idle/active", "{\"code\":\"rally\"}").andExpect(status().isBadRequest());
+    postJson("/api/company/idle/active", "{\"code\":\"boostFire\",\"ad\":true}")
+        .andExpect(status().isBadRequest());
     jdbc.sql(
-            "UPDATE raising_company SET state = jsonb_set(state, '{idle}', '{\"best\":100}'::jsonb) WHERE id = CAST(:id AS uuid)")
+            "UPDATE raising_company SET state = jsonb_set(state, '{idle}', '{\"best\":100,\"cardsPending\":1,\"cardOffer\":[\"rally\",\"stopLoss\",\"catMagic\"]}'::jsonb) WHERE id = CAST(:id AS uuid)")
         .param(
             "id",
             json(mvc.perform(get("/api/company").cookie(session)))
                 .read("$.companyId", String.class))
         .update();
-    // 뺀 고유 스킬은 쓸 수 없다. 광고 스킬은 장착할 수 없다.
-    postJson("/api/company/idle/active/equip", "{\"code\":\"rally\",\"equipped\":false}")
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.idle.actives[1].equipped").value(false));
+    // 고유 스킬은 누르지 않는다: 레벨업 카드로 켠다. 내민 석 장 밖의 카드는 고르지 못한다.
     postJson("/api/company/idle/active", "{\"code\":\"rally\"}").andExpect(status().isBadRequest());
-    postJson("/api/company/idle/active/equip", "{\"code\":\"boostFire\",\"equipped\":true}")
-        .andExpect(status().isBadRequest());
-    postJson("/api/company/idle/active/equip", "{\"code\":\"rally\"}")
-        .andExpect(status().isBadRequest());
-    postJson("/api/company/idle/active/equip", "{\"code\":\"rally\",\"equipped\":true}")
+    postJson("/api/company/idle/card", "{\"code\":\"barrage\"}").andExpect(status().isBadRequest());
+    postJson("/api/company/idle/card", "{\"code\":\"rally\"}")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.idle.actives[1].equipped").value(true));
-    postJson("/api/company/idle/active", "{\"code\":\"rally\"}").andExpect(status().isOk());
-    // 새 고유 스킬은 칸이 꽉 차면 장착하지 못하고, 하나를 빼고 장착하면 쓴다 (591번).
-    postJson("/api/company/idle/active/equip", "{\"code\":\"stopLoss\",\"equipped\":true}")
-        .andExpect(status().isBadRequest());
-    postJson("/api/company/idle/active/equip", "{\"code\":\"fortify\",\"equipped\":false}")
-        .andExpect(status().isOk());
-    postJson("/api/company/idle/active/equip", "{\"code\":\"stopLoss\",\"equipped\":true}")
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.idle.actives[4].equipped").value(true));
-    postJson("/api/company/idle/active", "{\"code\":\"stopLoss\"}").andExpect(status().isOk());
+        .andExpect(jsonPath("$.idle.actives[1].left").value(60.0))
+        .andExpect(jsonPath("$.idle.levelUp.pending").value(0))
+        .andExpect(jsonPath("$.idle.levelUp.offer.length()").value(0));
+    postJson("/api/company/idle/card", "{\"code\":\"rally\"}").andExpect(status().isBadRequest());
     // 광고 스킬은 ad가 참이어야 한다: 180초 동안 하나만 쓰고, 끝나면 다시 선택한다.
     postJson("/api/company/idle/active", "{\"code\":\"boostFire\"}")
         .andExpect(status().isBadRequest());
@@ -821,7 +806,7 @@ class CompanyApiTest {
     List<String> missions = opened.read("$.pass.missions[*].code");
     assertThat(missions)
         .containsExactly(
-            "attend", "upgrade", "skill", "wall", "boss", "draw", "merge", "fish", "forever");
+            "attend", "upgrade", "card", "wall", "boss", "draw", "merge", "fish", "forever");
     assertThat(opened.read("$.pass.missions[3].title", String.class)).isEqualTo("매도벽 최고 기록 30개 돌파");
     assertThat(opened.read("$.pass.missions[3].period", String.class)).isEqualTo("week");
     assertThat(opened.read("$.pass.missions[0].period", String.class)).isEqualTo("day");

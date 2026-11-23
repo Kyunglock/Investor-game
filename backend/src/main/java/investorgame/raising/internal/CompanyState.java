@@ -100,8 +100,26 @@ class CompanyState {
     /** 불장이 끝나는 활성 시간 (503번). */
     double rallyUntil;
 
-    /** 장착한 고유 스킬 (587번): 세 개까지. null이면 장착이 생기기 전의 저장이라 셋을 모두 장착한 것으로 본다. */
+    /** 쓰지 않는다 (666번): 고유 스킬의 장착 칸(587번)이 남은 저장을 읽기만 한다. */
     List<String> activeSlots;
+
+    /** 전투 레벨 (666번): 매도벽을 부수면 경험치가 오르고, 레벨이 오를 때마다 카드 석 장 가운데 하나를 고른다. 환생하면 1로 돌아간다. */
+    int level = 1;
+
+    /** 지금 레벨에서 모은 경험치 (666번). */
+    long xp;
+
+    /** 아직 고르지 않은 레벨업 카드의 수 (666번). */
+    int cardsPending;
+
+    /** 지금 고를 수 있는 카드 석 장 (666번): 비어 있고 cardsPending이 있으면 서버가 새로 뽑는다. */
+    List<String> cardOffer = new ArrayList<>();
+
+    /** 이번 환생에서 고른 카드의 수 (666번): 다음 석 장을 뽑는 씨앗이다. */
+    int cardPicks;
+
+    /** 고양이 마법 강화 카드로 더한 마법 레벨 (666번): 출전한 고양이 모두에게 붙는다. 환생하면 0. */
+    int magicBonus;
 
     /** 광고 스킬 (588번): 코드 → 효과가 끝나는 활성 시간(activeSeconds). */
     Map<String, Double> activeUntil = new LinkedHashMap<>();

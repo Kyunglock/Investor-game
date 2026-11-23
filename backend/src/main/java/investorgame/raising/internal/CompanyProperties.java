@@ -117,7 +117,7 @@ public record CompanyProperties(
    * 시즌패스의 퀘스트 (570번, 643번 고침): 주기(period)마다 센 수가 goal에 닿으면 points를 한 번 받는다. 주기가 바뀌면 처음부터 센다.
    *
    * @param code wall(매도벽 최고 기록 돌파)·boss(보스 처치)·upgrade(강화)·draw(뽑기)·merge(무기
-   *     합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·skill(액티브 스킬 사용)
+   *     합성)·attend(출석)·fish(환생으로 얻은 생선)·forever(영구 강화)·card(레벨업 카드 고르기)
    * @param title 화면에 적는 글. {n}은 goal이다
    * @param period day(한국 시간 하루) 또는 week(시즌 첫날부터 7일)
    * @param goal 포인트를 받는 데 필요한 수

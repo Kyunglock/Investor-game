@@ -139,13 +139,13 @@ public interface CompanyService {
   CompanyView drawCat(UUID sessionId, int count, boolean ad);
 
   /**
-   * 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 재사용 대기 중이면 400. 고유 스킬은 장착한 것만 쓰고 (587번), 광고 스킬은 광고를 본
-   * 뒤(ad)에만 쓴다 (588번).
+   * 광고 스킬을 쓴다 (decisions.md 503·588번). 없는 스킬이거나 재사용 대기 중이면 400. 광고를 본 뒤(ad)에만 쓴다. 사장냥의 고유 스킬은 레벨업
+   * 카드로만 켠다 (666번).
    */
   CompanyView useActive(UUID sessionId, String code, boolean ad);
 
-  /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). 세 개까지. 광고 스킬이거나 칸이 꽉 찼으면 400. */
-  CompanyView equipActive(UUID sessionId, String code, boolean equipped);
+  /** 레벨업 카드를 고른다 (decisions.md 666번). 내민 석 장에 없는 카드면 400. */
+  CompanyView pickCard(UUID sessionId, String code);
 
   CompanyView tutorial(UUID sessionId, String action, int step);
 

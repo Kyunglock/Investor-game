@@ -679,9 +679,9 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView equipActive(UUID sessionId, String code, boolean equipped) {
+  public CompanyView pickCard(UUID sessionId, String code) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.equipActive(row.state(), code, equipped);
+    idle.pickCard(row.state(), code);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
