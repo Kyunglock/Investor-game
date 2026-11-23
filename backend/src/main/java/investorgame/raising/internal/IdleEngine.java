@@ -86,7 +86,7 @@ class IdleEngine {
     "매수세례", "불장", "방어선 구축", "상한가", "손절", "물타기", "공격속도 3배", "공격력 3배", "매수공격 3배"
   };
 
-  /** 고유 스킬 여섯 (666번): 이제 레벨업 카드로만 켠다. */
+  /** 고유 스킬 여섯 (667번): 이제 레벨업 카드로만 켠다. */
   static final List<String> CARD_SKILLS = ACTIVES.subList(0, 6);
 
   private static final double[] ACTIVE_COOLDOWN = {60, 90, 90, 90, 90, 90, 270, 270, 270};
@@ -102,18 +102,18 @@ class IdleEngine {
   static final double AVERAGING_MAX = 3;
 
   /**
-   * 레벨업 카드로 켠 고유 스킬이 이어지는 시간 (666번): 실제 1분, 게임 초로는 SPEED배. Matches the app's actives.ts
+   * 레벨업 카드로 켠 고유 스킬이 이어지는 시간 (667번): 실제 1분, 게임 초로는 SPEED배. Matches the app's actives.ts
    * CARD_SECONDS.
    */
   static final double CARD_SECONDS = 60 * SPEED;
 
-  /** 고양이 마법 강화 카드 (666번). */
+  /** 고양이 마법 강화 카드 (667번). */
   static final String CAT_MAGIC_CARD = "catMagic";
 
-  /** 레벨업 카드 한 번에 내미는 수 (666번). */
+  /** 레벨업 카드 한 번에 내미는 수 (667번). */
   static final int CARD_CHOICES = 3;
 
-  /** 다음 레벨까지 부술 벽의 수 (666번): Lv.1에서 5개, 한 레벨마다 2개씩 늘어난다. */
+  /** 다음 레벨까지 부술 벽의 수 (667번): Lv.1에서 5개, 한 레벨마다 2개씩 늘어난다. */
   static long xpToNext(int level) {
     return 3 + 2L * Math.max(1, level);
   }
@@ -969,7 +969,7 @@ class IdleEngine {
   }
 
   /**
-   * 레벨업 카드를 고른다 (666번). 내민 석 장 가운데 하나만 받는다. 고유 스킬 카드는 그 스킬을 1분 동안 켜고(손절은 바로 한 방), 고양이 마법 카드는 출전한
+   * 레벨업 카드를 고른다 (667번). 내민 석 장 가운데 하나만 받는다. 고유 스킬 카드는 그 스킬을 1분 동안 켜고(손절은 바로 한 방), 고양이 마법 카드는 출전한
    * 고양이 모두의 마법 레벨을 하나 올린다. 고를 카드가 남아 있으면 다음 석 장을 바로 내민다.
    */
   void pickCard(CompanyState c, String code) {
@@ -989,7 +989,7 @@ class IdleEngine {
     offerCards(c);
   }
 
-  /** 고유 스킬 카드의 효과를 1분 동안 켠다 (666번). 이미 켜져 있으면 다시 1분부터 센다. */
+  /** 고유 스킬 카드의 효과를 1분 동안 켠다 (667번). 이미 켜져 있으면 다시 1분부터 센다. */
   private static void castCard(CompanyState.Idle s, String code) {
     if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
     double until = s.activeSeconds + CARD_SECONDS;
@@ -1008,7 +1008,7 @@ class IdleEngine {
     }
   }
 
-  /** 고를 카드가 남았는데 내민 카드가 없으면 석 장을 뽑는다 (666번). 같은 레벨·같은 환생이면 늘 같은 석 장이다. */
+  /** 고를 카드가 남았는데 내민 카드가 없으면 석 장을 뽑는다 (667번). 같은 레벨·같은 환생이면 늘 같은 석 장이다. */
   void offerCards(CompanyState c) {
     CompanyState.Idle s = state(c);
     if (s.cardOffer == null) s.cardOffer = new ArrayList<>();
@@ -1030,7 +1030,7 @@ class IdleEngine {
     }
   }
 
-  /** 벽 하나를 부순 경험치 (666번): 레벨이 오르면 고를 카드가 하나 는다. */
+  /** 벽 하나를 부순 경험치 (667번): 레벨이 오르면 고를 카드가 하나 는다. */
   private void gainXp(CompanyState c) {
     CompanyState.Idle s = state(c);
     if (s.level < 1) s.level = 1;
@@ -1043,7 +1043,7 @@ class IdleEngine {
     offerCards(c);
   }
 
-  /** 출전한 고양이의 마법 레벨 (515·534·666번): 고양이 레벨로 오른 레벨에 마법 강화 카드로 더한 레벨. 최고 SKILL_MAX_LEVEL. */
+  /** 출전한 고양이의 마법 레벨 (515·534·667번): 고양이 레벨로 오른 레벨에 마법 강화 카드로 더한 레벨. 최고 SKILL_MAX_LEVEL. */
   private static int castLevel(CompanyState.Idle s, String code) {
     int base = skillLevel(s.cats.getOrDefault(code, 1));
     return Math.min(SKILL_MAX_LEVEL, base + (s.fielded.contains(code) ? s.magicBonus : 0));
@@ -1509,7 +1509,7 @@ class IdleEngine {
     move(s, 1);
     s.earned = 0;
     s.wallDps = 0;
-    // 레벨업 카드 (666번): 전투 레벨과 고른 카드는 환생하면 처음으로 돌아간다.
+    // 레벨업 카드 (667번): 전투 레벨과 고른 카드는 환생하면 처음으로 돌아간다.
     s.level = 1;
     s.xp = 0;
     s.cardsPending = 0;

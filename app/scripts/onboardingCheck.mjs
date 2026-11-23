@@ -27,12 +27,10 @@ try {
       power: 1,
       income: { perSecond: 0, staffPerSecond: 0, bonusPercent: 0 },
       offline: null,
-      activeSlots: 3,
       actives: [
         {
           code: 'barrage',
           name: '매수세례',
-          equipped: true,
           ad: false,
           readyIn: 0,
           left: 0,
@@ -334,13 +332,10 @@ try {
     c.idle.wall = 101
     c.idle.onboarding.skillsUnlocked = true
     await refresh()
-    await expect(guide).toContainText('100 매도벽 돌파!')
-    await nav('skills').click()
-    await guide.getByRole('button', { name: '사용 위치 보기' }).click()
-    await nav('battle').click()
-    await expect(target).toHaveAttribute('data-target', '[data-testid="idle-active"]')
-    await page.getByTestId('idle-active').click()
+    // 100벽의 스킬 안내는 없앴다 (667번): 사장냥의 스킬은 레벨업 카드로 켠다. 스킬 탭만 열린다.
+    await expect(nav('skills')).toBeEnabled()
     await expect(guide).toHaveCount(0)
+    await expect(page.getByTestId('idle-active')).toHaveCount(0)
     await page.getByTestId('idle-options').click()
     await page.getByRole('button', { name: '첫 출근 안내 다시 보기' }).click()
     await expect(guide).toContainText('다시 보기')

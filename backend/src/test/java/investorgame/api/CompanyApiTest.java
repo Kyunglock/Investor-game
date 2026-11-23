@@ -127,7 +127,7 @@ class CompanyApiTest {
         .andExpect(jsonPath("$.idle.onboarding.weaponClaimed").value(false));
   }
 
-  /** 고유 스킬은 레벨업 카드로만 켜고 (666번), 광고 스킬은 광고를 본 뒤에 쓴다 (588번). */
+  /** 고유 스킬은 레벨업 카드로만 켜고 (667번), 광고 스킬은 광고를 본 뒤에 쓴다 (588번). */
   @Test
   void 고유_스킬은_레벨업_카드로_켜고_광고_스킬은_광고를_본_뒤에_쓴다() throws Exception {
     mvc.perform(post("/api/company").cookie(session))

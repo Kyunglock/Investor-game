@@ -37,6 +37,7 @@ import { IdleShop } from './IdleShop'
 import { IdleSkills } from './IdleSkills'
 import { IdleTutorial } from './IdleTutorial'
 import { IdleIcon } from './icons'
+import { LevelUpCards } from './LevelUpCards'
 import { MenuIcon } from './MenuIcon'
 import { OfflineIncome } from './OfflineIncome'
 import { tutorialMenuLocked } from './onboarding'
@@ -130,7 +131,6 @@ export function IdleHome({
   onBattle: () => void
   office: ReactNode
 }) {
-  const [skillUse, setSkillUse] = useState(false)
   const [replay, setReplay] = useState<number | null>(null)
   const [inVault, setInVault] = useState(false)
   const [ownMenu, setMenu] = useState<Menu>('battle')
@@ -269,8 +269,6 @@ export function IdleHome({
       replay={replay}
       onReplay={setReplay}
       menu={menu}
-      skillUse={skillUse}
-      onSkillUse={() => setSkillUse(true)}
       onGo={(next, openGear) => {
         if (next === 'cats') {
           setWearer('night')
@@ -383,10 +381,18 @@ export function IdleHome({
             />
           )}
           {idle?.onboarding?.skillsUnlocked !== false && (
-            <IdleActives
+            <IdleActives company={company} connected={connected} />
+          )}
+          {/* 레벨업 카드 (667번): 안내가 도는 동안과 금고 전투 중에는 카드를 펼치지 않는다. */}
+          {!inVault && (
+            <LevelUpCards
               company={company}
-              connected={connected}
-              autoPaused={inVault || elsewhere}
+              paused={
+                menu !== 'battle' ||
+                elsewhere ||
+                (idle?.onboarding?.step ?? 8) < 8 ||
+                replay !== null
+              }
             />
           )}
           {menu === 'battle' && tutorial()}

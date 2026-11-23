@@ -116,7 +116,7 @@ export function useTutorialFocus(targets: FocusTarget[], active: boolean) {
   return focus
 }
 
-export function tutorialTargets(step: number, menu: string, skillUse: boolean): FocusTarget[] {
+export function tutorialTargets(step: number, menu: string): FocusTarget[] {
   const nav = (name: string, text: string) => ({ selector: `[data-tutorial-menu="${name}"]`, text })
   const night = {
     selector: '[data-testid="cat"][data-code="night"], [data-testid="cat-slot"][data-code="night"]',
@@ -196,24 +196,8 @@ export function tutorialTargets(step: number, menu: string, skillUse: boolean): 
           ]
         : [nav('cats', '출전 탭에서 밤냥의 무기를 바꿔봐요.')]
     case 7:
-      return [nav('battle', '첫 팀 완성! 직접 쓰는 스킬은 100 매도벽 돌파 후 열려요.')]
+      return [nav('battle', '첫 팀 완성! 매도벽을 부숴 레벨이 오르면 스킬 카드를 골라요.')]
     default:
-      return skillUse
-        ? menu === 'battle'
-          ? [
-              {
-                selector: '[data-testid="idle-active"]',
-                text: '이 스킬 버튼을 직접 눌러보세요. 사용 후에는 잠시 기다려야 해요.',
-              },
-            ]
-          : [nav('battle', '돌파 화면에서 장착한 스킬을 직접 사용해 봐요.')]
-        : menu === 'skills'
-          ? [
-              {
-                selector: '.boss-skill-loadout',
-                text: '스킬은 여기 최대 3개까지 장착해요. 아래 목록에서 바꿀 수 있어요.',
-              },
-            ]
-          : [nav('skills', '100 매도벽 돌파! 스킬 메뉴를 눌러보세요.')]
+      return []
   }
 }

@@ -268,8 +268,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 광고 스킬을 쓴다 (decisions.md 503·588·666번)
-         * @description 사장냥의 고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 여기서 쓰지 않고 레벨업 카드로만 켠다 (666번, /api/company/idle/card): 보내면 400.
+         * 광고 스킬을 쓴다 (decisions.md 503·588·667번)
+         * @description 사장냥의 고유 스킬(barrage·rally·fortify·limitUp·stopLoss·averaging)은 여기서 쓰지 않고 레벨업 카드로만 켠다 (667번, /api/company/idle/card): 보내면 400.
          *     쓰면 재사용 대기 시간이 돈다. 대기 시간은 전투가 돌아가는 동안만 흐른다. 없는 스킬이거나 대기 중이거나 거래 정지 중이면 400.
          *     광고 스킬은 공격속도 3배(boostFire)·공격력 3배(boostDamage)·매수공격 3배(boostBuy)다 (588번): 장착하지 않고, 광고를 본 뒤(ad가 참)에만 쓴다.
          *     ad 없이 광고 스킬을 쓰면 400. 아직 광고를 붙이지 않아 서버는 ad를 그대로 믿는다.
@@ -291,7 +291,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 레벨업 카드를 고른다 (decisions.md 666번)
+         * 레벨업 카드를 고른다 (decisions.md 667번)
          * @description 매도벽을 부수면 경험치가 오르고 레벨이 오를 때마다 카드 석 장(idle.levelUp.offer) 가운데 하나를 고른다. 고유 스킬 카드는 그 스킬을 1분 동안 켜고(손절은 바로 한 방),
          *     catMagic은 출전한 고양이 모두의 마법 레벨을 하나 올린다(최고 5). 내민 석 장에 없는 카드거나 고를 카드가 없으면 400.
          */
@@ -1785,7 +1785,7 @@ export interface components {
                     /** @description 처음 얻은 고양이 */
                     isNew: boolean;
                 }[];
-                /** @description 액티브 스킬 (decisions.md 503번). 시간은 화면에서 흐르는 실제 초다. 앞의 여섯은 사장냥의 고유 스킬로 레벨업 카드로 켜고(666번), 뒤의 셋은 광고 스킬(588번)이다 */
+                /** @description 액티브 스킬 (decisions.md 503번). 시간은 화면에서 흐르는 실제 초다. 앞의 여섯은 사장냥의 고유 스킬로 레벨업 카드로 켜고(667번), 뒤의 셋은 광고 스킬(588번)이다 */
                 actives?: {
                     /** @enum {string} */
                     code: "barrage" | "rally" | "fortify" | "limitUp" | "stopLoss" | "averaging" | "boostFire" | "boostDamage" | "boostBuy";
@@ -1798,10 +1798,10 @@ export interface components {
                     readyIn: number;
                     /** @description 효과가 남은 시간(초). 손절처럼 바로 끝나는 것은 0 */
                     left: number;
-                    /** @description 광고를 보면 쓰는 스킬이다 (588번). 아니면 레벨업 카드로 켜는 고유 스킬 (666번) */
+                    /** @description 광고를 보면 쓰는 스킬이다 (588번). 아니면 레벨업 카드로 켜는 고유 스킬 (667번) */
                     ad: boolean;
                 }[];
-                /** @description 전투 레벨과 레벨업 카드 (decisions.md 666번). 매도벽을 부수면 경험치가 오르고 레벨이 오를 때마다 카드를 고른다. 환생하면 처음으로 돌아간다 */
+                /** @description 전투 레벨과 레벨업 카드 (decisions.md 667번). 매도벽을 부수면 경험치가 오르고 레벨이 오를 때마다 카드를 고른다. 환생하면 처음으로 돌아간다 */
                 levelUp?: {
                     /** @description 지금 전투 레벨 */
                     level: number;

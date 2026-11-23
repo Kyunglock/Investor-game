@@ -34,7 +34,7 @@ const idle = {
   power: 1038,
   income: { perSecond: 1, staffPerSecond: 0, bonusPercent: 0 },
   offline: null,
-  activeSlots: 3,
+  levelUp: { level: 1, xp: 0, next: 5, pending: 0, offer: [], magicBonus: 0, cardSeconds: 60 },
   actives: [
     ['barrage', '매수세례', 40, 4, false],
     ['rally', '불장', 60, 6.7, false],
@@ -42,14 +42,13 @@ const idle = {
     ['boostFire', '공격속도 3배', 180, 180, true],
     ['boostDamage', '공격력 3배', 180, 180, true],
     ['boostBuy', '매수공격 3배', 180, 180, true],
-  ].map(([code, name, cooldown, seconds, ad], index) => ({
+  ].map(([code, name, cooldown, seconds, ad]) => ({
     code,
     name,
     cooldown,
     seconds,
     readyIn: 0,
     left: 0,
-    equipped: index < 3,
     ad,
   })),
 }
@@ -86,7 +85,8 @@ async function run(browser, width, height) {
     return {
       wallTop: canvas.top + market.buyWall.feedback.top,
       sellBottom: canvas.top + window.__mentalWalls()[0].bottom,
-      columns: ['idle-actives', 'idle-ad-actives'].map((id) => {
+      // 오른쪽 열은 고유 스킬 단추였다가 전투 레벨 단추가 되었다 (667번).
+      columns: ['idle-level', 'idle-ad-actives'].map((id) => {
         const rect = box(`[data-testid=${id}]`)
         return { id, top: rect.top, bottom: rect.bottom }
       }),

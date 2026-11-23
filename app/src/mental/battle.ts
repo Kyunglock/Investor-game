@@ -9,6 +9,7 @@ import {
   averagingMult,
   BOOST,
   type BoostCode,
+  CARD_SECONDS,
   stopLossDamage,
 } from './actives'
 import {
@@ -3721,24 +3722,24 @@ class BattleScene extends Phaser.Scene {
    */
   castActive(code: ActiveCode, left?: number) {
     if (!this.opts.idle || this.over) return
+    // 고유 스킬은 레벨업 카드로 켜고 1분(CARD_SECONDS) 동안 이어진다 (667번).
     if (code === 'barrage') {
-      if (left != null) return
-      this.barrageLeft = ACTIVES.barrage.shots
+      const { seconds, shots } = ACTIVES.barrage
+      this.barrageLeft = Math.round(((left ?? CARD_SECONDS) * shots) / seconds)
       this.barrageClock = 0
     } else if (code === 'rally') {
-      this.rallyUntil = this.elapsed + (left ?? ACTIVES.rally.seconds)
+      this.rallyUntil = this.elapsed + (left ?? CARD_SECONDS)
     } else if (code === 'fortify') {
-      if (left != null) return
-      this.buyWall?.fortify(ACTIVES.fortify.seconds)
+      this.buyWall?.fortify(left ?? CARD_SECONDS)
       this.buyWallFx?.fortify()
       this.drawBuyWall()
     } else if (code === 'limitUp') {
-      this.limitUpUntil = this.elapsed + (left ?? ACTIVES.limitUp.seconds)
+      this.limitUpUntil = this.elapsed + (left ?? CARD_SECONDS)
     } else if (code === 'stopLoss') {
       if (left != null) return
       this.stopLossPending = true
     } else if (code === 'averaging') {
-      this.averagingUntil = this.elapsed + (left ?? ACTIVES.averaging.seconds)
+      this.averagingUntil = this.elapsed + (left ?? CARD_SECONDS)
     } else {
       this.boostUntil[code] = this.elapsed + (left ?? ACTIVES[code].seconds)
     }

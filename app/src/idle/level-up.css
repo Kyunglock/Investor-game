@@ -1,0 +1,221 @@
+/* 전투 레벨과 레벨업 카드 (decisions.md 667번). 레벨 단추는 예전 고유 스킬 줄(오른쪽)의 자리에 선다. */
+.idle-level {
+  position: absolute;
+  grid-row: 1 / 2;
+  right: 6px;
+  top: var(--idle-actives-top);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff7e3;
+  box-shadow: 0 3px 0 #a8772e;
+  color: #5c3b12;
+  cursor: pointer;
+}
+/* 다음 레벨까지의 경험치: 둘레의 고리가 시계 방향으로 찬다. */
+.idle-level-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(#f2a71b var(--level-ratio, 0turn), #ead9b8 0);
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 63%);
+  mask: radial-gradient(circle, transparent 62%, #000 63%);
+}
+.idle-level-number {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  font:
+    900 16px / 1 "Jua",
+    "Noto Sans KR",
+    sans-serif;
+}
+.idle-level-number small {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+.idle-level-pending {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: 9px;
+  background: #e8434f;
+  color: #fff;
+  font:
+    900 11px / 14px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+}
+.idle-level[data-pending] {
+  animation: idle-level-glow 1.2s ease-in-out infinite alternate;
+}
+@keyframes idle-level-glow {
+  to {
+    box-shadow:
+      0 3px 0 #a8772e,
+      0 0 0 4px #ffe08a,
+      0 0 14px #ffbf45;
+  }
+}
+.idle-level:focus-visible {
+  outline: 3px solid #237bd2;
+  outline-offset: 3px;
+}
+
+/* 카드 석 장: 전장의 아래쪽에 가로로 펼친다. 전투는 그대로 돈다. */
+.level-cards {
+  position: absolute;
+  grid-row: 1 / 2;
+  left: 50%;
+  translate: -50% 0;
+  width: min(560px, calc(100% - 16px));
+  box-sizing: border-box;
+  bottom: 10px;
+  z-index: 3;
+  padding: 8px;
+  border: 2px solid #fff3d6;
+  border-radius: 16px;
+  background: #3b2a4ef0;
+  box-shadow: 0 6px 18px #1a10284d;
+  color: #fff8ea;
+  animation: level-cards-in 0.22s ease-out;
+}
+@keyframes level-cards-in {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+.level-cards header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 2px 6px;
+}
+.level-cards-title {
+  color: #ffd76a;
+  font:
+    900 15px "Jua",
+    "Noto Sans KR",
+    sans-serif;
+}
+.level-cards header span {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  opacity: 0.9;
+}
+.level-cards-later {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #fff3d699;
+  border-radius: 16px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+.level-cards ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.level-card {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  min-height: 150px;
+  padding: 8px 5px;
+  border: 2px solid #d9b46a;
+  border-radius: 12px;
+  background: linear-gradient(#fffaf0, #f7e7c6);
+  box-shadow: 0 3px 0 #a8772e;
+  color: #4a2f12;
+  text-align: center;
+  font: inherit;
+  cursor: pointer;
+}
+.level-card:active:enabled {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #a8772e;
+}
+.level-card:disabled {
+  opacity: 0.7;
+}
+.level-card:focus-visible {
+  outline: 3px solid #7cc4ff;
+  outline-offset: 2px;
+}
+.level-card[data-code="catMagic"] {
+  border-color: #9a7be0;
+  background: linear-gradient(#f9f4ff, #e7dbff);
+  box-shadow: 0 3px 0 #6c4fb0;
+  color: #34205e;
+}
+.level-card-art {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+}
+.level-card-art .active-badge {
+  width: 100%;
+  height: 100%;
+}
+.level-card-magic {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d9c8ff, #7a52d6 70%);
+  box-shadow: 0 2px 0 #4e2f9e;
+  color: #fff7c2;
+  font-size: 24px;
+}
+.level-card > b {
+  font-size: 13px;
+  line-height: 1.2;
+}
+.level-card > small {
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #4a2f12;
+  color: #ffe9b8;
+  font-size: 10px;
+  font-weight: 700;
+}
+.level-card[data-code="catMagic"] > small {
+  background: #34205e;
+}
+.level-card p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.level-cards [role="alert"] {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: #ffb4b4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-level[data-pending],
+  .level-cards {
+    animation: none;
+  }
+}

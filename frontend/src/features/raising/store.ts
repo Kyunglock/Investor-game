@@ -8,6 +8,8 @@ export type WeaponGrade = NonNullable<Company['weapons']>[number]['grade']
 export type ActiveCode = NonNullable<NonNullable<Company['idle']>['actives']>[number]['code']
 /** 장착하는 고유 스킬 (decisions.md 587번). 광고 스킬(588번)은 장착하지 않는다. */
 export type UniqueActiveCode = Exclude<ActiveCode, `boost${string}`>
+/** 레벨업 카드 (decisions.md 667번): 사장냥의 고유 스킬 여섯과 고양이 마법 강화. */
+export type CardCode = UniqueActiveCode | 'catMagic'
 export type CatCode = NonNullable<Company['idle']>['cats'][number]['code']
 
 interface RaisingState {
@@ -65,7 +67,8 @@ interface RaisingState {
   /** ad: 광고를 끝까지 본 뒤에 쓴다 (588번). 광고 스킬은 ad가 참이어야 서버가 받아 준다. */
   useActive: (code: ActiveCode, ad?: boolean) => Promise<boolean>
   /** 고유 스킬을 장착하거나 뺀다 (decisions.md 587번). 세 개까지. */
-  equipActive: (code: UniqueActiveCode, equipped: boolean) => Promise<void>
+  /** 레벨업 카드를 고른다 (667번). 서버가 받아 주면 참. */
+  pickCard: (code: CardCode) => Promise<boolean>
   tutorial: (
     action: 'next' | 'draw-cat' | 'draw-weapon' | 'start' | 'skills',
     step: number,
@@ -342,8 +345,10 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     },
     tutorial: (action, step) =>
       change(api.POST('/api/company/idle/tutorial', { body: { action, step } })),
-    equipActive: (code, equipped) =>
-      change(api.POST('/api/company/idle/active/equip', { body: { code, equipped } })),
+    pickCard: async (code) => {
+      await change(api.POST('/api/company/idle/card', { body: { code } }))
+      return !get().error
+    },
     drawCat: async (ad = false, count = 1) => {
       const res = await safely(api.POST('/api/company/cat/draw', { body: { count, ad } }))
       set({ company: res?.data ?? get().company, error: reason(res?.error) })

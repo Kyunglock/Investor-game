@@ -13,39 +13,14 @@ import { ActiveBadge } from './ActiveBadge'
 
 type Active = NonNullable<NonNullable<Company['idle']>['actives']>[number]
 
-const AUTO_KEY = 'idle-auto-skill'
-function readAutoSkill() {
-  try {
-    return localStorage.getItem(AUTO_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-function writeAutoSkill(on: boolean) {
-  try {
-    localStorage.setItem(AUTO_KEY, on ? '1' : '0')
-  } catch {
-    // 기억하지 못해도 지금은 그대로 쓴다.
-  }
-}
-
 /**
  * 액티브 스킬 단추 (decisions.md 503번). 누르면 서버가 대기 시간을 보고 받아 주고, 받아 준 뒤에 전투가 효과를 낸다. 남은 대기 시간은 접속
  * 신호마다 서버가 다시 알려 준다.
  *
- * 오른쪽에는 장착한 고유 스킬이 선다 (587번): 스킬 탭에서 세 개까지 장착한다. 왼쪽에는 광고 스킬이 선다 (588번): 광고를 본 뒤에 쓴다. 광고를
- * 불러오지 못하면 알림을 띄운다 (589번, app/ads.ts).
+ * 왼쪽에 광고 스킬이 선다 (588번): 광고를 본 뒤에 쓴다. 광고를 불러오지 못하면 알림을 띄운다 (589번, app/ads.ts). 사장냥의 고유 스킬은
+ * 단추가 없고 레벨업 카드로 켠다 (667번, LevelUpCards).
  */
-export function IdleActives({
-  company,
-  connected,
-  autoPaused = false,
-}: {
-  company: Company
-  connected: boolean
-  /** 돌파 전투가 화면에 없다(금고 전투·다른 전투 창): 자동 사용을 쉰다 (655번). */
-  autoPaused?: boolean
-}) {
+export function IdleActives({ company, connected }: { company: Company; connected: boolean }) {
   const [selectedAd, setSelectedAd] = useState<ActiveCode | null>(null)
   const running = useRef(false)
   const [pending, setPending] = useState<ActiveCode | null>(null)
@@ -60,7 +35,6 @@ export function IdleActives({
   const actives = idle?.actives ?? []
   // 거래 정지는 화면이 벽을 부순 때 시작한다 (532번): 서버가 알기 전에도 단추가 잠긴다.
   const halted = useShownIdle(idle).circuitSeconds > 0
-  const unique = actives.filter((active) => !active.ad && active.equipped)
   const ads = actives.filter((active) => active.ad)
   const activeAd = ads.find((active) => active.left > 0)
   const unavailable = (active: Active) => {
@@ -71,15 +45,13 @@ export function IdleActives({
     if (active.readyIn > 0) return `${Math.ceil(active.readyIn)}초 뒤에 쓸 수 있어요`
     return null
   }
-  const use = async (active: Active, auto = false) => {
+  const use = async (active: Active) => {
     if (running.current || unavailable(active)) return
     running.current = true
     setPending(active.code)
     setNotice(null)
-    if (!auto) {
-      sfx.tap()
-      haptic.light()
-    }
+    sfx.tap()
+    haptic.light()
     try {
       if (active.ad) {
         const watched = await watchRewardedAd('active')
@@ -96,7 +68,7 @@ export function IdleActives({
       if (ok) {
         window.dispatchEvent(new CustomEvent('idle-active', { detail: active.code }))
         setSelectedAd(null)
-      } else if (!auto)
+      } else
         setNotice(
           useRaisingStore.getState().error ?? '스킬을 사용하지 못했어요. 다시 시도해 주세요.',
         )
@@ -107,23 +79,6 @@ export function IdleActives({
       setPending(null)
     }
   }
-  // 스킬 자동 사용 (654번): 켜 두면 장착한 고유 스킬을 쓸 수 있게 되는 대로 쓴다. 광고 스킬은 저절로 쓰지 않는다. 이 기기에 기억한다.
-  const [auto, setAuto] = useState(readAutoSkill)
-  const tried = useRef(new Map<string, number>())
-  const autoUse = useEffectEvent(() => {
-    if (!auto || autoPaused || running.current) return
-    const now = Date.now()
-    const ready = unique.find(
-      (active) => !unavailable(active) && now - (tried.current.get(active.code) ?? 0) > 3000,
-    )
-    if (!ready) return
-    tried.current.set(ready.code, now)
-    void use(ready, true)
-  })
-  // 서버가 남은 대기 시간을 1초마다 알려 주므로 화면이 바뀔 때마다 살핀다.
-  useEffect(() => {
-    autoUse()
-  })
   const selected = ads.find((active) => active.code === selectedAd)
   const button = (active: Active) => {
     const blockedByAd = active.ad && !!activeAd && activeAd.code !== active.code
@@ -137,7 +92,7 @@ export function IdleActives({
       <button
         key={active.code}
         type="button"
-        data-testid={active.ad ? 'idle-ad-active' : 'idle-active'}
+        data-testid="idle-ad-active"
         data-code={active.code}
         data-ready={wait === 0 && !blockedByAd}
         data-on={left > 0 || undefined}
@@ -196,27 +151,6 @@ export function IdleActives({
       {ads.length > 0 && (
         <div className="idle-actives idle-actives-ad" data-testid="idle-ad-actives">
           {ads.map(button)}
-        </div>
-      )}
-      {unique.length > 0 && (
-        <div className="idle-actives" data-testid="idle-actives">
-          <button
-            type="button"
-            className="idle-auto-skill"
-            data-testid="idle-auto-skill"
-            aria-pressed={auto}
-            aria-label={auto ? '스킬 자동 사용 끄기' : '스킬 자동 사용 켜기'}
-            title="스킬 자동 사용"
-            onClick={() => {
-              sfx.tap()
-              const next = !auto
-              setAuto(next)
-              writeAutoSkill(next)
-            }}
-          >
-            AUTO
-          </button>
-          {unique.map(button)}
         </div>
       )}
     </>

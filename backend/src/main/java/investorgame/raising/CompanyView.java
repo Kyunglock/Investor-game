@@ -415,7 +415,7 @@ public record CompanyView(
    * @param seconds 효과가 이어지는 시간
    * @param readyIn 다시 쓸 수 있을 때까지 남은 시간. 0이면 쓸 수 있다. 전투가 돌아가는 동안만 준다
    * @param left 효과가 남은 시간. 손절처럼 바로 끝나는 것은 0이다
-   * @param ad 광고를 보면 쓰는 스킬이다 (588번). 아니면 사장냥의 고유 스킬로, 레벨업 카드로만 켠다 (666번)
+   * @param ad 광고를 보면 쓰는 스킬이다 (588번). 아니면 사장냥의 고유 스킬로, 레벨업 카드로만 켠다 (667번)
    */
   public record IdleActive(
       String code,
@@ -427,7 +427,7 @@ public record CompanyView(
       boolean ad) {}
 
   /**
-   * 전투 레벨과 레벨업 카드 (decisions.md 666번). 매도벽을 부수면 경험치가 오르고, 레벨이 오를 때마다 석 장 가운데 하나를 고른다. 환생하면 처음으로
+   * 전투 레벨과 레벨업 카드 (decisions.md 667번). 매도벽을 부수면 경험치가 오르고, 레벨이 오를 때마다 석 장 가운데 하나를 고른다. 환생하면 처음으로
    * 돌아간다.
    *
    * @param level 지금 전투 레벨

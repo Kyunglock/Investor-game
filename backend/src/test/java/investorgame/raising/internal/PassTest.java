@@ -233,7 +233,7 @@ class PassTest {
     }
     assertThat(mission(c, "forever").count()).isEqualTo(5);
     assertThat(mission(c, "forever").ready()).isEqualTo(150);
-    // 레벨업 카드는 고른 장 수 (666번).
+    // 레벨업 카드는 고른 장 수 (667번).
     c.idle.cardsPending = 1;
     c.idle.cardOffer = new java.util.ArrayList<>(List.of("rally"));
     idle.pickCard(c, "rally");

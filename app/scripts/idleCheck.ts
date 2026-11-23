@@ -100,26 +100,33 @@ try {
             nextBonus: kind === 'buy' ? 10 : 1,
           })),
         },
-        // 고유 스킬 여섯(587·591번, 앞의 셋을 장착)과 광고 스킬 셋(588번). 시간은 실제 초다.
-        activeSlots: 3,
+        // 고유 스킬 여섯(587·591번, 레벨업 카드로 1분 동안 켠다, 667번)과 광고 스킬 셋(588번). 시간은 실제 초다.
+        levelUp: {
+          level: 4,
+          xp: 3,
+          next: 11,
+          pending: 0,
+          offer: [] as string[],
+          magicBonus: 0,
+          cardSeconds: 60,
+        },
         actives: [
-          ['barrage', '매수세례', 40, 4, false],
-          ['rally', '불장', 60, 6.7, false],
-          ['fortify', '방어선 구축', 60, 4, false],
-          ['limitUp', '상한가', 60, 8, false],
-          ['stopLoss', '손절', 60, 0, false],
-          ['averaging', '물타기', 60, 10, false],
+          ['barrage', '매수세례', 0, 60, false],
+          ['rally', '불장', 0, 60, false],
+          ['fortify', '방어선 구축', 0, 60, false],
+          ['limitUp', '상한가', 0, 60, false],
+          ['stopLoss', '손절', 0, 0, false],
+          ['averaging', '물타기', 0, 60, false],
           ['boostFire', '공격속도 3배', 180, 180, true],
           ['boostDamage', '공격력 3배', 180, 180, true],
           ['boostBuy', '매수공격 3배', 180, 180, true],
-        ].map(([code, name, cooldown, seconds, ad], index) => ({
+        ].map(([code, name, cooldown, seconds, ad]) => ({
           code,
           name,
           cooldown,
           seconds,
           readyIn: 0,
           left: 0,
-          equipped: index < 3,
           ad,
         })) as {
           code: string
@@ -128,7 +135,6 @@ try {
           seconds: number
           readyIn: number
           left: number
-          equipped: boolean
           ad: boolean
         }[],
         wallDps: 0,
@@ -180,7 +186,7 @@ try {
     const moves: string[] = []
     const rebirths: { ad?: boolean }[] = []
     const usedActives: { code: string; ad?: boolean }[] = []
-    const equips: { code: string; equipped: boolean }[] = []
+    const picks: string[] = []
     let catDraws = 0
     const hires: number[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -214,10 +220,14 @@ try {
           if (active.ad) active.left = active.seconds
         }
       }
-      if (path.endsWith('/idle/active/equip')) {
-        equips.push(sent)
+      // 레벨업 카드 (667번): 고른 고유 스킬은 1분 동안 켜진다.
+      if (path.endsWith('/idle/card')) {
+        picks.push(sent.code)
+        const levelUp = company.idle.levelUp
+        levelUp.pending = Math.max(0, levelUp.pending - 1)
+        levelUp.offer = []
         const active = company.idle.actives.find((a) => a.code === sent.code)
-        if (active) active.equipped = sent.equipped
+        if (active && active.seconds > 0) active.left = active.seconds
       }
       // Rebirth (571, 586): the fish it paid, three times as many after an ad.
       if (path.endsWith('/company/rebirth')) {
@@ -1022,13 +1032,16 @@ try {
     await expect(page.getByTestId('rebirth-confirm')).toHaveCount(0)
     await page.getByTestId('idle-menu').getByRole('button', { name: '닫기 ✕' }).click()
     await expect(rebirthShortcut).toBeFocused()
-    // 고유 스킬 (587번): 장착한 셋이 전투 화면 오른쪽에 선다. 광고 스킬 (588번)은 왼쪽에 늘 셋이다.
-    await expect(page.getByTestId('idle-active')).toHaveCount(3)
+    // 사장냥의 고유 스킬은 단추가 없다 (667번): 오른쪽에는 전투 레벨 단추가 선다. 광고 스킬 (588번)은 왼쪽에 늘 셋이다.
+    await expect(page.getByTestId('idle-active')).toHaveCount(0)
     await expect(page.getByTestId('idle-ad-active')).toHaveCount(3)
+    const levelButton = page.getByTestId('idle-level')
+    await expect(levelButton).toHaveAccessibleName('전투 레벨 4 · 다음 레벨까지 경험치 3 / 11')
+    await expect(page.getByTestId('level-cards')).toHaveCount(0)
     {
       const left = await page.getByTestId('idle-ad-actives').boundingBox()
-      const right = await page.getByTestId('idle-actives').boundingBox()
-      assert(left && right && left.x + left.width < right.x, 'ad skills left, unique skills right')
+      const right = await levelButton.boundingBox()
+      assert(left && right && left.x + left.width < right.x, 'ad skills left, the level right')
       assert(left.x >= 0 && right.x + right.width <= width, 'skill buttons stay on screen')
       // 환생 단추는 광고 스킬 바로 위에 선다 (605번): 같은 줄에 맞추고 겹치지 않는다.
       const rebirth = await rebirthShortcut.boundingBox()
@@ -1063,67 +1076,69 @@ try {
       /다른 광고 스킬 사용 중/,
     )
     await page.screenshot({ path: `/tmp/idle-actives-${width}.png` })
-    // 스킬 탭 (587번): 장착 칸 셋과 스킬 목록. 빼면 전투 화면의 단추가 사라지고, 다시 장착하면 돌아온다.
+    // 레벨업 카드 (667번): 레벨이 오르면 석 장이 전장 아래에 펼쳐지고, 고른 고유 스킬은 1분 동안 켜진다.
+    Object.assign(company.idle.levelUp, {
+      level: 5,
+      xp: 0,
+      next: 13,
+      pending: 1,
+      offer: ['rally', 'stopLoss', 'catMagic'],
+    })
+    const cards = page.getByTestId('level-cards')
+    await expect(cards).toBeVisible()
+    await expect(cards).toContainText('레벨업! Lv.5')
+    await expect(cards.getByTestId('level-card')).toHaveCount(3)
+    await expect(cards.locator('[data-code=rally]')).toContainText('불장')
+    await expect(cards.locator('[data-code=rally]')).toContainText('1분 동안')
+    await expect(cards.locator('[data-code=stopLoss]')).toContainText('바로 발동')
+    await expect(cards.locator('[data-code=catMagic]')).toContainText('고양이 마법 강화')
+    {
+      const box = await cards.boundingBox()
+      const nav = await page.getByRole('navigation', { name: '게임 메뉴' }).last().boundingBox()
+      assert(box && box.x >= 0 && box.x + box.width <= width, 'the cards stay on screen')
+      assert(nav && box.y + box.height <= nav.y, 'the cards stay above the menu')
+    }
+    await page.screenshot({ path: `/tmp/idle-level-cards-${width}.png` })
+    // 나중에: 접으면 레벨 단추에 고를 수가 붙고, 누르면 다시 펼친다.
+    await cards.getByRole('button', { name: '나중에' }).click()
+    await expect(cards).toHaveCount(0)
+    await expect(levelButton).toHaveAttribute('data-pending', '1')
+    await expect(levelButton).toHaveAccessibleName(/고를 카드 1장/)
+    await levelButton.click()
+    await expect(cards).toBeVisible()
+    await cards.locator('[data-code=rally]').click()
+    await expect.poll(() => picks).toEqual(['rally'])
+    await expect(cards).toHaveCount(0)
+    await expect(levelButton).not.toHaveAttribute('data-pending')
+    // 스킬 탭 (667번): 전투 레벨과 레벨업 카드 일곱(고유 스킬 여섯과 고양이 마법 강화)을 본다. 장착 칸은 없다.
     await nav.getByRole('button', { name: '스킬', exact: true }).click()
     await expect(page.getByTestId('skills')).toBeVisible()
-    await expect(page.getByTestId('skill-slot')).toHaveCount(3)
-    await expect(page.getByTestId('unique-skill')).toHaveCount(6)
+    await expect(page.getByTestId('skill-level')).toContainText('전투 레벨 Lv.5')
+    await expect(page.getByTestId('skill-slot')).toHaveCount(0)
+    await expect(page.getByTestId('skill-equip')).toHaveCount(0)
+    await expect(page.getByTestId('unique-skill')).toHaveCount(7)
     await expect(page.getByTestId('ad-skill')).toHaveCount(0)
     await expect(page.getByTestId('skills').getByText('광고 스킬', { exact: true })).toHaveCount(0)
     const rally = page.locator('[data-testid=unique-skill][data-code=rally]')
     await expect(rally.getByRole('img', { name: /불장/ })).toBeVisible()
     await expect(rally).toContainText('×2')
+    await expect(rally).toContainText('60초 남음')
     await rally.locator('summary[aria-label="불장 설명"]').click()
-    await expect(rally.getByRole('img', { name: '지속 7초 · 재사용 대기 60초' })).toBeVisible()
     await expect(rally.locator('details')).toHaveAttribute('open', '')
     await expect(
-      rally.getByText('사장냥과 고양이의 총이 두 배 빨리 나가요.', { exact: true }),
+      rally.getByText('1분 동안 사장냥과 고양이의 총이 두 배 빨리 나가요.', { exact: true }),
     ).toBeVisible()
     await rally.locator('summary[aria-label="불장 설명"]').click()
-    await page.screenshot({ path: `/tmp/idle-skills-${width}.png` })
-    await page
-      .locator('[data-testid=skill-slot][data-code=rally]')
-      .getByRole('button', { name: '불장 해제' })
-      .click()
-    await expect(rally).toHaveAttribute('data-equipped', 'false')
-    assert.deepEqual(equips, [{ code: 'rally', equipped: false }])
-    await expect(page.locator('[data-testid=skill-slot][data-code]')).toHaveCount(2)
-    await expect(page.locator('[data-testid=skill-slot]:not([data-code])')).toHaveText('빈 칸')
-    await expect(page.getByTestId('idle-active')).toHaveCount(2)
-    await expect(page.locator('[data-testid=idle-active][data-code=rally]')).toHaveCount(0)
-    await expect(page.getByTestId('idle-ad-active')).toHaveCount(3)
-    await rally.getByTestId('skill-equip').click()
-    await expect(rally).toHaveAttribute('data-equipped', 'true')
-    assert.deepEqual(equips.at(-1), { code: 'rally', equipped: true })
-    await expect(page.getByTestId('idle-active')).toHaveCount(3)
-    // 상한가·손절·물타기 (591번): 칸이 꽉 차 있으면 장착하지 못하고, 하나를 빼면 그 자리에 장착해 전투 화면에 단추가 선다.
-    const stopLoss = page.locator('[data-testid=unique-skill][data-code=stopLoss]')
-    await expect(stopLoss).toContainText('손절')
-    await stopLoss.locator('summary').click()
-    await expect(stopLoss.getByRole('img', { name: '바로 발동 · 재사용 대기 60초' })).toBeVisible()
-    await stopLoss.locator('summary').click()
-    await expect(stopLoss.getByTestId('skill-equip')).toBeDisabled()
-    await expect(stopLoss.getByTestId('skill-equip')).toHaveText('장착')
+    await expect(page.locator('[data-testid=unique-skill][data-code=stopLoss]')).toContainText(
+      '바로 발동',
+    )
     await expect(page.locator('[data-testid=unique-skill][data-code=limitUp]')).toContainText(
       '전부 치명타',
     )
-    await expect(page.locator('[data-testid=unique-skill][data-code=averaging]')).toContainText(
-      '물타기',
+    await expect(page.locator('[data-testid=unique-skill][data-code=catMagic]')).toContainText(
+      '고양이 마법 강화',
     )
-    await rally.getByTestId('skill-equip').click()
-    await stopLoss.getByTestId('skill-equip').click()
-    await expect(stopLoss).toHaveAttribute('data-equipped', 'true')
-    assert.deepEqual(equips.at(-1), { code: 'stopLoss', equipped: true })
-    await expect(
-      page.locator('[data-testid=idle-active][data-code=stopLoss]'),
-    ).toHaveAccessibleName(/손절/)
-    await expect(page.locator('[data-testid=idle-active][data-code=stopLoss]')).toContainText(
-      '−50%',
-    )
-    await page.screenshot({ path: `/tmp/idle-skills-new-${width}.png` })
-    await stopLoss.getByTestId('skill-equip').click()
-    await rally.getByTestId('skill-equip').click()
-    await expect(page.locator('[data-testid=idle-active][data-code=rally]')).toHaveCount(1)
+    await page.screenshot({ path: `/tmp/idle-skills-${width}.png` })
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     await expect(page.getByTestId('idle-menu')).toHaveCount(0)
     await expect(nav.getByRole('button', { name: /^무기/ })).toHaveCount(0)

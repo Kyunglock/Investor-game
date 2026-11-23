@@ -1174,7 +1174,7 @@ class IdleEngineTest {
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
     assertThat(state.idle.damage).isZero();
 
-    // 666: the boss cat's skills are no longer pressed. They come from level-up cards.
+    // 667: the boss cat's skills are no longer pressed. They come from level-up cards.
     assertThatThrownBy(() -> engine.useActive(state, "barrage"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("레벨업 카드");
@@ -1195,7 +1195,7 @@ class IdleEngineTest {
     assertThat(state.idle.damage).as("600 in all").isCloseTo(550 * order, offset(1e-9));
   }
 
-  /** Offers one card and picks it (666). */
+  /** Offers one card and picks it (667). */
   private void card(String code) {
     state.idle.cardsPending = 1;
     state.idle.cardOffer = new java.util.ArrayList<>(List.of(code));
@@ -1217,7 +1217,7 @@ class IdleEngineTest {
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * plain, org.assertj.core.data.Offset.offset(1e-9));
-    // A minute later it is over (666).
+    // A minute later it is over (667).
     for (int i = 0; i < 60; i++) tick(1000);
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
@@ -1227,7 +1227,7 @@ class IdleEngineTest {
 
   @Test
   void breakingWallsLevelsUpAndEachLevelOffersThreeCards() {
-    // 666: a wall is one experience point. Level 1 needs five, then two more each level.
+    // 667: a wall is one experience point. Level 1 needs five, then two more each level.
     start(1);
     assertThat(IdleEngine.xpToNext(1)).isEqualTo(5);
     assertThat(IdleEngine.xpToNext(2)).isEqualTo(7);
@@ -1338,7 +1338,7 @@ class IdleEngineTest {
         .hasMessageContaining("레벨업 카드");
 
     // 상한가: a critical hit was already the most a bullet may do, so only the time is kept. A
-    // card runs it for a minute (666).
+    // card runs it for a minute (667).
     double bullets = accepted("bullet");
     card("limitUp");
     var limitUp = engine.view(state).actives().get(3);

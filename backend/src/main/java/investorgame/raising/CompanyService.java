@@ -140,11 +140,11 @@ public interface CompanyService {
 
   /**
    * 광고 스킬을 쓴다 (decisions.md 503·588번). 없는 스킬이거나 재사용 대기 중이면 400. 광고를 본 뒤(ad)에만 쓴다. 사장냥의 고유 스킬은 레벨업
-   * 카드로만 켠다 (666번).
+   * 카드로만 켠다 (667번).
    */
   CompanyView useActive(UUID sessionId, String code, boolean ad);
 
-  /** 레벨업 카드를 고른다 (decisions.md 666번). 내민 석 장에 없는 카드면 400. */
+  /** 레벨업 카드를 고른다 (decisions.md 667번). 내민 석 장에 없는 카드면 400. */
   CompanyView pickCard(UUID sessionId, String code);
 
   CompanyView tutorial(UUID sessionId, String action, int step);

@@ -478,7 +478,7 @@ class CompanyController {
 
   record ActiveRequest(@NotBlank String code, Boolean ad) {}
 
-  /** 레벨업 카드를 고른다 (decisions.md 666번). */
+  /** 레벨업 카드를 고른다 (decisions.md 667번). */
   @PostMapping("/idle/card")
   CompanyView pickCard(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,

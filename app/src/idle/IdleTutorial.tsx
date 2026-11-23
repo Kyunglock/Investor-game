@@ -14,16 +14,12 @@ export function IdleTutorial({
   onReplay,
   onGo,
   menu,
-  skillUse,
-  onSkillUse,
 }: {
   company: Company
   replay: number | null
   onReplay: (step: number | null) => void
   onGo: (menu: 'battle' | 'growth' | 'cats' | 'skills', gear?: boolean) => void
   menu: string
-  skillUse: boolean
-  onSkillUse: () => void
 }) {
   const progress = company.idle?.onboarding
   const busy = useRaisingStore((s) => s.busy)
@@ -33,9 +29,9 @@ export function IdleTutorial({
   const bubble = useRef<HTMLElement>(null)
   const [height, setHeight] = useState(110)
   const step = replay ?? progress?.step ?? 8
-  const skillGuide = step >= 8 && !!progress?.skillsUnlocked && !progress.skillGuideSeen
-  const active = !!progress && (step < 8 || skillGuide)
-  const focus = useTutorialFocus(tutorialTargets(step, menu, skillUse), active)
+  // 100벽의 스킬 안내(587번)는 없앴다: 사장냥의 스킬은 누르지 않고 레벨업 카드로 켠다 (667번).
+  const active = !!progress && step < 8
+  const focus = useTutorialFocus(tutorialTargets(step, menu), active)
   useTutorialDragGuard(focus?.drop ? focus.target : undefined, focus?.drop?.target)
   const ready = tutorialReady(company, step)
   const advance = () => useRaisingStore.getState().tutorial('next', progress?.step ?? 8)
@@ -57,12 +53,6 @@ export function IdleTutorial({
         if (step === 5 && !useRaisingStore.getState().error) onGo('battle')
       })
   }, [step, ready, busy, replay, progress, onGo])
-  useEffect(() => {
-    if (!skillGuide || !skillUse) return
-    const used = () => void useRaisingStore.getState().tutorial('skills', 8)
-    window.addEventListener('idle-active', used, { once: true })
-    return () => window.removeEventListener('idle-active', used)
-  }, [skillGuide, skillUse])
   useLayoutEffect(() => {
     if (!active || !focus || !bubble.current) return
     const observer = new ResizeObserver(() =>
@@ -104,9 +94,7 @@ export function IdleTutorial({
             : null
           : step === 7
             ? '안내 마치기'
-            : skillGuide && menu === 'skills' && !skillUse
-              ? '사용 위치 보기'
-              : null
+            : null
   const drop = focus.drop
   const windows = (drop ? [focus, drop] : [focus]).map((box) => (
     <rect key={box.target} x={box.left} y={box.top} width={box.width} height={box.height} rx={9} />
@@ -119,10 +107,6 @@ export function IdleTutorial({
   const next = () => {
     if (replay !== null) {
       onReplay(step === 7 ? null : step === 5 ? 7 : step + 1)
-      return
-    }
-    if (skillGuide) {
-      onSkillUse()
       return
     }
     void advance()
@@ -195,13 +179,7 @@ export function IdleTutorial({
             }}
           />
         )}
-        <small>
-          {replay !== null
-            ? '다시 보기'
-            : skillGuide
-              ? '스킬 해금'
-              : `${Math.min(step + 2, 8)} / 8`}
-        </small>
+        <small>{replay !== null ? '다시 보기' : `${Math.min(step + 2, 8)} / 8`}</small>
         <p aria-live="polite">
           {step === 0 && ready
             ? '첫 매도벽을 돌파했어요! 확인하고 공격력 강화를 배워봐요.'
@@ -230,15 +208,12 @@ export function IdleTutorial({
               다시 시도
             </button>
           )}
-          {(replay !== null || skillGuide) && (
+          {replay !== null && (
             <button
               type="button"
               className="tutorial-skip"
               disabled={busy}
-              onClick={() => {
-                if (replay !== null) onReplay(null)
-                else void useRaisingStore.getState().tutorial('skills', 8)
-              }}
+              onClick={() => onReplay(null)}
             >
               안내 닫기
             </button>

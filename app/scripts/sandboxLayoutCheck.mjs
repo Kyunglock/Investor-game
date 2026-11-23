@@ -36,8 +36,8 @@ try {
         power: 1,
         income: { perSecond: 0, staffPerSecond: 0, bonusPercent: 0 },
         offline: null,
+        levelUp: { level: 1, xp: 0, next: 5, pending: 0, offer: [], magicBonus: 0, cardSeconds: 60 },
         rebirth: { count: 0, fish: 0, gain: 5, fromWall: 51, adGain: 15, upgrades: [] },
-        activeSlots: 3,
         actives: [
           ['barrage', '매수세례', false],
           ['rally', '불장', false],
@@ -52,7 +52,6 @@ try {
           seconds: 60,
           readyIn: 0,
           left: 0,
-          equipped: true,
           ad,
         })),
       },
@@ -80,7 +79,7 @@ try {
     const others = {
       환생: await page.getByTestId('rebirth-shortcut').boundingBox(),
       '광고 스킬': await page.getByTestId('idle-ad-actives').boundingBox(),
-      스킬: await page.getByTestId('idle-actives').boundingBox(),
+      '전투 레벨': await page.getByTestId('idle-level').boundingBox(),
     }
     for (const [name, mine] of [
       ['테스트판 단추', await tools.boundingBox()],

@@ -2516,27 +2516,6 @@
 }
 
 /* 스킬 자동 사용 (654번): 스킬 열의 크기를 바꾸지 않게 열 왼쪽 옆, 첫 스킬과 같은 높이에 띄운다. */
-.idle-actives .idle-auto-skill {
-  position: absolute;
-  top: calc((var(--idle-active-size) - 26px) / 2);
-  right: calc(100% + 4px);
-  width: 46px;
-  height: 26px;
-  border: 2px solid #9162aa;
-  border-radius: 13px;
-  background: #f6e6ffd9;
-  box-shadow: 0 2px 0 #9162aa;
-  font:
-    900 11px "Noto Sans KR",
-    sans-serif;
-  letter-spacing: 0.02em;
-  color: #9162aa;
-}
-.idle-actives .idle-auto-skill[aria-pressed="true"] {
-  background: linear-gradient(#b27bdb, #7a3fae);
-  color: #fff;
-  border-color: #5d2e86;
-}
 
 /* 지정 자동 강화 (654번). */
 .idle-auto-note {

@@ -1,21 +1,16 @@
 import type { Company } from '@web/api/client'
-import { type CatCode, type UniqueActiveCode, useRaisingStore } from '@web/features/raising/store'
+import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useRef, useState } from 'react'
-import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { ACTIVE_HINTS, ACTIVE_NOTES } from '../mental/actives'
 import { heroOf } from '../mental/hero'
-import { ActiveBadge, ActiveTime } from './ActiveBadge'
+import { ActiveBadge } from './ActiveBadge'
 import { CatPortrait, catTrait } from './CatPortrait'
 import { CatRosterGrid } from './CatRosterGrid'
 import { CompanionSkills } from './CompanionSkills'
 import { sortCats } from './catGrade'
 
-type Active = NonNullable<NonNullable<Company['idle']>['actives']>[number]
-
-const seconds = (value: number) => `${Math.round(value).toLocaleString()}초`
-
-/** 장착 칸에서도 해제할 수 있어, 목록을 오가며 빈자리를 찾지 않아도 된다. */
+/** 스킬 탭: 사장냥의 고유 스킬은 레벨업 카드로 켜고 (667번), 고양이를 고르면 그 고양이의 고유 스킬을 본다. */
 export function IdleSkills({
   company,
   picked,
@@ -37,17 +32,9 @@ export function IdleSkills({
     sfx.tap()
   }
   const boss = heroOf(company).name
-  const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const unique = (company.idle?.actives ?? []).filter((active) => !active.ad)
-  const slots = company.idle?.activeSlots ?? 0
-  const equipped = unique.filter((active) => active.equipped)
-  const full = equipped.length >= slots
-  const toggle = (active: Active) => {
-    sfx.tap()
-    haptic.light()
-    void useRaisingStore.getState().equipActive(active.code as UniqueActiveCode, !active.equipped)
-  }
+  const level = company.idle?.levelUp
   return (
     <div ref={panel} className="boss-skills" data-testid="skills">
       {cat ? (
@@ -67,61 +54,30 @@ export function IdleSkills({
         </section>
       ) : (
         <>
-          <section className="boss-skill-loadout" aria-label="장착 중인 스킬">
+          <section className="boss-skill-loadout" aria-label="전투 레벨" data-testid="skill-level">
             <div className="boss-skill-header">
-              <b>장착 중</b>
-              <span role="status" aria-label={`${slots}칸 중 ${equipped.length}칸 장착`}>
-                {equipped.length} / {slots}
+              <b>전투 레벨 Lv.{level?.level ?? 1}</b>
+              <span>
+                경험치 {level?.xp ?? 0} / {level?.next ?? 0}
               </span>
             </div>
-            <ul className="boss-skill-slots" aria-label="장착 칸">
-              {Array.from({ length: slots }, (_, i) => equipped[i] ?? null).map((active, i) => (
-                <li
-                  // biome-ignore lint/suspicious/noArrayIndexKey: 장착 칸은 자리 번호가 곧 열쇠다.
-                  key={i}
-                  className={active ? 'is-filled' : ''}
-                  data-testid="skill-slot"
-                  data-code={active?.code}
-                >
-                  {active ? (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      aria-label={`${active.name} 해제`}
-                      onClick={() => toggle(active)}
-                    >
-                      <span className="boss-skill-slot-icon">
-                        <ActiveBadge code={active.code} />
-                      </span>
-                      <span className="boss-skill-slot-name">{active.name}</span>
-                      <span className="boss-skill-slot-remove" aria-hidden="true">
-                        ×
-                      </span>
-                    </button>
-                  ) : (
-                    <small>빈 칸</small>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p className="boss-skill-help" id="boss-skill-help">
-              {full
-                ? '다른 스킬을 쓰려면 위에서 하나를 눌러 해제하세요.'
-                : '아래에서 스킬을 골라 빈 칸에 장착하세요.'}
+            <p className="boss-skill-help">
+              매도벽을 부수면 경험치가 올라요. 레벨이 오를 때마다 아래 카드 석 장 가운데 한 장을
+              골라요. 환생하면 레벨과 고른 카드가 처음으로 돌아가요.
+              {level?.magicBonus ? ` 지금 고양이 마법 +${level.magicBonus}.` : ''}
             </p>
           </section>
           <div className="boss-skill-header">
-            <b>사장냥 고유 스킬</b>
-            <span>{unique.length}종</span>
+            <b>레벨업 카드</b>
+            <span>{unique.length + 1}종</span>
           </div>
-          <ul className="boss-skill-list" aria-label="고유 스킬">
+          <ul className="boss-skill-list" aria-label="레벨업 카드">
             {unique.map((active) => (
               <li
                 key={active.code}
-                className={active.equipped ? 'is-equipped' : ''}
+                className={active.left > 0 ? 'is-equipped' : ''}
                 data-testid="unique-skill"
                 data-code={active.code}
-                data-equipped={active.equipped}
               >
                 <div className="boss-skill-main">
                   <span
@@ -134,22 +90,17 @@ export function IdleSkills({
                   <div className="boss-skill-info">
                     <div className="boss-skill-title">
                       <b>{active.name}</b>
-                      {active.equipped && <span className="boss-skill-status">장착 중</span>}
+                      {active.left > 0 && (
+                        <span className="boss-skill-status">{Math.ceil(active.left)}초 남음</span>
+                      )}
                     </div>
-                    <p>{ACTIVE_HINTS[active.code]}</p>
+                    <p>
+                      {ACTIVE_HINTS[active.code]} ·{' '}
+                      {active.seconds > 0
+                        ? `${Math.round(active.seconds / 60)}분 동안`
+                        : '바로 발동'}
+                    </p>
                   </div>
-                  <button
-                    type="button"
-                    className="boss-skill-equip"
-                    data-testid="skill-equip"
-                    aria-pressed={active.equipped}
-                    aria-label={`${active.name} ${active.equipped ? '해제' : full ? '장착 칸 없음' : '장착'}`}
-                    aria-describedby={!active.equipped && full ? 'boss-skill-help' : undefined}
-                    disabled={busy || (!active.equipped && full)}
-                    onClick={() => toggle(active)}
-                  >
-                    {active.equipped ? '해제' : '장착'}
-                  </button>
                 </div>
                 <details className="boss-skill-details">
                   <summary aria-label={`${active.name} 설명`}>
@@ -159,21 +110,25 @@ export function IdleSkills({
                     </span>
                   </summary>
                   <p>{ACTIVE_NOTES[active.code]}</p>
-                  <span
-                    className="boss-skill-times"
-                    role="img"
-                    aria-label={`${active.seconds > 0 ? `지속 ${seconds(active.seconds)}` : '바로 발동'} · 재사용 대기 ${seconds(active.cooldown)}`}
-                  >
-                    <span>
-                      {active.seconds > 0 ? '지속' : '즉시'} <ActiveTime seconds={active.seconds} />
-                    </span>
-                    <span>
-                      재사용 <ActiveTime seconds={active.cooldown} cooldown />
-                    </span>
-                  </span>
                 </details>
               </li>
             ))}
+            <li data-testid="unique-skill" data-code="catMagic">
+              <div className="boss-skill-main">
+                <span className="boss-skill-art level-card-magic" aria-hidden="true">
+                  ✦
+                </span>
+                <div className="boss-skill-info">
+                  <div className="boss-skill-title">
+                    <b>고양이 마법 강화</b>
+                    {!!level?.magicBonus && (
+                      <span className="boss-skill-status">+{level.magicBonus}</span>
+                    )}
+                  </div>
+                  <p>출전한 고양이 모두의 마법 레벨 +1 · 최고 Lv.5</p>
+                </div>
+              </div>
+            </li>
           </ul>
         </>
       )}
