@@ -382,6 +382,9 @@ try {
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(1)
     const attend = page.locator('[data-testid=pass-mission][data-code=attend]')
     await expect(attend.getByTestId('pass-mission-claim')).toHaveText('받기 +50P')
+    // 664번: 받을 것이 있는 묶음에는 일괄 받기 단추가 서고, 받을 포인트의 합을 적는다.
+    await expect(page.getByTestId('pass-missions-claim-all')).toHaveCount(1)
+    await expect(page.getByTestId('pass-missions-claim-all')).toContainText('일괄 받기 +50P')
     await expect(attend).toContainText('출석하기')
     await expect(attend).toContainText('1/1')
     await attend.getByTestId('pass-mission-claim').click()
@@ -389,6 +392,7 @@ try {
     await expect(attend).toContainText('완료')
     await expect(attend).toHaveAttribute('data-state', 'done')
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(0)
+    await expect(page.getByTestId('pass-missions-claim-all')).toHaveCount(0)
     await expect(page.getByTestId('pass-exp')).toHaveText('170 / 300P')
     await expect(page.getByTestId('pass-badge')).toHaveCount(0)
     await expect(page.getByTestId('pass').locator('.idle-coin')).toHaveCount(0)
