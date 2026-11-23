@@ -1,5 +1,5 @@
 import type { Company } from '@web/api/client'
-import { type Loadout, loadoutOf, MAX_MATES } from '../mental/cards'
+import { type Loadout, loadoutOf, STAGE_TEAM_MAX } from '../mental/cards'
 import { heroOf } from '../mental/hero'
 import { idleLoadout } from './loadout'
 import { fieldedInOrder } from './seats'
@@ -11,7 +11,7 @@ import { fieldedInOrder } from './seats'
  *
  * 스테이지는 화면이 판을 차리므로 이 기기에 저장한다(금고 파티와 같다, 654번). 고른 적이 없으면 지금 출전한 고양이의 앞에서부터다.
  */
-export const STAGE_TEAM_MAX = MAX_MATES
+export { STAGE_TEAM_MAX }
 
 const key = (companyId: string) => `stage-team:${companyId}`
 

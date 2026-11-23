@@ -8,19 +8,15 @@ const company = (step: number, unlocked = false) =>
   }) as Company
 
 describe('첫 출근 안내', () => {
-  it('행동 단계에 맞춰 성장과 고양이를 열고 스킬은 서버의 100벽 해금을 따른다', () => {
+  it('행동 단계에 맞춰 성장과 고양이를 열고 스킬 탭은 고양이 탭과 함께 열린다 (670번)', () => {
     expect(tutorialMenuLocked(company(0), 'growth')).toBe(true)
     expect(tutorialMenuLocked(company(1), 'growth')).toBe(false)
     expect(tutorialMenuLocked(company(2), 'cats')).toBe(true)
     expect(tutorialMenuLocked(company(3), 'cats')).toBe(false)
-    expect(tutorialMenuLocked(company(8), 'skills')).toBe(true)
-    expect(tutorialMenuLocked(company(8, true), 'skills')).toBe(false)
+    expect(tutorialMenuLocked(company(2), 'skills')).toBe(true)
+    expect(tutorialMenuLocked(company(3), 'skills')).toBe(false)
+    expect(tutorialMenuLocked(company(8), 'skills')).toBe(false)
     expect(tutorialMenuLocked(company(0), 'shop')).toBe(false)
-  })
-  it('100번째 벽에 도착한 것만으로 스킬을 열지 않는다', () => {
-    const c = company(8)
-    if (c.idle) c.idle.wall = 100
-    expect(tutorialMenuLocked(c, 'skills')).toBe(true)
   })
   it('첫 돌파와 공격력 강화를 실제 서버 상태로 확인한다', () => {
     const c = company(0)

@@ -348,6 +348,11 @@ describe('스테이지에 데려온 고양이 (669번)', () => {
     expect(stageCatCard(loadout)?.effect).toContain('고유 스킬 없음')
     loadout = { ...loadout, mates: 3 }
     expect(stageCatCard(loadout)).toBeNull()
+    // 메인 화면처럼 네 마리까지 데려간다.
+    const four = { ...base, stageCats: [...team, { name: '민트냥', skills: [] }], mates: 3 }
+    expect(stageCatCard(four)).toMatchObject({ name: '민트냥 출전' })
+    expect(applyCard(four, mateCard(3)).mates).toBe(4)
+    expect(stageCatCard({ ...four, mates: 4 })).toBeNull()
     // 두 마리만 데려왔으면 두 마리까지만 나온다.
     const two = { ...base, stageCats: team.slice(0, 2), mates: 2 }
     expect(stageCatCard(two)).toBeNull()

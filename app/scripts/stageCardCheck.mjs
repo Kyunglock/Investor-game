@@ -47,6 +47,8 @@ try {
         cat('sky', '하늘냥', 'C', [], true),
         cat('night', '밤냥', 'A', [{ code: 'meteor', name: '메테오' }], false),
         cat('mint', '민트냥', 'B', [], false),
+        cat('lilac', '라일락냥', 'B', [], false),
+        cat('sunset', '노을냥', 'C', [], false),
       ],
     }
     const page = await browser.newPage({
@@ -82,6 +84,28 @@ try {
     await expect(team.getByTestId('stage-team-slot').first()).toHaveAttribute('data-code', 'night')
     await expect(team.getByTestId('stage-team-slot').nth(1)).toHaveAttribute('data-code', 'sky')
     await expect(team.getByTestId('stage-team-slot').first()).toContainText('메테오')
+    // 메인 화면처럼 네 마리까지 데려간다: 넷이 차면 다섯째는 고를 수 없다.
+    await expect(team.getByTestId('stage-team-slot')).toHaveCount(4)
+    await team.locator('[data-testid=stage-team-cat][data-code=mint]').click()
+    await team.locator('[data-testid=stage-team-cat][data-code=lilac]').click()
+    await expect(team.locator('[data-testid=stage-team-slot][data-code]')).toHaveCount(4)
+    await expect(team.locator('[data-testid=stage-team-cat][data-code=sunset]')).toBeDisabled()
+    {
+      const slots = await team
+        .getByTestId('stage-team-slot')
+        .evaluateAll((els) =>
+          els.map((el) => el.getBoundingClientRect()).map((r) => [r.left, r.right, r.top]),
+        )
+      assert.ok(
+        slots.every((r) => r[0] >= 0 && r[1] <= width),
+        'the four slots fit',
+      )
+      assert.equal(
+        new Set(slots.map((r) => Math.round(r[2]))).size,
+        1,
+        'the four slots share a row',
+      )
+    }
     await team.scrollIntoViewIfNeeded()
     await page.screenshot({ path: `/tmp/stage-team-${width}.png` })
     await page.locator('[data-testid=assault-stage][data-stage="1"]').click()
@@ -129,6 +153,26 @@ try {
     await expect(pick).toBeVisible({ timeout: 15000 })
     await pick.locator('[data-card=rally]').click()
     await expect(pick).toHaveCount(0, { timeout: 15000 })
+    // 나머지 세 마리도 고양이 카드로 차례로 나와 모두 넷이 함께 싸운다.
+    for (const [name, count] of [
+      ['하늘냥', 2],
+      ['민트냥', 3],
+      ['라일락냥', 4],
+    ]) {
+      await page.evaluate(() => {
+        window.__mentalCards = ['cat', 'rally', 'stopLoss']
+        window.__mentalLevelUp()
+      })
+      await expect(pick).toBeVisible({ timeout: 15000 })
+      await expect(pick.locator('[data-card=cat]')).toContainText(`${name} 출전`)
+      await pick.locator('[data-card=cat]').click()
+      await expect(pick).toHaveCount(0, { timeout: 15000 })
+      await expect
+        .poll(() => page.evaluate(() => window.__mentalDamage.mates), { timeout: 15000 })
+        .toBe(count)
+    }
+    await page.waitForTimeout(800)
+    await page.screenshot({ path: `/tmp/stage-four-${width}.png` })
     // 고른 불장이 1분 동안 켜진다(전투 초).
     await expect
       .poll(() => page.evaluate(() => window.__mentalMarket?.().actives.rally ?? 0), {

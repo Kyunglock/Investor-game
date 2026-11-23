@@ -228,11 +228,7 @@ export function IdleHome({
           className={activeMenu === item.key ? 'on' : ''}
           disabled={tutorialMenuLocked(company, item.key)}
           title={
-            tutorialMenuLocked(company, item.key)
-              ? item.key === 'skills'
-                ? '100 매도벽 돌파 시 해금'
-                : '첫 출근 안내를 진행하면 열려요'
-              : undefined
+            tutorialMenuLocked(company, item.key) ? '첫 출근 안내를 진행하면 열려요' : undefined
           }
           aria-current={activeMenu === item.key ? 'page' : undefined}
           onClick={() => navigate(item.key)}

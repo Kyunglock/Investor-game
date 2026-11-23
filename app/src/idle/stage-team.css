@@ -33,7 +33,7 @@
 }
 .stage-team-slots {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -47,8 +47,8 @@
   align-content: center;
   gap: 2px;
   width: 100%;
-  min-height: 104px;
-  padding: 8px 4px;
+  min-height: 100px;
+  padding: 8px 2px;
   border-radius: 12px;
   font: inherit;
   text-align: center;

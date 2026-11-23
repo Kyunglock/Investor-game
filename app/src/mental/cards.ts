@@ -63,6 +63,8 @@ export const MATE_CHANCE = 8
 export const MATE_MAGIC_CHANCE = 8
 /** 한 칸이 사장냥의 스킬 카드일 확률(%, 667번): 매도벽 돌파 스테이지에서만. 일반 카드의 몫에서 나온다. */
 export const SKILL_CHANCE = 20
+/** 스테이지에 데려가는 고양이의 최대 수 (669번): 메인 화면의 출전 칸과 같은 넷. */
+export const STAGE_TEAM_MAX = 4
 /** 스테이지에 고양이를 데려왔을 때 한 칸의 몫(%, 669번). 나머지는 일반 카드다. */
 export const STAGE_TEAM_CHANCES = { cat: 18, magic: 35, catSkill: 15, skill: 18 }
 /** 함께 싸우는 고양이의 최대 수(393번, 사용자 결정): 사장냥까지 모두 넷. */
@@ -226,7 +228,7 @@ export function stageCatCard(state: MateMagicState): Card | null {
   const team = state.stageCats ?? []
   const have = state.mates ?? 0
   const next = team[have]
-  if (!next || have >= MAX_MATES) return null
+  if (!next || have >= STAGE_TEAM_MAX) return null
   return {
     code: 'cat',
     grade: 'R',
@@ -454,7 +456,7 @@ export function applyCard(loadout: Loadout, card: Card): Loadout {
       return {
         ...loadout,
         mates: Math.min(
-          loadout.stageCats ? Math.min(MAX_MATES, loadout.stageCats.length) : MAX_MATES,
+          loadout.stageCats ? Math.min(STAGE_TEAM_MAX, loadout.stageCats.length) : MAX_MATES,
           loadout.mates + 1,
         ),
       }
