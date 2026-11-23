@@ -334,8 +334,8 @@ class IdleEngine {
           "plum", "coral", "truffle");
   // A grade's share of the draws (percent) and its cats' gun damage (x the level's power). The
   // damage was {1, 1.4, 2, 3} before 644, {1, 1.15, 1.35, 1.6} in 644, {1, 1.05, 1.1, 1.2, 1.4}
-  // in 646 and returned to the 644 ladder in 656. SS now has twice the S grade multiplier. S was 2% before 651 (its lost share
-  // went to C, 59.8%).
+  // in 646 and returned to the 644 ladder in 656. SS now has twice the S grade multiplier.
+  // S was 2% before 651 (its lost share went to C, 59.8%).
   private static final int[] GRADE_PER_THOUSAND = {608, 280, 100, 10, 2};
   private static final double[] GRADE_DAMAGE = {1, 1.15, 1.35, 1.6, 3.2};
   private static final int[] CAT_GRADE = CATS.stream().mapToInt(IdleEngine::gradeIndex).toArray();
