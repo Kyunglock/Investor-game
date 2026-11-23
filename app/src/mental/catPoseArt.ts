@@ -11,6 +11,12 @@ export function drawCatPose(
   index: number,
   roster?: { code: CatCode; atlas: number; slot: number },
 ) {
+  // 봄꽃냥은 몸만 흰 털과 은빛 줄무늬로 칠하고 꽃옷은 원래 색으로 합성한다.
+  const whiteFur = roster?.code === 'flora'
+  if (whiteFur) {
+    c.save()
+    c.filter = 'grayscale(1) brightness(1.18)'
+  }
   drawSprite(
     c,
     source,
@@ -20,5 +26,6 @@ export function drawCatPose(
     { x: 14, y: 3, w: 75, h: 100 },
     'height',
   )
+  if (whiteFur) c.restore()
   if (roster) drawCatOutfit(c, roster.code, index)
 }
