@@ -328,11 +328,11 @@ test('출석 보상은 하루에 한 번 받는다 (#799)', async ({ page }) => 
   const api = page.request
   expect((await api.post('/api/sessions')).ok()).toBe(true)
   const opened = await companyOf(await api.post('/api/company'))
-  // 새 회사는 1일 차를 받을 수 있다. 출석판은 일곱 칸이고 모두 다이아다 (566번). 한 주기 250 (644번, 전에는 750).
+  // 새 회사는 1일 차를 받을 수 있다. 출석판은 일곱 칸이고 모두 다이아다 (566번). 한 주기 1,000 (659번, 644번에는 250).
   expect(opened.attendance.claimable).toBe(true)
   expect(opened.attendance.today).toBe(1)
   expect(opened.attendance.board.map((cell) => cell.diamonds)).toEqual([
-    20, 20, 30, 20, 30, 30, 100,
+    80, 80, 120, 80, 120, 120, 400,
   ])
   expect(opened.attendance.board.every((cell) => cell.money == null)).toBe(true)
   expect(opened.attendance.board.every((cell) => !cell.claimed)).toBe(true)
