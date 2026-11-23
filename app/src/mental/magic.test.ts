@@ -24,6 +24,12 @@ import {
 const levels = Array.from({ length: MAGIC_MAX_LEVEL }, (_, i) => i + 1)
 
 describe('물·불·번개 마법 (decisions.md 392번)', () => {
+  it('극광의 밤은 모든 레벨에서 기존보다 1.5배 자주 시전한다', () => {
+    for (const level of levels) {
+      expect(magicCooldown('auroraNight', level)).toBeCloseTo((6 - (level - 1) * 0.5) / 1.5)
+    }
+  })
+
   it('번개는 레벨마다 추가 타격 수가 두 배가 되고 같은 적을 중복해서 잇지 않는다', () => {
     expect(levels.map((level) => lightningStats(level).chains)).toEqual([2, 4, 8, 16, 32])
     const targets = Array.from({ length: 40 }, (_, i) => ({ x: i * 20, y: 0 }))
