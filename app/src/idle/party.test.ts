@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
-import { nextAutoBuy } from './autoUpgrade'
+import { autoBuyPlan, nextAutoBuy } from './autoUpgrade'
 import { idleLoadout } from './loadout'
 import { bossMarks, catDps, fieldSteps, partyOf, recommendParty } from './party'
 import type { Vault } from './vaultBattle'
@@ -186,6 +186,26 @@ describe('지정 자동 강화 (654번)', () => {
     expect(nextAutoBuy(two, 1e9, ['damage'])).toEqual({ kind: 'damage', levels: 100 })
     // 가장 싼 것을 살 돈이 없으면 기다린다(비싼 것으로 건너뛰지 않는다).
     expect(nextAutoBuy(two, 90, ['damage', 'fire'])).toBeNull()
+  })
+
+  it('돈이 닿는 데까지 번갈아 사서 능력치마다 한 묶음으로 보낸다 (665번)', () => {
+    const grow = (kind: string, price: number) => ({ ...up(kind, price), priceGrowthPercent: 10 })
+    const two = [grow('damage', 100), grow('fire', 100)] as unknown as Parameters<
+      typeof nextAutoBuy
+    >[0]
+    // 값이 같으면 nextAutoBuy는 한 단계뿐이지만, 계획은 가진 돈을 다 쓴다: 100+100+110+110+121+121 = 662.
+    expect(nextAutoBuy(two, 700, ['damage', 'fire'])).toEqual({ kind: 'damage', levels: 1 })
+    expect(autoBuyPlan(two, 700, ['damage', 'fire'])).toEqual([
+      { kind: 'damage', levels: 3 },
+      { kind: 'fire', levels: 3 },
+    ])
+    // 돈이 넘쳐도 능력치마다 100단계까지다. 고르지 않은 것과 살 수 없을 때는 비어 있다.
+    expect(autoBuyPlan(two, 1e300, ['damage', 'fire'])).toEqual([
+      { kind: 'damage', levels: 100 },
+      { kind: 'fire', levels: 100 },
+    ])
+    expect(autoBuyPlan(two, 99, ['damage', 'fire'])).toEqual([])
+    expect(autoBuyPlan(two, 1e9, [])).toEqual([])
   })
 
   it('한 번에 100단계까지만 산다', () => {

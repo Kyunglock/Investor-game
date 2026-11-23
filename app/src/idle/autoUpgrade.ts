@@ -72,7 +72,41 @@ export function nextAutoBuy(
   return { kind: pick.kind, levels }
 }
 
-/** 고른 능력치를 1.5초마다 살펴 살 수 있으면 산다. 한 번에 하나만 보낸다. */
+/**
+ * 이번에 살 것 모두 (665번): nextAutoBuy를 가진 돈이 닿는 데까지 되풀이한 셈이다. 가장 싼 것부터 번갈아 사되 능력치마다 한 묶음(최대
+ * 100단계)으로 모은다. 전에는 한 번에 nextAutoBuy 하나만 사서, 고른 능력치들의 값이 비슷하면 1.5초에 한 단계씩만 올라 돈이 남았다.
+ */
+export function autoBuyPlan(
+  upgrades: readonly Upgrade[],
+  capital: number,
+  kinds: readonly UpgradeKind[],
+): { kind: UpgradeKind; levels: number }[] {
+  const lines = upgrades
+    .filter((u) => kinds.includes(u.kind) && !(u.maxLevel > 0 && u.level >= u.maxLevel))
+    .map((u) => ({
+      kind: u.kind,
+      price: u.price,
+      growth: 1 + u.priceGrowthPercent / 100,
+      room: u.maxLevel > 0 ? Math.min(MAX_BATCH, u.maxLevel - u.level) : MAX_BATCH,
+      levels: 0,
+    }))
+  let left = capital
+  for (;;) {
+    // 다음에 살 한 단계: 아직 묶음이 차지 않은 것 가운데 지금 값이 가장 싼 것.
+    let pick: (typeof lines)[number] | null = null
+    for (const line of lines) {
+      if (line.levels < line.room && (!pick || line.price < pick.price)) pick = line
+    }
+    const cost = pick ? Math.round(pick.price) : 0
+    if (!pick || cost > left) break
+    left -= cost
+    pick.levels++
+    pick.price *= pick.growth
+  }
+  return lines.filter((l) => l.levels > 0).map((l) => ({ kind: l.kind, levels: l.levels }))
+}
+
+/** 고른 능력치를 1.5초마다 살펴 살 수 있는 만큼 산다. 능력치마다 한 묶음씩 차례로 보낸다 (665번). */
 export function useAutoUpgradeLoop(company: Company, connected: boolean) {
   const load = useAutoUpgrade((s) => s.load)
   const kinds = useAutoUpgrade((s) => s.kinds)
@@ -81,8 +115,10 @@ export function useAutoUpgradeLoop(company: Company, connected: boolean) {
     const store = useRaisingStore.getState()
     const now = store.company
     if (!now || store.busy) return
-    const buy = nextAutoBuy(now.battleUpgrades ?? [], now.capital, kinds)
-    if (buy) await store.buyBattleUpgrade(buy.kind, buy.levels)
+    for (const buy of autoBuyPlan(now.battleUpgrades ?? [], now.capital, kinds)) {
+      // 거절되거나 끊기면 이번 차례는 그만둔다: 다음 차례에 서버의 값으로 다시 셈한다.
+      if (!(await store.buyBattleUpgrade(buy.kind, buy.levels))) break
+    }
   })
   const on = connected && kinds.length > 0
   useEffect(() => {
