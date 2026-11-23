@@ -18,7 +18,7 @@ import {
   nextGrade,
 } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
-import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
+import { attackOf, DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { CatPortrait as Portrait } from './CatPortrait'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
@@ -273,8 +273,9 @@ export function CatGear({
       {picked && (
         <div className="loadout-compare" data-testid="gear-compare">
           <span>
-            {picked.name} {picked.gradeName} · 공격 배율 ×{currentWeapon.damagePercent / 100} → ×
-            {picked.damagePercent / 100}
+            {picked.name} {picked.gradeName} · 공격력{' '}
+            {attackOf(currentWeapon).toLocaleString('ko-KR')} →{' '}
+            {attackOf(picked).toLocaleString('ko-KR')}
           </span>
           <button
             type="button"
