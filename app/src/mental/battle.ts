@@ -816,7 +816,7 @@ class BattleScene extends Phaser.Scene {
     damage: number
     step: number
     distance: number
-    nextHit: Map<Enemy | WallState, { step: number; born: number }>
+    nextHit: Map<Enemy | WallState | number, { step: number; born: number }>
   } | null = null
   private elapsed = 0
   private lastFire = 0
@@ -4302,34 +4302,64 @@ class BattleScene extends Phaser.Scene {
     const endStep = Math.floor((age - 0.38) * AURORA_STEPS_PER_SECOND)
     const freeStep = (bottom + height) / (0.72 * AURORA_STEPS_PER_SECOND)
     if (sweep.step >= endStep) return
-    const targets = this.magicTargets(true, true).map((enemy) => {
-      const u = enemy.x / w
+    const bounds = (x: number, y: number, radius: number) => {
+      const u = x / w
       const back = auroraFold(u, true)
-      const radius = Math.min(18, enemy.displayHeight * 0.25)
       return {
-        enemy,
-        leading: ((back.edge - 0.8 * back.height) * height) / 72 - radius,
-        trailing: (auroraEdge(u) * height) / 72 + radius,
+        start: y - ((auroraEdge(u) * height) / 72 + radius),
+        end: y - (((back.edge - 0.8 * back.height) * height) / 72 - radius),
       }
-    })
+    }
+    const ready = (key: Enemy | WallState | number, born = 0) => {
+      const next = sweep.nextHit.get(key)
+      if (next && next.born === born && sweep.step < next.step) return false
+      sweep.nextHit.set(key, { step: sweep.step + AURORA_TICK_STEPS, born })
+      return true
+    }
+    const targets = this.magicTargets(true, true).map((enemy) => ({
+      enemy,
+      ...bounds(enemy.x, enemy.y, Math.min(18, enemy.displayHeight * 0.25)),
+    }))
+    const queued =
+      this.idleTransition || this.circuit ? [] : (this.idleQueue?.behind(w / 2, 0, 0) ?? [])
+    const walls = queued
+      .filter(({ y }) => y > 0 && y < h)
+      .map((layer) => ({
+        ...layer,
+        ...bounds(layer.x, layer.y, Math.min(18, (layer.y - layer.top) / 2)),
+      }))
     while (sweep.step < endStep && sweep.distance < bottom + height) {
       sweep.step++
       const top = bottom - sweep.distance
       let contact = false
-      for (const { enemy, leading, trailing } of targets) {
-        if (!enemy.active || enemy.dying || enemy.y < top + leading || enemy.y > top + trailing)
-          continue
+      for (const { enemy, start, end } of targets) {
+        if (!enemy.active || enemy.dying || top < start || top > end) continue
         const wall = enemy.cell?.wall
         const target = wall ? this.frontLayer(wall) : enemy
         if (!target) continue
         contact = true
-        const key = wall ?? enemy
-        const born = wall ? 0 : enemy.born
-        const next = sweep.nextHit.get(key)
-        if (next && next.born === born && sweep.step < next.step) continue
-        sweep.nextHit.set(key, { step: sweep.step + AURORA_TICK_STEPS, born })
+        const key = wall ? (this.opts.idle ? this.idleWall : wall) : enemy
+        if (!ready(key, wall ? 0 : enemy.born)) continue
         this.auroraFlare(enemy.x, enemy.y, enemy.boss || wall ? 68 : 44, 210)
         this.hit(target, sweep.damage, -Math.PI / 2, 'auroraNight', true)
+      }
+      for (const { wall, x, y, start, end } of walls) {
+        if (top < start || top > end) continue
+        const depth = wall - this.idleWall
+        if (depth !== 1 && depth !== 2) continue
+        contact = true
+        if (!ready(wall)) continue
+        this.reportIdleHit(wall, 'auroraNight', sweep.damage, depth)
+        this.auroraFlare(x, y, 68, 210)
+        this.damageNumberAt(
+          this.pierceOwners[depth - 1],
+          x,
+          y,
+          sweep.damage,
+          'auroraNight',
+          false,
+          depth,
+        )
       }
       sweep.distance += freeStep * (contact ? AURORA_CONTACT_SPEED : 1)
     }
@@ -5022,8 +5052,7 @@ class BattleScene extends Phaser.Scene {
 
   /**
    * 총알 관통 (decisions.md 520번): 맨 앞 매도벽을 맞힌 총알이 뒤의 두 벽까지 뚫고 가며 절반씩 줄어든 피해를 준다. 뒤 벽은 물리 대상이 아니라
-   * 여기서 판정한다: 맞은 벽 번호와 줄어든 피해를 서버에 알리고, 총알이 이어 날아가는 모습과 줄어든 피해 숫자를 띄운다. 무기 폭발과 고양이 스킬은
-   * 뒤 벽에 닿지 않는다.
+   * 여기서 판정한다: 맞은 벽 번호와 줄어든 피해를 서버에 알리고, 총알이 이어 날아가는 모습과 줄어든 피해 숫자를 띄운다. 극광의 밤은 띠와 벽이 닿을 때 따로 판정한다.
    */
   private pierceIdleWalls(
     bullet: Bullet,

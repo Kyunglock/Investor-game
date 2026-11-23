@@ -52,7 +52,7 @@ export function queuedWallHealth(
 /**
  * Server-owned health for the two walls behind the current target. Each carries its remaining
  * shares and nothing else (decisions.md 542; 507 had removed every text).
- * Only pierced bullets reach them, and they keep their last point of health until they come to the front (520).
+ * Piercing bullets and the aurora can hit them. They keep their last point until they come to the front.
  */
 export class IdleWallQueueFx {
   private layers: {

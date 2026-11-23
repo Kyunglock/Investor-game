@@ -4,23 +4,28 @@ import { company } from './fixture.ts'
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH })
 try {
-  for (const reducedMotion of ['reduce', 'no-preference']) {
+  for (const mode of ['reduce', 'no-preference', 'idle']) {
     const page = await browser.newPage({
       viewport: { width: 390, height: 844 },
-      reducedMotion,
+      reducedMotion: mode === 'idle' ? 'reduce' : mode,
     })
     await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (r) => r.fulfill({ json: company }))
     await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
-    const result = await page.evaluate(async () => {
+    const result = await page.evaluate(async (idle) => {
       const base = '/app/src/mental/'
-      const [{ startBattle }, cards, { DEFAULT_WEAPON }, { assaultSpec }, { auroraNightStats }] =
-        await Promise.all([
-          import(`${base}battle.ts`),
-          import(`${base}cards.ts`),
-          import(`${base}hero.ts`),
-          import(`${base}assault.ts`),
-          import(`${base}magic.ts`),
-        ])
+      const [
+        { startBattle },
+        cards,
+        { DEFAULT_WEAPON },
+        { assaultSpec, idleAssaultSpec },
+        { auroraNightStats },
+      ] = await Promise.all([
+        import(`${base}battle.ts`),
+        import(`${base}cards.ts`),
+        import(`${base}hero.ts`),
+        import(`${base}assault.ts`),
+        import(`${base}magic.ts`),
+      ])
       const manager = window.Phaser.Scenes.SceneManager.prototype
       const create = manager.create
       let scene
@@ -36,9 +41,15 @@ try {
         ready = resolve
       })
       const loadout = { ...cards.loadoutOf(DEFAULT_WEAPON), damage: 1, fireMs: 100000 }
+      const wallHits = []
       const handle = startBattle(host, {
         mode: 'assault',
-        assault: assaultSpec(1),
+        assault: idle ? idleAssaultSpec(49, 10000) : assaultSpec(1),
+        idle: idle ? () => ({ wall: 49, hp: 10000, maxHp: 10000 }) : undefined,
+        onIdleHit(wall, kind, damage, depth) {
+          if (kind === 'auroraNight')
+            wallHits.push({ wall, damage, depth, step: scene.auroraSweep.step })
+        },
         genre: 'DEFENSE',
         hero: { name: 'test', weapon: DEFAULT_WEAPON, upgrades: [] },
         loadout,
@@ -51,6 +62,19 @@ try {
       })
       await loaded
       scene.paused = true
+      if (idle) {
+        scene.castAuroraNight(scene.player, 1)
+        const speeds = {}
+        for (let i = 0; i < 1200 && scene.auroraSweep; i++) {
+          const sweep = scene.auroraSweep
+          const before = sweep.distance
+          const step = sweep.step
+          scene.elapsed = sweep.started + 0.38 + (i + 1.01) / 120
+          scene.advanceAuroraSweep()
+          if (sweep.step > step) speeds[sweep.step] = sweep.distance - before
+        }
+        return { wallHits, speeds, finished: !scene.auroraSweep }
+      }
       scene.addWall(0, 300)
       const wall = scene.walls.at(-1)
       wall.arrived = true
@@ -129,7 +153,27 @@ try {
         losses: enemies.map((enemy) => 10000 - enemy.hp),
         wallLoss: before - wallHp(),
       }
-    })
+    }, mode === 'idle')
+    if (mode === 'idle') {
+      assert(result.finished)
+      const free = Math.max(...Object.values(result.speeds))
+      let previous = 0
+      for (const depth of [0, 1, 2]) {
+        const hits = result.wallHits.filter((hit) => hit.depth === depth)
+        assert(hits.length >= 2)
+        assert(hits[0].step > previous)
+        previous = hits[0].step
+        for (const [i, hit] of hits.entries()) {
+          assert.equal(hit.wall, 49 + depth)
+          assert.equal(hit.damage, result.wallHits[0].damage)
+          assert(Math.abs(result.speeds[hit.step] / free - 0.16) < 1e-6)
+          if (i) assert.equal(hit.step - hits[i - 1].step, 30)
+        }
+      }
+      console.log('자동 전투: 앞·두 번째·세 번째 매도벽에서 감속 및 연타 확인')
+      await page.close()
+      continue
+    }
     assert.equal(result.casts, 1)
     assert(result.charging && result.finished)
     const [far, near, boss, outside, wall] = result.ticks
