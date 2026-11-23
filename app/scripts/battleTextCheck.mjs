@@ -152,7 +152,13 @@ async function run(browser, width, height) {
   const halted = await hp()
   await page.waitForFunction(() => window.__mentalMarket().circuit?.elapsed > 1.5)
   const refilled = await hp()
-  assert.ok(refilled > halted, `the buy wall refills while halted: ${halted} -> ${refilled}`)
+  // 정지가 시작될 때 벽이 마침 무너져 있었으면(매도 물량 세기 3배, 657번 뒤로 잦다) 되채우지 않는다: 무너진 벽은 재건을 기다린다
+  // (buyWall.ts recover). 서 있던 벽만 되채워진다.
+  const full = await page.evaluate(() => window.__mentalMarket().buyWall.maxHp)
+  if (halted === 0)
+    assert.equal(refilled, 0, `a broken buy wall waits for its rebuild: ${refilled}`)
+  else if (halted >= full) assert.equal(refilled, full, `a full buy wall stays full: ${refilled}`)
+  else assert.ok(refilled > halted, `the buy wall refills while halted: ${halted} -> ${refilled}`)
   assert.match(
     await page.evaluate(() => window.__mentalMarket().circuit.caption),
     /^거래 정지 · 매수벽 회복 \+[\d,]+주$/,
