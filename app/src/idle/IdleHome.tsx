@@ -17,6 +17,7 @@ import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { mergeable } from '../mental/armory'
 import { idleBuyOrderDamage } from '../mental/buyWall'
+import { attackOf, heroOf } from '../mental/hero'
 import { SHARES_PER_HP, sharesOf } from '../mental/shares'
 import { useAutoUpgrade, useAutoUpgradeLoop } from './autoUpgrade'
 import { BossReward } from './BossReward'
@@ -82,6 +83,15 @@ const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
 
 /** 매수 주문 한 장의 수량 (514·573·638번): 벽의 깊이는 보지 않는다. 이 강화의 고정 수량에 팀 화력을 따르는 덤이 붙는다(서버가 더해 준다). */
+/** 공격력 강화 줄: 사장냥 무기의 공격력(기본 권총 100)에 강화 %를 먹인 지금 값과 강화 뒤 값. */
+function damageText(company: Company, u: Upgrade, levels: number) {
+  const weapon = heroOf(company).weapon
+  const now = attackOf(weapon, u.bonusPercent)
+  if (levels <= 0) return `${now.toLocaleString('ko-KR')} (+${percentText(u.bonusPercent)}%) · 최대`
+  const next = u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels
+  return `${now.toLocaleString('ko-KR')} → ${attackOf(weapon, next).toLocaleString('ko-KR')} (+${percentText(u.bonusPercent)}% → +${percentText(next)}%)`
+}
+
 function buyNote(company: Company, u: Upgrade) {
   if (!company.idle) return STATS.buy.note
   const damage = idleBuyOrderDamage((u.bonusShares ?? 0) / SHARES_PER_HP)
@@ -701,6 +711,9 @@ function IdleStats({ company }: { company: Company }) {
                 ) : u.kind === 'buy' ? (
                   // 매수벽 공격은 %가 아니라 수량으로 오른다 (579번).
                   `+${(u.bonusShares ?? 0).toLocaleString()}주 → +${((u.bonusShares ?? 0) + ((u.nextBonusShares ?? 0) - (u.bonusShares ?? 0)) * levels).toLocaleString()}주`
+                ) : u.kind === 'damage' ? (
+                  // 공격력은 든 무기의 공격력(기본 권총 100)에 강화 %를 먹인 수로 보인다.
+                  damageText(company, u, full ? 0 : levels)
                 ) : full ? (
                   `+${percentText(u.bonusPercent)}% · 최대`
                 ) : (
