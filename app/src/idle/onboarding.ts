@@ -22,8 +22,7 @@ export function tutorialReady(c: Company, step: number): boolean {
 export function tutorialMenuLocked(c: Company, menu: string): boolean {
   const progress = c.idle?.onboarding
   if (!progress) return false
-  // 스킬 탭의 100벽 잠금은 없앴다 (670번): 고양이 탭이 열릴 때 함께 열려 바로 볼 수 있다.
-  if (menu === 'skills') return progress.step < 3
+  // 스킬 탭은 잠그지 않는다: 첫 출근 안내 중에도 처음부터 바로 쓸 수 있다.
   if (menu === 'growth') return progress.step < 1
   if (menu === 'cats') return progress.step < 3
   return false
