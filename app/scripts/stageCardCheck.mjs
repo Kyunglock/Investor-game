@@ -79,7 +79,7 @@ try {
     await page.locator('[data-testid=assault-stage][data-stage="1"]').click()
     // 스테이지: 첫 카드 석 장에 사장냥의 스킬과 고양이 마법 강화가 나온다.
     // 출전 화면: 무기를 보고 들어간다.
-    await expect(page.getByTestId('stage-mode')).toContainText('디펜스')
+    await expect(page.getByTestId('stage-mode')).toContainText('디펜스 · 3분 버티기')
     await page.getByRole('button', { name: /출발/ }).click()
     const pick = page.getByTestId('mental-levelup')
     await expect(pick).toBeVisible({ timeout: 60000 })

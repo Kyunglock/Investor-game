@@ -1520,7 +1520,7 @@ class BattleScene extends Phaser.Scene {
   /** 디펜스 보스 스테이지 (509번): 한 판의 한가운데에 보스가 나와 위에서 졸개를 부른다. 보스를 쓰러뜨리면 깬다. */
   private defenseBossStep() {
     if (!this.bossCalled) {
-      if (this.elapsed >= DEFENSE_BOSS_SECONDS) {
+      if (this.elapsed >= this.defenseBossSeconds()) {
         this.bossCalled = true
         sfx.levelUp()
         this.opts.onBanner(`${BOSS.name} 등장!!`, '#ff4f6d')
@@ -3072,7 +3072,20 @@ class BattleScene extends Phaser.Scene {
 
   /** 난이도 곡선의 시각(초): 예전 4분 판 기준으로 잡은 곡선을 2분 판에 맞춰 PACE배 빨리 돈다 (363번). */
   private curve() {
-    return this.elapsed * PACE
+    // 길이가 정해진 판 (677번, 3분 스테이지)은 그 길이의 끝에 같은 세기에 닿게 돈다.
+    const seconds = this.stageSeconds()
+    return this.elapsed * (seconds ? 240 / seconds : PACE)
+  }
+
+  /** 디펜스 번호 스테이지가 제 길이를 정했으면 그 길이(초). */
+  private stageSeconds() {
+    return this.mode === 'defense' ? this.opts.stage?.seconds : undefined
+  }
+
+  /** 디펜스 보스가 나오는 때: 한 판의 한가운데 (509번). */
+  private defenseBossSeconds() {
+    const seconds = this.stageSeconds()
+    return seconds ? seconds / 2 : DEFENSE_BOSS_SECONDS
   }
 
   private waveDump() {
@@ -5344,7 +5357,10 @@ class BattleScene extends Phaser.Scene {
 
   /** 이 판의 제한 시간(초): 공격 판은 3분(#593), 나머지는 BATTLE_SECONDS. */
   private limitSeconds() {
-    return this.opts.vault?.score?.seconds ?? (this.assault ? ASSAULT_SECONDS : BATTLE_SECONDS)
+    return (
+      this.opts.vault?.score?.seconds ??
+      (this.assault ? ASSAULT_SECONDS : (this.stageSeconds() ?? BATTLE_SECONDS))
+    )
   }
 
   /** 전투 추가 수익 눈금은 부순 매도벽에만 비례한다. */

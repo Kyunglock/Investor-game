@@ -99,9 +99,9 @@ describe('번호 스테이지 초반 난이도', () => {
 })
 
 describe('스테이지의 판 (676번)', () => {
-  it('번호 스테이지의 판에 적의 수만 두 배다', () => {
+  it('번호 스테이지의 판에 적의 수가 두 배고 3분을 버틴다', () => {
     const base = stageSpec(3)
-    expect(crowdStageSpec(3)).toEqual({ ...base, countScale: base.countScale * 2 })
+    expect(crowdStageSpec(3)).toEqual({ ...base, countScale: base.countScale * 2, seconds: 180 })
     expect(crowdStageSpec(10).boss).toBe(true)
   })
 })

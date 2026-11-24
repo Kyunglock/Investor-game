@@ -289,8 +289,8 @@ export function MentalWindow({
               {mode !== 'assault' && (
                 <span className="stage-mode" data-testid="stage-mode">
                   {spec?.boss
-                    ? `디펜스 · ${DEFENSE_BOSS_SECONDS / 60}분에 보스 · 제한 시간 ${BATTLE_SECONDS / 60}분 안에 격파`
-                    : `디펜스 · 제한 시간 ${BATTLE_SECONDS / 60}분 버티기`}
+                    ? `디펜스 · ${minutes(spec.seconds ? spec.seconds / 2 : DEFENSE_BOSS_SECONDS)}에 보스 · 제한 시간 ${minutes(spec.seconds ?? BATTLE_SECONDS)} 안에 격파`
+                    : `디펜스 · ${minutes(spec?.seconds ?? BATTLE_SECONDS)} 버티기`}
                 </span>
               )}
               {entry.kind === 'invest' && (
@@ -1451,6 +1451,12 @@ function Battle({
 function investStage(level: number, perChapter = 10): number {
   const n = Math.max(1, level * 2 - 1)
   return n % perChapter === 0 ? n - 1 : n
+}
+
+/** 초를 "3분", "1분 30초"로. */
+function minutes(seconds: number): string {
+  const rest = seconds % 60
+  return rest ? `${Math.floor(seconds / 60)}분 ${rest}초` : `${seconds / 60}분`
 }
 
 function signedMoney(amount: number): string {
