@@ -20,6 +20,7 @@ import {
   idleBreakPace,
   idleMomentum,
   idleThreat,
+  MID_BOSS_NAME,
   orderPriceStep,
   ordersOnly,
   pickFlow,
@@ -29,6 +30,7 @@ import {
   swarmSize,
   WEAK_CELL,
   wallBreakXp,
+  wallBrief,
   wallCols,
   whaleSummonSeconds,
 } from './assault'
@@ -280,5 +282,15 @@ describe('매도벽 경험치 (#700)', () => {
     expect(deep.enemyHp).toBe(15)
     expect(deep.enemyDmg).toBe(same.enemyDmg * 15)
     expect(deep.enemyCount).toBe(same.enemyCount)
+  })
+})
+
+describe('다음 벽 예고 (671번)', () => {
+  it('두께와 큰손, 가장 잦은 까다로운 물량을 한 줄로 알린다', () => {
+    expect(wallBrief(ASSAULT_WALLS[0])).toBe('매도벽 1줄')
+    expect(wallBrief(ASSAULT_WALLS[4])).toContain('중간 매도벽')
+    expect(wallBrief(ASSAULT_WALLS[4])).toContain(MID_BOSS_NAME)
+    const last = wallBrief(ASSAULT_WALLS[ASSAULT_WALLS.length - 1])
+    expect(last).toBe(`대량 매도벽 3줄 · ${ASSAULT_BOSS.name} · 대량 매도 주의`)
   })
 })

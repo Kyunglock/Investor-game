@@ -1,4 +1,4 @@
-import { type EnemyKind, isOrder, type OrderKind } from './enemies'
+import { ENEMIES, type EnemyKind, isOrder, ORDERS, type OrderKind } from './enemies'
 import { idleBossWall } from './idlePierce'
 import { SHARES_PER_HP } from './shares'
 
@@ -497,4 +497,27 @@ export const WALL_BREAK_XP_SHARE = 0.4
 /** 벽 하나를 무너뜨렸을 때 더 주는 경험치: 지금 레벨에서 다음 레벨까지 드는 몫(xpNeeded)의 WALL_BREAK_XP_SHARE. */
 export function wallBreakXp(xpNeeded: number): number {
   return Math.max(1, Math.round(xpNeeded * WALL_BREAK_XP_SHARE))
+}
+
+/** 다음 벽 예고에서 따로 알리는 물량: 흔한 매도·시장가·패닉·투매는 빼고, 대비가 필요한 것만. */
+const THREATS: readonly FlowKind[] = ['spec', 'short', 'bulk', 'stop', 'fake']
+
+/**
+ * 다음 벽 예고 (671번): 벽을 부수고 카드를 고를 때 다음 벽이 어떤 벽인지 한 줄로 알린다. 두께(줄 수)와 큰손, 그리고 그 벽 앞에서 가장 잦은
+ * 까다로운 물량 하나. 카드를 고를 까닭이 된다.
+ */
+export function wallBrief(wall: AssaultWall): string {
+  const body = wall.boss
+    ? `대량 매도벽 ${wall.rows}줄 · ${ASSAULT_BOSS.name}`
+    : wall.mid
+      ? `중간 매도벽 ${wall.rows}줄 · ${MID_BOSS_NAME}`
+      : `매도벽 ${wall.rows}줄`
+  let threat: FlowKind | null = null
+  for (const kind of THREATS) {
+    const weight = wall.mix[kind] ?? 0
+    if (weight >= 1 && weight > (threat ? (wall.mix[threat] ?? 0) : 0)) threat = kind
+  }
+  if (!threat) return body
+  const label = isOrder(threat) ? ORDERS[threat].label : ENEMIES[threat as EnemyKind].label
+  return `${body} · ${label} 주의`
 }

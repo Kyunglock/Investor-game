@@ -71,20 +71,20 @@ export function IdleSkills({
         <>
           <section
             className="boss-skill-loadout"
-            aria-label="스테이지 레벨업 카드"
+            aria-label="스테이지 카드"
             data-testid="skill-level"
           >
             <div className="boss-skill-header">
-              <b>스테이지 레벨업 카드</b>
+              <b>스테이지 카드</b>
               <span>{SKILL_CODES.length + 1}종</span>
             </div>
             <p className="boss-skill-help">
-              사장냥의 스킬은 매도벽 돌파 스테이지에서 써요. 스테이지에서 매도벽을 부숴 레벨이
-              오르면 카드 석 장 가운데 한 장을 고르고, 아래 카드가 섞여 나와요. 고른 카드는 그
-              판에서만 이어져요.
+              사장냥의 스킬은 매도벽 돌파 스테이지에서 써요. 스테이지에서 매도벽을 하나 부술 때마다
+              카드 석 장 가운데 한 장을 고르고, 아래 카드가 섞여 나와요. 고른 카드는 그 판에서만
+              이어져요.
             </p>
           </section>
-          <ul className="boss-skill-list" aria-label="레벨업 카드">
+          <ul className="boss-skill-list" aria-label="스테이지 카드 목록">
             {SKILL_CODES.map((code) => (
               <li key={code} data-testid="unique-skill" data-code={code}>
                 <div className="boss-skill-main">

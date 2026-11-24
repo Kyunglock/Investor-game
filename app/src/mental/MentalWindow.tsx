@@ -19,7 +19,7 @@ import {
   stageSpec,
 } from './advance'
 import { GRADE_BADGE } from './armory'
-import { type AssaultSpec, assaultSpec } from './assault'
+import { type AssaultSpec, assaultSpec, wallBrief } from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import { ASSAULT_AD_BONUS, assaultBonusPercent } from './buyWall'
@@ -1059,6 +1059,8 @@ function Battle({
   const [loadError, setLoadError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [levelUp, setLevelUp] = useState<number | null>(null)
+  /** 벽마다 카드를 고르는 스테이지 (671번)에서 다음에 설 벽. */
+  const nextWall = hud?.assault ? assault?.walls[hud.assault.wallsBroken] : undefined
   const [asking, setAsking] = useState(false)
   const [speed, setSpeed] = useState<GameSpeed>(loadGameSpeed)
 
@@ -1388,11 +1390,20 @@ function Battle({
         <div className="stage-overlay stage-card-overlay" data-testid="mental-levelup">
           <CardPick
             key={levelUp}
-            title={levelUp === 1 ? '오늘의 마음가짐' : `한층 더 단단하게 · Lv. ${levelUp}`}
-            sub={
+            title={
               levelUp === 1
-                ? '한 장을 고르세요. 레벨이 오를 때마다 또 고릅니다'
-                : '카드 한 장을 더 쌓으세요'
+                ? '오늘의 마음가짐'
+                : nextWall && hud.assault
+                  ? `매도벽 ${hud.assault.wallsBroken}개 돌파! 카드 한 장`
+                  : `한층 더 단단하게 · Lv. ${levelUp}`
+            }
+            sub={
+              // 벽마다 끊는 스테이지 (671번): 다음 벽이 어떤 벽인지 알리고 그에 맞춰 고르게 한다.
+              nextWall
+                ? `다음 벽: ${wallBrief(nextWall)}${levelUp === 1 ? ' · 벽을 부술 때마다 또 고릅니다' : ''}`
+                : levelUp === 1
+                  ? '한 장을 고르세요. 레벨이 오를 때마다 또 고릅니다'
+                  : '카드 한 장을 더 쌓으세요'
             }
             levels={loadout.current}
             skills={mode === 'assault'}

@@ -941,6 +941,10 @@ class BattleScene extends Phaser.Scene {
       return
     }
     this.choosing = false
+    if (this.rushAfterPick) {
+      this.rushAfterPick = false
+      this.startRush()
+    }
     if (!this.begun) {
       this.begun = true
       this.opts.onBanner(
@@ -1915,7 +1919,7 @@ class BattleScene extends Phaser.Scene {
     this.idleMoved = false
     // 자동 전투는 벽 위가 남은 물량과 피해 숫자로 차 있다: 격파 알림은 비어 있는 전장 가운데에 띄운다 (#914).
     const noteY = this.opts.idle ? (this.stopY() + this.buyWallY()) / 2 : wall.y - 36
-    if (!moved) {
+    if (!moved && !this.wallCards()) {
       const breakXp = wallBreakXp(xpToNext(this.level))
       this.pop(
         this.view().w / 2,
@@ -2424,7 +2428,15 @@ class BattleScene extends Phaser.Scene {
     const { h } = this.view()
     if (this.nextWallIn > 0) {
       this.nextWallIn = Math.max(0, this.nextWallIn - dt)
-      if (this.nextWallIn === 0) this.startRush()
+      if (this.nextWallIn === 0) {
+        // 벽마다 끊는다 (671번): 무너지는 모습을 다 본 뒤 멈춰 카드를 고르고, 고르면 다음 벽으로 오른다.
+        if (this.wallCards()) {
+          this.rushAfterPick = true
+          this.offerCard()
+          return
+        }
+        this.startRush()
+      }
     }
     this.sinceBreak += dt
     const wall = this.walls.find((wl) => !wl.broken)
@@ -3456,16 +3468,34 @@ class BattleScene extends Phaser.Scene {
   /** 경험치: 적의 값만큼. 다음 레벨에 닿으면 전투를 멈추고 카드를 고르게 한다 (330번). */
   /** 개발 서버의 확인 스크립트: 다음 레벨까지 남은 경험치를 한 번에 준다. */
   devLevelUp() {
-    this.gainXp(xpToNext(this.level) - this.xp)
+    if (this.wallCards()) this.offerCard()
+    else this.gainXp(xpToNext(this.level) - this.xp)
   }
 
+  /**
+   * 매도벽 돌파 스테이지는 벽마다 끊는 로그라이크다 (671번): 경험치로 레벨이 오르지 않고, 벽 하나를 무너뜨릴 때마다 카드를 한 장 고른다.
+   * 자동 전투와 금고 도전은 아니다.
+   */
+  private wallCards() {
+    return Boolean(this.assault) && !this.opts.idle && !this.opts.vault
+  }
+
+  /** 벽을 넘은 보상으로 카드를 고르는 중이면 고른 뒤 다음 벽으로 오른다. */
+  private rushAfterPick = false
+
   private gainXp(amount: number) {
-    if (this.opts.idle) return
+    if (this.opts.idle || this.wallCards()) return
     this.xp += amount
     if (this.xp < xpToNext(this.level) || this.over || this.choosing) {
       return
     }
     this.xp -= xpToNext(this.level)
+    this.offerCard()
+  }
+
+  /** 전투를 멈추고 카드 석 장을 띄운다: 레벨이 하나 오른다. */
+  private offerCard() {
+    if (this.over || this.choosing) return
     this.level++
     this.choosing = true
     this.physics.pause()
