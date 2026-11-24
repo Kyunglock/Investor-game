@@ -213,7 +213,7 @@ export interface paths {
                              * @description stoploss는 고유 스킬 손절의 한 방(591번). barrage는 액티브 스킬 매수세례의 매수 주문 (503번)
                              * @enum {string}
                              */
-                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb" | "auroraNight" | "lightArrow" | "barrage" | "buy" | "stoploss";
+                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb" | "auroraNight" | "lightArrow" | "starArrow" | "poisonArrow" | "iceArrow" | "fireArrow" | "waterArrow" | "sandArrow" | "shadowArrow" | "petalArrow" | "barrage" | "buy" | "stoploss";
                             count: number;
                             /** @description 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 */
                             damage?: number;
@@ -1886,7 +1886,7 @@ export interface components {
                     /** @description 이 고양이의 고유 스킬 (501·561번). C·B등급은 없고(빈 배열) A등급은 하나, S등급은 둘, SS 극광냥은 전용 마법 극광의 밤 하나를 가진다. 출전해 있는 동안 발동한다 */
                     skills: {
                         /** @enum {string} */
-                        code: "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb" | "auroraNight" | "lightArrow";
+                        code: "water" | "meteor" | "bolt" | "ram" | "ice" | "wind" | "fire" | "poison" | "light" | "dark" | "sand" | "star" | "hail" | "blossom" | "bomb" | "auroraNight" | "lightArrow" | "starArrow" | "poisonArrow" | "iceArrow" | "fireArrow" | "waterArrow" | "sandArrow" | "shadowArrow" | "petalArrow";
                         name: string;
                     }[];
                     /** @description 고유 스킬의 레벨 1~5 (515번). 고양이 Lv.10·20·30·40에 하나씩 오른다 (534번). 스킬이 둘이면 같은 레벨이다 */

@@ -55,7 +55,7 @@ class IdleEngine {
 
   // Credit buckets: the bullet, the cat skills, the buy barrage (decisions.md 503), and the
   // buy wall's own buy orders (514).
-  private static final int SKILLS = 16;
+  private static final int SKILLS = 23;
   private static final int KINDS = SKILLS + 4;
   private static final int BARRAGE = SKILLS + 1;
   private static final int BUY = SKILLS + 2;
@@ -197,18 +197,26 @@ class IdleEngine {
     "wind",
     "fire",
     "poison",
-    "light",
+    "starArrow",
     "dark",
     "sand",
     "star",
     "hail",
     "blossom",
     "lightArrow",
-    "auroraNight"
+    "auroraNight",
+    "poisonArrow",
+    "iceArrow",
+    "fireArrow",
+    "waterArrow",
+    "sandArrow",
+    "shadowArrow",
+    "petalArrow"
   };
   private static final String[] NAMES = {
-    "물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬", "얼음 스킬", "바람 스킬", "불 스킬", "독 스킬", "빛 스킬", "어둠 스킬", "모래 스킬",
-    "별 스킬", "우박 스킬", "꽃비 스킬", "빛화살", "극광의 밤"
+    "물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬", "얼음 스킬", "바람 스킬", "불 스킬", "독 스킬", "별빛화살", "어둠 스킬", "모래 스킬",
+    "별 스킬", "우박 스킬", "꽃비 스킬", "빛화살", "극광의 밤", "맹독화살", "서리화살", "홍염화살", "심해화살", "모래화살", "그림자화살",
+    "꽃잎화살"
   };
   private static final double[][] COOLDOWNS = {
     {2.4, 2.1, 1.8, 1.6, 1.4},
@@ -226,7 +234,14 @@ class IdleEngine {
     ramp(3.4, 2.6),
     ramp(3, 2.2),
     ramp(5, 3.8),
-    ramp(6 / 1.5, 4 / 1.5)
+    ramp(6 / 1.5, 4 / 1.5),
+    ramp(3, 2.2),
+    ramp(3.2, 2.2),
+    ramp(3.6, 2.6),
+    ramp(3.2, 2.2),
+    ramp(2.8, 1.8),
+    ramp(2.6, 1.6),
+    ramp(2.2, 1.4)
   };
   private static final double[][] SKILL_DAMAGE = {
     {1.5, 2, 2.6, 3, 3.4},
@@ -244,7 +259,14 @@ class IdleEngine {
     ramp(2, 2.8),
     ramp(1.6, 2.4),
     ramp(9, 20),
-    ramp(12, 28)
+    ramp(12, 28),
+    ramp(2.2, 5),
+    ramp(3.2, 7.6),
+    ramp(4.8, 17.68),
+    ramp(3.2, 7.6),
+    ramp(1.8, 4.1),
+    ramp(2.5, 6),
+    ramp(1.2, 2.8)
   };
   private static final double[][] SKILL_HITS = {
     ONE_HIT,
@@ -261,6 +283,13 @@ class IdleEngine {
     ONE_HIT,
     hits(2, 2, 3, 4, 5),
     hits(2, 2, 3, 3, 4),
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
+    ONE_HIT,
     ONE_HIT,
     ONE_HIT
   };
@@ -389,13 +418,13 @@ class IdleEngine {
           // S grade cats have two skills each. Aurora has one exclusive spell.
           Map.entry("star", new int[] {11, 8}),
           Map.entry("silver", new int[] {2, 14}),
-          Map.entry("wisteria", new int[] {7, 9}),
-          Map.entry("frost", new int[] {12, 4}),
-          Map.entry("ruby", new int[] {6, 1}),
-          Map.entry("abyss", new int[] {0, 4}),
-          Map.entry("dune", new int[] {10, 5}),
-          Map.entry("veil", new int[] {9, 2}),
-          Map.entry("flora", new int[] {13, 7}),
+          Map.entry("wisteria", new int[] {7, 16}),
+          Map.entry("frost", new int[] {12, 17}),
+          Map.entry("ruby", new int[] {6, 18}),
+          Map.entry("abyss", new int[] {0, 19}),
+          Map.entry("dune", new int[] {10, 20}),
+          Map.entry("veil", new int[] {9, 21}),
+          Map.entry("flora", new int[] {13, 22}),
           Map.entry("aurora", new int[] {15}));
   private static final int[] NO_SKILLS = {};
   private static final int[][] CAT_SKILLS =

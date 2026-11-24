@@ -1,4 +1,4 @@
-import type { FallSpell, FlowSpell } from './spellbook'
+import { type ArrowSpell, type FallSpell, type FlowSpell, SPELLBOOK } from './spellbook'
 
 type Paint = CanvasRenderingContext2D
 type Painter = (c: Paint) => void
@@ -91,6 +91,27 @@ export function fireBloom(c: Paint) {
   c.restore()
 }
 
+const arrowheads: Record<ArrowSpell, string> = {
+  starArrow: 'M38 32 L44 27 L44 15 L51 23 L61 19 L58 29 L63 33 L55 37 L53 48 L46 40 L37 41Z',
+  lightArrow: 'M38 12 L63 32 L38 52 L42 36 L42 28Z',
+  poisonArrow: 'M36 42 L42 31 L37 20 L48 25 L46 14 L63 30 L52 42 L52 36Z',
+  iceArrow: 'M35 32 L42 19 L51 17 L63 32 L49 46 L40 43Z',
+  fireArrow: 'M32 43 Q46 33 34 17 Q47 20 49 27 L48 13 Q59 19 63 32 Q56 46 38 48 Q44 41 43 35Z',
+  waterArrow: 'M33 35 Q46 28 36 16 Q48 16 53 26 Q58 26 63 32 Q56 45 39 46 Q47 39 45 34Z',
+  sandArrow: 'M34 40 L40 29 L38 19 L48 23 L46 17 L56 24 L63 32 L49 44 L40 47 L44 38Z',
+  shadowArrow: 'M33 47 Q48 33 35 14 Q53 16 63 32 Q53 45 33 47Z',
+  petalArrow: 'M36 32 Q33 19 44 17 Q52 16 53 25 Q63 22 62 32 Q57 44 43 45 Q37 44 36 32Z',
+}
+
+export function drawElementArrow(c: Paint, spell: ArrowSpell) {
+  const { light, mid, dark, line } = SPELLBOOK[spell].colors
+  ink(c, 'M2 12 L13 17 L21 28 L47 28 L47 36 L21 36 L12 48 L2 52 L10 33Z', mid, line)
+  ink(c, 'M8 19 L16 24 L22 31 L47 31 L47 33 L16 33Z', light)
+  ink(c, arrowheads[spell], mid, line)
+  ink(c, 'M43 26 L59 31 L46 33Z', light)
+  ink(c, 'M44 39 L49 34 L57 33Z', dark)
+}
+
 export const spellSprites = {
   fire(c) {
     ink(
@@ -110,17 +131,6 @@ export const spellSprites = {
     )
     ink(c, 'M10 37 L51 25 L33 33Z', '#efd2ff')
     oval(c, 43, 51, 3, 5, '#ab65d7')
-  },
-  lightArrow(c) {
-    // Two swept feathers and a faceted silver head stay readable when the sprite is rotated.
-    ink(
-      c,
-      'M2 12 L13 17 L21 28 L42 28 L38 12 L63 32 L38 52 L42 36 L21 36 L12 48 L2 52 L10 33Z',
-      '#b7e9ff',
-      '#536489',
-    )
-    ink(c, 'M8 19 L16 24 L22 31 L47 31 L43 20 L58 31 L16 33Z', '#fffbea')
-    ink(c, 'M43 44 L48 34 L58 32Z', '#839dd4')
   },
   light(c) {
     ink(c, 'M1 27 L41 23 L46 7 L49 23 L63 31 L50 39 L46 57 L42 40 L1 36Z', '#ffcd4e', '#a66924')
@@ -192,7 +202,7 @@ export const spellSprites = {
     oval(c, 35, 34, 2, 2, '#42374f')
     ink(c, 'M53 5 L55 1 L57 5 L62 4 L59 9 L61 13 L55 11 L51 14 L52 9 L48 7Z', '#ffd563')
   },
-} satisfies Record<FlowSpell | FallSpell, Painter>
+} satisfies Record<Exclude<FlowSpell, ArrowSpell> | FallSpell, Painter>
 
 export function stoneRam(c: Paint) {
   ink(

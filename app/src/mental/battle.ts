@@ -181,6 +181,7 @@ import {
   AURORA_CAST_SPEED,
   EXTRA_SPELLS,
   type ExtraSpell,
+  isArrowSpell,
   isExtraSpell,
   SPELLBOOK,
 } from './spellbook'
@@ -506,7 +507,7 @@ type SoundKey = 'splash' | 'whoosh' | 'boom' | 'zap' | 'rumble' | 'ram' | 'coin'
 const CAST_STAGGER = 0.18
 /** 같은 마법 소리를 이 간격(ms) 안에 또 내지 않는다: 고양이 넷이 함께 쏘면 소리가 뭉개지고 폰에서 오디오 노드가 쌓였다. */
 const SOUND_GAP_MS = 90
-const LIGHT_ARROW_DRAW_SECONDS = 0.48
+const ARROW_DRAW_SECONDS = 0.48
 
 /** 비행 마법 투사체 풀. half·depth는 지금 맞는 폭(sweepHits). */
 interface WaterShot {
@@ -4020,9 +4021,7 @@ class BattleScene extends Phaser.Scene {
       scale: { start: 0.9 * TEX, end: 0 },
       alpha: { start: 1, end: 0.3 },
       gravityY: 420,
-      tint: this.opts.idle
-        ? { onEmit: () => this.trailColor }
-        : [0xffffff, 0xbfe8ff, 0x6cc0ff, 0x2f8fe8],
+      tint: { onEmit: () => this.trailColor },
     })
     this.fireFx = soft({
       speed: { min: 30, max: 190 },
@@ -4514,7 +4513,7 @@ class BattleScene extends Phaser.Scene {
     s.active = true
     s.level = level
     s.spell = spell
-    s.drawRemaining = spell === 'lightArrow' ? LIGHT_ARROW_DRAW_SECONDS : 0
+    s.drawRemaining = isArrowSpell(spell) ? ARROW_DRAW_SECONDS : 0
     s.color = hexColor(SKILL_MARK_COLORS[spell].mid)
     s.x = from.x
     s.y = from.y
@@ -4552,9 +4551,10 @@ class BattleScene extends Phaser.Scene {
       const k = spell === 'water' ? 1 : 1 + (level - 1) * 0.12
       s.img.setDisplaySize(92 * k, (spell === 'water' ? 26 : 30) * k)
     }
+    this.trailColor = s.color
     this.moveWater(s, 0)
     this.waterFx.explode(this.fx(3 * tier), from.x, from.y)
-    if (spell !== 'lightArrow') this.playSound('splash')
+    if (!isArrowSpell(spell)) this.playSound('splash')
     return true
   }
 
@@ -4562,7 +4562,7 @@ class BattleScene extends Phaser.Scene {
     if (s.drawRemaining > 0) {
       const elapsed = Math.min(dt, s.drawRemaining)
       s.drawRemaining -= elapsed
-      const draw = 1 - s.drawRemaining / LIGHT_ARROW_DRAW_SECONDS
+      const draw = 1 - s.drawRemaining / ARROW_DRAW_SECONDS
       const retreat = (this.reducedMotion ? 5 : 23) * Phaser.Math.Easing.Sine.Out(draw)
       // Only the floating arrow moves. Reserve its shot slot but defer collision until release.
       s.img.setPosition(s.x - s.dx * retreat, s.y - s.dy * retreat).setAlpha(0.45 + 0.55 * draw)
