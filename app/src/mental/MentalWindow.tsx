@@ -52,7 +52,7 @@ import { FirstClear } from './FirstClear'
 import { GunSprite } from './GunSprite'
 import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './gameSpeed'
 import { BATTLE_SECONDS, type Genre } from './genres'
-import { StageLobbyTeam, StageTimeline } from './StageLobbyPlan'
+import { StageLobbyTeam } from './StageLobbyPlan'
 import { StagePortrait } from './StagePortrait'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './stage.css'
@@ -339,12 +339,8 @@ export function MentalWindow({
               </p>
             )}
             {crowd && <StageLobbyTeam company={company} />}
-            {crowd && spec?.seconds ? (
-              <StageTimeline
-                seconds={spec.seconds}
-                bossAt={spec.boss ? spec.seconds / 2 : undefined}
-              />
-            ) : (
+            {/* 메인 스테이지의 출전 화면에는 적 범례를 두지 않는다 (678번). */}
+            {!crowd && (
               <div className="stage-enemies">
                 {(mode === 'assault'
                   ? [

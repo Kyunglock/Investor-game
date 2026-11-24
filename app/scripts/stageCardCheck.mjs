@@ -95,9 +95,9 @@ try {
     // 메인 스테이지의 출전 화면에는 사장냥 뒷모습과 무기 칸이 없다.
     await expect(page.locator('.stage-portrait')).toHaveCount(0)
     await expect(page.getByTestId('stage-weapon')).toHaveCount(0)
-    // 3분 타임라인: 15초마다 파도 열한 번(끝나는 순간은 빼고), 1-1은 보스가 없다.
-    await expect(page.getByTestId('stage-timeline')).toHaveAttribute('data-waves', '11')
-    await expect(page.getByTestId('stage-timeline-boss')).toHaveCount(0)
+    // 미니맵(타임라인)과 적 범례는 두지 않는다.
+    await expect(page.getByTestId('stage-timeline')).toHaveCount(0)
+    await expect(page.locator('.stage-enemies')).toHaveCount(0)
     const lobby = page.getByTestId('mental-lobby')
     const overflow = await lobby.evaluate((el) => el.scrollWidth - el.clientWidth)
     assert.equal(overflow, 0, '출전 화면이 옆으로 넘치지 않는다')

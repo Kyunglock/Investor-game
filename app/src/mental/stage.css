@@ -139,7 +139,7 @@
   border-radius: 50%;
   margin-right: 4px;
 }
-/* 출전 화면의 출전 고양이 줄과 한 판 타임라인 (decisions.md 678번). */
+/* 출전 화면의 출전 고양이 줄 (decisions.md 678번). */
 /* 메인 스테이지의 출전 화면은 사장냥 뒷모습·무기 칸이 없어 짧다: 가운데로 모으고, 멘탈벽은 뒷모습 밑으로 파고들지 않는다. */
 .stage-lobby.is-crowd {
   justify-content: safe center;
@@ -147,8 +147,7 @@
 .stage-lobby.is-crowd .stage-mini-wall {
   margin-top: 12px;
 }
-.stage-lobby-team,
-.stage-timeline {
+.stage-lobby-team {
   width: 100%;
   max-width: 440px;
   flex-shrink: 0;
@@ -232,61 +231,6 @@
   font-size: 11px;
   color: #8b6847;
   text-align: center;
-}
-.stage-timeline-bar {
-  position: relative;
-  height: 10px;
-  margin: 8px 4px 4px;
-  border-radius: 5px;
-  background: linear-gradient(90deg, #ffe7b0, #ffc48a 60%, #ff9a7a);
-}
-.stage-timeline-wave {
-  position: absolute;
-  top: -3px;
-  width: 4px;
-  height: 16px;
-  margin-left: -2px;
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px #fffaee;
-}
-.stage-timeline-boss {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -55%);
-  font-size: 18px;
-  line-height: 1;
-  filter: drop-shadow(0 1px 1px #0005);
-}
-.stage-timeline-clock {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  margin: 0 4px;
-  font-size: 10px;
-  color: #8b6847;
-}
-.stage-timeline-clock .is-boss {
-  position: absolute;
-  transform: translateX(-50%);
-  font-weight: 800;
-  color: #c2412b;
-}
-.stage-timeline-legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 10px;
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 10.5px;
-}
-.stage-timeline-legend i {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 4px;
-  border-radius: 2px;
 }
 .stage-primary {
   width: 100%;
@@ -1378,16 +1322,14 @@
   .stage-summary > .stage-primary {
     margin-bottom: auto;
   }
-  /* 짧은 화면에서는 출전 고양이 줄과 타임라인을 줄여 출발 단추가 덜 밀려나게 한다 (678번). */
-  .stage-lobby-team,
-  .stage-timeline {
+  /* 짧은 화면에서는 출전 고양이 줄을 줄여 출발 단추가 덜 밀려나게 한다 (678번). */
+  .stage-lobby-team {
     padding: 7px 10px;
   }
   .stage-lobby-team header {
     margin-bottom: 4px;
   }
-  .stage-lobby-team header span,
-  .stage-timeline-legend {
+  .stage-lobby-team header span {
     display: none;
   }
   .stage-lobby-team .idle-cat-portrait {

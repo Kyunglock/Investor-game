@@ -3,9 +3,6 @@ import type { CatCode } from '@web/features/raising/store'
 import { CatPortrait } from '../idle/CatPortrait'
 import { SkillBadge } from '../idle/SkillBadge'
 import { stageTeamOf } from '../idle/stageTeam'
-import { ENEMIES } from './enemies'
-import { WAVE_SECONDS } from './genres'
-import { WAVE_ORDER, waveKind } from './waves'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
@@ -45,68 +42,4 @@ export function StageLobbyTeam({ company }: { company: Company }) {
       )}
     </section>
   )
-}
-
-const WAVE_NAMES = { panic: '패닉셀', dump: '투매', short: '공매도' } as const
-
-/**
- * 출전 화면의 한 판 타임라인 (decisions.md 678번): WAVE_SECONDS마다 오는 파도(패닉셀 → 투매 → 공매도)를 눈금으로, 챕터 끝 판이면
- * 한가운데에 나오는 보스를 표시한다. 판이 끝나는 순간의 파도는 오지 않으므로 그리지 않는다.
- */
-export function StageTimeline({ seconds, bossAt }: { seconds: number; bossAt?: number }) {
-  const waves = Array.from({ length: Math.ceil(seconds / WAVE_SECONDS) - 1 }, (_, i) => ({
-    at: (i + 1) * WAVE_SECONDS,
-    kind: waveKind(i),
-  }))
-  const pct = (t: number) => `${(t / seconds) * 100}%`
-  return (
-    <section
-      className="stage-timeline"
-      data-testid="stage-timeline"
-      data-waves={waves.length}
-      aria-label={`${clock(seconds)} 동안 파도 ${waves.length}번${bossAt ? `, ${clock(bossAt)}에 보스` : ''}`}
-    >
-      <div className="stage-timeline-bar" aria-hidden="true">
-        {waves.map((w) => (
-          <i
-            key={w.at}
-            className="stage-timeline-wave"
-            data-kind={w.kind}
-            style={{ left: pct(w.at), background: ENEMIES[w.kind].fill }}
-          />
-        ))}
-        {bossAt !== undefined && (
-          <span
-            className="stage-timeline-boss"
-            data-testid="stage-timeline-boss"
-            style={{ left: pct(bossAt) }}
-          >
-            👑
-          </span>
-        )}
-      </div>
-      <div className="stage-timeline-clock" aria-hidden="true">
-        <span>0:00</span>
-        {bossAt !== undefined && (
-          <span className="is-boss" style={{ left: pct(bossAt) }}>
-            {clock(bossAt)} 보스
-          </span>
-        )}
-        <span>{clock(seconds)} 버티면 승리</span>
-      </div>
-      <ul className="stage-timeline-legend" aria-hidden="true">
-        {WAVE_ORDER.map((kind) => (
-          <li key={kind}>
-            <i style={{ background: ENEMIES[kind].fill }} />
-            {WAVE_NAMES[kind]} 파도
-          </li>
-        ))}
-        <li>{WAVE_SECONDS}초마다</li>
-      </ul>
-    </section>
-  )
-}
-
-function clock(seconds: number): string {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
