@@ -11,7 +11,22 @@ export const ICE_GLYPH = 'M24 12.5 28.5 20l7 4-7 4L24 35.5 19.5 28l-7-4 7-4Z'
 export const WIND_GLYPH =
   'M13 20.5h14.5a4 4 0 1 0-4-4h2.6a1.4 1.4 0 1 1 1.4 1.4H13ZM13 25.5h20a4.5 4.5 0 1 1-4.5 4.5h2.6a1.9 1.9 0 1 0 1.9-1.9H13Z'
 
-export type FlowSpell = 'fire' | 'poison' | 'light' | 'dark' | 'sand' | 'star' | 'lightArrow'
+export const ARROW_SPELLS = [
+  'starArrow',
+  'lightArrow',
+  'poisonArrow',
+  'iceArrow',
+  'fireArrow',
+  'waterArrow',
+  'sandArrow',
+  'shadowArrow',
+  'petalArrow',
+] as const
+export type ArrowSpell = (typeof ARROW_SPELLS)[number]
+export const isArrowSpell = (spell: string): spell is ArrowSpell =>
+  ARROW_SPELLS.some((arrow) => arrow === spell)
+
+export type FlowSpell = 'fire' | 'poison' | 'light' | 'dark' | 'sand' | 'star' | ArrowSpell
 export type FallSpell = 'hail' | 'blossom' | 'bomb'
 export type ExtraSpell = FlowSpell | FallSpell | 'auroraNight'
 
@@ -24,7 +39,7 @@ export const FLOW_SPELLS: readonly FlowSpell[] = [
   'dark',
   'sand',
   'star',
-  'lightArrow',
+  ...ARROW_SPELLS,
 ]
 export const FALL_SPELLS: readonly FallSpell[] = ['hail', 'blossom', 'bomb']
 export const EXTRA_SPELLS: readonly ExtraSpell[] = [...FLOW_SPELLS, ...FALL_SPELLS, 'auroraNight']
@@ -84,6 +99,40 @@ export interface FallSpec extends Look {
 }
 
 const none: Ramp = [0, 0]
+
+function arrow(
+  name: string,
+  cat: string,
+  [light, mid, dark, line]: readonly [string, string, string, string],
+  cooldown: Ramp,
+  damage: Ramp,
+  effect?: { description: string } & Partial<
+    Pick<FlowSpec, 'stun' | 'push' | 'slowFactor' | 'slowSeconds'>
+  >,
+): FlowSpec {
+  return {
+    kind: 'flow',
+    form: 'jet',
+    name,
+    does:
+      `${cat} 곁에 나타난 ${name}이 스스로 뒤로 당겨졌다가 날아가 적들을 관통해요` +
+      (effect ? `. ${effect.description}` : ''),
+    grows: '레벨이 오르면 화살이 굵어지고 더 자주, 더 세게 쏴요',
+    tiers: [name, `강화 ${name}`, `찬란한 ${name}`],
+    colors: { light, mid, dark, line },
+    glyph: 'M10 33l4-7 6-1 9-9-3-2 13-5-5 13-2-3-10 10-1 6-8 4 3-7Z',
+    number: light,
+    cooldown,
+    damage,
+    half: [8, 16],
+    speed: 1150,
+    splash: none,
+    slowFactor: effect?.slowFactor ?? 1,
+    slowSeconds: effect?.slowSeconds ?? 0,
+    stun: effect?.stun ?? none,
+    push: effect?.push ?? none,
+  }
+}
 
 export const SPELLBOOK: { [K in FlowSpell]: FlowSpec } & { [K in FallSpell]: FallSpec } & {
   auroraNight: Look & { kind: 'global' }
@@ -163,26 +212,75 @@ export const SPELLBOOK: { [K in FlowSpell]: FlowSpec } & { [K in FallSpell]: Fal
     stun: none,
     push: none,
   },
-  lightArrow: {
-    kind: 'flow',
-    name: '빛화살',
-    does: '은빛냥 곁에 빛화살이 나타나 스스로 뒤로 당겨졌다가 적을 향해 날아가 관통해요',
-    grows: '레벨이 오르면 화살이 굵어지고 더 자주, 더 세게 쏴요',
-    tiers: ['빛화살', '은빛 화살', '찬란한 빛화살'],
-    colors: { light: '#fffbea', mid: '#c7ecff', dark: '#8298cc', line: '#43577e' },
-    glyph: 'M10 33l4-7 6-1 9-9-3-2 13-5-5 13-2-3-10 10-1 6-8 4 3-7Z',
-    number: '#dbf2ff',
-    cooldown: [5, 3.8],
-    damage: [9, 20],
-    form: 'jet',
-    half: [8, 16],
-    speed: 1150,
-    splash: none,
-    slowFactor: 1,
-    slowSeconds: 0,
-    stun: none,
-    push: none,
-  },
+  starArrow: arrow(
+    '별빛화살',
+    '별빛냥',
+    ['#fffbe1', '#ffd564', '#ec9b41', '#82582d'],
+    [3.4, 2.4],
+    [3.6, 8.4],
+  ),
+  lightArrow: arrow(
+    '빛화살',
+    '은빛냥',
+    ['#fffbea', '#c7ecff', '#8298cc', '#43577e'],
+    [5, 3.8],
+    [9, 20],
+  ),
+  poisonArrow: arrow(
+    '맹독화살',
+    '등꽃냥',
+    ['#f2e2ff', '#ba77ea', '#854bad', '#522861'],
+    [3, 2.2],
+    [2.2, 5],
+    { description: '독이 묻은 적이 느려져요', slowFactor: 0.5, slowSeconds: 2 },
+  ),
+  iceArrow: arrow(
+    '서리화살',
+    '서리냥',
+    ['#f2feff', '#91daff', '#519bd7', '#285d8a'],
+    [3.2, 2.2],
+    [3.2, 7.6],
+    { description: '맞은 적은 잠깐 얼어붙어요', stun: [0.4, 0.8] },
+  ),
+  fireArrow: arrow(
+    '홍염화살',
+    '홍염냥',
+    ['#fff1b2', '#ff9545', '#dd4730', '#882f31'],
+    [3.6, 2.6],
+    [4.8, 17.68],
+  ),
+  waterArrow: arrow(
+    '심해화살',
+    '심해냥',
+    ['#dbffff', '#53cddd', '#257cb8', '#244f7c'],
+    [3.2, 2.2],
+    [3.2, 7.6],
+    { description: '물살에 맞은 적이 느려져요', slowFactor: 0.6, slowSeconds: 1.5 },
+  ),
+  sandArrow: arrow(
+    '모래화살',
+    '사막별냥',
+    ['#fff0c8', '#e3bc72', '#bd8540', '#765432'],
+    [2.8, 1.8],
+    [1.8, 4.1],
+    { description: '모래바람이 적을 뒤로 밀어요', push: [0.12, 0.24] },
+  ),
+  shadowArrow: arrow(
+    '그림자화살',
+    '그림자냥',
+    ['#e4dcff', '#9e86dc', '#68509e', '#392e57'],
+    [2.6, 1.6],
+    [2.5, 6],
+    { description: '그림자가 적의 발을 늦춰요', slowFactor: 0.5, slowSeconds: 2 },
+  ),
+  petalArrow: arrow(
+    '꽃잎화살',
+    '봄꽃냥',
+    ['#fff1fa', '#f6a5c7', '#de73a0', '#854262'],
+    [2.2, 1.4],
+    [1.2, 2.8],
+    { description: '꽃잎에 닿은 적이 느려져요', slowFactor: 0.45, slowSeconds: 2.5 },
+  ),
   dark: {
     kind: 'flow',
     name: '어둠 스킬',

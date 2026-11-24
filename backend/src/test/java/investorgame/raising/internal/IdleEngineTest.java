@@ -676,17 +676,48 @@ class IdleEngineTest {
             "wind",
             "fire",
             "poison",
-            "light",
+            "starArrow",
             "dark",
             "sand",
             "star",
             "hail",
             "blossom",
             "lightArrow",
-            "auroraNight");
+            "auroraNight",
+            "poisonArrow",
+            "iceArrow",
+            "fireArrow",
+            "waterArrow",
+            "sandArrow",
+            "shadowArrow",
+            "petalArrow");
+    assertThat(cat.apply("star").skills())
+        .extracting(skill -> skill.code())
+        .containsExactly("star", "starArrow");
     assertThat(cat.apply("silver").skills())
         .extracting(skill -> skill.code())
         .containsExactly("bolt", "lightArrow");
+    assertThat(cat.apply("wisteria").skills())
+        .extracting(skill -> skill.code())
+        .containsExactly("poison", "poisonArrow");
+    assertThat(cat.apply("frost").skills())
+        .extracting(skill -> skill.code())
+        .containsExactly("hail", "iceArrow");
+    assertThat(cat.apply("ruby").skills())
+        .extracting(skill -> skill.code())
+        .containsExactly("fire", "fireArrow");
+    assertThat(cat.apply("abyss").skills())
+        .extracting(skill -> skill.code())
+        .containsExactly("water", "waterArrow");
+    assertThat(cat.apply("dune").skills())
+        .extracting(skill -> skill.code())
+        .containsExactly("sand", "sandArrow");
+    assertThat(cat.apply("veil").skills())
+        .extracting(skill -> skill.code())
+        .containsExactly("dark", "shadowArrow");
+    assertThat(cat.apply("flora").skills())
+        .extracting(skill -> skill.code())
+        .containsExactly("blossom", "petalArrow");
     assertThat(cat.apply("aurora").skills())
         .containsExactly(new investorgame.raising.CompanyView.CatSkill("auroraNight", "극광의 밤"));
     // 동료 45종의 고유 스킬은 모두 26칸이다.
@@ -767,7 +798,7 @@ class IdleEngineTest {
     tick(1000, new IdleHit(10, "bullet", 1));
     assertThat(state.diamonds).isEqualTo(diamonds);
     // Walls no longer unlock skills (decisions.md 501): without a cat nothing is cast.
-    assertThat(engine.view(state).skills()).hasSize(16).noneMatch(skill -> skill.owned());
+    assertThat(engine.view(state).skills()).hasSize(23).noneMatch(skill -> skill.owned());
   }
 
   @Test
@@ -1052,7 +1083,7 @@ class IdleEngineTest {
     // A skill is a cat's own ability (decisions.md 501): deep walls alone cast nothing.
     tick(3000, new IdleHit(60, "meteor", 1));
     assertThat(state.idle.damage).isZero();
-    assertThat(engine.view(state).skills()).hasSize(16).noneMatch(skill -> skill.owned());
+    assertThat(engine.view(state).skills()).hasSize(23).noneMatch(skill -> skill.owned());
     assertThatThrownBy(() -> engine.drawCat(state, random))
         .as("no diamonds, no cat")
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
@@ -1510,7 +1541,7 @@ class IdleEngineTest {
 
   @Test
   void anSGradeCatCastsBothOfItsSkills() {
-    // 마법은 A등급부터, S등급은 둘 (561번). 서리냥은 우박과 얼음창을 쓴다.
+    // 마법은 A등급부터, S등급은 둘 (561번). 서리냥은 우박과 서리화살을 쓴다.
     start(1);
     state.idle.wall = 100;
     state.idle.cats.put("frost", 1);
@@ -1518,13 +1549,13 @@ class IdleEngineTest {
     assertThat(engine.view(state).skills())
         .filteredOn(skill -> skill.owned())
         .extracting(skill -> skill.code())
-        .containsExactly("ice", "hail");
+        .containsExactly("hail", "iceArrow");
     // 2.3 s at 1.5x (580) is 3.45 game seconds: one 3.4 s hail cooldown (two stones at level 1)
     // and one 3.2 s ice cooldown.
     tick(
         2300,
         new IdleHit(100, "hail", 2, 1000.0),
-        new IdleHit(100, "ice", 1, 1000.0),
+        new IdleHit(100, "iceArrow", 1, 1000.0),
         new IdleHit(100, "fire", 1, 1000.0),
         new IdleHit(100, "wind", 1, 1000.0));
     assertThat(state.idle.damage)

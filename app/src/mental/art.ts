@@ -13,8 +13,24 @@ import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
-import { EXTRA_SPELLS, type ExtraSpell, ICE_GLYPH, SPELLBOOK, WIND_GLYPH } from './spellbook'
-import { fireBloom, fish, fishWave, paw, pawComet, spellSprites, stoneRam } from './spellSprites'
+import {
+  EXTRA_SPELLS,
+  type ExtraSpell,
+  ICE_GLYPH,
+  isArrowSpell,
+  SPELLBOOK,
+  WIND_GLYPH,
+} from './spellbook'
+import {
+  drawElementArrow,
+  fireBloom,
+  fish,
+  fishWave,
+  paw,
+  pawComet,
+  spellSprites,
+  stoneRam,
+} from './spellSprites'
 import { drawBuyWall, drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
 import { BULLET_ART, drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
@@ -566,7 +582,8 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
     c.fill()
   })
   for (const spell of EXTRA_SPELLS) {
-    if (spell !== 'auroraNight') bake(scene, spellKey(spell), 64, 64, spellSprites[spell])
+    if (isArrowSpell(spell)) bake(scene, spellKey(spell), 64, 64, (c) => drawElementArrow(c, spell))
+    else if (spell !== 'auroraNight') bake(scene, spellKey(spell), 64, 64, spellSprites[spell])
   }
   if (breakthrough) {
     // 낙하 지점의 중심은 비워 적과 물량 숫자를 계속 볼 수 있게 한다.
