@@ -390,7 +390,7 @@ class IdleEngine {
           Map.entry("star", new int[] {11, 8}),
           Map.entry("silver", new int[] {2, 14}),
           Map.entry("wisteria", new int[] {7, 9}),
-          Map.entry("frost", new int[] {12, 6}),
+          Map.entry("frost", new int[] {12, 4}),
           Map.entry("ruby", new int[] {6, 1}),
           Map.entry("abyss", new int[] {0, 4}),
           Map.entry("dune", new int[] {10, 5}),

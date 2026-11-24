@@ -1507,7 +1507,7 @@ class IdleEngineTest {
 
   @Test
   void anSGradeCatCastsBothOfItsSkills() {
-    // 마법은 A등급부터, S등급은 둘 (561번). 서리냥은 우박과 불을 쓴다 (563번).
+    // 마법은 A등급부터, S등급은 둘 (561번). 서리냥은 우박과 얼음창을 쓴다.
     start(1);
     state.idle.wall = 100;
     state.idle.cats.put("frost", 1);
@@ -1515,15 +1515,18 @@ class IdleEngineTest {
     assertThat(engine.view(state).skills())
         .filteredOn(skill -> skill.owned())
         .extracting(skill -> skill.code())
-        .containsExactly("fire", "hail");
+        .containsExactly("ice", "hail");
     // 2.3 s at 1.5x (580) is 3.45 game seconds: one 3.4 s hail cooldown (two stones at level 1)
-    // and one 3 s fire cooldown.
+    // and one 3.2 s ice cooldown.
     tick(
         2300,
         new IdleHit(100, "hail", 2, 1000.0),
+        new IdleHit(100, "ice", 1, 1000.0),
         new IdleHit(100, "fire", 1, 1000.0),
         new IdleHit(100, "wind", 1, 1000.0));
-    assertThat(state.idle.damage).as("hail 2 x 2 + fire 2.4, no wind").isCloseTo(6.4, offset(1e-9));
+    assertThat(state.idle.damage)
+        .as("hail 2 x 2 + ice 3.2, no fire or wind")
+        .isCloseTo(7.2, offset(1e-9));
     // The tiger cat (A grade) has the one skill: the wind.
     state.idle.cats.put("tiger", 1);
     state.idle.fielded.add("tiger");
