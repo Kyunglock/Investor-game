@@ -3487,8 +3487,11 @@ class BattleScene extends Phaser.Scene {
   /** 개발 서버의 확인 스크립트: 다음 레벨까지 남은 경험치를 한 번에 준다. */
   devLevelUp() {
     if (this.wallCards()) this.offerCard()
-    else this.gainXp(xpToNext(this.level) - this.xp)
+    else this.gainXp(xpToNext(this.level) - this.xp, true)
   }
+
+  /** 개발 서버의 확인 스크립트: 끄면 적을 잡아도 경험치가 쌓이지 않아, 카드 고르기가 스크립트가 부를 때만 뜬다. */
+  devXp = true
 
   /**
    * 매도벽 돌파 스테이지는 벽마다 끊는 로그라이크다 (671번): 경험치로 레벨이 오르지 않고, 벽 하나를 무너뜨릴 때마다 카드를 한 장 고른다.
@@ -3501,8 +3504,8 @@ class BattleScene extends Phaser.Scene {
   /** 벽을 넘은 보상으로 카드를 고르는 중이면 고른 뒤 다음 벽으로 오른다. */
   private rushAfterPick = false
 
-  private gainXp(amount: number) {
-    if (this.opts.idle || this.wallCards()) return
+  private gainXp(amount: number, forced = false) {
+    if (this.opts.idle || this.wallCards() || (!this.devXp && !forced)) return
     this.xp += amount
     if (this.xp < xpToNext(this.level) || this.over || this.choosing) {
       return
@@ -5890,6 +5893,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
       __mentalBuyWallHit?: (damage: number, x?: number) => void
       __mentalMarket?: () => ReturnType<BattleScene['inspectMarket']>
       __mentalLevelUp?: () => void
+      __mentalXp?: (on: boolean) => void
     }
     dev.__mentalDamage = scene.damageStats
     // 공격 판(413번)을 자동으로 돌려 강화 단계별로 걸린 시간을 재는 데 쓴다.
@@ -5901,6 +5905,9 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     dev.__mentalMarket = () => scene.inspectMarket()
     // 확인 스크립트가 다음 레벨업(카드 고르기)을 바로 부른다 (stageCardCheck.mjs).
     dev.__mentalLevelUp = () => scene.devLevelUp()
+    dev.__mentalXp = (on) => {
+      scene.devXp = on
+    }
     dev.__mentalBuyWallHit = (damage, x = parent.clientWidth / 2) => scene.hitBuyWall(damage, x)
     dev.__mentalMagic = (levels) => scene.applyLoadout({ ...scene.loadout, ...levels })
     dev.__mentalMates = (mates) => scene.applyLoadout({ ...scene.loadout, mates })

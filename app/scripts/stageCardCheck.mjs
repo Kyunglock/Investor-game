@@ -79,9 +79,12 @@ try {
     await page.locator('[data-testid=assault-stage][data-stage="1"]').click()
     // 스테이지: 첫 카드 석 장에 사장냥의 스킬과 고양이 마법 강화가 나온다.
     // 출전 화면: 무기를 보고 들어간다.
-    await page.getByRole('button', { name: /돌파하러 가기/ }).click()
+    await expect(page.getByTestId('stage-mode')).toContainText('디펜스')
+    await page.getByRole('button', { name: /출발/ }).click()
     const pick = page.getByTestId('mental-levelup')
     await expect(pick).toBeVisible({ timeout: 60000 })
+    // 확인하는 동안에는 적을 잡아도 레벨이 오르지 않게 둔다: 카드 고르기는 아래에서 부를 때만 뜬다.
+    await page.evaluate(() => window.__mentalXp(false))
     await expect(pick.locator('[data-card]')).toHaveCount(3)
     await expect(pick.locator('[data-card=rally]')).toContainText('불장')
     await expect(pick.locator('[data-card=rally]')).toContainText('1분 동안')
@@ -150,28 +153,29 @@ try {
     const rally = await page.evaluate(() => window.__mentalMarket().actives.rally)
     assert.ok(rally <= 60, `rally lasts a minute: ${rally}`)
     await page.screenshot({ path: `/tmp/stage-rally-${width}.png` })
-    // 벽마다 끊는다 (671번): 경험치가 아니라 벽을 무너뜨리면 카드를 고르고, 다음 벽을 알려 준다.
+    // 디펜스 스테이지 (676번): 벽을 부수는 판이 아니다. 몰려오는 적을 잡은 경험치로 레벨이 올라 카드가 뜬다.
+    assert.equal(await page.evaluate(() => window.__mentalWalls().length), 0)
+    const kills = Number(await page.getByTestId('battle-level').locator('span b').textContent())
     await page.evaluate(() => {
-      window.__mentalCards = ['rally', 'stopLoss', 'cat']
-      window.__mentalAutopilot?.(true)
+      window.__mentalCards = ['rally', 'limitUp', 'cat']
+      window.__mentalXp(true)
       window.__mentalSpeed?.(4)
     })
     await expect(pick).toBeVisible({ timeout: 90000 })
-    await expect(pick).toContainText('매도벽 1개 돌파')
-    await expect(pick).toContainText('다음 벽: 매도벽 1줄')
-    // 카드를 고르는 동안에는 다음 벽이 아직 서지 않는다.
-    assert.equal(await page.evaluate(() => window.__mentalWalls().length), 0)
-    await page.screenshot({ path: `/tmp/stage-wall-card-${width}.png` })
-    await pick.locator('[data-card=rally]').click()
+    await expect(pick).toContainText('한층 더 단단하게')
+    assert.ok(
+      Number(await page.getByTestId('battle-level').locator('span b').textContent()) > kills,
+      'kills pay the level',
+    )
+    await page.screenshot({ path: `/tmp/stage-defense-card-${width}.png` })
+    await pick.locator('[data-card=limitUp]').click()
     await expect(pick).toHaveCount(0, { timeout: 15000 })
-    // 고르고 나면 다음 벽이 선다.
-    await expect
-      .poll(() => page.evaluate(() => window.__mentalWalls().length), { timeout: 15000 })
-      .toBeGreaterThan(0)
     assert.deepEqual(errors, [])
     await page.close()
   }
-  console.log('스테이지 320/390px: 출전한 고양이의 카드·스킬 강화·사장냥 스킬·벽마다 카드 통과')
+  console.log(
+    '스테이지 320/390px: 디펜스·출전한 고양이의 카드·스킬 강화·사장냥 스킬·경험치 레벨업 통과',
+  )
 } finally {
   await browser.close()
 }

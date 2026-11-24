@@ -123,6 +123,18 @@ export function stageSpec(stage: number, perChapter: number = PER_CHAPTER): Stag
   }
 }
 
+/** 스테이지 (676번)에서 적이 나오는 수의 배율: 번호 스테이지 판의 두 배. 몰려오는 적을 쓸어 담아 경험치로 카드를 고르는 판이다. */
+export const STAGE_CROWD = 2
+
+/**
+ * 메인 화면의 스테이지 (decisions.md 676번): 디펜스다. 번호 스테이지의 판(stageSpec)에 적의 수만 STAGE_CROWD배로 늘린다. 체력·빠르기·멘탈
+ * 피해와 챕터 끝의 보스는 그대로다.
+ */
+export function crowdStageSpec(stage: number, perChapter: number = PER_CHAPTER): StageSpec {
+  const spec = stageSpec(stage, perChapter)
+  return { ...spec, countScale: spec.countScale * STAGE_CROWD }
+}
+
 /** 챕터 이름 (407번): 챕터 보스를 깨면 다음 챕터가 열린다. 서버의 챕터 수(stages.last ÷ perChapter)보다 많으면 남는 이름은 쓰지 않는다. */
 export const CHAPTER_NAMES = [
   '개미의 첫걸음',

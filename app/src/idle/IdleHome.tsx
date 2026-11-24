@@ -435,9 +435,9 @@ export function IdleHome({
           {menu === 'stage' && (
             <div data-testid="stage-select">
               <p className="idle-stage-note">
-                한 판씩 깨는 전투예요. 매도벽을 하나 부술 때마다 카드 석 장 가운데 한 장을 골라요.
-                출전 탭에서 출전시킨 고양이가 고양이 카드로 차례로 나오고, 사장냥의 스킬과 고양이
-                스킬 강화도 카드로 나와요.
+                몰려오는 적을 막는 디펜스예요. 적을 잡은 경험치로 레벨이 오를 때마다 카드 석 장
+                가운데 한 장을 골라요. 출전 탭에서 출전시킨 고양이가 고양이 카드로 차례로 나오고,
+                사장냥의 스킬과 고양이 스킬 강화도 카드로 나와요.
               </p>
               <AssaultSelect company={company} />
             </div>
