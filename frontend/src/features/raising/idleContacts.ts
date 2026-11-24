@@ -43,8 +43,9 @@ export class IdleContacts {
   add(wall: number, kind: IdleAttackKind, depth: number, damage: number) {
     if (!Number.isSafeInteger(wall) || wall < 1) return false
     if (depth !== 0 && depth !== 1 && depth !== 2) return false
-    // Only a bullet's pierce reaches the walls behind (decisions.md 520).
-    if (depth > 0 && kind !== 'bullet') return false
+    // Only a bullet's pierce reaches the walls behind (decisions.md 520), and the aurora cat's
+    // ribbon, which sweeps the whole lane (673, 675). The server takes no other kind there.
+    if (depth > 0 && kind !== 'bullet' && kind !== 'auroraNight') return false
     if (!Number.isFinite(damage) || damage <= 0) return false
     const key = `${wall}:${kind}:${depth}`
     let old = this.hits.get(key)
