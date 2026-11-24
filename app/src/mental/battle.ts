@@ -4407,6 +4407,7 @@ class BattleScene extends Phaser.Scene {
         sweep.nextHit.set(key, { step: sweep.step + AURORA_TICK_STEPS, born })
         this.auroraFlare(enemy.x, enemy.y, enemy.boss || wall ? 68 : 44, 210)
         this.hit(target, sweep.damage, -Math.PI / 2, 'auroraNight', true)
+        if (wall) this.auroraBehind(sweep.damage, wall.y)
       }
       sweep.distance += freeStep * (contact ? AURORA_CONTACT_SPEED : 1)
     }
@@ -4414,6 +4415,33 @@ class BattleScene extends Phaser.Scene {
     if (sweep.distance >= bottom + height) {
       sweep.ribbon.destroy()
       this.auroraSweep = null
+    }
+  }
+
+  /**
+   * 극광의 밤은 뒤 매도벽도 친다 (673번): 장막이 레인 전체를 쓸고 올라가므로, 맨 앞 벽을 칠 때마다 뒤에 보이는 벽들도 함께 맞는다. 피해는
+   * 총알의 관통(520번)과 같이 벽 하나를 지날 때마다 절반이고, 대량 매도벽은 넘지 못한다. 뒤 벽은 물리 대상이 아니라 여기서 판정해 서버에 알린다.
+   */
+  private auroraBehind(damage: number, frontY: number) {
+    if (!this.opts.idle || !this.idleQueue || this.idleTransition || this.circuit) return
+    const reach = idlePierceReach(this.idleWall)
+    const layers = this.idleQueue
+      .behind(this.view().w / 2, 0, frontY)
+      .filter((layer) => layer.wall - this.idleWall <= reach)
+    for (const hit of idlePierceHits(this.idleWall, damage, layers)) {
+      const layer = layers.find((entry) => entry.wall === hit.wall)
+      if (!layer) continue
+      this.reportIdleHit(hit.wall, 'auroraNight', hit.damage, hit.behind)
+      this.auroraFlare(layer.x, layer.y, 56, 210)
+      this.damageNumberAt(
+        this.pierceOwners[hit.behind - 1],
+        layer.x,
+        layer.y,
+        hit.damage,
+        'auroraNight',
+        false,
+        hit.behind,
+      )
     }
   }
 
@@ -5100,7 +5128,7 @@ class BattleScene extends Phaser.Scene {
   /**
    * 총알 관통 (decisions.md 520번): 맨 앞 매도벽을 맞힌 총알이 뒤의 두 벽까지 뚫고 가며 절반씩 줄어든 피해를 준다. 뒤 벽은 물리 대상이 아니라
    * 여기서 판정한다: 맞은 벽 번호와 줄어든 피해를 서버에 알리고, 총알이 이어 날아가는 모습과 줄어든 피해 숫자를 띄운다. 무기 폭발과 고양이 스킬은
-   * 뒤 벽에 닿지 않는다.
+   * 뒤 벽에 닿지 않는다(극광의 밤만 닿는다, 673번 auroraBehind).
    */
   private pierceIdleWalls(
     bullet: Bullet,

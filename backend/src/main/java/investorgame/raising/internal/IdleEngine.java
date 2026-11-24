@@ -1148,7 +1148,9 @@ class IdleEngine {
         }
         // Only a bullet's pierce reaches the queued walls (520): explosions and skills stop at the
         // front wall.
-        if (depth > 0 && kind != 0) continue;
+        // 극광의 밤 (673번) is the one skill that does: its ribbon sweeps the whole lane, so it hits the
+        // queued walls at the same halving shares as a pierced bullet.
+        if (depth > 0 && kind != 0 && !"auroraNight".equals(code)) continue;
         // A 대량 매도벽 (the boss, every 50th wall) cannot be pierced: not when it is the screen's front
         // wall,
         // and a pierced bullet neither hits it nor goes past it. Matches the app's idlePierceReach.

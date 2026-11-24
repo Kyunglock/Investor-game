@@ -144,6 +144,7 @@ jobs:
           APP_URL=http://localhost:5182/app/ node ../app/scripts/sandboxGateCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/stageCardCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/bossRestCheck.mjs
+          APP_URL=http://localhost:5182/app/ node ../app/scripts/auroraBehindCheck.mjs
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
