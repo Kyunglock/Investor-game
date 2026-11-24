@@ -12,6 +12,7 @@ import {
   isFlow,
   lightningStats,
 } from '../mental/magic'
+import { isArrowSpell } from '../mental/spellbook'
 
 /**
  * 금고 도전의 화면 규칙 (decisions.md 641번). 보상과 주마다 바뀌는 것(약점·내성·천적·카드)은 서버가 정해 company.vault로 주고,
@@ -37,7 +38,7 @@ function spellRate(spell: Spell, level: number): number {
   }
   if (isFlow(spell)) {
     const s = flowStats(spell, level)
-    return s.damage / s.cooldown
+    return s.damage / (isArrowSpell(spell) ? s.cooldown * VAULT_SIM : s.cooldown)
   }
   if (isFall(spell)) {
     const s = fallStats(spell, level)

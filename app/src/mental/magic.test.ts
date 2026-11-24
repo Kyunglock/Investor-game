@@ -21,9 +21,22 @@ import {
   waterStats,
 } from './magic'
 
+import { ARROW_SPELLS } from './spellbook'
+
 const levels = Array.from({ length: MAGIC_MAX_LEVEL }, (_, i) => i + 1)
 
 describe('물·불·번개 마법 (decisions.md 392번)', () => {
+  it('속성 화살은 모든 레벨에서 시전자마다 1초에 한 발씩 발사한다', () => {
+    const clock = new MagicClock()
+    for (const arrow of ARROW_SPELLS) {
+      for (const level of levels) {
+        clock.cast(arrow, level, 3)
+        expect(clock.due(arrow, level, 3.999)).toBe(false)
+        expect(clock.due(arrow, level, 4)).toBe(true)
+      }
+    }
+  })
+
   it('극광의 밤은 모든 레벨에서 기존보다 1.5배 자주 시전한다', () => {
     for (const level of levels) {
       expect(magicCooldown('auroraNight', level)).toBeCloseTo((6 - (level - 1) * 0.5) / 1.5)

@@ -218,6 +218,8 @@ class IdleEngine {
     "별 스킬", "우박 스킬", "꽃비 스킬", "빛화살", "극광의 밤", "맹독화살", "서리화살", "홍염화살", "심해화살", "모래화살", "그림자화살",
     "꽃잎화살"
   };
+  // One real second at the server battle clock rate, for every arrow level.
+  private static final double[] ARROW_COOLDOWN = ramp(SPEED, SPEED);
   private static final double[][] COOLDOWNS = {
     {2.4, 2.1, 1.8, 1.6, 1.4},
     {3.6, 3.3, 3, 2.8, 2.6},
@@ -227,21 +229,21 @@ class IdleEngine {
     {2.8, 2.5, 2.2, 2, 1.8},
     ramp(3, 2.2),
     ramp(2.2, 1.4),
-    ramp(3.4, 2.4),
+    ARROW_COOLDOWN,
     ramp(3, 2.2),
     ramp(2.6, 1.8),
     ramp(2, 1.3),
     ramp(3.4, 2.6),
     ramp(3, 2.2),
-    ramp(5, 3.8),
+    ARROW_COOLDOWN,
     ramp(6 / 1.5, 4 / 1.5),
-    ramp(3, 2.2),
-    ramp(3.2, 2.2),
-    ramp(3.6, 2.6),
-    ramp(3.2, 2.2),
-    ramp(2.8, 1.8),
-    ramp(2.6, 1.6),
-    ramp(2.2, 1.4)
+    ARROW_COOLDOWN,
+    ARROW_COOLDOWN,
+    ARROW_COOLDOWN,
+    ARROW_COOLDOWN,
+    ARROW_COOLDOWN,
+    ARROW_COOLDOWN,
+    ARROW_COOLDOWN
   };
   private static final double[][] SKILL_DAMAGE = {
     {1.5, 2, 2.6, 3, 3.4},

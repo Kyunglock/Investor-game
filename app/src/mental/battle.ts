@@ -833,6 +833,7 @@ class BattleScene extends Phaser.Scene {
     distance: number
     nextHit: Map<object, { step: number; born: number }>
   } | null = null
+  private arrowElapsed = 0
   private elapsed = 0
   private lastFire = 0
   /** 사장냥이 쏜 탄 수(재장전, #587). */
@@ -1369,7 +1370,10 @@ class BattleScene extends Phaser.Scene {
       const index = this.casters.length - 1
       const mate = this.mates[index]
       const clock = new MagicClock()
-      for (const magic of SPELLS) clock.ready(magic, this.elapsed + (index + 1) * CAST_STAGGER)
+      for (const magic of SPELLS) {
+        const now = isArrowSpell(magic) ? this.arrowElapsed : this.elapsed
+        clock.ready(magic, now + (index + 1) * CAST_STAGGER)
+      }
       this.casters.push({ mate: index, at: () => ({ x: mate.body.x, y: mate.body.y - 24 }), clock })
       if (own) continue
       this.ring(mate.body.x, mate.body.y, 0xc7a4ff, 64, 500)
@@ -4235,7 +4239,8 @@ class BattleScene extends Phaser.Scene {
           (m === 'water' || m === 'meteor' || m === 'lightning' || m === 'earth'
             ? this.loadout[m]
             : 0)
-        if (!caster.clock.due(m, level, this.elapsed)) continue
+        const now = isArrowSpell(m) ? this.arrowElapsed : this.elapsed
+        if (!caster.clock.due(m, level, now)) continue
         const from = caster.at()
         const cast =
           m === 'auroraNight'
@@ -4248,7 +4253,7 @@ class BattleScene extends Phaser.Scene {
                   ? this.castEarth(from, level)
                   : this.castLightning(from, level)
         if (cast) {
-          caster.clock.cast(m, level, this.elapsed)
+          caster.clock.cast(m, level, now)
           this.damageStats.casts[m]++
           if (caster.mate !== undefined) {
             this.damageStats.mateCasts[caster.mate]++
@@ -4258,7 +4263,7 @@ class BattleScene extends Phaser.Scene {
             }
           }
         } else {
-          caster.clock.retry(m, this.elapsed)
+          caster.clock.retry(m, now)
         }
       }
     }
@@ -4513,7 +4518,9 @@ class BattleScene extends Phaser.Scene {
     s.active = true
     s.level = level
     s.spell = spell
-    s.drawRemaining = isArrowSpell(spell) ? ARROW_DRAW_SECONDS : 0
+    const arrow = isArrowSpell(spell)
+    s.drawRemaining = arrow ? ARROW_DRAW_SECONDS : 0
+    s.img.setDepth(arrow ? 6.8 : 4)
     s.color = hexColor(SKILL_MARK_COLORS[spell].mid)
     s.x = from.x
     s.y = from.y
@@ -4560,7 +4567,7 @@ class BattleScene extends Phaser.Scene {
 
   private moveWater(s: WaterShot, dt: number) {
     if (s.drawRemaining > 0) {
-      const elapsed = Math.min(dt, s.drawRemaining)
+      const elapsed = Math.min(dt / this.simSpeed, s.drawRemaining)
       s.drawRemaining -= elapsed
       const draw = 1 - s.drawRemaining / ARROW_DRAW_SECONDS
       const retreat = (this.reducedMotion ? 5 : 23) * Phaser.Math.Easing.Sine.Out(draw)
@@ -4570,7 +4577,7 @@ class BattleScene extends Phaser.Scene {
       s.x = s.img.x
       s.y = s.img.y
       this.playSound('whoosh')
-      dt -= elapsed
+      dt -= elapsed * this.simSpeed
     }
     this.trailColor = s.color
     const st = flowStats(s.spell, s.level)
@@ -5630,6 +5637,7 @@ class BattleScene extends Phaser.Scene {
       this.circuitStep(this.opts.idle ? (realDtMs / 1000) * 2 : dt)
       return
     }
+    this.arrowElapsed += realDtMs / 1000
     this.elapsed += dt
     // 물리가 멈추는 카드 선택·일시정지·서킷브레이커는 탄 수명/연사/재장전에도 포함하지 않는다.
     const time = this.elapsed * 1000
