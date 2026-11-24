@@ -17,62 +17,6 @@ function shape(c: Paint, points: number[][], fill: string, edge?: string) {
   }
 }
 
-export function drawWater(c: Paint) {
-  const g = c.createLinearGradient(0, 0, 30, 20)
-  g.addColorStop(0, '#84efff33')
-  g.addColorStop(0.45, '#46d9ef')
-  g.addColorStop(1, '#1677b9')
-  c.beginPath()
-  c.moveTo(1, 10)
-  c.bezierCurveTo(13, 9, 15, 0, 24, 3)
-  c.bezierCurveTo(34, 6, 31, 18, 23, 18)
-  c.bezierCurveTo(12, 18, 12, 12, 1, 10)
-  c.fillStyle = g
-  c.fill()
-  c.strokeStyle = '#175e92'
-  c.lineWidth = 1
-  c.stroke()
-  c.beginPath()
-  c.moveTo(9, 10)
-  c.bezierCurveTo(21, 11, 16, 3, 26, 6)
-  c.strokeStyle = '#e1ffff'
-  c.lineWidth = 2
-  c.stroke()
-  c.beginPath()
-  c.arc(25, 9, 2, 0, Math.PI * 2)
-  c.fillStyle = '#ffffff'
-  c.fill()
-}
-
-export function drawWave(c: Paint) {
-  c.beginPath()
-  c.moveTo(3, 5)
-  c.bezierCurveTo(41, 24, 52, 87, 4, 116)
-  c.bezierCurveTo(23, 82, 22, 38, 3, 5)
-  const g = c.createLinearGradient(0, 0, 44, 0)
-  g.addColorStop(0, '#1a7eae00')
-  g.addColorStop(0.4, '#168fbeaa')
-  g.addColorStop(0.8, '#49dfe8')
-  g.addColorStop(1, '#e8ffff')
-  c.fillStyle = g
-  c.fill()
-  for (let i = 0; i < 3; i++) {
-    c.beginPath()
-    c.moveTo(5 + i * 3, 12 + i * 10)
-    c.bezierCurveTo(35 + i * 3, 39, 37 + i * 3, 78, 7 + i * 2, 109 - i * 7)
-    c.strokeStyle = i === 0 ? '#f0ffff' : '#a2f6f5aa'
-    c.lineWidth = i === 0 ? 3 : 1.4
-    c.stroke()
-  }
-  for (let i = 0; i < 9; i++) {
-    const a = -1.1 + i * 0.27
-    c.beginPath()
-    c.ellipse(5 + Math.cos(a) * 31, 60 + Math.sin(a) * 51, 2.3, 3.2, -a, 0, Math.PI * 2)
-    c.fillStyle = i % 2 ? '#f1ffff' : '#8cf0f4'
-    c.fill()
-  }
-}
-
 /** 얼음 창 (561번): 오른쪽(나아가는 쪽)이 뾰족한 결정. 44×16. */
 export function drawIceLance(c: Paint) {
   const g = c.createLinearGradient(0, 0, 44, 0)
@@ -101,6 +45,26 @@ export function drawIceLance(c: Paint) {
   c.closePath()
   c.fillStyle = g
   c.fill()
+  shape(
+    c,
+    [
+      [3, 8],
+      [15, 2],
+      [11, 8],
+    ],
+    '#85ccf8',
+    '#3977a2',
+  )
+  shape(
+    c,
+    [
+      [13, 10],
+      [22, 15],
+      [30, 9],
+    ],
+    '#b4e7ff',
+    '#3977a2',
+  )
   // 결정의 모서리와 반짝임.
   c.beginPath()
   c.moveTo(13, 4.4)
@@ -138,104 +102,24 @@ export function drawGust(c: Paint) {
     c.lineWidth = i === 0 ? 2.6 : 1.3
     c.stroke()
   }
-}
-
-/** spellbook 마법의 색 (563번). */
-type Palette = { light: string; mid: string; dark: string; line: string }
-
-/** 창 (563번): 오른쪽이 뾰족한 44×16. 얼음 창과 같은 꼴에 마법의 색. */
-export function drawLance(c: Paint, p: Palette) {
+  // 넓게 감기는 두 번째 리본과 휘말려 올라간 잎.
+  c.beginPath()
+  c.moveTo(2, 87)
+  c.bezierCurveTo(44, 82, 35, 45, 12, 48)
+  c.bezierCurveTo(34, 57, 27, 76, 2, 87)
+  c.fillStyle = '#adf5d7'
+  c.fill()
   shape(
     c,
     [
-      [1, 8],
-      [12, 3],
-      [30, 2],
-      [43, 8],
-      [30, 14],
-      [12, 13],
+      [5, 29],
+      [13, 25],
+      [17, 17],
+      [9, 20],
     ],
-    p.line,
+    '#86cf83',
+    '#42806d',
   )
-  const g = c.createLinearGradient(0, 0, 44, 0)
-  g.addColorStop(0, `${p.mid}33`)
-  g.addColorStop(0.4, p.mid)
-  g.addColorStop(1, p.light)
-  shape(
-    c,
-    [
-      [3, 8],
-      [13, 4.4],
-      [29.5, 3.5],
-      [40.5, 8],
-      [29.5, 12.5],
-      [13, 11.6],
-    ],
-    p.mid,
-  )
-  c.fillStyle = g
-  c.fill()
-  c.beginPath()
-  c.moveTo(14, 8)
-  c.lineTo(40, 8)
-  c.strokeStyle = '#ffffffcc'
-  c.lineWidth = 1.2
-  c.stroke()
-}
-
-/** 물결 (563번): 오른쪽으로 부푼 초승달 44×120에 마법의 색. */
-export function drawCrescent(c: Paint, p: Palette) {
-  c.beginPath()
-  c.moveTo(3, 5)
-  c.bezierCurveTo(41, 24, 52, 87, 4, 116)
-  c.bezierCurveTo(23, 82, 22, 38, 3, 5)
-  const g = c.createLinearGradient(0, 0, 44, 0)
-  g.addColorStop(0, `${p.dark}00`)
-  g.addColorStop(0.45, `${p.dark}aa`)
-  g.addColorStop(0.85, p.mid)
-  g.addColorStop(1, p.light)
-  c.fillStyle = g
-  c.fill()
-  for (let i = 0; i < 3; i++) {
-    c.beginPath()
-    c.moveTo(5 + i * 3, 12 + i * 10)
-    c.bezierCurveTo(35 + i * 3, 39, 37 + i * 3, 78, 7 + i * 2, 109 - i * 7)
-    c.strokeStyle = i === 0 ? p.light : `${p.light}99`
-    c.lineWidth = i === 0 ? 2.6 : 1.3
-    c.stroke()
-  }
-}
-
-/** 구슬 (563번): 32×32. 폭탄은 어두운 몸에 심지가 달렸다. */
-export function drawOrb(c: Paint, p: Palette, bomb = false) {
-  c.beginPath()
-  c.arc(16, 17, 12.5, 0, Math.PI * 2)
-  c.fillStyle = p.line
-  c.fill()
-  const g = c.createRadialGradient(12, 12, 1, 16, 17, 12)
-  g.addColorStop(0, bomb ? '#b9bdc8' : p.light)
-  g.addColorStop(0.55, p.mid)
-  g.addColorStop(1, p.dark)
-  c.beginPath()
-  c.arc(16, 17, 11, 0, Math.PI * 2)
-  c.fillStyle = g
-  c.fill()
-  c.beginPath()
-  c.arc(12, 12.5, 2.6, 0, Math.PI * 2)
-  c.fillStyle = '#ffffffcc'
-  c.fill()
-  if (bomb) {
-    c.beginPath()
-    c.moveTo(21, 8)
-    c.lineTo(26, 3)
-    c.strokeStyle = '#c9a26a'
-    c.lineWidth = 2.4
-    c.stroke()
-    c.beginPath()
-    c.arc(27, 2.5, 2.2, 0, Math.PI * 2)
-    c.fillStyle = '#ffd24a'
-    c.fill()
-  }
 }
 
 export function drawEmber(c: Paint) {
@@ -297,123 +181,6 @@ export function drawPillar(c: Paint) {
   c.lineTo(30, 140)
   c.fillStyle = '#fffbe4'
   c.fill()
-}
-
-/** 오른쪽을 향한 목제 공성 충차. 88×48 영역과 통나무 앞끝의 타격 위치를 유지한다. */
-export function drawWoodenRam(c: Paint) {
-  c.save()
-  c.lineJoin = 'round'
-  c.lineCap = 'round'
-  const timber = (x: number, y: number, w: number, h: number, color: string) => {
-    c.beginPath()
-    c.roundRect(x, y, w, h, 2)
-    c.fillStyle = color
-    c.fill()
-    c.strokeStyle = '#503019'
-    c.lineWidth = 1.3
-    c.stroke()
-  }
-  c.fillStyle = '#4a291c30'
-  c.beginPath()
-  c.ellipse(43, 27, 40, 18, 0, 0, Math.PI * 2)
-  c.fill()
-  // 네 나무 바퀴: 두꺼운 테두리와 바퀴살.
-  for (const x of [17, 47])
-    for (const y of [6, 42]) {
-      timber(x - 8, y - 4, 16, 8, '#684225')
-      c.strokeStyle = '#b98b50'
-      c.lineWidth = 1.5
-      for (const dx of [-4, 0, 4]) {
-        c.beginPath()
-        c.moveTo(x + dx, y - 2.5)
-        c.lineTo(x + dx, y + 2.5)
-        c.stroke()
-      }
-    }
-  // 바퀴축과 양옆의 긴 받침대.
-  for (const x of [17, 47]) timber(x - 2, 6, 4, 36, '#81542b')
-  timber(4, 10, 55, 5, '#af7a41')
-  timber(4, 33, 55, 5, '#82502a')
-  // 넓은 나무 프레임의 대각 버팀대.
-  for (const points of [
-    [
-      [6, 14],
-      [20, 6],
-      [23, 9],
-      [10, 19],
-    ],
-    [
-      [6, 34],
-      [20, 42],
-      [23, 39],
-      [10, 29],
-    ],
-  ]) {
-    shape(c, points, '#be8b4e', '#58351e')
-  }
-  // 둥근 통나무 몸통. 금속 하이라이트 대신 껍질의 길쭉한 결을 넣는다.
-  const wood = c.createLinearGradient(0, 14, 0, 34)
-  wood.addColorStop(0, '#d4a365')
-  wood.addColorStop(0.35, '#b47b3f')
-  wood.addColorStop(1, '#70411f')
-  c.beginPath()
-  c.roundRect(12, 14, 69, 20, 8)
-  c.fillStyle = wood
-  c.fill()
-  c.strokeStyle = '#51301a'
-  c.lineWidth = 1.5
-  c.stroke()
-  for (const y of [18, 24, 30]) {
-    c.beginPath()
-    c.moveTo(18, y)
-    c.bezierCurveTo(31, y - 2, 55, y + 2, 77, y - 0.5)
-    c.strokeStyle = y === 18 ? '#e0b47b' : '#815025'
-    c.lineWidth = 1
-    c.stroke()
-  }
-  // 통나무를 매단 두 겹의 밧줄과 프레임 가로대.
-  for (const x of [23, 49]) {
-    timber(x - 3, 8, 6, 32, '#986431')
-    for (const dx of [-1.4, 1.4]) {
-      c.beginPath()
-      c.moveTo(x + dx, 11)
-      c.lineTo(x + dx, 37)
-      c.strokeStyle = '#e6c48b'
-      c.lineWidth = 1.5
-      c.stroke()
-    }
-    c.strokeStyle = '#7c512b'
-    c.lineWidth = 0.7
-    for (let y = 14; y < 36; y += 4) {
-      c.beginPath()
-      c.moveTo(x - 2.5, y)
-      c.lineTo(x + 2.5, y + 2)
-      c.stroke()
-    }
-  }
-  // 평평하게 잘린 나무 머리: 둥근 단면·나이테·작은 갈라짐.
-  c.beginPath()
-  c.ellipse(80, 24, 6, 10, 0, 0, Math.PI * 2)
-  c.fillStyle = '#e6b979'
-  c.fill()
-  c.strokeStyle = '#68401f'
-  c.lineWidth = 1.6
-  c.stroke()
-  for (const k of [0.72, 0.43, 0.16]) {
-    c.beginPath()
-    c.ellipse(80.3, 24, 6 * k, 10 * k, 0.12, 0, Math.PI * 2)
-    c.strokeStyle = '#ab733c'
-    c.lineWidth = 0.9
-    c.stroke()
-  }
-  c.beginPath()
-  c.moveTo(83.5, 16.5)
-  c.lineTo(80.5, 21)
-  c.lineTo(81.5, 22.5)
-  c.strokeStyle = '#81522b'
-  c.lineWidth = 1
-  c.stroke()
-  c.restore()
 }
 
 /** 한 덩어리인 매도벽의 실제 가로 비율로 굽는다. */

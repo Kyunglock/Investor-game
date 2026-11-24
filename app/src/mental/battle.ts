@@ -86,7 +86,7 @@ import {
   wallCols,
   whaleSummonSeconds,
 } from './assault'
-import { BREAKTHROUGH_SPELL_ART, STAGE_ASSETS } from './assets'
+import { STAGE_ASSETS } from './assets'
 import {
   BUY_WALL,
   BuyLossNote,
@@ -181,7 +181,6 @@ import {
   AURORA_CAST_SPEED,
   EXTRA_SPELLS,
   type ExtraSpell,
-  type FallSpell,
   isExtraSpell,
   SPELLBOOK,
 } from './spellbook'
@@ -966,10 +965,6 @@ class BattleScene extends Phaser.Scene {
   }
 
   preload() {
-    if (this.opts.idle) {
-      for (const [spell, url] of Object.entries(BREAKTHROUGH_SPELL_ART))
-        this.load.image(`breakthrough-${spell}`, url)
-    }
     if (this.opts.vault) this.load.image('vault-guard', this.opts.vault.guardianArt)
     this.load.on('progress', (value: number) => this.opts.onProgress?.(value))
     for (const [key, url] of Object.entries(STAGE_ASSETS)) this.load.image(`art-${key}`, url)
@@ -4172,7 +4167,15 @@ class BattleScene extends Phaser.Scene {
 
   /** 반지름 r(px)의 고리와 빛. 고리 텍스처는 반지름 36, 빛은 32. */
   private ring(x: number, y: number, tint: number, r: number, ms: number) {
-    this.flare(this.rings[this.ringIndex++ % this.rings.length], x, y, tint, 0.25, r / 36, ms)
+    this.flare(
+      this.rings[this.ringIndex++ % this.rings.length].setTexture('magic-ring'),
+      x,
+      y,
+      tint,
+      0.25,
+      r / 36,
+      ms,
+    )
   }
   private glow(x: number, y: number, tint: number, r: number, ms: number, alpha = 0.8) {
     this.flare(
@@ -4504,18 +4507,14 @@ class BattleScene extends Phaser.Scene {
       .setRotation(a)
       .setAlpha(1)
       .setVisible(true)
-    // 물결 단계는 넓어지는 파도 모양을 유지한다. 그림 로드가 실패하면 기본 마법 그림을 사용한다.
-    if (
-      this.opts.idle &&
-      (spell === 'ice' || spell === 'wind' || (spell === 'water' && form !== 'wave'))
-    ) {
-      const art = `breakthrough-${spell}`
-      if (this.textures.exists(art)) s.img.setTexture(art)
-    }
     if (form === 'drop') {
       // 물방울은 꼬리가 있고, spellbook의 구슬은 둥글다.
       if (spell === 'water') s.img.setDisplaySize(36, 23)
-      else s.img.setDisplaySize(30 + level * 3, 30 + level * 3)
+      else
+        s.img.setDisplaySize(
+          (spell === 'fire' || spell === 'star' ? 46 : 30) + level * 3,
+          30 + level * 3,
+        )
     } else if (form === 'jet') {
       // 물줄기 말고는 레벨이 오를수록 길고 굵다.
       const k = spell === 'water' ? 1 : 1 + (level - 1) * 0.12
@@ -4580,7 +4579,10 @@ class BattleScene extends Phaser.Scene {
     // 터지는 빛깔은 마법의 색을 따른다 (563번).
     const look =
       s.spell === 'water' || s.spell === 'ice' || s.spell === 'wind' ? null : SPELLBOOK[s.spell]
-    this.ring(x, y, look ? hexColor(look.colors.mid) : 0x6cc0ff, st.splash, 260)
+    if (s.spell === 'fire') {
+      const bloom = this.rings[this.ringIndex++ % this.rings.length].setTexture('magic-fire-bloom')
+      this.flare(bloom, x, y, 0xffffff, 0.3, st.splash / 32, this.reducedMotion ? 160 : 310)
+    } else this.ring(x, y, look ? hexColor(look.colors.mid) : 0x6cc0ff, st.splash, 260)
     this.glow(x, y, look ? hexColor(look.colors.light) : 0xbfe8ff, st.splash * 0.8, 200, 0.6)
     if (!look) this.waterFx.explode(this.fx(10), x, y)
     const angle = Math.atan2(s.dy, s.dx)
@@ -4643,13 +4645,16 @@ class BattleScene extends Phaser.Scene {
         12,
         this.view().h - 50,
       )
-      // 운석은 돌 그림을 물들이고, spellbook의 마법은 제 그림을 쓴다 (563번).
-      if (look) s.img.setTexture(spellKey(spell as FallSpell)).clearTint()
-      else if (this.opts.idle && this.textures.exists('breakthrough-meteor'))
-        s.img.setTexture('breakthrough-meteor').clearTint()
-      else s.img.setTexture('magic-rock').setTint(0xc98b72)
+      s.img.setTexture(spell === 'meteor' ? 'magic-paw-comet' : spellKey(spell)).clearTint()
       s.img.setVisible(false).setAlpha(1)
       s.warning
+        .setTexture(
+          spell === 'meteor'
+            ? 'magic-paw-warning'
+            : this.opts.idle
+              ? 'magic-landing'
+              : 'magic-ring',
+        )
         .setPosition(s.tx, s.ty)
         .setTint(look ? hexColor(look.colors.mid) : 0xff8d76)
         .setDisplaySize(st.radius * 2, st.radius)
@@ -4670,7 +4675,7 @@ class BattleScene extends Phaser.Scene {
     const size =
       (s.spell === 'bomb' ? 46 : s.spell !== 'meteor' ? 24 : s.level === 1 ? 26 : 40) *
       this.grow(s.level)
-    const comet = s.img.texture.key === 'breakthrough-meteor'
+    const comet = s.spell === 'meteor'
     s.img
       .setOrigin(0.5, comet ? 0.77 : 0.5)
       .setVisible(drop > 0)
@@ -4700,9 +4705,17 @@ class BattleScene extends Phaser.Scene {
     }
     this.tweens.killTweensOf(s.crater)
     s.crater
+      .setTexture(
+        spell === 'meteor'
+          ? 'magic-paw-print'
+          : spell === 'bomb'
+            ? 'magic-scorch'
+            : spellKey(spell),
+      )
+      .setTint(spell === 'bomb' ? 0x705d72 : 0xffffff)
       .setPosition(x, y)
-      .setDisplaySize(st.radius * 1.5, st.radius * 0.65)
-      .setAlpha(0.5)
+      .setDisplaySize(st.radius * 1.5, st.radius * (spell === 'meteor' ? 1.05 : 0.65))
+      .setAlpha(spell === 'meteor' ? 0.95 : 0.5)
       .setVisible(true)
     this.tweens.add({
       targets: s.crater,
@@ -4969,7 +4982,7 @@ class BattleScene extends Phaser.Scene {
     this.drawBolt(g, target.x, target.y - 28, target.x, target.y, width, 0)
     let prev = target
     for (const o of chain) {
-      this.drawBolt(g, o.x, o.y - 28, o.x, o.y, width, 0)
+      this.drawBolt(g, prev.x, prev.y, o.x, o.y, width * 0.7, 0)
       this.drawLightningImpact(g, o.x, o.y, 11)
       prev = o
     }
