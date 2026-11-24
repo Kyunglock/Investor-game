@@ -652,12 +652,13 @@ class IdleEngineTest {
             engine.view(state).cats().stream().filter(c -> c.code().equals(code)).findFirst().get();
     // 특성으로 공격력이 붙지 않은 고양이끼리 견준다: 하늘냥 C, 카라멜냥 B, 바다냥 A, 별빛냥 S.
     // 등급 배수 (656번): C 1 · B 1.15 · A 1.35 · S 1.6 · SS 3.2.
-    assertThat(cat.apply("sky").damagePercent()).isEqualTo(25);
-    assertThat(cat.apply("caramel").damagePercent()).isEqualTo(29);
-    assertThat(cat.apply("ocean").damagePercent()).isEqualTo(34);
-    assertThat(cat.apply("star").damagePercent()).isEqualTo(40);
-    // 극광냥은 고유 공격 특성 1.25에 SS 등급 배수 3.2를 곱한다.
-    assertThat(cat.apply("aurora").damagePercent()).isEqualTo(100);
+    // 680번: 무기의 100%(SS는 200%)를 기본으로 받고 그 위에 전의 몫(25% x 등급 배수)이 더해진다.
+    assertThat(cat.apply("sky").damagePercent()).isEqualTo(125);
+    assertThat(cat.apply("caramel").damagePercent()).isEqualTo(129);
+    assertThat(cat.apply("ocean").damagePercent()).isEqualTo(134);
+    assertThat(cat.apply("star").damagePercent()).isEqualTo(140);
+    // 극광냥은 고유 공격 특성 1.25에 SS 등급 배수 3.2를 곱한 100%에 SS의 기본 200%를 더한다.
+    assertThat(cat.apply("aurora").damagePercent()).isEqualTo(300);
     // 마법은 A등급부터다 (561번): C·B는 없고 A는 하나, S는 둘이다. 모든 스킬이 쓰인다.
     for (var c : cats) {
       int want =
@@ -1110,7 +1111,8 @@ class IdleEngineTest {
     // A cat's gun: a quarter of the weapon's damage times its level to the 0.1 (646; to the 0.3 in
     // 644, half times the square root before, 636), times its trait.
     var sky = cats.getFirst();
-    assertThat(sky.damagePercent()).isEqualTo((int) Math.round(25 * Math.pow(sky.level(), 0.1)));
+    assertThat(sky.damagePercent())
+        .isEqualTo((int) Math.round(100 + 25 * Math.pow(sky.level(), 0.1)));
     assertThat(sky.firePercent()).isEqualTo(125);
     assertThat(cats.get(1).firePercent()).isEqualTo(100);
     assertThat(cats.get(2).criticalPercent()).isEqualTo(150);
@@ -1392,17 +1394,18 @@ class IdleEngineTest {
     double before = state.idle.damage;
     for (int i = 0; i < 3; i++) tick(1000);
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
-    assertThat(state.idle.damage - before).isEqualTo(4);
-    // Even at the top level the cat does not outgun the boss cat (646): 25% x 1000^0.1 = 50% of the
-    // pistol (25% x 1000^0.3 = 199% in 644, when past level 101 it did), so the boss cat's pistol
-    // still sets the cap.
+    // 680번: the cat's gun is now the whole pistol plus that share (129%), so it is the strongest
+    // gun and sets the cap: one doubled bullet x critical 2 x 1.287.
+    assertThat(state.idle.damage - before)
+        .isCloseTo(4 * (1 + 0.25 * Math.pow(4, 0.1)), offset(1e-9));
+    // At the top level the old share is 25% x 1000^0.1 = 50%: the cat shoots 150% of the pistol.
     state.idle.cats.put("sky", IdleEngine.MAX_CAT_LEVEL);
     assertThat(0.25 * Math.pow(IdleEngine.MAX_CAT_LEVEL, 0.1)).isCloseTo(0.4988, offset(1e-4));
     before = state.idle.damage;
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
     assertThat(state.idle.damage - before)
-        .as("level 1000 cat: 25% x 1000^0.1 = 50%, below the boss cat's pistol critical")
-        .isEqualTo(4);
+        .as("level 1000 cat: 100% + 25% x 1000^0.1 = 150% of the pistol's critical")
+        .isCloseTo(4 * (1 + 0.25 * Math.pow(IdleEngine.MAX_CAT_LEVEL, 0.1)), offset(1e-9));
   }
 
   @Test
@@ -1462,26 +1465,28 @@ class IdleEngineTest {
     // faster (sky, 646; 4^0.3 = 38% in 644, as hard as the boss cat before): the team is 1.359
     // pistols, and (1.359 - 1) x 0.5 x 45 = 8.08, 8 shares come on top (653: one order is 45
     // shares at 30 shares a health point; 40 of 225 in 646, 53 in 644, 140 before).
-    double cat = 1.25 * 0.25 * Math.pow(4, 0.1);
+    // 680번: the cat's gun is the whole pistol plus that old share, 129% of the boss cat's, so the
+    // team is 2.609 pistols and (2.609 - 1) x 0.5 x 45 = 36.2, 36 shares come on top.
+    double cat = 1.25 * (1 + 0.25 * Math.pow(4, 0.1));
     state.idle.cats.put("sky", 4);
     engine.fieldCat(state, "sky", true);
     assertThat(engine.teamScale(state)).isCloseTo(1 + cat, offset(1e-9));
-    assertThat(buyBonus()).isEqualTo(8);
+    assertThat(buyBonus()).isEqualTo(36);
     // The attack and fire upgrades are not in it: the team's share follows gear, not upgrades.
     state.capital = 1e18;
     company.mental.buyUpgrade(state, "damage", 20);
     company.mental.buyUpgrade(state, "fire", 20);
-    assertThat(buyBonus()).isEqualTo(8);
+    assertThat(buyBonus()).isEqualTo(36);
     // Fifty buy levels: 200 fixed shares, and the team's part grows by 0.4 shares a level (648).
     company.mental.buyUpgrade(state, "buy", 50);
     assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(cat * 0.5 * 65));
     // The wall's depth changes nothing (573), and the server accepts an order of that size.
     state.idle.wall = 100;
-    // 0.359 x 0.5 x (45 + 0.4 x 50) = 11.67 (653; 0.359 x 0.5 x 245 = 43.97 in 646).
-    assertThat(buyBonus()).isEqualTo(200 + 11);
+    // 1.609 x 0.5 x (45 + 0.4 x 50) = 52.29 (680; 0.359 x 0.5 x 65 = 11.67 in 653).
+    assertThat(buyBonus()).isEqualTo(200 + 52);
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 1, 1e9));
-    assertThat(state.idle.damage).isCloseTo(1.5 + 211 / 30.0, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(1.5 + 252 / 30.0, offset(1e-9));
     // 영구 강화(생선)는 고정 수량에 6주(653번, 전에는 30주: 피해로는 같다)를 더하고 팀의 몫에는 한 단계에 1%를 곱한다 (644번).
     state.fishLevels.put("buy", 10);
     assertThat(buyBonus()).isEqualTo(200 + 60 + (long) Math.floor(cat * 0.5 * 65 * 1.1));
