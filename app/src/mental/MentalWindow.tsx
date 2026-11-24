@@ -52,6 +52,7 @@ import { FirstClear } from './FirstClear'
 import { GunSprite } from './GunSprite'
 import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './gameSpeed'
 import { BATTLE_SECONDS, type Genre } from './genres'
+import { StageLobbyTeam, StageTimeline } from './StageLobbyPlan'
 import { StagePortrait } from './StagePortrait'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './stage.css'
@@ -334,21 +335,29 @@ export function MentalWindow({
                 {apiError}
               </p>
             )}
-            <div className="stage-enemies">
-              {(mode === 'assault'
-                ? [
-                    { label: '시장가 매도', fill: '#5b8def' },
-                    { label: '대량 매도', fill: '#2f5fbf' },
-                    { label: '허매도', fill: '#a9c1f0' },
-                  ]
-                : Object.values(ENEMIES)
-              ).map((e) => (
-                <span key={e.label}>
-                  <i style={{ background: e.fill }} />
-                  {e.label}
-                </span>
-              ))}
-            </div>
+            {crowd && <StageLobbyTeam company={company} />}
+            {crowd && spec?.seconds ? (
+              <StageTimeline
+                seconds={spec.seconds}
+                bossAt={spec.boss ? spec.seconds / 2 : undefined}
+              />
+            ) : (
+              <div className="stage-enemies">
+                {(mode === 'assault'
+                  ? [
+                      { label: '시장가 매도', fill: '#5b8def' },
+                      { label: '대량 매도', fill: '#2f5fbf' },
+                      { label: '허매도', fill: '#a9c1f0' },
+                    ]
+                  : Object.values(ENEMIES)
+                ).map((e) => (
+                  <span key={e.label}>
+                    <i style={{ background: e.fill }} />
+                    {e.label}
+                  </span>
+                ))}
+              </div>
+            )}
             <button
               type="button"
               disabled={busy}

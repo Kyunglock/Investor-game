@@ -80,6 +80,22 @@ try {
     // 스테이지: 첫 카드 석 장에 사장냥의 스킬과 고양이 마법 강화가 나온다.
     // 출전 화면: 무기를 보고 들어간다.
     await expect(page.getByTestId('stage-mode')).toContainText('디펜스 · 3분 버티기')
+    // 출전 화면의 출전 고양이 줄 (678번): 출전 칸의 차례대로, 쉬는 노을냥은 없다. 밤냥은 제 고유 스킬을 단다.
+    const lobbyCats = page.getByTestId('stage-lobby-cat')
+    assert.deepEqual(await lobbyCats.evaluateAll((els) => els.map((el) => el.dataset.code)), [
+      'night',
+      'sky',
+      'mint',
+      'lilac',
+    ])
+    await expect(lobbyCats.first()).toContainText('메테오')
+    // 3분 타임라인: 15초마다 파도 열한 번(끝나는 순간은 빼고), 1-1은 보스가 없다.
+    await expect(page.getByTestId('stage-timeline')).toHaveAttribute('data-waves', '11')
+    await expect(page.getByTestId('stage-timeline-boss')).toHaveCount(0)
+    const lobby = page.getByTestId('mental-lobby')
+    const overflow = await lobby.evaluate((el) => el.scrollWidth - el.clientWidth)
+    assert.equal(overflow, 0, '출전 화면이 옆으로 넘치지 않는다')
+    await page.screenshot({ path: `/tmp/stage-lobby-${width}.png` })
     await page.getByRole('button', { name: /출발/ }).click()
     const pick = page.getByTestId('mental-levelup')
     await expect(pick).toBeVisible({ timeout: 60000 })

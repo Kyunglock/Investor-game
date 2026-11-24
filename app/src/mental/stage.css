@@ -139,6 +139,142 @@
   border-radius: 50%;
   margin-right: 4px;
 }
+/* 출전 화면의 출전 고양이 줄과 한 판 타임라인 (decisions.md 678번). */
+.stage-lobby-team,
+.stage-timeline {
+  width: 100%;
+  max-width: 440px;
+  flex-shrink: 0;
+  padding: 9px 12px 10px;
+  border: 1px solid #e2c99a;
+  border-radius: 14px;
+  background: #fffaeee6;
+  color: #5a3f22;
+}
+.stage-lobby-team header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-size: 12px;
+}
+.stage-lobby-team header span {
+  font-size: 10.5px;
+  color: #8b6847;
+}
+.stage-lobby-team ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stage-lobby-team li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  text-align: center;
+}
+.stage-lobby-team .idle-cat-portrait {
+  width: 44px;
+  height: 46px;
+}
+.stage-lobby-team li b,
+.stage-lobby-team li small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stage-lobby-team li b {
+  font-size: 11px;
+}
+.stage-lobby-team li small {
+  font-size: 9.5px;
+  color: #8b6847;
+}
+.stage-lobby-team-order {
+  position: absolute;
+  top: -4px;
+  left: calc(50% - 28px);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #ff7a45;
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+.stage-lobby-team-empty {
+  margin: 0;
+  font-size: 11px;
+  color: #8b6847;
+  text-align: center;
+}
+.stage-timeline-bar {
+  position: relative;
+  height: 10px;
+  margin: 8px 4px 4px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #ffe7b0, #ffc48a 60%, #ff9a7a);
+}
+.stage-timeline-wave {
+  position: absolute;
+  top: -3px;
+  width: 4px;
+  height: 16px;
+  margin-left: -2px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px #fffaee;
+}
+.stage-timeline-boss {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -55%);
+  font-size: 18px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px #0005);
+}
+.stage-timeline-clock {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 4px;
+  font-size: 10px;
+  color: #8b6847;
+}
+.stage-timeline-clock .is-boss {
+  position: absolute;
+  transform: translateX(-50%);
+  font-weight: 800;
+  color: #c2412b;
+}
+.stage-timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 10px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 10.5px;
+}
+.stage-timeline-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 2px;
+}
 .stage-primary {
   width: 100%;
   max-width: 440px;
@@ -1228,6 +1364,26 @@
   }
   .stage-summary > .stage-primary {
     margin-bottom: auto;
+  }
+  /* 짧은 화면에서는 출전 고양이 줄과 타임라인을 줄여 출발 단추가 덜 밀려나게 한다 (678번). */
+  .stage-lobby-team,
+  .stage-timeline {
+    padding: 7px 10px;
+  }
+  .stage-lobby-team header {
+    margin-bottom: 4px;
+  }
+  .stage-lobby-team header span,
+  .stage-lobby-team li small,
+  .stage-timeline-legend {
+    display: none;
+  }
+  .stage-lobby-team .idle-cat-portrait {
+    width: 34px;
+    height: 36px;
+  }
+  .stage-lobby-team-order {
+    left: calc(50% - 23px);
   }
 }
 /* 자동 선택 (#566): 저절로 골라질 카드에 점선 테두리가 맥박치고, 아래 막대가 5초 동안 줄어든다. */
