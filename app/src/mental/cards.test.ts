@@ -398,3 +398,35 @@ describe('디펜스 스테이지의 사장냥 스킬 카드 (676번)', () => {
     expect([...seen].sort()).toEqual(['limitUp', 'rally'])
   })
 })
+
+describe('마법은 고양이의 것 (678번, 디펜스 스테이지)', () => {
+  const team = [
+    { name: '밤냥', skills: ['메테오'] },
+    { name: '하늘냥', skills: [] },
+  ]
+  const codes = (state: Parameters<typeof pickCards>[0]) => {
+    const seen = new Set<string>()
+    for (let seed = 0; seed < 400; seed++) {
+      for (const card of pickCards(state, rng(seed), true, DEFENSE_SKILL_CODES, true)) {
+        expect(new Set(pickCards(state, rng(seed), true, DEFENSE_SKILL_CODES, true)).size).toBe(3)
+        seen.add(card.code)
+      }
+    }
+    return seen
+  }
+  it('사장냥이 배우는 마법 카드는 나오지 않고, 메테오는 밤냥의 카드로만 온다', () => {
+    const base = { ...BASE_LOADOUT, stageCats: team, mateMagicLevels: [1, 1] }
+    const before = codes(base)
+    for (const magic of MAGICS) expect(before.has(magic)).toBe(false)
+    expect(before.has('cat')).toBe(true)
+    // 밤냥이 나오기 전에는 스킬 강화도 없다: 나온 뒤에야 메테오를 올린다.
+    expect(before.has('cat-skill')).toBe(false)
+    const after = codes({ ...base, mates: 1 })
+    expect(after.has('cat-skill')).toBe(true)
+    for (const magic of MAGICS) expect(after.has(magic)).toBe(false)
+  })
+  it('출전한 고양이가 없으면 마법도 이름 없는 동료도 없다', () => {
+    const seen = codes({ ...BASE_LOADOUT })
+    expect([...seen].sort()).toEqual(['atk', 'limitUp', 'rally', 'spd'])
+  })
+})

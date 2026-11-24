@@ -67,6 +67,10 @@ export const SKILL_CHANCE = 20
 export const STAGE_TEAM_MAX = 4
 /** 스테이지에 고양이를 데려왔을 때 한 칸의 몫(%, 669번). 나머지는 일반 카드다. */
 export const STAGE_TEAM_CHANCES = { cat: 18, magic: 35, catSkill: 15, skill: 18 }
+/**
+ * 마법은 고양이의 것일 때 (678번, 디펜스 스테이지) 한 칸의 몫(%): 마법 카드가 없어 그 몫이 고양이와 고양이 스킬 강화로 간다. 나머지는 일반 카드다.
+ */
+export const CAT_MAGIC_CHANCES = { cat: 25, catSkill: 30, skill: 18 }
 /** 함께 싸우는 고양이의 최대 수(393번, 사용자 결정): 사장냥까지 모두 넷. */
 export const MAX_MATES = 3
 
@@ -505,6 +509,11 @@ export function pickCards(
   skills = false,
   /** 나올 수 있는 사장냥 스킬 카드. 디펜스 스테이지 (676번)는 총에 붙는 스킬만 준다. */
   skillCodes: readonly SkillCode[] = SKILL_CODES,
+  /**
+   * 마법은 고양이의 것이다 (678번, 디펜스 스테이지): 사장냥이 배우는 마법 카드(물·메테오·번개·충차)와 이름 없는 동료 카드가 나오지 않는다.
+   * 메테오는 메테오를 쓰는 고양이를 출전시키고 그 고양이의 카드를 골라야 나간다.
+   */
+  catMagic = false,
 ): Card[] {
   const open = MAGICS.filter((m) => state[m] < MAGIC_MAX_LEVEL)
   const mates = state.mates ?? 0
@@ -515,7 +524,19 @@ export function pickCards(
     // 스테이지에 데려온 고양이가 있으면 (669번) 고양이 카드는 그 고양이를 부르고, 각성 카드의 몫은 나와 있는 고양이의 스킬 강화가 된다.
     const team = skills && state.stageCats?.length ? state.stageCats : null
     const from = MATE_CHANCE + MAGIC_CHANCE
-    if (team) {
+    if (catMagic) {
+      const { cat, catSkill, skill } = CAT_MAGIC_CHANCES
+      const targets = team ? stageSkillTargets(state) : []
+      if (roll < cat) {
+        card = (team && stageCatCard(state)) || card
+      } else if (roll < cat + catSkill) {
+        if (targets.length > 0) {
+          card = stageSkillCard(state, targets[Math.floor(random() * targets.length)])
+        }
+      } else if (roll < cat + catSkill + skill) {
+        card = skillCard(skillCodes[Math.floor(random() * skillCodes.length)])
+      }
+    } else if (team) {
       // 데려온 고양이가 판의 중심이라 몫이 크다: 고양이 18 · 마법 35 · 고양이 스킬 강화 15 · 사장냥 스킬 18 · 나머지 일반.
       const { cat, magic, catSkill, skill } = STAGE_TEAM_CHANCES
       if (roll < cat) {
