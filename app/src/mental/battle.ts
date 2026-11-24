@@ -149,7 +149,7 @@ import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
 import { BULLET_W, bulletHitbox } from './hitbox'
-import { idlePierceHits, idlePierceReach } from './idlePierce'
+import { IDLE_PIERCE, IDLE_PIERCE_FLOOR, idlePierceHits, idlePierceReach } from './idlePierce'
 import { IDLE_WALL_TOP, IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
   auroraNightStats,
@@ -827,7 +827,7 @@ class BattleScene extends Phaser.Scene {
     damage: number
     step: number
     distance: number
-    nextHit: Map<Enemy | WallState, { step: number; born: number }>
+    nextHit: Map<object, { step: number; born: number }>
   } | null = null
   private elapsed = 0
   private lastFire = 0
@@ -4392,6 +4392,7 @@ class BattleScene extends Phaser.Scene {
         trailing: (auroraEdge(u) * height) / 72 + radius,
       }
     })
+    const layers = this.auroraLayers(height)
     while (sweep.step < endStep && sweep.distance < bottom + height) {
       sweep.step++
       const top = bottom - sweep.distance
@@ -4410,7 +4411,26 @@ class BattleScene extends Phaser.Scene {
         sweep.nextHit.set(key, { step: sweep.step + AURORA_TICK_STEPS, born })
         this.auroraFlare(enemy.x, enemy.y, enemy.boss || wall ? 68 : 44, 210)
         this.hit(target, sweep.damage, -Math.PI / 2, 'auroraNight', true)
-        if (wall) this.auroraBehind(sweep.damage, wall.y)
+      }
+      // 뒤 매도벽 (675번): 장막이 겹쳐 있는 동안 맨 앞 벽처럼 느려지고 0.125초마다 맞는다. 피해는 벽 하나를 지날 때마다 절반이다.
+      for (const layer of layers) {
+        if (layer.y < top + layer.leading || layer.y > top + layer.trailing) continue
+        contact = true
+        const next = sweep.nextHit.get(layer.key)
+        if (next && sweep.step < next.step) continue
+        sweep.nextHit.set(layer.key, { step: sweep.step + AURORA_TICK_STEPS, born: 0 })
+        const damage = sweep.damage * IDLE_PIERCE[layer.behind]
+        this.reportIdleHit(layer.wall, 'auroraNight', damage, layer.behind)
+        this.auroraFlare(layer.x, layer.y, 56, 210)
+        this.damageNumberAt(
+          this.pierceOwners[layer.behind - 1],
+          layer.x,
+          layer.y,
+          damage,
+          'auroraNight',
+          false,
+          layer.behind,
+        )
       }
       sweep.distance += freeStep * (contact ? AURORA_CONTACT_SPEED : 1)
     }
@@ -4418,35 +4438,42 @@ class BattleScene extends Phaser.Scene {
     if (sweep.distance >= bottom + height) {
       sweep.ribbon.destroy()
       this.auroraSweep = null
+      this.auroraLayerKeys.clear()
     }
   }
 
   /**
-   * 극광의 밤은 뒤 매도벽도 친다 (673번): 장막이 레인 전체를 쓸고 올라가므로, 맨 앞 벽을 칠 때마다 뒤에 보이는 벽들도 함께 맞는다. 피해는
-   * 총알의 관통(520번)과 같이 벽 하나를 지날 때마다 절반이고, 대량 매도벽은 넘지 못한다. 뒤 벽은 물리 대상이 아니라 여기서 판정해 서버에 알린다.
+   * 극광의 밤이 닿는 뒤 매도벽들 (673·675번): 뒤 벽은 물리 대상이 아니라 장막이 지나갈 때 여기서 판정한다. 총알의 관통(520번)과 같이 대량
+   * 매도벽은 넘지 못하고, 이미 바닥(체력 1)까지 깎인 벽은 맞지 않는다. band는 장막 가운데(u = 0.5)의 앞뒤 가장자리다.
    */
-  private auroraBehind(damage: number, frontY: number) {
-    if (!this.opts.idle || !this.idleQueue || this.idleTransition || this.circuit) return
+  private auroraLayers(height: number) {
+    if (!this.opts.idle || !this.idleQueue || this.idleTransition || this.circuit) return []
     const reach = idlePierceReach(this.idleWall)
-    const layers = this.idleQueue
-      .behind(this.view().w / 2, 0, frontY)
-      .filter((layer) => layer.wall - this.idleWall <= reach)
-    for (const hit of idlePierceHits(this.idleWall, damage, layers)) {
-      const layer = layers.find((entry) => entry.wall === hit.wall)
-      if (!layer) continue
-      this.reportIdleHit(hit.wall, 'auroraNight', hit.damage, hit.behind)
-      this.auroraFlare(layer.x, layer.y, 56, 210)
-      this.damageNumberAt(
-        this.pierceOwners[hit.behind - 1],
-        layer.x,
-        layer.y,
-        hit.damage,
-        'auroraNight',
-        false,
-        hit.behind,
-      )
-    }
+    const back = auroraFold(0.5, true)
+    const edge = auroraEdge(0.5)
+    return this.idleQueue
+      .behind(this.view().w / 2, 0, 0)
+      .filter((layer) => layer.wall - this.idleWall <= reach && layer.hp > IDLE_PIERCE_FLOOR)
+      .map((layer) => {
+        const behind = layer.wall - this.idleWall
+        let key = this.auroraLayerKeys.get(layer.wall)
+        if (!key) {
+          key = {}
+          this.auroraLayerKeys.set(layer.wall, key)
+        }
+        return {
+          ...layer,
+          behind,
+          key,
+          leading: ((back.edge - 0.8 * back.height) * height) / 72 - 18,
+          trailing: (edge * height) / 72 + 18,
+        }
+      })
+      .filter((layer) => layer.behind >= 1 && layer.behind < IDLE_PIERCE.length)
   }
+
+  /** 뒤 벽마다 타격 주기를 따로 세는 열쇠. 장막이 끝나면 비운다. */
+  private auroraLayerKeys = new Map<number, object>()
 
   private updateMagic(dt: number) {
     this.advanceAuroraSweep()
@@ -5141,7 +5168,7 @@ class BattleScene extends Phaser.Scene {
   /**
    * 총알 관통 (decisions.md 520번): 맨 앞 매도벽을 맞힌 총알이 뒤의 두 벽까지 뚫고 가며 절반씩 줄어든 피해를 준다. 뒤 벽은 물리 대상이 아니라
    * 여기서 판정한다: 맞은 벽 번호와 줄어든 피해를 서버에 알리고, 총알이 이어 날아가는 모습과 줄어든 피해 숫자를 띄운다. 무기 폭발과 고양이 스킬은
-   * 뒤 벽에 닿지 않는다(극광의 밤만 닿는다, 673번 auroraBehind).
+   * 뒤 벽에 닿지 않는다(극광의 밤만 닿는다, 673·675번 auroraLayers).
    */
   private pierceIdleWalls(
     bullet: Bullet,

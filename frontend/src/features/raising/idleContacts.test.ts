@@ -29,6 +29,16 @@ describe('actual wall contacts', () => {
     expect(contacts.add(0, 'bullet', 0, 1)).toBe(false)
     expect(contacts.drain()).toEqual([])
   })
+  it('lets the aurora ribbon reach the walls behind too (673, 675)', () => {
+    const contacts = new IdleContacts()
+    expect(contacts.add(11, 'auroraNight', 1, 6)).toBe(true)
+    expect(contacts.add(12, 'auroraNight', 2, 3)).toBe(true)
+    expect(contacts.add(13, 'auroraNight', 3, 1)).toBe(false)
+    expect(contacts.drain()).toEqual([
+      { wall: 11, kind: 'auroraNight', depth: 1, count: 1, damage: 6 },
+      { wall: 12, kind: 'auroraNight', depth: 2, count: 1, damage: 3 },
+    ])
+  })
   it('clears pending hits on stop or reconnect', () => {
     const contacts = new IdleContacts()
     contacts.add(10, 'water', 0, 1.5)

@@ -1,5 +1,5 @@
-// 극광의 밤은 뒤 매도벽도 친다 (decisions.md 673번): 자동 전투에서 극광냥의 장막이 맨 앞 벽을 칠 때 뒤에 보이는 벽들도 절반·4분의 1의
-// 피해로 함께 맞고, 그 명중이 서버로 가는 길(idle-wall-hit)에 실린다. 개발 서버에서만 돈다.
+// 극광의 밤은 뒤 매도벽도 친다 (decisions.md 673·675번): 자동 전투에서 극광냥의 장막이 뒤에 보이는 벽 위에서도 느려지며 절반·4분의 1의
+// 피해로 치고, 그 명중이 서버로 실려 간다(idle-hit-counted). 개발 서버에서만 돈다.
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
@@ -58,7 +58,8 @@ try {
   page.on('pageerror', (error) => errors.push(error.message))
   await page.addInitScript(() => {
     window.__auroraHits = []
-    window.addEventListener('idle-wall-hit', (event) => {
+    // 서버로 실려 갈 명중만 센다(idle-hit-counted): 화면에 숫자만 뜨고 버려지는 명중은 세지 않는다.
+    window.addEventListener('idle-hit-counted', (event) => {
       if (event.detail.kind === 'auroraNight') window.__auroraHits.push(event.detail)
     })
   })
@@ -80,6 +81,10 @@ try {
   assert.equal(far[0].wall, 3)
   assert.ok(Math.abs(next[0].damage / front[0].damage - 0.5) < 1e-6, 'half on the next wall')
   assert.ok(Math.abs(far[0].damage / front[0].damage - 0.25) < 1e-6, 'a quarter on the far wall')
+  // 장막은 뒤 벽 위에서도 느려져 여러 번 친다 (675번): 한 번 쓸고 가는 동안 뒤 벽마다 두 번 넘게 맞는다.
+  await expect
+    .poll(async () => (await depths()).map((hits) => hits.length > 2), { timeout: 60000 })
+    .toEqual([true, true, true])
   await page.screenshot({ path: '/tmp/aurora-behind.png' })
   assert.deepEqual(errors, [])
   console.log('극광의 밤 390px: 뒤 매도벽 둘도 절반·4분의 1로 맞는다')
