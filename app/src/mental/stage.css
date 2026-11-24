@@ -140,6 +140,13 @@
   margin-right: 4px;
 }
 /* 출전 화면의 출전 고양이 줄과 한 판 타임라인 (decisions.md 678번). */
+/* 메인 스테이지의 출전 화면은 사장냥 뒷모습·무기 칸이 없어 짧다: 가운데로 모으고, 멘탈벽은 뒷모습 밑으로 파고들지 않는다. */
+.stage-lobby.is-crowd {
+  justify-content: safe center;
+}
+.stage-lobby.is-crowd .stage-mini-wall {
+  margin-top: 12px;
+}
 .stage-lobby-team,
 .stage-timeline {
   width: 100%;
@@ -197,6 +204,12 @@
 .stage-lobby-team li small {
   font-size: 9.5px;
   color: #8b6847;
+}
+.stage-lobby-team-skills {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  min-height: 20px;
 }
 .stage-lobby-team-order {
   position: absolute;
@@ -1374,7 +1387,6 @@
     margin-bottom: 4px;
   }
   .stage-lobby-team header span,
-  .stage-lobby-team li small,
   .stage-timeline-legend {
     display: none;
   }

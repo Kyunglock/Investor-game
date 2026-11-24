@@ -1,6 +1,7 @@
 import type { Company } from '@web/api/client'
 import type { CatCode } from '@web/features/raising/store'
 import { CatPortrait } from '../idle/CatPortrait'
+import { SkillBadge } from '../idle/SkillBadge'
 import { stageTeamOf } from '../idle/stageTeam'
 import { ENEMIES } from './enemies'
 import { WAVE_SECONDS } from './genres'
@@ -31,13 +32,13 @@ export function StageLobbyTeam({ company }: { company: Company }) {
               <em className="stage-lobby-team-order">{i + 1}</em>
               <CatPortrait code={cat.code as CatCode} grade={cat.grade} />
               <b>{cat.name}</b>
-              <small>
-                {benched && i === 0
-                  ? '처음부터'
-                  : cat.skills.length > 0
-                    ? cat.skills.map((s) => s.name).join(' · ')
-                    : '총만 쏜다'}
-              </small>
+              {/* 고유 스킬은 그림으로만 (스테이지에서는 Lv.1부터 쓴다, 669번). C·B등급은 스킬이 없어 비운다. */}
+              <span className="stage-lobby-team-skills">
+                {cat.skills.map((s) => (
+                  <SkillBadge key={s.code} skill={s.code} size={20} label={s.name} />
+                ))}
+              </span>
+              {benched && i === 0 && <small>처음부터</small>}
             </li>
           ))}
         </ol>
