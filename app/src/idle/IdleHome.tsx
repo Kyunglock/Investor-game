@@ -19,7 +19,6 @@ import { sfx } from '../fx/sound'
 import { stageLabel } from '../mental/advance'
 import { mergeable } from '../mental/armory'
 import { idleBuyOrderDamage } from '../mental/buyWall'
-import { attackOf, heroOf } from '../mental/hero'
 import { SHARES_PER_HP, sharesOf } from '../mental/shares'
 import { useAutoUpgrade, useAutoUpgradeLoop } from './autoUpgrade'
 import { BossReward } from './BossReward'
@@ -99,18 +98,6 @@ function ownPercent(u: Upgrade) {
 function nextOwnPercent(u: Upgrade, levels: number) {
   const now = ownPercent(u)
   return now + ((u.nextStepBonusPercent ?? u.nextBonusPercent) - now) * levels
-}
-
-/**
- * 공격력 강화 줄: 사장냥 무기의 공격력(기본 권총 100)과 강화 %. 공격력 수는 영구 강화까지 곱한 실제 값이고, %는 이 강화만의 값이라
- * 한 단계에 꼭 1%씩 오른다 (661번).
- */
-function damageText(company: Company, u: Upgrade, levels: number) {
-  const weapon = heroOf(company).weapon
-  const now = attackOf(weapon, u.bonusPercent)
-  if (levels <= 0) return `${now.toLocaleString('ko-KR')} (+${percentText(ownPercent(u))}%) · 최대`
-  const next = u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels
-  return `${now.toLocaleString('ko-KR')} → ${attackOf(weapon, next).toLocaleString('ko-KR')} (+${percentText(ownPercent(u))}% → +${percentText(nextOwnPercent(u, levels))}%)`
 }
 
 function buyNote(company: Company, u: Upgrade) {
@@ -759,9 +746,6 @@ function IdleStats({ company }: { company: Company }) {
                 ) : u.kind === 'buy' ? (
                   // 매수벽 공격은 %가 아니라 수량으로 오른다 (579번).
                   `+${(u.bonusShares ?? 0).toLocaleString()}주 → +${((u.bonusShares ?? 0) + ((u.nextBonusShares ?? 0) - (u.bonusShares ?? 0)) * levels).toLocaleString()}주`
-                ) : u.kind === 'damage' ? (
-                  // 공격력은 든 무기의 공격력(기본 권총 100)에 강화 %를 먹인 수로 보인다.
-                  damageText(company, u, full ? 0 : levels)
                 ) : full ? (
                   `+${percentText(ownPercent(u))}% · 최대`
                 ) : (
