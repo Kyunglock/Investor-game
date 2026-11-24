@@ -120,6 +120,8 @@ interface RaisingState {
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   /** slot: 세울 출전 칸의 번호(0부터, 599번). */
   fieldCat: (code: CatCode, fielded: boolean, replaceCode?: CatCode, slot?: number) => Promise<void>
+  /** 사장냥을 쉬게 하거나 다시 내보낸다 (672번). 출전한 고양이가 있을 때만 쉴 수 있다. */
+  fieldBoss: (fielded: boolean) => Promise<void>
   /** 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 571번). */
   /** 생선으로 영구 강화를 levels단계까지(없으면 한 단계) 올린다 (600·663번). */
   buyFishUpgrade: (kind: 'damage' | 'hp' | 'buy', levels?: number) => Promise<void>
@@ -350,6 +352,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     fieldCat: (code, fielded, replaceCode, slot) =>
       change(api.POST('/api/company/cat/field', { body: { code, fielded, replaceCode, slot } })),
+
+    fieldBoss: (fielded) => change(api.POST('/api/company/boss/field', { body: { fielded } })),
 
     buyFishUpgrade: (kind, levels = 1) =>
       change(api.POST('/api/company/rebirth/upgrade', { body: { kind, levels } })),

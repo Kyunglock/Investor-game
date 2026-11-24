@@ -178,6 +178,14 @@ describe('고양이 교체', () => {
     expect(useRaisingStore.getState().company).toBe(after)
   })
 
+  it('사장냥을 쉬게 한다 (672번)', async () => {
+    const after = { ...before, capital: 321 }
+    post.mockResolvedValueOnce({ data: after } as never)
+    await useRaisingStore.getState().fieldBoss(false)
+    expect(post).toHaveBeenCalledWith('/api/company/boss/field', { body: { fielded: false } })
+    expect(useRaisingStore.getState().company).toBe(after)
+  })
+
   it('교체가 거절되어도 기존 팀을 지우지 않는다', async () => {
     post.mockResolvedValueOnce({ error: { message: '출전 구성이 바뀌었어요' } } as never)
     await useRaisingStore.getState().fieldCat('mint', true, 'sky')

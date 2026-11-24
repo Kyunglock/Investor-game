@@ -677,6 +677,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/boss/field": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 사장냥을 쉬게 하거나 다시 내보낸다 (decisions.md 672번)
+         * @description 쉬는 동안 사장냥의 총은 쏘지 않고 출전한 고양이들만 싸운다. 고양이의 스킬은 전처럼 사장냥의 무기를 바탕으로 한다. 출전한 고양이가 한 마리도 없으면 쉴 수 없다(400).
+         */
+        post: operations["fieldBoss"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/cat/weapon": {
         parameters: {
             query?: never;
@@ -1796,6 +1816,8 @@ export interface components {
                 bakingPercent?: number;
                 /** @description 한 번에 출전하는 고양이 수 (492·493번 */
                 fieldSlots: number;
+                /** @description 사장냥이 출전 중인가 (672번). false면 쉬고 있어 고양이들만 싸운다. 출전한 고양이가 없으면 늘 true */
+                bossFielded?: boolean;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
                 /**
@@ -2935,6 +2957,35 @@ export interface operations {
                     replaceCode?: string;
                     /** @description 세울 출전 칸의 번호(0부터 */
                     slot?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 바꾼 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    fieldBoss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    fielded: boolean;
                 };
             };
         };

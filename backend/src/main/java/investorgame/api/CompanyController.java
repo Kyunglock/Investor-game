@@ -540,6 +540,16 @@ class CompanyController {
   record CatFieldRequest(
       @NotBlank String code, @NotNull Boolean fielded, String replaceCode, Integer slot) {}
 
+  /** 사장냥을 쉬게 하거나 다시 내보낸다 (decisions.md 672번). */
+  @PostMapping("/boss/field")
+  CompanyView fieldBoss(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody BossFieldRequest request) {
+    return companies.fieldBoss(cookies.requirePlayer(token), request.fielded());
+  }
+
+  record BossFieldRequest(@NotNull Boolean fielded) {}
+
   /** 고양이에게 가진 무기 하나를 들린다. kind와 grade를 비우면 뺀다 (decisions.md 488번). */
   @PostMapping("/cat/weapon")
   CompanyView equipCat(

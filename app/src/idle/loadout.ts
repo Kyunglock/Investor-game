@@ -60,6 +60,8 @@ export function idleLoadout(company: Company, party?: readonly string[]) {
     }
   }
   loadout.mates = cats.length
+  // 사장냥이 쉬면 (672번) 고양이들만 싸운다. 고양이가 없으면(금고 도전의 빈 파티) 사장냥이 나간다(서버 IdleEngine bossOut과 같다).
+  loadout.heroBenched = company.idle?.bossFielded === false && cats.length > 0
   loadout.mateGuns = cats.map((cat) => {
     const weapon =
       company.weapons?.find((w) => w.kind === cat.weapon?.kind && w.grade === cat.weapon.grade) ??

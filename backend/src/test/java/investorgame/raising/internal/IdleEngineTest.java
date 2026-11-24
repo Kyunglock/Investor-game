@@ -1809,4 +1809,30 @@ class IdleEngineTest {
         .findFirst()
         .orElseThrow();
   }
+
+  /** 사장냥도 쉴 수 있다 (672번): 고양이가 있을 때만, 쉬면 그 총은 쏘지 않는다. 마지막 고양이는 뺄 수 없다. */
+  @Test
+  void bossCatRestsOnlyWhileACatIsFielded() {
+    start(1);
+    assertThat(engine.view(state).bossFielded()).isTrue();
+    assertThatThrownBy(() -> engine.fieldBoss(state, false))
+        .isInstanceOf(InvalidRequestException.class);
+    state.idle.cats.put("sky", 1);
+    engine.fieldCat(state, "sky", true);
+    double together = engine.view(state).dps();
+    double power = engine.view(state).power();
+
+    engine.fieldBoss(state, false);
+    assertThat(engine.view(state).bossFielded()).isFalse();
+    assertThat(engine.view(state).dps()).isPositive().isLessThan(together);
+    assertThat(engine.view(state).power()).isLessThan(power);
+    assertThatThrownBy(() -> engine.fieldCat(state, "sky", false))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(state.idle.fielded).containsExactly("sky");
+
+    engine.fieldBoss(state, true);
+    assertThat(engine.view(state).dps()).isEqualTo(together);
+    engine.fieldCat(state, "sky", false);
+    assertThat(engine.view(state).bossFielded()).isTrue();
+  }
 }

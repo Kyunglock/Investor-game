@@ -27,6 +27,9 @@ export function stageLoadout(company: Company, team: readonly string[]): Loadout
   const cats = team.flatMap((code) => (company.idle?.cats ?? []).filter((c) => c.code === code))
   return {
     ...base,
+    // 사장냥이 쉬면 (672번) 맨 앞 고양이가 처음부터 나와 싸운다: 고양이 카드는 그다음 고양이부터 부른다.
+    heroBenched: full.heroBenched,
+    mates: full.heroBenched ? 1 : base.mates,
     mateGuns: full.mateGuns,
     mateMagic: full.mateMagic,
     mateMagicLevels: cats.map(() => 1),

@@ -1739,6 +1739,11 @@
   border-color: #d9a85a;
   background: #fff3c9;
 }
+/* 사장냥이 쉰다 (672번): 칸은 남고 흐려진다. */
+.idle-cat-boss.is-resting > * {
+  opacity: 0.4;
+  filter: grayscale(0.7);
+}
 /* 스킬 설명 (530번): 고양이를 누르면 그 고양이의 고유 스킬이 하는 일과 다음 레벨이 나온다. */
 .idle-cat-skill {
   grid-column: 1 / -1;

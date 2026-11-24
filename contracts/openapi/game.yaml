@@ -728,6 +728,29 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/boss/field:
+    post:
+      operationId: fieldBoss
+      summary: 사장냥을 쉬게 하거나 다시 내보낸다 (decisions.md 672번)
+      description: 쉬는 동안 사장냥의 총은 쏘지 않고 출전한 고양이들만 싸운다. 고양이의 스킬은 전처럼 사장냥의 무기를 바탕으로 한다. 출전한 고양이가 한 마리도 없으면 쉴 수 없다(400).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fielded]
+              properties:
+                fielded: { type: boolean }
+      responses:
+        '200':
+          description: 바꾼 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/cat/weapon:
     post:
       operationId: equipCat
@@ -1743,6 +1766,7 @@ components:
             nextDiamondSeconds: { type: integer, minimum: 1, maximum: 600 }
             bakingPercent: { type: integer, minimum: 0, maximum: 99 }
             fieldSlots: { type: integer, description: 한 번에 출전하는 고양이 수 (492·493번, 넷) }
+            bossFielded: { type: boolean, description: 사장냥이 출전 중인가 (672번). false면 쉬고 있어 고양이들만 싸운다. 출전한 고양이가 없으면 늘 true }
             wallDps: { type: number, description: 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 }
             bestWall: { type: integer, format: int64, minimum: 0, description: 최고 기록 (654번). 통과한 가장 높은 매도벽이고 환생해도 남는다. 지금 선 벽이 이보다 높으면 최고 기록을 갱신하고 있다 }
             rebirth:

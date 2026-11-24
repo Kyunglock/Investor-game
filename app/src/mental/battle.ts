@@ -933,6 +933,7 @@ class BattleScene extends Phaser.Scene {
     this.buyWall?.resize(this.buyWallMental())
     this.bakeMateGuns()
     this.syncMates()
+    this.syncHero()
     if (loadout.heal > 0) {
       this.mental = Math.min(loadout.maxMental, this.mental + loadout.heal)
       this.pop(this.player.x, this.player.y - 40, `멘탈 +${loadout.heal}`, '#7be0c3', 24)
@@ -1281,6 +1282,7 @@ class BattleScene extends Phaser.Scene {
       )
     }
 
+    this.syncHero()
     // 첫 카드는 전장이 열린 뒤 고른다 (339번): 멈춘 채로 Lv.1 카드 고르기를 띄운다.
     this.choosing = true
     this.physics.pause()
@@ -1316,8 +1318,10 @@ class BattleScene extends Phaser.Scene {
    */
   private standX(i: number) {
     const { w } = this.view()
-    const line = mateFormation(this.mates.length + 1, w, Boolean(this.opts.idle))
-    const off = line[i] ?? 0
+    // 사장냥이 쉬면 (672번) 줄은 고양이들만으로 선다. 보이지 않는 사장냥의 자리(마법이 나가는 곳)는 맨 앞 고양이와 같다.
+    const benched = this.benched()
+    const line = mateFormation(this.mates.length + (benched ? 0 : 1), w, Boolean(this.opts.idle))
+    const off = line[benched ? Math.max(0, i - 1) : i] ?? 0
     if (this.assault) {
       // 공격 판 (413번): 사장냥도 붙박이라, 사장냥을 화면 가운데에 두고 줄을 붙이면 넷일 때 줄이 반 칸 오른쪽으로 밀리고 끝 고양이가 가장자리에
       // 막혀 간격이 좁아졌다. 줄 전체를 레인 가운데에 둔다.
@@ -1326,6 +1330,18 @@ class BattleScene extends Phaser.Scene {
     }
     if (this.mode === 'defense' || !this.player) return w / 2 + off
     return Phaser.Math.Clamp(this.player.x + off - line[0], 28, w - 28)
+  }
+
+  /** 사장냥이 쉰다 (672번): 전장에 서지 않고 쏘지 않는다. 고양이가 한 마리도 없으면 쉬지 못한다. */
+  private benched() {
+    return Boolean(this.loadout.heroBenched) && this.loadout.mates > 0
+  }
+
+  /** 쉬는 사장냥은 그리지 않는다: 총은 몸을 따라 숨는다(poseGun). */
+  private syncHero() {
+    if (!this.player) return
+    this.player.setVisible(!this.benched())
+    this.tagsDressed = ''
   }
 
   /** 고양이 수를 수치에 맞춘다. 실제 판에서는 늘기만 하고, 개발 서버의 확인 스크립트가 줄이면 뒤에서부터 뺀다. */
@@ -2870,6 +2886,9 @@ class BattleScene extends Phaser.Scene {
           tag?.visible ? tag.text : null,
         ),
         xs: [this.player.x, ...this.mates.map((mate) => mate.body.x)],
+        /** 사장냥이 서 있는가(쉬면 그리지 않는다, 672번)와 지금까지 쏜 발수. */
+        heroVisible: this.player.visible,
+        heroShots: this.heroShots,
         looks: this.mates.map((_, i) => this.mateLook(i)),
       },
       mental: this.mental,
@@ -5316,7 +5335,7 @@ class BattleScene extends Phaser.Scene {
     if (!this.opts.idle || !this.player) return
     this.heroTag ??= makeTag(this)
     const tags: (CatTag | undefined)[] = [
-      { code: 'boss', name: BattleScene.TAG_NAME },
+      this.benched() ? undefined : { code: 'boss', name: BattleScene.TAG_NAME },
       ...this.mates.map((_, i) => this.mateGun(i)?.tag),
     ]
     const key = tags.map((tag) => (tag ? tagText(tag) : '')).join('|')
@@ -5324,7 +5343,9 @@ class BattleScene extends Phaser.Scene {
     this.tagsDressed = key
     for (const [i, text] of [this.heroTag, ...this.mates.map((m) => m.tag)].entries()) {
       const tag = tags[i]
-      const room = this.mates.length > 0 ? Math.abs(this.standX(1) - this.standX(0)) - 4 : 999
+      const first = this.benched() ? 1 : 0
+      const room =
+        this.mates.length > first ? Math.abs(this.standX(first + 1) - this.standX(first)) - 4 : 999
       dressTag(text, tag, room)
     }
   }
@@ -5343,9 +5364,10 @@ class BattleScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       cancel()
       const spots = [this.player, ...this.mates.map((m) => m.body)]
-      // 몸통의 가운데는 발보다 위다.
+      const benched = this.benched()
+      // 몸통의 가운데는 발보다 위다. 쉬는 사장냥은 눌리지 않는다 (672번).
       const at = catAt(
-        spots.map((s) => ({ x: s.x, y: s.y - 10 })),
+        spots.map((s, i) => ({ x: i === 0 && benched ? -9999 : s.x, y: s.y - 10 })),
         pointer.x,
         pointer.y,
       )
@@ -5571,7 +5593,13 @@ class BattleScene extends Phaser.Scene {
     }
     // 프레임이 연사 간격보다 길면(느린 휴대폰) 밀린 만큼 한 프레임에 몇 발 더 쏜다(최대 3, #587): 아니면 연사가 빠른 무기(기관단총)일수록
     // 프레임 수에 묶여 제 연사를 못 냈다.
-    for (let n = 0; target && !this.disarmed && time - this.lastFire > fireMs && n < 3; n++) {
+    // 쉬는 사장냥은 쏘지 않는다 (672번).
+    const benched = this.benched()
+    for (
+      let n = 0;
+      target && !benched && !this.disarmed && time - this.lastFire > fireMs && n < 3;
+      n++
+    ) {
       this.fire(Math.max(this.lastFire + fireMs, time - fireMs), target)
     }
     this.poseGun(p, this.aim, this.heroKick)

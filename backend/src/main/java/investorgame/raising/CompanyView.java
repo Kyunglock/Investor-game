@@ -365,7 +365,8 @@ public record CompanyView(
       double power,
       Rebirth rebirth,
       Onboarding onboarding,
-      long bestWall) {}
+      long bestWall,
+      boolean bossFielded) {}
 
   public record Onboarding(
       int step,

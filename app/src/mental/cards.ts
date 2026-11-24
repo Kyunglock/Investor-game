@@ -344,6 +344,10 @@ export interface Loadout {
   awakenedMates: number
   /** 매수벽 공격 강화 (495·579번): 매수 주문 한 장의 피해에 이만큼을 더한다. %가 아니다. */
   buyBonus: number
+  /**
+   * 사장냥이 쉰다 (672번): 전장에 서지 않고 총도 쏘지 않는다. 고양이들만 싸운다. 고양이가 한 마리도 없으면 켜지 않는다.
+   */
+  heroBenched?: boolean
   /** 고양이가 따로 든 총 (488번), 줄 선 차례대로. 없는 자리의 고양이는 사장냥과 같은 총을 쏜다. */
   mateGuns: MateGun[]
   /**
