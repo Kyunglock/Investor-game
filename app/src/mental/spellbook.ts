@@ -11,13 +11,21 @@ export const ICE_GLYPH = 'M24 12.5 28.5 20l7 4-7 4L24 35.5 19.5 28l-7-4 7-4Z'
 export const WIND_GLYPH =
   'M13 20.5h14.5a4 4 0 1 0-4-4h2.6a1.4 1.4 0 1 1 1.4 1.4H13ZM13 25.5h20a4.5 4.5 0 1 1-4.5 4.5h2.6a1.9 1.9 0 1 0 1.9-1.9H13Z'
 
-export type FlowSpell = 'fire' | 'poison' | 'light' | 'dark' | 'sand' | 'star'
+export type FlowSpell = 'fire' | 'poison' | 'light' | 'dark' | 'sand' | 'star' | 'lightArrow'
 export type FallSpell = 'hail' | 'blossom' | 'bomb'
 export type ExtraSpell = FlowSpell | FallSpell | 'auroraNight'
 
 export const AURORA_CAST_SPEED = 1.5
 
-export const FLOW_SPELLS: readonly FlowSpell[] = ['fire', 'poison', 'light', 'dark', 'sand', 'star']
+export const FLOW_SPELLS: readonly FlowSpell[] = [
+  'fire',
+  'poison',
+  'light',
+  'dark',
+  'sand',
+  'star',
+  'lightArrow',
+]
 export const FALL_SPELLS: readonly FallSpell[] = ['hail', 'blossom', 'bomb']
 export const EXTRA_SPELLS: readonly ExtraSpell[] = [...FLOW_SPELLS, ...FALL_SPELLS, 'auroraNight']
 
@@ -149,6 +157,26 @@ export const SPELLBOOK: { [K in FlowSpell]: FlowSpec } & { [K in FallSpell]: Fal
     form: 'jet',
     half: [8, 16],
     speed: 1400,
+    splash: none,
+    slowFactor: 1,
+    slowSeconds: 0,
+    stun: none,
+    push: none,
+  },
+  lightArrow: {
+    kind: 'flow',
+    name: '빛화살',
+    does: '은빛냥 곁에 빛화살이 나타나 스스로 뒤로 당겨졌다가 적을 향해 날아가 관통해요',
+    grows: '레벨이 오르면 화살이 굵어지고 더 자주, 더 세게 쏴요',
+    tiers: ['빛화살', '은빛 화살', '찬란한 빛화살'],
+    colors: { light: '#fffbea', mid: '#c7ecff', dark: '#8298cc', line: '#43577e' },
+    glyph: 'M10 33l4-7 6-1 9-9-3-2 13-5-5 13-2-3-10 10-1 6-8 4 3-7Z',
+    number: '#dbf2ff',
+    cooldown: [5, 3.8],
+    damage: [9, 20],
+    form: 'jet',
+    half: [8, 16],
+    speed: 1150,
     splash: none,
     slowFactor: 1,
     slowSeconds: 0,

@@ -682,8 +682,11 @@ class IdleEngineTest {
             "star",
             "hail",
             "blossom",
-            "bomb",
+            "lightArrow",
             "auroraNight");
+    assertThat(cat.apply("silver").skills())
+        .extracting(skill -> skill.code())
+        .containsExactly("bolt", "lightArrow");
     assertThat(cat.apply("aurora").skills())
         .containsExactly(new investorgame.raising.CompanyView.CatSkill("auroraNight", "극광의 밤"));
     // 동료 45종의 고유 스킬은 모두 26칸이다.
@@ -1534,12 +1537,12 @@ class IdleEngineTest {
     state.idle.hitCredits = new double[18];
     tick(1900, new IdleHit(100, "wind", 1, 1000.0));
     assertThat(state.idle.damage).isCloseTo(1.8, offset(1e-9));
-    // A level 5 bomb is one hit of twenty times the gun, once per 3.8 s.
+    // A level 5 light arrow is one hit of twenty times the gun, once per 3.8 s.
     state.idle.cats.put("silver", 40);
     state.idle.fielded.add("silver");
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
-    tick(2600, new IdleHit(100, "bomb", 1, 1000.0));
+    tick(2600, new IdleHit(100, "lightArrow", 1, 1000.0), new IdleHit(100, "bomb", 1, 1000.0));
     assertThat(state.idle.damage).isCloseTo(20, offset(1e-9));
   }
 
