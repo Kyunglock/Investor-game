@@ -85,7 +85,7 @@ export const SIMPLE_CARDS: readonly Card[] = [
     code: 'atk',
     grade: 'N',
     name: '존버 정신',
-    effect: '공격력 +10%',
+    effect: '모두의 공격력 +10%',
     icon: '💪',
     color: '#ffd84d',
   },
@@ -93,7 +93,7 @@ export const SIMPLE_CARDS: readonly Card[] = [
     code: 'spd',
     grade: 'N',
     name: '원칙 매매',
-    effect: '공격 속도 +10%',
+    effect: '모두의 공격 속도 +10%',
     icon: '📏',
     color: '#8fb8ff',
   },
@@ -456,10 +456,23 @@ export function loadoutOf(
 /** 카드 한 장을 쌓는다. 같은 카드를 또 고르면 또 쌓인다. 마법은 등급과 상관없이 한 레벨씩 오른다(392번). 고양이는 한 마리씩 는다(393번). */
 export function applyCard(loadout: Loadout, card: Card): Loadout {
   switch (card.code) {
+    // 공격력·공격 속도 카드는 사장냥만이 아니라 제 총을 든 고양이 모두에게 붙는다 (679번): 아직 나오지 않은 고양이도 나올 때 그만큼 세다.
     case 'atk':
-      return { ...loadout, damage: loadout.damage * 1.1 }
+      return {
+        ...loadout,
+        damage: loadout.damage * 1.1,
+        skillDamage: loadout.skillDamage === undefined ? undefined : loadout.skillDamage * 1.1,
+        mateGuns: loadout.mateGuns.map((gun) => ({ ...gun, damage: gun.damage * 1.1 })),
+      }
     case 'spd':
-      return { ...loadout, fireMs: Math.max(60, loadout.fireMs / 1.1) }
+      return {
+        ...loadout,
+        fireMs: Math.max(60, loadout.fireMs / 1.1),
+        mateGuns: loadout.mateGuns.map((gun) => ({
+          ...gun,
+          fireMs: Math.max(60, gun.fireMs / 1.1),
+        })),
+      }
     case 'cat':
       return {
         ...loadout,

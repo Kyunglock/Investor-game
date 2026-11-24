@@ -430,3 +430,36 @@ describe('마법은 고양이의 것 (678번, 디펜스 스테이지)', () => {
     expect([...seen].sort()).toEqual(['atk', 'limitUp', 'rally', 'spd'])
   })
 })
+
+describe('공격력·공격 속도 카드는 모두에게 붙는다 (679번)', () => {
+  const gun = {
+    kind: 'pistol' as const,
+    grade: 'F' as const,
+    damage: 2,
+    bulletPower: 0,
+    fireMs: 400,
+    bulletSpeed: 600,
+    critical: 1,
+    look: 0,
+  }
+  const base = { ...BASE_LOADOUT, damage: 4, fireMs: 200, mateGuns: [gun, { ...gun, fireMs: 62 }] }
+  const card = (code: string) => {
+    const found = SIMPLE_CARDS.find((c) => c.code === code)
+    if (!found) throw new Error(code)
+    return found
+  }
+  it('제 총을 든 고양이의 총도 같은 비율로 오른다', () => {
+    const atk = applyCard(base, card('atk'))
+    expect(atk.damage).toBeCloseTo(4.4)
+    expect(atk.mateGuns.map((g) => g.damage)).toEqual([2 * 1.1, 2 * 1.1])
+    const spd = applyCard(base, card('spd'))
+    expect(spd.fireMs).toBeCloseTo(200 / 1.1)
+    // 가장 빠른 간격(60ms)은 그대로다.
+    expect(spd.mateGuns.map((g) => g.fireMs)).toEqual([400 / 1.1, 60])
+    expect(card('atk').effect).toBe('모두의 공격력 +10%')
+  })
+  it('스킬 피해의 바탕이 따로 있으면 그것도 오른다', () => {
+    expect(applyCard({ ...base, skillDamage: 10 }, card('atk')).skillDamage).toBeCloseTo(11)
+    expect(applyCard(base, card('atk')).skillDamage).toBeUndefined()
+  })
+})
