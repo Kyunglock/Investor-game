@@ -150,10 +150,28 @@ try {
     const rally = await page.evaluate(() => window.__mentalMarket().actives.rally)
     assert.ok(rally <= 60, `rally lasts a minute: ${rally}`)
     await page.screenshot({ path: `/tmp/stage-rally-${width}.png` })
+    // 벽마다 끊는다 (671번): 경험치가 아니라 벽을 무너뜨리면 카드를 고르고, 다음 벽을 알려 준다.
+    await page.evaluate(() => {
+      window.__mentalCards = ['rally', 'stopLoss', 'cat']
+      window.__mentalAutopilot?.(true)
+      window.__mentalSpeed?.(4)
+    })
+    await expect(pick).toBeVisible({ timeout: 90000 })
+    await expect(pick).toContainText('매도벽 1개 돌파')
+    await expect(pick).toContainText('다음 벽: 매도벽 1줄')
+    // 카드를 고르는 동안에는 다음 벽이 아직 서지 않는다.
+    assert.equal(await page.evaluate(() => window.__mentalWalls().length), 0)
+    await page.screenshot({ path: `/tmp/stage-wall-card-${width}.png` })
+    await pick.locator('[data-card=rally]').click()
+    await expect(pick).toHaveCount(0, { timeout: 15000 })
+    // 고르고 나면 다음 벽이 선다.
+    await expect
+      .poll(() => page.evaluate(() => window.__mentalWalls().length), { timeout: 15000 })
+      .toBeGreaterThan(0)
     assert.deepEqual(errors, [])
     await page.close()
   }
-  console.log('스테이지 320/390px: 출전한 고양이의 카드·스킬 강화·사장냥 스킬 통과')
+  console.log('스테이지 320/390px: 출전한 고양이의 카드·스킬 강화·사장냥 스킬·벽마다 카드 통과')
 } finally {
   await browser.close()
 }

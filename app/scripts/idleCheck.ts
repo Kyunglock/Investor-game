@@ -1071,7 +1071,7 @@ try {
     await levelButton.click()
     const stageSelect = page.getByTestId('stage-select')
     await expect(stageSelect).toBeVisible()
-    await expect(stageSelect).toContainText('레벨이 오를 때마다 카드 석 장')
+    await expect(stageSelect).toContainText('매도벽을 하나 부술 때마다 카드 석 장')
     // 출전 고양이는 출전 탭에서 고른다 (669번): 스테이지 고르기에는 따로 고르는 칸이 없다.
     await expect(stageSelect).toContainText('출전 탭에서 출전시킨 고양이')
     await expect(stageSelect.getByTestId('stage-team')).toHaveCount(0)
@@ -1084,7 +1084,7 @@ try {
     // 스킬 탭 (667번): 스테이지의 레벨업 카드 일곱(사장냥 스킬 여섯과 고양이 마법 강화)의 설명을 본다. 장착 칸은 없다.
     await nav.getByRole('button', { name: '스킬', exact: true }).click()
     await expect(page.getByTestId('skills')).toBeVisible()
-    await expect(page.getByTestId('skill-level')).toContainText('스테이지 레벨업 카드')
+    await expect(page.getByTestId('skill-level')).toContainText('스테이지 카드')
     await expect(page.getByTestId('skill-slot')).toHaveCount(0)
     await expect(page.getByTestId('skill-equip')).toHaveCount(0)
     await expect(page.getByTestId('unique-skill')).toHaveCount(7)
