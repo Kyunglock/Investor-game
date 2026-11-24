@@ -2,16 +2,15 @@ import type { Company } from '@web/api/client'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useRef, useState } from 'react'
 import { sfx } from '../fx/sound'
-import { ACTIVE_HINTS, ACTIVE_NOTES, SKILL_CODES, SKILL_NAMES } from '../mental/actives'
-import { ActiveBadge } from './ActiveBadge'
 import { CatPortrait, catTrait } from './CatPortrait'
 import { CatRosterGrid } from './CatRosterGrid'
 import { CompanionSkills } from './CompanionSkills'
 import { sortCats } from './catGrade'
 
 /**
- * 스킬 탭: 사장냥의 스킬은 매도벽 돌파 스테이지의 레벨업 카드로 쓴다 (667번). 아래 고양이 목록에서 고양이를 누르면 그 고양이의 상세 보기로
- * 넘어간다 (668번): 목록은 가리고 그 고양이의 정보와 고유 스킬만 보이며, 위의 "스킬 목록" 단추로 돌아온다.
+ * 스킬 탭: 고양이의 고유 스킬을 본다. 스테이지 카드의 설명과 목록은 없앴다 (674번): 카드는 스테이지에서 고를 때 설명이 나온다. 고양이
+ * 목록에서 고양이를 누르면 그 고양이의 상세 보기로 넘어간다 (668번): 목록은 가리고 그 고양이의 정보와 고유 스킬만 보이며, 위의 "스킬 목록"
+ * 단추로 돌아온다.
  */
 export function IdleSkills({
   company,
@@ -68,70 +67,6 @@ export function IdleSkills({
           <CompanionSkills cat={cat} />
         </section>
       ) : (
-        <>
-          <section
-            className="boss-skill-loadout"
-            aria-label="스테이지 카드"
-            data-testid="skill-level"
-          >
-            <div className="boss-skill-header">
-              <b>스테이지 카드</b>
-              <span>{SKILL_CODES.length + 1}종</span>
-            </div>
-            <p className="boss-skill-help">
-              사장냥의 스킬은 매도벽 돌파 스테이지에서 써요. 스테이지에서 매도벽을 하나 부술 때마다
-              카드 석 장 가운데 한 장을 고르고, 아래 카드가 섞여 나와요. 고른 카드는 그 판에서만
-              이어져요.
-            </p>
-          </section>
-          <ul className="boss-skill-list" aria-label="스테이지 카드 목록">
-            {SKILL_CODES.map((code) => (
-              <li key={code} data-testid="unique-skill" data-code={code}>
-                <div className="boss-skill-main">
-                  <span
-                    className="boss-skill-art"
-                    role="img"
-                    aria-label={`${SKILL_NAMES[code]} · ${ACTIVE_NOTES[code]}`}
-                  >
-                    <ActiveBadge code={code} />
-                  </span>
-                  <div className="boss-skill-info">
-                    <div className="boss-skill-title">
-                      <b>{SKILL_NAMES[code]}</b>
-                    </div>
-                    <p>
-                      {ACTIVE_HINTS[code]} · {code === 'stopLoss' ? '바로 발동' : '1분 동안'}
-                    </p>
-                  </div>
-                </div>
-                <details className="boss-skill-details">
-                  <summary aria-label={`${SKILL_NAMES[code]} 설명`}>
-                    효과 자세히{' '}
-                    <span className="boss-skill-chevron" aria-hidden="true">
-                      ⌄
-                    </span>
-                  </summary>
-                  <p>{ACTIVE_NOTES[code]}</p>
-                </details>
-              </li>
-            ))}
-            <li data-testid="unique-skill" data-code="cat-skill">
-              <div className="boss-skill-main">
-                <span className="boss-skill-art boss-skill-magic" aria-hidden="true">
-                  ✦
-                </span>
-                <div className="boss-skill-info">
-                  <div className="boss-skill-title">
-                    <b>고양이 스킬 강화</b>
-                  </div>
-                  <p>스테이지에 나온 고양이의 고유 스킬 레벨 +1 · 최고 Lv.5</p>
-                </div>
-              </div>
-            </li>
-          </ul>
-        </>
-      )}
-      {!cat && (
         <>
           <div className="boss-skill-header">
             <b>고양이 고유 스킬</b>

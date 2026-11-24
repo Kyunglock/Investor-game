@@ -286,6 +286,26 @@ class IdleEngineTest {
     assertThat(state.idle.nextDamage).isEqualTo(1);
   }
 
+  /** 극광의 밤은 뒤 매도벽도 친다 (673번): 총알의 관통과 같은 비율(절반·4분의 1)까지. 다른 스킬은 맨 앞 벽에서 멈춘다. */
+  @Test
+  void auroraNightAlsoHitsTheQueuedWalls() {
+    start(1);
+    state.idle.cats.putAll(java.util.Map.of("aurora", 1, "night", 1));
+    state.idle.fielded.addAll(List.of("aurora", "night"));
+    tick(
+        3000,
+        new IdleHit(1, "auroraNight", 1, 0.01, 0),
+        new IdleHit(2, "auroraNight", 1, 0.005, 1),
+        new IdleHit(3, "auroraNight", 1, 1e12, 2),
+        new IdleHit(2, "meteor", 1, 0.01, 1));
+    // 명중 예산(쿨타임)만큼만 받으므로 비율로 본다: 뒤 벽은 맨 앞 벽의 절반, 메테오는 뒤 벽에 닿지 않는다.
+    assertThat(state.idle.damage).isPositive();
+    assertThat(state.idle.nextDamage)
+        .isCloseTo(state.idle.damage / 2, org.assertj.core.data.Offset.offset(1e-9));
+    // 한 번의 명중은 맨 앞 벽에 줄 수 있는 피해의 4분의 1까지만 받는다.
+    assertThat(state.idle.afterNextDamage).isPositive().isLessThan(1e9);
+  }
+
   @Test
   void collisionAmountsMatchDisplayWithoutHiddenMultiplier() {
     start(51);
@@ -1808,5 +1828,31 @@ class IdleEngineTest {
         .filter(u -> u.kind().equals(kind))
         .findFirst()
         .orElseThrow();
+  }
+
+  /** 사장냥도 쉴 수 있다 (672번): 고양이가 있을 때만, 쉬면 그 총은 쏘지 않는다. 마지막 고양이는 뺄 수 없다. */
+  @Test
+  void bossCatRestsOnlyWhileACatIsFielded() {
+    start(1);
+    assertThat(engine.view(state).bossFielded()).isTrue();
+    assertThatThrownBy(() -> engine.fieldBoss(state, false))
+        .isInstanceOf(InvalidRequestException.class);
+    state.idle.cats.put("sky", 1);
+    engine.fieldCat(state, "sky", true);
+    double together = engine.view(state).dps();
+    double power = engine.view(state).power();
+
+    engine.fieldBoss(state, false);
+    assertThat(engine.view(state).bossFielded()).isFalse();
+    assertThat(engine.view(state).dps()).isPositive().isLessThan(together);
+    assertThat(engine.view(state).power()).isLessThan(power);
+    assertThatThrownBy(() -> engine.fieldCat(state, "sky", false))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(state.idle.fielded).containsExactly("sky");
+
+    engine.fieldBoss(state, true);
+    assertThat(engine.view(state).dps()).isEqualTo(together);
+    engine.fieldCat(state, "sky", false);
+    assertThat(engine.view(state).bossFielded()).isTrue();
   }
 }

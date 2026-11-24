@@ -560,7 +560,7 @@ try {
     await page.screenshot({ path: `/tmp/idle-skill-cat-${width}.png` })
     await catDetail.getByTestId('skill-back').click()
     await expect(catDetail).toHaveCount(0)
-    await expect(skills.getByTestId('unique-skill')).toHaveCount(7)
+    await expect(skills.getByTestId('unique-skill')).toHaveCount(0)
     await skills.locator('[data-testid=cat][data-code=sky]').click()
     await expect(catDetail).toHaveAttribute('data-code', 'sky')
     await expect(skills.getByTestId('cat-skill')).toContainText('고유 스킬 메테오 스킬 Lv.1')
@@ -1081,30 +1081,15 @@ try {
     await page.screenshot({ path: `/tmp/idle-stage-select-${width}.png` })
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     await expect(page.getByTestId('idle-menu')).toHaveCount(0)
-    // 스킬 탭 (667번): 스테이지의 레벨업 카드 일곱(사장냥 스킬 여섯과 고양이 마법 강화)의 설명을 본다. 장착 칸은 없다.
+    // 스킬 탭 (674번): 스테이지 카드의 설명과 목록은 없고, 고양이 고유 스킬 목록만 있다. 장착 칸도 없다.
     await nav.getByRole('button', { name: '스킬', exact: true }).click()
     await expect(page.getByTestId('skills')).toBeVisible()
-    await expect(page.getByTestId('skill-level')).toContainText('스테이지 카드')
+    await expect(page.getByTestId('skill-level')).toHaveCount(0)
+    await expect(page.getByTestId('unique-skill')).toHaveCount(0)
     await expect(page.getByTestId('skill-slot')).toHaveCount(0)
     await expect(page.getByTestId('skill-equip')).toHaveCount(0)
-    await expect(page.getByTestId('unique-skill')).toHaveCount(7)
+    await expect(page.getByTestId('skills')).toContainText('고양이 고유 스킬')
     await expect(page.getByTestId('skills').getByText('광고 스킬', { exact: true })).toHaveCount(0)
-    const rally = page.locator('[data-testid=unique-skill][data-code=rally]')
-    await expect(rally.getByRole('img', { name: /불장/ })).toBeVisible()
-    await expect(rally).toContainText('×2')
-    await expect(rally).toContainText('1분 동안')
-    await rally.locator('summary[aria-label="불장 설명"]').click()
-    await expect(rally.locator('details')).toHaveAttribute('open', '')
-    await expect(
-      rally.getByText('1분 동안 사장냥과 고양이의 총이 두 배 빨리 나가요.', { exact: true }),
-    ).toBeVisible()
-    await rally.locator('summary[aria-label="불장 설명"]').click()
-    await expect(page.locator('[data-testid=unique-skill][data-code=stopLoss]')).toContainText(
-      '바로 발동',
-    )
-    await expect(page.locator('[data-testid=unique-skill][data-code=cat-skill]')).toContainText(
-      '고양이 스킬 강화',
-    )
     await page.screenshot({ path: `/tmp/idle-skills-${width}.png` })
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     await expect(page.getByTestId('idle-menu')).toHaveCount(0)

@@ -346,6 +346,18 @@ class CompanyApiTest {
     assertThat(cats.getFirst()).containsEntry("fielded", true);
     String code = (String) cats.getFirst().get("code");
 
+    // 사장냥도 쉴 수 있다 (672번): 고양이가 출전해 있을 때만. 쉬는 동안 마지막 고양이는 뺄 수 없다.
+    assertThat(drawn.read("$.idle.bossFielded", Boolean.class)).isTrue();
+    DocumentContext benched =
+        json(postJson("/api/company/boss/field", "{\"fielded\":false}").andExpect(status().isOk()));
+    assertThat(benched.read("$.idle.bossFielded", Boolean.class)).isFalse();
+    assertThat(benched.read("$.idle.dps", Double.class))
+        .isPositive()
+        .isLessThan(drawn.read("$.idle.dps", Double.class));
+    postJson("/api/company/cat/field", "{\"code\":\"%s\",\"fielded\":false}".formatted(code))
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/boss/field", "{\"fielded\":true}").andExpect(status().isOk());
+
     DocumentContext rested =
         json(
             postJson(
@@ -353,6 +365,7 @@ class CompanyApiTest {
                 .andExpect(status().isOk()));
     List<Boolean> fielded = rested.read("$.idle.cats[*].fielded");
     assertThat(fielded).containsOnly(false);
+    postJson("/api/company/boss/field", "{\"fielded\":false}").andExpect(status().isBadRequest());
 
     // 사장냥이 든 하나뿐인 권총은 못 가져간다. 종류만 보내거나 없는 고양이도 400.
     postJson(

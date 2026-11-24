@@ -420,7 +420,7 @@ try {
       await page.getByTestId('cat-unequip').click()
       await expect(slot).toHaveClass(/is-bare/)
       await expect(page.getByTestId('cat-unequip')).toHaveCount(0)
-      await expect(page.getByTestId('cat-boss')).toHaveAttribute('aria-label', /늘 출전/)
+      await expect(page.getByTestId('cat-boss')).toHaveAttribute('aria-label', /출전 중/)
       await expect(page.getByTestId('cat-field')).toHaveCount(0)
       // Put the pistol back for the rest of the check.
       await drag(

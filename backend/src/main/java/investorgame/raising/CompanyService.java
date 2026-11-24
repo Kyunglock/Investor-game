@@ -182,6 +182,9 @@ public interface CompanyService {
   CompanyView fieldCat(
       UUID sessionId, String code, boolean fielded, String replaceCode, Integer slot);
 
+  /** 사장냥을 쉬게 하거나 다시 내보낸다 (672번). 출전한 고양이가 없으면 쉴 수 없다. */
+  CompanyView fieldBoss(UUID sessionId, boolean fielded);
+
   /** 고양이에게 가진 무기 하나를 들린다 (488번). kind와 grade가 null이면 뺀다. */
   CompanyView equipCat(UUID sessionId, String code, String kind, String grade);
 

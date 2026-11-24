@@ -63,6 +63,9 @@ export function IdleCats({
   const cat = (idle?.cats ?? []).find((c) => c.code === picked && c.level > 0) ?? null
   const bakers = sorted.filter((c) => c.level > 0 && !c.fielded)
   const full = fielded.length >= (idle?.fieldSlots ?? 0)
+  // 사장냥이 쉰다 (672번): 고양이들만 싸운다. 그동안 마지막 고양이는 뺄 수 없다.
+  const bossResting = idle?.bossFielded === false
+  const lastFighter = bossResting && (idle?.cats ?? []).filter((c) => c.fielded).length <= 1
   // 교체 (#910): 출전 칸이 다 찼을 때 쉬는 고양이를 세우려면 뺄 고양이를 출전 칸에서 고른다. 사장냥은 출전 칸이 아니라 고를 수 없다.
   // 누구를 세우려는지 적어 둔다: 밖에서 다른 고양이를 골라 주거나 교체가 끝나 그 고양이가 출전하면 저절로 풀린다.
   const [swapFor, setSwapFor] = useState<CatCode | null>(null)
@@ -240,7 +243,7 @@ export function IdleCats({
         <p className="idle-subtitle idle-team-line">
           {swapping ? (
             <span className="idle-swap-hint" role="status" data-testid="swap-hint">
-              {cat.name} 대신 뺄 고양이를 누르세요 · 사장냥은 못 빼요
+              {cat.name} 대신 뺄 고양이를 누르세요
             </span>
           ) : (
             <span>
@@ -266,9 +269,10 @@ export function IdleCats({
           <li>
             <button
               type="button"
-              className={`idle-cat-boss ${cat ? '' : 'is-picked'}`}
+              className={`idle-cat-boss ${cat ? '' : 'is-picked'} ${bossResting ? 'is-resting' : ''}`}
               data-testid="cat-boss"
-              aria-label={`${BOSS_NAME} · 늘 출전`}
+              data-fielded={!bossResting}
+              aria-label={`${BOSS_NAME} · ${bossResting ? '쉬는 중' : '출전 중'}`}
               aria-pressed={!cat}
               onClick={() => pick(null)}
             >
@@ -372,7 +376,11 @@ export function IdleCats({
               <small>
                 {cat
                   ? `무기 공격력의 ${cat.damagePercent}%로 쏴요 · ${catTrait(cat)}`
-                  : '늘 맨 앞에서 싸워요 · 출전은 뺄 수 없어요 · 무기는 바꾸거나 뺄 수 있어요'}
+                  : bossResting
+                    ? '쉬는 중이에요 · 고양이들만 싸워요 · 고양이 스킬은 그대로 사장냥 무기를 따라요'
+                    : fielded.length > 0
+                      ? '맨 앞에서 싸워요 · 쉬게 하면 고양이들만 싸워요 · 무기는 바꾸거나 뺄 수 있어요'
+                      : '맨 앞에서 싸워요 · 고양이가 출전하면 쉬게 할 수 있어요 · 무기는 바꾸거나 뺄 수 있어요'}
               </small>
             )}
           </div>
@@ -395,7 +403,13 @@ export function IdleCats({
               className="idle-cat-field"
               data-testid="cat-field"
               aria-pressed={cat.fielded}
-              disabled={busy}
+              // 사장냥이 쉬는 동안 (672번) 마지막 고양이는 뺄 수 없다: 최소 한 마리는 싸운다.
+              disabled={busy || (cat.fielded && lastFighter)}
+              title={
+                cat.fielded && lastFighter
+                  ? '사장냥이 쉬는 동안 마지막 고양이는 뺄 수 없어요'
+                  : undefined
+              }
               onClick={() => {
                 sfx.tap()
                 haptic.light()
@@ -405,7 +419,26 @@ export function IdleCats({
               {cat.fielded ? '출전 중' : '출전'}
             </button>
           ) : (
-            <span className="idle-cat-field idle-cat-always">늘 출전</span>
+            // 사장냥도 쉴 수 있다 (672번): 출전한 고양이가 한 마리라도 있을 때만.
+            <button
+              type="button"
+              className="idle-cat-field"
+              data-testid="boss-field"
+              aria-pressed={!bossResting}
+              disabled={busy || (!bossResting && fielded.length === 0)}
+              title={
+                !bossResting && fielded.length === 0
+                  ? '출전한 고양이가 있어야 사장냥이 쉴 수 있어요'
+                  : undefined
+              }
+              onClick={() => {
+                sfx.tap()
+                haptic.light()
+                void useRaisingStore.getState().fieldBoss(bossResting)
+              }}
+            >
+              {bossResting ? '출전' : '출전 중'}
+            </button>
           )}
           {onSkills ? (
             <button type="button" className="cat-skills-link" onClick={onSkills}>

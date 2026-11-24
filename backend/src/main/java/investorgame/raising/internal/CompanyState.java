@@ -83,6 +83,9 @@ class CompanyState {
     /** 출전한 고양이, 줄 선 차례대로: 출전 칸(seats)의 번호순이다 (599번). */
     List<String> fielded = new ArrayList<>();
 
+    /** 사장냥이 쉰다 (672번): 출전한 고양이가 한 마리라도 있을 때만 쉴 수 있다. 쉬면 사장냥의 총은 쏘지 않는다. */
+    boolean bossBenched;
+
     /** 출전한 고양이가 선 출전 칸 (599번): 코드 → 칸 번호(0부터). 빈 칸을 사이에 둘 수 있다. 없던 저장은 줄 선 차례대로 앞에서부터 채운다. */
     Map<String, Integer> seats = new LinkedHashMap<>();
 

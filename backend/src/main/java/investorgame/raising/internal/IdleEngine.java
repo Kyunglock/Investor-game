@@ -543,6 +543,16 @@ class IdleEngine {
     return shooters;
   }
 
+  /** 사장냥이 쉬고 있다 (672번). 출전한 고양이가 없으면(금고 도전의 빈 파티 포함) 쉬지 못하고 나가 싸운다: 전장에 아무도 없는 일은 없다. */
+  private static boolean bossOut(CompanyState.Idle s) {
+    return s.bossBenched && !s.fielded.isEmpty();
+  }
+
+  /** 실제로 쏘는 총 (672번): shooters의 맨 앞은 늘 사장냥의 총이고(스킬 피해의 바탕이라 쉬어도 남는다), 사장냥이 쉬면 그 총은 쏘지 않는다. */
+  private List<Shooter> firing(CompanyState c, List<Shooter> shooters) {
+    return bossOut(state(c)) ? shooters.subList(1, shooters.size()) : shooters;
+  }
+
   private static double power(int level) {
     return CAT_POWER * Math.pow(Math.max(1, level), CAT_LEVEL_EXPONENT);
   }
@@ -758,7 +768,7 @@ class IdleEngine {
     CompanyState.Idle s = state(c);
     List<Shooter> shooters = shooters(c);
     double total = 0;
-    for (Shooter shooter : shooters) {
+    for (Shooter shooter : firing(c, shooters)) {
       total += shooter.damage() * shooter.perSecond() * shooter.power() / 1.25;
     }
     for (String code : s.fielded) {
@@ -790,7 +800,7 @@ class IdleEngine {
     CompanyState.Idle s = state(c);
     List<Shooter> shooters = shooters(c);
     double total = 0;
-    for (int i = 0; i < shooters.size(); i++) {
+    for (int i = bossOut(s) ? 1 : 0; i < shooters.size(); i++) {
       Shooter shooter = shooters.get(i);
       CompanyState.Weapon weapon = i == 0 ? c.weapon : s.catWeapons.get(s.fielded.get(i - 1));
       double chance =
@@ -878,7 +888,7 @@ class IdleEngine {
   /** 팀 화력 배율 (638번): 강화를 뺀 모든 총의 (한 발 × 초당 발수 × 탄 강화)를 처음 권총의 그것으로 나눈 값. 처음 권총뿐이면 1. */
   double teamScale(CompanyState c) {
     double total = 0;
-    for (Shooter shooter : shooters(c, 1, 1)) {
+    for (Shooter shooter : firing(c, shooters(c, 1, 1))) {
       total += shooter.damage() * shooter.perSecond() * shooter.power();
     }
     return total / (1000.0 / PISTOL_FIRE_MS);
@@ -1073,9 +1083,12 @@ class IdleEngine {
     // A contact is not a second of DPS: fire upgrades must never multiply a single hit.
     List<Shooter> shooters = shooters(c);
     Shooter hero = shooters.getFirst();
+    // 사장냥이 쉬면 (672번) 총알은 고양이들의 것뿐이다: 한 발의 바탕도 맨 앞 고양이의 총이다. 스킬의 바탕은 그대로 사장냥의 무기다.
+    List<Shooter> firing = firing(c, shooters);
+    Shooter gunner = firing.getFirst();
     double bulletMax = 0;
     double bulletsPerSecond = 0;
-    for (Shooter shooter : shooters) {
+    for (Shooter shooter : firing) {
       bulletMax =
           Math.max(
               bulletMax,
@@ -1099,7 +1112,7 @@ class IdleEngine {
       if (kind > 0 && casters[kind - 1] == 0) continue;
       // A skill is cast by each fielded cat that has it, at that cat's level (515): the hit budget
       // adds up over them and one hit may be as strong as the highest level's.
-      double perHit = kind == 0 ? BULLET_WEIGHT * hero.power() : 0;
+      double perHit = kind == 0 ? BULLET_WEIGHT * gunner.power() : 0;
       double perSecond = kind == 0 ? bulletsPerSecond : 0;
       double gained = kind == 0 ? active / (1 / bulletsPerSecond) : 0;
       for (String cat : kind == 0 ? List.<String>of() : s.fielded) {
@@ -1110,7 +1123,7 @@ class IdleEngine {
         perSecond += SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
         gained += active * SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
       }
-      double damage = damageBoost * (kind == 0 ? hero.damage() : hero.skill()) * perHit;
+      double damage = damageBoost * (kind == 0 ? gunner.damage() : hero.skill()) * perHit;
       double maxDamage = kind == 0 ? bulletMax : damage;
       s.hitCredits[kind] =
           Math.min(Math.max(2, SPEED * GRACE_MS / 1000 * perSecond), s.hitCredits[kind] + gained);
@@ -1135,7 +1148,9 @@ class IdleEngine {
         }
         // Only a bullet's pierce reaches the queued walls (520): explosions and skills stop at the
         // front wall.
-        if (depth > 0 && kind != 0) continue;
+        // 극광의 밤 (673번) is the one skill that does: its ribbon sweeps the whole lane, so it hits the
+        // queued walls at the same halving shares as a pierced bullet.
+        if (depth > 0 && kind != 0 && !"auroraNight".equals(code)) continue;
         // A 대량 매도벽 (the boss, every 50th wall) cannot be pierced: not when it is the screen's front
         // wall,
         // and a pierced bullet neither hits it nor goes past it. Matches the app's idlePierceReach.
@@ -1485,6 +1500,20 @@ class IdleEngine {
     s.fielded.sort(java.util.Comparator.comparing(s.seats::get));
   }
 
+  /**
+   * 사장냥을 쉬게 하거나 다시 내보낸다 (672번). 출전한 고양이가 한 마리도 없으면 쉴 수 없다: 누군가는 싸워야 한다. 쉬는 동안 사장냥의 총은 쏘지 않고, 고양이의
+   * 스킬은 전처럼 사장냥의 무기를 바탕으로 한다.
+   */
+  void fieldBoss(CompanyState c, boolean fielded) {
+    CompanyState.Idle s = state(c);
+    if (!fielded && s.fielded.isEmpty()) {
+      throw new InvalidRequestException("출전한 고양이가 있어야 사장냥이 쉴 수 있어요");
+    }
+    if (s.bossBenched == !fielded) return;
+    s.bossBenched = !fielded;
+    s.hitCredits = new double[KINDS];
+  }
+
   /** Validate the whole swap before changing the team; a stale target must not remove anyone. */
   /**
    * slot(0부터)을 주면 그 출전 칸에 세운다 (599번): 빈 칸이면 거기에, 다른 고양이가 있으면 쉬던 고양이는 그 고양이와 교체하고 출전 중인 고양이는 자리를
@@ -1534,7 +1563,12 @@ class IdleEngine {
         throw new InvalidRequestException("출전 칸이 꽉 찼다: " + FIELD_SLOTS + "마리까지 출전한다");
       }
       s.fielded.add(code);
-    } else if (s.fielded.remove(code)) {
+    } else if (s.fielded.contains(code)) {
+      // 사장냥이 쉬는 동안 (672번) 마지막 고양이는 뺄 수 없다: 최소 한 마리는 싸운다.
+      if (s.bossBenched && s.fielded.size() == 1) {
+        throw new InvalidRequestException("사장냥이 쉬는 동안 마지막 고양이는 뺄 수 없어요");
+      }
+      s.fielded.remove(code);
       // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번): 그 무기는 다른 고양이가 바로 들 수 있다.
       s.catWeapons.remove(code);
     }
@@ -1765,6 +1799,7 @@ class IdleEngine {
             skillsUnlocked(c),
             c.skillGuideSeen),
         // 최고 기록 (654번): 통과한 가장 높은 벽. 환생해도 남는다(best와 같은 셈).
-        Math.max(s.best, Math.max(s.wall - 1, s.bossCleared)));
+        Math.max(s.best, Math.max(s.wall - 1, s.bossCleared)),
+        !bossOut(s));
   }
 }
