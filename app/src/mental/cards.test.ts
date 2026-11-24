@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SKILL_CODES } from './actives'
+import { DEFENSE_SKILL_CODES, SKILL_CODES } from './actives'
 import {
   applyCard,
   BASE_LOADOUT,
@@ -383,5 +383,18 @@ describe('스테이지에 데려온 고양이 (669번)', () => {
     }
     expect(seen.has('cat') && seen.has('cat-skill') && seen.has('rally')).toBe(true)
     expect(seen.has('cat-magic') || seen.has('cat-up')).toBe(false)
+  })
+})
+
+describe('디펜스 스테이지의 사장냥 스킬 카드 (676번)', () => {
+  it('총에 붙는 불장·상한가만 나온다', () => {
+    const levels = { water: 0, meteor: 0, lightning: 0, earth: 0, mates: 0 }
+    const seen = new Set<string>()
+    for (let seed = 0; seed < 400; seed++) {
+      for (const card of pickCards(levels, rng(seed), true, DEFENSE_SKILL_CODES)) {
+        if ((SKILL_CODES as readonly string[]).includes(card.code)) seen.add(card.code)
+      }
+    }
+    expect([...seen].sort()).toEqual(['limitUp', 'rally'])
   })
 })

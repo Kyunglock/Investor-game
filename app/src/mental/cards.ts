@@ -503,6 +503,8 @@ export function pickCards(
   state: MateMagicState,
   random: () => number = Math.random,
   skills = false,
+  /** 나올 수 있는 사장냥 스킬 카드. 디펜스 스테이지 (676번)는 총에 붙는 스킬만 준다. */
+  skillCodes: readonly SkillCode[] = SKILL_CODES,
 ): Card[] {
   const open = MAGICS.filter((m) => state[m] < MAGIC_MAX_LEVEL)
   const mates = state.mates ?? 0
@@ -529,7 +531,7 @@ export function pickCards(
           card = stageSkillCard(state, targets[Math.floor(random() * targets.length)])
         }
       } else if (roll < cat + magic + catSkill + skill) {
-        card = skillCard(SKILL_CODES[Math.floor(random() * SKILL_CODES.length)])
+        card = skillCard(skillCodes[Math.floor(random() * skillCodes.length)])
       }
     } else if (roll < MATE_CHANCE) {
       if (mates < MAX_MATES) card = mateCard(mates)
@@ -549,7 +551,7 @@ export function pickCards(
         roll >= from + MATE_MAGIC_CHANCE &&
         roll < from + MATE_MAGIC_CHANCE + SKILL_CHANCE
       ) {
-        card = skillCard(SKILL_CODES[Math.floor(random() * SKILL_CODES.length)])
+        card = skillCard(skillCodes[Math.floor(random() * skillCodes.length)])
       }
     }
     if (!picked.some((c) => c.code === card.code)) {

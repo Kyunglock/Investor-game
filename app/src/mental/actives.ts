@@ -18,6 +18,11 @@ export const SKILL_CODES = [
   'averaging',
 ] as const
 export type SkillCode = (typeof SKILL_CODES)[number]
+/**
+ * 디펜스 스테이지 (676번)에서 카드로 나오는 사장냥 스킬: 매수벽이 없는 판이라 총에 붙는 둘(불장·상한가)만 나온다. 매수세례·방어선 구축·
+ * 손절·물타기는 매수벽의 스킬이라 디펜스에서는 하는 일이 없다.
+ */
+export const DEFENSE_SKILL_CODES: readonly SkillCode[] = ['rally', 'limitUp']
 export const SKILL_NAMES: Record<SkillCode, string> = {
   barrage: '매수세례',
   rally: '불장',

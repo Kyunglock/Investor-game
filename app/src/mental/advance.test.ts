@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BOSS,
   bossSummonSeconds,
+  crowdStageSpec,
   defenseStars,
   formation,
   numberedStageScale,
@@ -94,5 +95,13 @@ describe('번호 스테이지 초반 난이도', () => {
     expect(numberedStageScale(scale, 15)).toBeGreaterThan(numberedStageScale(scale, 0))
     expect(numberedStageScale(scale, 35)).toBe(scale)
     expect(numberedStageScale(scale, 120)).toBe(scale)
+  })
+})
+
+describe('스테이지의 판 (676번)', () => {
+  it('번호 스테이지의 판에 적의 수가 두 배고 3분을 버틴다', () => {
+    const base = stageSpec(3)
+    expect(crowdStageSpec(3)).toEqual({ ...base, countScale: base.countScale * 2, seconds: 180 })
+    expect(crowdStageSpec(10).boss).toBe(true)
   })
 })

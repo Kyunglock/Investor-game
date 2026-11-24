@@ -10,9 +10,11 @@ import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { stageLoadout, stageTeamOf } from '../idle/stageTeam'
+import { DEFENSE_SKILL_CODES } from './actives'
 
 import {
   type BattleMode,
+  crowdStageSpec,
   DEFENSE_BOSS_SECONDS,
   type StageSpec,
   stageLabel,
@@ -92,8 +94,11 @@ export function MentalWindow({
   // 디펜스가 주 콘텐츠다 (509번): 번호 스테이지도 EX도 멘탈벽을 지키는 디펜스다. 전진 모드(364번)는 지금 쓰지 않는다.
   // 종목 회의 뒤 전투(414번): 맞힌 쪽에 걸었으면 공격 판(매도벽 돌파, 413번), 틀렸으면 디펜스.
   // 매도벽 돌파 스테이지(주 게임, #698)는 스테이지 번호가 곧 세기다(459번처럼 하나마다 +1). 종목 이름 없이 싸운다.
-  const assaultLevel =
-    entry.kind === 'assault'
+  // 메인 화면의 스테이지는 디펜스다 (676번): 몰려오는 적을 잡은 경험치로 카드를 고른다. 첫 출근 안내의 한 판만 전처럼 매도벽을 돌파한다.
+  const crowd = entry.kind === 'assault' && !tutorial
+  const assaultLevel = crowd
+    ? null
+    : entry.kind === 'assault'
       ? entry.stage
       : entry.kind === 'invest' && entry.mode === 'ASSAULT'
         ? entry.level
@@ -105,6 +110,7 @@ export function MentalWindow({
     [assaultLevel, stockName],
   )
   const perChapter = company.stages?.perChapter
+  const assaultPerChapter = company.assaults?.perChapter ?? perChapter
   // 한 번만 만든다: 새 객체면 전투(Battle)의 effect가 다시 돌아 판이 처음부터 다시 시작됐다.
   // 종목 회의 뒤 디펜스 (414번)는 세기(level)만큼의 번호 스테이지 판을 빌려 쓴다. 보스 판(챕터 끝)은 피한다.
   const stageNumber =
@@ -114,8 +120,13 @@ export function MentalWindow({
         ? investStage(entry.level, perChapter)
         : null
   const spec: StageSpec | undefined = useMemo(
-    () => (stageNumber === null ? undefined : stageSpec(stageNumber, perChapter)),
-    [stageNumber, perChapter],
+    () =>
+      crowd
+        ? crowdStageSpec(entry.stage, assaultPerChapter)
+        : stageNumber === null
+          ? undefined
+          : stageSpec(stageNumber, perChapter),
+    [crowd, entry, assaultPerChapter, stageNumber, perChapter],
   )
   // 분기마다 서버가 정하던 장르는 없어졌다 (#803): 늘 디펜스 바닥이다.
   const genre: Genre = 'DEFENSE'
@@ -210,7 +221,6 @@ export function MentalWindow({
       : saved && entry.kind !== 'invest'
         ? (company.stages?.lastResult ?? null)
         : null
-  const assaultPerChapter = company.assaults?.perChapter ?? perChapter
   const investBattle = saved && entry.kind === 'invest' ? company.invest?.outcome?.battle : null
 
   return createPortal(
@@ -233,6 +243,7 @@ export function MentalWindow({
             start={start}
             cards={picked}
             pauseRequest={pauseRequest}
+            stageCards={entry.kind === 'assault'}
             onPick={(card) => setPicked((p) => [...p, card])}
             onDone={setOutcome}
             onQuit={onDone}
@@ -242,24 +253,28 @@ export function MentalWindow({
           <div className="stage-lobby" data-testid="mental-lobby">
             <header className="stage-heading">
               <span className="stage-eyebrow">
-                {entry.kind === 'assault'
-                  ? `매도벽 돌파 스테이지 · 세기 ${entry.stage}`
-                  : entry.kind === 'stage'
-                    ? '멘탈 보호 스테이지'
-                    : entry.kind === 'invest'
-                      ? `종목 회의 뒤 전투 · 세기 ${entry.level}`
-                      : 'EX 도전 · 하루에 한 번'}
+                {crowd
+                  ? `스테이지 · 세기 ${entry.stage}`
+                  : entry.kind === 'assault'
+                    ? `매도벽 돌파 스테이지 · 세기 ${entry.stage}`
+                    : entry.kind === 'stage'
+                      ? '멘탈 보호 스테이지'
+                      : entry.kind === 'invest'
+                        ? `종목 회의 뒤 전투 · 세기 ${entry.level}`
+                        : 'EX 도전 · 하루에 한 번'}
               </span>
               <h2>
-                {entry.kind === 'assault'
-                  ? `매도벽 돌파 ${stageLabel(entry.stage, assaultPerChapter)}`
-                  : entry.kind === 'stage'
-                    ? `수련 ${stageLabel(entry.stage, perChapter)}`
-                    : entry.kind === 'invest'
-                      ? mode === 'assault'
-                        ? '매도벽 돌파!'
-                        : '멘탈을 지켜라'
-                      : 'EX 디펜스'}
+                {crowd
+                  ? `스테이지 ${stageLabel(entry.stage, assaultPerChapter)}`
+                  : entry.kind === 'assault'
+                    ? `매도벽 돌파 ${stageLabel(entry.stage, assaultPerChapter)}`
+                    : entry.kind === 'stage'
+                      ? `수련 ${stageLabel(entry.stage, perChapter)}`
+                      : entry.kind === 'invest'
+                        ? mode === 'assault'
+                          ? '매도벽 돌파!'
+                          : '멘탈을 지켜라'
+                        : 'EX 디펜스'}
               </h2>
               {/* 매도벽 돌파는 설명 글(어느 쪽에 걸었나·별 배율)을 뺐다 (439번). */}
               {entry.kind === 'invest' && mode !== 'assault' && (
@@ -274,8 +289,8 @@ export function MentalWindow({
               {mode !== 'assault' && (
                 <span className="stage-mode" data-testid="stage-mode">
                   {spec?.boss
-                    ? `디펜스 · ${DEFENSE_BOSS_SECONDS / 60}분에 보스 · 제한 시간 ${BATTLE_SECONDS / 60}분 안에 격파`
-                    : `디펜스 · 제한 시간 ${BATTLE_SECONDS / 60}분 버티기`}
+                    ? `디펜스 · ${minutes(spec.seconds ? spec.seconds / 2 : DEFENSE_BOSS_SECONDS)}에 보스 · 제한 시간 ${minutes(spec.seconds ?? BATTLE_SECONDS)} 안에 격파`
+                    : `디펜스 · ${minutes(spec?.seconds ?? BATTLE_SECONDS)} 버티기`}
                 </span>
               )}
               {entry.kind === 'invest' && (
@@ -298,9 +313,11 @@ export function MentalWindow({
                       : '몰려오는 불안을 막아 멘탈벽을 지키세요'}
                   </p>
                   <small>
-                    {spec
-                      ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
-                      : '누른 방향으로 발사 · 하루 한 번 다이아를 받는다'}
+                    {crowd
+                      ? '적을 잡은 경험치로 레벨이 오르면 카드를 골라요 · 멘탈벽이 많이 남을수록 별이 많다'
+                      : spec
+                        ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
+                        : '누른 방향으로 발사 · 하루 한 번 다이아를 받는다'}
                   </small>
                 </>
               )}
@@ -690,14 +707,17 @@ function CardPick({
   sub,
   levels,
   skills,
+  skillCodes,
   paused,
   onPick,
 }: {
   title: string
   sub: string
   levels: Parameters<typeof pickCards>[0]
-  /** 매도벽 돌파 스테이지 (667번): 사장냥의 스킬 카드와 고양이 마법 강화가 섞여 나온다. */
+  /** 스테이지 (667번): 사장냥의 스킬 카드와 고양이 카드가 섞여 나온다. */
   skills: boolean
+  /** 나올 수 있는 사장냥 스킬 카드 (676번). 없으면 여섯 모두. */
+  skillCodes?: Parameters<typeof pickCards>[3]
   paused: boolean
   onPick: (card: Card) => void
 }) {
@@ -718,7 +738,7 @@ function CardPick({
         return skillCard(code as Parameters<typeof skillCard>[0])
       })
     }
-    return pickCards(levels, Math.random, skills)
+    return pickCards(levels, Math.random, skills, skillCodes)
   })
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const plan = useMemo(() => revealPlan(cards.map((c) => c.grade)), [cards])
@@ -1024,6 +1044,7 @@ function Battle({
   genre,
   hero,
   start,
+  stageCards,
   cards,
   pauseRequest,
   onPick,
@@ -1038,6 +1059,8 @@ function Battle({
   hero: Hero
   /** 처음 수치. 매도벽 돌파 스테이지는 데려온 고양이를 실어 둔다 (669번, idle/stageTeam.ts). 없으면 사장냥의 총만. */
   start?: Loadout
+  /** 스테이지의 카드 (667·676번): 사장냥의 스킬 카드와 데려온 고양이의 카드가 나온다. */
+  stageCards: boolean
   cards: Card[]
   pauseRequest: number
   onPick: (card: Card) => void
@@ -1406,7 +1429,8 @@ function Battle({
                   : '카드 한 장을 더 쌓으세요'
             }
             levels={loadout.current}
-            skills={mode === 'assault'}
+            skills={stageCards}
+            skillCodes={mode === 'assault' ? undefined : DEFENSE_SKILL_CODES}
             paused={asking}
             onPick={(card) => {
               loadout.current = applyCard(loadout.current, card)
@@ -1427,6 +1451,12 @@ function Battle({
 function investStage(level: number, perChapter = 10): number {
   const n = Math.max(1, level * 2 - 1)
   return n % perChapter === 0 ? n - 1 : n
+}
+
+/** 초를 "3분", "1분 30초"로. */
+function minutes(seconds: number): string {
+  const rest = seconds % 60
+  return rest ? `${Math.floor(seconds / 60)}분 ${rest}초` : `${seconds / 60}분`
 }
 
 function signedMoney(amount: number): string {
