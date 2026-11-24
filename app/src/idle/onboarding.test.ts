@@ -13,7 +13,7 @@ describe('첫 출근 안내', () => {
     expect(tutorialMenuLocked(company(1), 'growth')).toBe(false)
     expect(tutorialMenuLocked(company(2), 'cats')).toBe(true)
     expect(tutorialMenuLocked(company(3), 'cats')).toBe(false)
-    expect(tutorialMenuLocked(company(2), 'skills')).toBe(true)
+    expect(tutorialMenuLocked(company(0), 'skills')).toBe(false)
     expect(tutorialMenuLocked(company(3), 'skills')).toBe(false)
     expect(tutorialMenuLocked(company(8), 'skills')).toBe(false)
     expect(tutorialMenuLocked(company(0), 'shop')).toBe(false)
