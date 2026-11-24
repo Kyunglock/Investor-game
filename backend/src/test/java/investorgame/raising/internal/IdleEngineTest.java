@@ -1551,7 +1551,7 @@ class IdleEngineTest {
         .extracting(skill -> skill.code())
         .containsExactly("hail", "iceArrow");
     // 2.3 s at 1.5x (580) is 3.45 game seconds: one 3.4 s hail cooldown (two stones at level 1)
-    // and one 3.2 s ice cooldown.
+    // and enough credit for the reported frost arrow.
     tick(
         2300,
         new IdleHit(100, "hail", 2, 1000.0),
@@ -1568,12 +1568,12 @@ class IdleEngineTest {
     state.idle.hitCredits = new double[18];
     tick(1900, new IdleHit(100, "wind", 1, 1000.0));
     assertThat(state.idle.damage).isCloseTo(1.8, offset(1e-9));
-    // A level 5 light arrow is one hit of twenty times the gun, once per 3.8 s.
+    // A level 5 light arrow is one hit of twenty times the gun, once per real second.
     state.idle.cats.put("silver", 40);
     state.idle.fielded.add("silver");
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
-    tick(2600, new IdleHit(100, "lightArrow", 1, 1000.0), new IdleHit(100, "bomb", 1, 1000.0));
+    tick(1000, new IdleHit(100, "lightArrow", 3, 1000.0), new IdleHit(100, "bomb", 1, 1000.0));
     assertThat(state.idle.damage).isCloseTo(20, offset(1e-9));
   }
 
