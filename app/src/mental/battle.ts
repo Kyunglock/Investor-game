@@ -506,8 +506,11 @@ type SoundKey = 'splash' | 'whoosh' | 'boom' | 'zap' | 'rumble' | 'ram' | 'coin'
 const CAST_STAGGER = 0.18
 /** 같은 마법 소리를 이 간격(ms) 안에 또 내지 않는다: 고양이 넷이 함께 쏘면 소리가 뭉개지고 폰에서 오디오 노드가 쌓였다. */
 const SOUND_GAP_MS = 90
-/** 날아가는 물(풀에서 돌려 쓴다): 물방울·물줄기·큰 물결. half·depth는 지금 맞는 폭(sweepHits). */
+const LIGHT_ARROW_DRAW_SECONDS = 0.48
+
+/** 비행 마법 투사체 풀. half·depth는 지금 맞는 폭(sweepHits). */
 interface WaterShot {
+  drawRemaining: number
   color: number
   img: Phaser.GameObjects.Image
   active: boolean
@@ -4045,6 +4048,7 @@ class BattleScene extends Phaser.Scene {
     for (let i = 0; i < 16; i++) {
       this.waters.push({
         img: hidden('magic-drop', 4),
+        drawRemaining: 0,
         color: 0x83d5ff,
         spell: 'water',
         active: false,
@@ -4483,6 +4487,7 @@ class BattleScene extends Phaser.Scene {
     s.active = true
     s.level = level
     s.spell = spell
+    s.drawRemaining = spell === 'lightArrow' ? LIGHT_ARROW_DRAW_SECONDS : 0
     s.color = hexColor(SKILL_MARK_COLORS[spell].mid)
     s.x = from.x
     s.y = from.y
@@ -4522,11 +4527,24 @@ class BattleScene extends Phaser.Scene {
     }
     this.moveWater(s, 0)
     this.waterFx.explode(this.fx(3 * tier), from.x, from.y)
-    this.playSound('splash')
+    if (spell !== 'lightArrow') this.playSound('splash')
     return true
   }
 
   private moveWater(s: WaterShot, dt: number) {
+    if (s.drawRemaining > 0) {
+      const elapsed = Math.min(dt, s.drawRemaining)
+      s.drawRemaining -= elapsed
+      const draw = 1 - s.drawRemaining / LIGHT_ARROW_DRAW_SECONDS
+      const retreat = (this.reducedMotion ? 5 : 23) * Phaser.Math.Easing.Sine.Out(draw)
+      // Only the floating arrow moves. Reserve its shot slot but defer collision until release.
+      s.img.setPosition(s.x - s.dx * retreat, s.y - s.dy * retreat).setAlpha(0.45 + 0.55 * draw)
+      if (s.drawRemaining > 0) return
+      s.x = s.img.x
+      s.y = s.img.y
+      this.playSound('whoosh')
+      dt -= elapsed
+    }
     this.trailColor = s.color
     const st = flowStats(s.spell, s.level)
     const tier = magicTier(s.level)

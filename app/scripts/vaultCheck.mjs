@@ -81,7 +81,7 @@ const TEAMS = {
         damagePercent: 470,
         skills: [
           { code: 'bolt', name: '번개 스킬' },
-          { code: 'bomb', name: '폭탄 스킬' },
+          { code: 'lightArrow', name: '빛화살' },
         ],
         skillLevel: 2,
       }),

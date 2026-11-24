@@ -187,7 +187,7 @@ class IdleEngine {
   private static final double[] ONE_HIT = {1, 1, 1, 1, 1};
   // The first six keep their own tables. The nine after them (563) are the app's
   // mental/spellbook.ts: cooldown and damage ramp from level 1 to level 5, and a falling spell
-  // (hail, blossom, bomb) lands as many times as it drops.
+  // (hail, blossom) lands as many times as it drops.
   private static final String[] CODES = {
     "water",
     "meteor",
@@ -203,12 +203,12 @@ class IdleEngine {
     "star",
     "hail",
     "blossom",
-    "bomb",
+    "lightArrow",
     "auroraNight"
   };
   private static final String[] NAMES = {
     "물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬", "얼음 스킬", "바람 스킬", "불 스킬", "독 스킬", "빛 스킬", "어둠 스킬", "모래 스킬",
-    "별 스킬", "우박 스킬", "꽃비 스킬", "폭탄 스킬", "극광의 밤"
+    "별 스킬", "우박 스킬", "꽃비 스킬", "빛화살", "극광의 밤"
   };
   private static final double[][] COOLDOWNS = {
     {2.4, 2.1, 1.8, 1.6, 1.4},

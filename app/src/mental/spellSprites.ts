@@ -111,6 +111,17 @@ export const spellSprites = {
     ink(c, 'M10 37 L51 25 L33 33Z', '#efd2ff')
     oval(c, 43, 51, 3, 5, '#ab65d7')
   },
+  lightArrow(c) {
+    // Two swept feathers and a faceted silver head stay readable when the sprite is rotated.
+    ink(
+      c,
+      'M2 12 L13 17 L21 28 L42 28 L38 12 L63 32 L38 52 L42 36 L21 36 L12 48 L2 52 L10 33Z',
+      '#b7e9ff',
+      '#536489',
+    )
+    ink(c, 'M8 19 L16 24 L22 31 L47 31 L43 20 L58 31 L16 33Z', '#fffbea')
+    ink(c, 'M43 44 L48 34 L58 32Z', '#839dd4')
+  },
   light(c) {
     ink(c, 'M1 27 L41 23 L46 7 L49 23 L63 31 L50 39 L46 57 L42 40 L1 36Z', '#ffcd4e', '#a66924')
     ink(c, 'M2 31 L44 28 L47 19 L49 28 L60 31 L48 34 L46 44 L43 34Z', '#fffdeb')
