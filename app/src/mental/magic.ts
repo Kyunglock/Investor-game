@@ -2,6 +2,7 @@ import type { Spell } from './cards'
 import {
   type FallSpell,
   type FlowSpell,
+  isArrowSpell,
   isFallSpell,
   isFlowSpell,
   ramp,
@@ -303,7 +304,11 @@ export class MagicClock {
   }
 
   cast(magic: Spell, level: number, elapsed: number) {
-    this.next[magic] = elapsed + magicCooldown(magic, level)
+    const interval = magicCooldown(magic, level)
+    const due = this.next[magic] ?? elapsed
+    // Carry frame rounding forward during continuous fire, but never bank missed shots.
+    const keepBeat = isArrowSpell(magic) && due <= elapsed && elapsed - due < interval
+    this.next[magic] = (keepBeat ? due : elapsed) + interval
   }
 
   retry(magic: Spell, elapsed: number) {
