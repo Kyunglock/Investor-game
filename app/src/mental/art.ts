@@ -7,24 +7,14 @@ import { CAT_GUN } from './catGun'
 import { CAT_SCALE, type CatModel } from './catModels'
 import { drawCatPose } from './catPoseArt'
 import { drawCatRun } from './catRunArt'
-import {
-  drawCrescent,
-  drawEmber,
-  drawGust,
-  drawIceLance,
-  drawLance,
-  drawOrb,
-  drawPillar,
-  drawWater,
-  drawWave,
-  drawWoodenRam,
-} from './effectArt'
+import { drawEmber, drawGust, drawIceLance, drawPillar } from './effectArt'
 import { orderShares, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
 import { EXTRA_SPELLS, type ExtraSpell, ICE_GLYPH, SPELLBOOK, WIND_GLYPH } from './spellbook'
+import { fireBloom, fish, fishWave, paw, pawComet, spellSprites, stoneRam } from './spellSprites'
 import { drawBuyWall, drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
 import { BULLET_ART, drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
@@ -471,14 +461,23 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
     c.fillStyle = radial(c, 32, 32, 32, ['#ffffff', '#ffffff88', '#ffffff22', '#ffffff00'])
     c.fillRect(0, 0, 64, 64)
   })
-  // 물방울: 오른쪽(나아가는 쪽)이 둥글고 왼쪽으로 꼬리가 빠진다.
-  bake(scene, 'magic-drop', 32, 20, drawWater)
-  // 큰 물결: 오른쪽(나아가는 쪽)으로 부푼 초승달. 앞은 흰 거품, 뒤로 갈수록 옅은 파랑.
-  bake(scene, 'magic-wave', 44, 120, drawWave)
-  // 얼음 창과 돌풍 (561번): 고양이 스킬로만 나간다.
+  bake(scene, 'magic-drop', 64, 64, fish)
+  bake(scene, 'magic-wave', 64, 64, fishWave)
   bake(scene, 'magic-ice', 44, 16, drawIceLance)
   bake(scene, 'magic-gust', 44, 120, drawGust)
-  // spellbook의 마법들 (563번): 모양(창·물결·구슬)과 색만으로 그린다. 떨어지는 마법은 구슬이다.
+  bake(scene, 'magic-paw-comet', 64, 64, pawComet)
+  bake(scene, 'magic-paw-warning', 64, 64, (c) => {
+    c.strokeStyle = '#fff'
+    c.lineWidth = 2
+    c.setLineDash([10, 4])
+    c.beginPath()
+    c.arc(32, 32, 30, 0, Math.PI * 2)
+    c.stroke()
+    c.globalAlpha = 0.75
+    paw(c, '#fff')
+  })
+  bake(scene, 'magic-paw-print', 64, 64, (c) => paw(c, '#ff9e39'))
+  bake(scene, 'magic-fire-bloom', 64, 64, fireBloom)
   bake(scene, 'aurora-ribbon', 512, 72, (c) => {
     // 뒤쪽 보라색 주름과 앞쪽 비취색 주름은 서로 다른 곡률로 겹친다.
     for (const back of [true, false]) {
@@ -486,8 +485,8 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
         const u = x / 512
         const { fold, edge, height } = auroraFold(u, back)
         const light = c.createLinearGradient(0, edge - height, 0, edge + 2)
-        light.addColorStop(0, back ? '#b090ff00' : '#8bfaff00')
-        light.addColorStop(0.42, back ? '#8768ef80' : '#2994be78')
+        light.addColorStop(0, back ? '#daaaff00' : '#8bfaff00')
+        light.addColorStop(0.42, back ? '#ac74ee90' : '#58c6bd90')
         light.addColorStop(0.75, back ? '#805ce3cb' : '#1dc4adce')
         light.addColorStop(0.92, back ? '#e3c3ffeb' : '#95ffe3fa')
         light.addColorStop(0.97, back ? '#fff0ffef' : '#fff4c7')
@@ -504,6 +503,18 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
         }
       }
     }
+    // 망토 자락에 수놓인 별자리도 극광과 함께 펼쳐진다.
+    c.strokeStyle = '#fff2cd88'
+    c.lineWidth = 0.8
+    c.beginPath()
+    for (const x of [54, 77, 97, 116, 142]) {
+      const y = auroraEdge(x / 512) - 14 - 6 * Math.sin(x)
+      if (x === 54) c.moveTo(x, y)
+      else c.lineTo(x, y)
+      c.fillStyle = '#ffedd1'
+      c.fillRect(x - 1.5, y - 1.5, 3, 3)
+    }
+    c.stroke()
     for (let i = 0; i < 24; i++) {
       const x = (i * 137 + 12) % 512
       const y = auroraEdge(x / 512) - 6 - ((i * 17) % 38)
@@ -555,13 +566,7 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
     c.fill()
   })
   for (const spell of EXTRA_SPELLS) {
-    const book = SPELLBOOK[spell]
-    if (book.kind === 'global') continue
-    const form = book.kind === 'fall' ? 'drop' : book.form
-    if (form === 'jet') bake(scene, spellKey(spell), 44, 16, (c) => drawLance(c, book.colors))
-    else if (form === 'wave')
-      bake(scene, spellKey(spell), 44, 120, (c) => drawCrescent(c, book.colors))
-    else bake(scene, spellKey(spell), 32, 32, (c) => drawOrb(c, book.colors, spell === 'bomb'))
+    if (spell !== 'auroraNight') bake(scene, spellKey(spell), 64, 64, spellSprites[spell])
   }
   if (breakthrough) {
     // 낙하 지점의 중심은 비워 적과 물량 숫자를 계속 볼 수 있게 한다.
@@ -618,10 +623,11 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
     c.fillStyle = '#ffffff'
     c.fillRect(0, 0, 6, 10)
   })
-  // 목제 공성 충차: 나무 프레임·밧줄·통나무 단면. 오른쪽 앞끝을 위로 돌려 들이받는다.
+  // 뿔이 말린 바위 충차. 오른쪽 앞끝을 위로 돌려 들이받는다.
   bake(scene, 'magic-ram', 88 * RAM_ART, 48 * RAM_ART, (c) => {
     c.scale(RAM_ART, RAM_ART)
-    drawWoodenRam(c)
+    c.scale(88 / 64, 48 / 64)
+    stoneRam(c)
   })
   // 돌 조각: 충차 뒤로 튀는 흙·돌 파편과 땅에서 솟는 돌기둥.
   bake(scene, 'magic-rock', 14, 12, (c) => {
