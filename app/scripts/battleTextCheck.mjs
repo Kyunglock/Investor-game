@@ -35,9 +35,9 @@ const idle = {
   income: { perSecond: 1, staffPerSecond: 0, bonusPercent: 0 },
   offline: null,
   actives: [
-    ['boostFire', '공격속도 3배', 180, 180, true],
-    ['boostDamage', '공격력 3배', 180, 180, true],
-    ['boostBuy', '매수공격 3배', 180, 180, true],
+    ['boostFire', '공격속도 2배', 180, 180, true],
+    ['boostDamage', '공격력 2배', 180, 180, true],
+    ['boostBuy', '매수공격 2배', 180, 180, true],
   ].map(([code, name, cooldown, seconds, ad]) => ({
     code,
     name,

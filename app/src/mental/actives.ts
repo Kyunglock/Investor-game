@@ -32,8 +32,8 @@ export const SKILL_NAMES: Record<SkillCode, string> = {
   averaging: '물타기',
 }
 
-/** 광고 스킬의 배수 (588번, 서버 IdleEngine.BOOST). */
-export const BOOST = 3
+/** 광고 스킬의 배수 (588번, 서버 IdleEngine.BOOST). 3배에서 2배로 낮췄다 (686번). */
+export const BOOST = 2
 
 export const ACTIVES = {
   /** 매수세례: 매수벽이 seconds마다 매수 주문 shots장의 빠르기로 쏟아 낸다(카드는 CARD_SECONDS 동안). 한 장은 보통 매수 주문의 power배다. */
@@ -54,11 +54,11 @@ export const ACTIVES = {
    * IdleEngine.AVERAGING_MAX와 같다.
    */
   averaging: { seconds: 15, min: 1.5, max: 3 },
-  /** 공격속도 3배: 이 시간 동안 모든 총이 BOOST배 빨리 나간다. 불장과 겹치면 더 큰 쪽(3배)만 센다. */
+  /** 공격속도 2배: 이 시간 동안 모든 총이 BOOST배 빨리 나간다. 불장(2배)과 겹쳐도 더해지지 않고 2배다. */
   boostFire: { seconds: 270 },
-  /** 공격력 3배: 이 시간 동안 총알과 고양이 스킬의 피해가 BOOST배다. */
+  /** 공격력 2배: 이 시간 동안 총알과 고양이 스킬의 피해가 BOOST배다. */
   boostDamage: { seconds: 270 },
-  /** 매수공격 3배: 이 시간 동안 매수 주문(매수세례 포함)의 피해가 BOOST배다. */
+  /** 매수공격 2배: 이 시간 동안 매수 주문(매수세례 포함)의 피해가 BOOST배다. */
   boostBuy: { seconds: 270 },
 } as const
 
@@ -90,9 +90,9 @@ export const ACTIVE_BANNERS: Record<ActiveCode, [string, string]> = {
   limitUp: ['상한가!! 전부 치명타', '#e8434f'],
   stopLoss: ['손절!! 매수벽을 던진다', '#2f7fe0'],
   averaging: ['물타기! 매수 주문 강화', '#2f9e74'],
-  boostFire: ['공격속도 3배!!', '#f08a24'],
-  boostDamage: ['공격력 3배!!', '#e8434f'],
-  boostBuy: ['매수공격 3배!!', '#2f7fe0'],
+  boostFire: ['공격속도 2배!!', '#f08a24'],
+  boostDamage: ['공격력 2배!!', '#e8434f'],
+  boostBuy: ['매수공격 2배!!', '#2f7fe0'],
 }
 
 /** 단추에 적는 한 줄 설명. */
@@ -103,9 +103,9 @@ export const ACTIVE_HINTS: Record<ActiveCode, string> = {
   limitUp: '전부 치명타',
   stopLoss: '매수벽 절반으로 한 방',
   averaging: '깎인 만큼 매수 강화',
-  boostFire: '연사 세 배',
-  boostDamage: '피해 세 배',
-  boostBuy: '매수 주문 세 배',
+  boostFire: '연사 두 배',
+  boostDamage: '피해 두 배',
+  boostBuy: '매수 주문 두 배',
 }
 
 /** 레벨업 카드와 스킬 탭에 적는 설명 (587·667번). */
@@ -118,7 +118,7 @@ export const ACTIVE_NOTES: Record<ActiveCode, string> = {
     '매수벽의 남은 체력 절반을 버리고 매도벽을 크게 한 번 쳐요. 가득 찬 매수벽에서 쓰면 매수 주문 240장어치예요.',
   averaging:
     '1분 동안 매수 주문이 1.5배 세져요. 매수벽이 깎여 있을수록 더 세져 3배까지 올라요. 매수세례에도 적용돼요.',
-  boostFire: '사장냥과 고양이의 총이 세 배 빨리 나가요. 불장과 겹치면 세 배만 적용돼요.',
-  boostDamage: '총알과 고양이 스킬의 피해가 세 배가 돼요.',
-  boostBuy: '매수 주문의 피해가 세 배가 돼요. 매수세례에도 적용돼요.',
+  boostFire: '사장냥과 고양이의 총이 두 배 빨리 나가요. 불장과 겹쳐도 두 배예요.',
+  boostDamage: '총알과 고양이 스킬의 피해가 두 배가 돼요.',
+  boostBuy: '매수 주문의 피해가 두 배가 돼요. 매수세례에도 적용돼요.',
 }

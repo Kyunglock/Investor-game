@@ -28,10 +28,10 @@ describe('고양이 등급 (539번)', () => {
     expect((['A', 'S', 'SS', 'SSS', 'SR', 'UR', 'LR'] as const).every(shinyWeapon)).toBe(true)
   })
 
-  it('좋은 장일수록 열리기 전의 뜸이 길다: A등급 0.5초, S등급 이상 1초 (576번)', () => {
-    expect(cardSuspense({ shiny: false, jackpot: false })).toBeLessThan(300)
-    expect(cardSuspense({ shiny: true, jackpot: false })).toBe(500)
-    expect(cardSuspense({ shiny: true, jackpot: true })).toBe(1000)
+  it('열리기 전의 뜸은 모든 장이 같다: 길이로 등급을 짐작할 수 없다 (687번)', () => {
+    expect(cardSuspense({ shiny: false, jackpot: false })).toBe(
+      cardSuspense({ shiny: true, jackpot: true }),
+    )
   })
 
   it('등급이 높을수록 뽑기 연출이 길고 세다', () => {

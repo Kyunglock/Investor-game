@@ -102,9 +102,9 @@ try {
         },
         // 광고 스킬 셋(588번). 사장냥의 고유 스킬은 자동 전투에서 없앴다 (667번). 시간은 실제 초다.
         actives: [
-          ['boostFire', '공격속도 3배', 180, 180, true],
-          ['boostDamage', '공격력 3배', 180, 180, true],
-          ['boostBuy', '매수공격 3배', 180, 180, true],
+          ['boostFire', '공격속도 2배', 180, 180, true],
+          ['boostDamage', '공격력 2배', 180, 180, true],
+          ['boostBuy', '매수공격 2배', 180, 180, true],
         ].map(([code, name, cooldown, seconds, ad]) => ({
           code,
           name,
@@ -1044,14 +1044,14 @@ try {
     // 광고 스킬은 설명을 먼저 확인하고 별도 버튼으로 실행한다. 브라우저는 기존 광고 완료 대체 동작을 쓴다.
     const boost = page.locator('[data-testid=idle-ad-active][data-code=boostDamage]')
     await expect(boost).toBeEnabled()
-    await expect(boost).toHaveAccessibleName(/공격력 3배.*광고 효과 자세히 보기/)
-    await expect(boost).toContainText('×3')
+    await expect(boost).toHaveAccessibleName(/공격력 2배.*광고 효과 자세히 보기/)
+    await expect(boost).toContainText('×2')
     await expect(boost.locator('.active-badge')).toBeVisible()
     await boost.click()
     await page.getByTestId('ad-skill-confirm').click()
     // The banner is not checked here: a monster raid's notice uses the same strip and may replace it.
     await expect.poll(() => usedActives).toEqual([{ code: 'boostDamage', ad: true }])
-    await expect(boost).toHaveAccessibleName('공격력 3배 · 180초 남았어요')
+    await expect(boost).toHaveAccessibleName('공격력 2배 · 180초 남았어요')
     await expect(boost).not.toContainText('180s')
     await expect(boost.locator('.idle-active-shade')).toBeVisible()
     await expect(boost).toHaveCSS('border-radius', '50%')

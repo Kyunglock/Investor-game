@@ -2639,7 +2639,7 @@ class BattleScene extends Phaser.Scene {
 
   /**
    * 손절 (591번): 매수벽의 남은 체력 절반을 버리고 그만큼 매도벽을 한 번 친다. 매수벽이 무너져 있거나 칠 벽이 아직 없으면(벽 사이를 달리는 중)
-   * 기다렸다가 친다. 물타기는 붙지 않고 매수공격 3배(588번)는 붙는다(서버도 같다). 매수벽의 반쪽을 뚝 떼어 매도벽으로 던지고, 그것이 닿을 때
+   * 기다렸다가 친다. 물타기는 붙지 않고 매수공격 2배(588번)는 붙는다(서버도 같다). 매수벽의 반쪽을 뚝 떼어 매도벽으로 던지고, 그것이 닿을 때
    * 피해가 들어간다(592번). 움직임을 줄인 화면에서는 던지지 않고 바로 친다.
    */
   private stopLoss() {
@@ -2833,7 +2833,7 @@ class BattleScene extends Phaser.Scene {
         averaging: Math.max(0, this.averagingUntil - this.elapsed),
         stopLossPending: this.stopLossPending,
       },
-      /** 지금 매수 주문 한 장의 피해 (물타기·매수공격 3배 포함). */
+      /** 지금 매수 주문 한 장의 피해 (물타기·매수공격 2배 포함). */
       buyOrder: this.buyOrderDamage(),
       buyWall: this.buyWall
         ? {
@@ -3788,7 +3788,7 @@ class BattleScene extends Phaser.Scene {
     return (this.loadout.fireMs * 1.25 * SHOT_WEIGHT) / this.rallyFire
   }
 
-  /** 불장 (503번): 타는 동안 모든 총이 두 배 빨리 나간다. 공격속도 3배(588번)와 겹치면 더 큰 쪽만 센다(서버도 같다). */
+  /** 불장 (503번): 타는 동안 모든 총이 두 배 빨리 나간다. 공격속도 2배(588번)와 겹치면 더 큰 쪽만 센다(서버도 같다). */
   private get rallyFire() {
     return Math.max(
       this.elapsed < this.rallyUntil ? ACTIVES.rally.fire : 1,
@@ -3801,7 +3801,7 @@ class BattleScene extends Phaser.Scene {
     return this.elapsed < this.boostUntil[code] ? BOOST : 1
   }
 
-  /** 스킬 피해의 바탕: 자동 전투는 무기의 실효 화력(636번)이다. 공격력 3배(588번)가 도는 동안 세 배다. */
+  /** 스킬 피해의 바탕: 자동 전투는 무기의 실효 화력(636번)이다. 공격력 2배(588·686번)가 도는 동안 두 배다. */
   private get attackDamage() {
     return (this.loadout.skillDamage ?? this.loadout.damage) * this.boost('boostDamage')
   }

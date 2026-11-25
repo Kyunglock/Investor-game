@@ -38,9 +38,9 @@ try {
         offline: null,
         rebirth: { count: 0, fish: 0, gain: 5, fromWall: 51, adGain: 15, upgrades: [] },
         actives: [
-          ['boostFire', '공격속도 3배', true],
-          ['boostDamage', '공격력 3배', true],
-          ['boostBuy', '매수공격 3배', true],
+          ['boostFire', '공격속도 2배', true],
+          ['boostDamage', '공격력 2배', true],
+          ['boostBuy', '매수공격 2배', true],
         ].map(([code, name, ad]) => ({
           code,
           name,

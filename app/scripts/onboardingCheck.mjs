@@ -30,7 +30,7 @@ try {
       actives: [
         {
           code: 'boostFire',
-          name: '공격속도 3배',
+          name: '공격속도 2배',
           ad: true,
           readyIn: 0,
           left: 0,

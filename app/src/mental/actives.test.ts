@@ -34,8 +34,8 @@ describe('액티브 스킬 (503·587·588·591번)', () => {
     }
   })
 
-  it('광고 스킬은 3배이고 전투 초로 270초(실제 180초) 이어진다: 서버 IdleEngine과 같다', () => {
-    expect(BOOST).toBe(3)
+  it('광고 스킬은 2배이고 전투 초로 270초(실제 180초) 이어진다: 서버 IdleEngine과 같다', () => {
+    expect(BOOST).toBe(2)
     for (const code of codes.filter(isBoost)) expect(ACTIVES[code].seconds).toBe(270)
   })
 

@@ -100,9 +100,9 @@ try {
     })
 
     company.idle.actives = [
-      ['boostFire', '공격속도 3배'],
-      ['boostDamage', '공격력 3배'],
-      ['boostBuy', '매수공격 3배'],
+      ['boostFire', '공격속도 2배'],
+      ['boostDamage', '공격력 2배'],
+      ['boostBuy', '매수공격 2배'],
     ].map(([code, name]) => ({
       code,
       name,
@@ -144,7 +144,7 @@ try {
     assert.deepEqual(calls, [{ code: 'boostDamage', ad: true }])
     await page.locator('[data-testid=idle-ad-active][data-code=boostFire]').click()
     await expect(page.getByTestId('ad-skill-confirm')).toBeDisabled()
-    await expect(page.getByTestId('ad-skill-details')).toContainText('공격력 3배 사용 중')
+    await expect(page.getByTestId('ad-skill-details')).toContainText('공격력 2배 사용 중')
     await page.screenshot({ path: `/tmp/skill-help-${width}.png` })
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('ad-skill-details')).toHaveCount(0)
