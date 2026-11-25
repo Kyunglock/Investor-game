@@ -134,8 +134,11 @@ async function run(browser, width, height) {
             const wall = window.__mentalMarket().buyWall
             if (wall.hp >= Math.min(wall.maxHp, 40)) {
               for (let i = 0; i < 5; i++) window.__mentalBuyWallHit(1 + i, x)
-              resolve(window.__mentalMarket().buyWall.lossNote)
-            } else if (performance.now() > until) reject(new Error('the buy wall never stood'))
+              // 막 다시 선 벽은 잠깐 맞지 않는다(buyWall.ts protectionLeft): 체력이 그대로면 글자도 없으니 다음 프레임에 다시 친다.
+              const after = window.__mentalMarket().buyWall
+              if (after.hp < wall.hp && after.lossNote) return resolve(after.lossNote)
+            }
+            if (performance.now() > until) reject(new Error('the buy wall never stood'))
             else requestAnimationFrame(attempt)
           }
           attempt()
