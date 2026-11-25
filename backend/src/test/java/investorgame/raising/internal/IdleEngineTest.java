@@ -1457,28 +1457,42 @@ class IdleEngineTest {
   }
 
   @Test
-  void theTeamsGunsAddNothingToABuyOrder() {
-    // 688: the team's share (638) is gone. A fielded cat does not make a buy order stronger: only
-    // the buy upgrade (four shares a level) and the fish upgrade (six shares a level) do.
+  void theTeamsGunsAddTheirShareToABuyOrder() {
+    // 638: a starting pistol alone adds nothing, so the order is its 30 shares (688).
     start(1);
+    assertThat(engine.teamScale(state)).isCloseTo(1, offset(1e-9));
     assertThat(buyBonus()).isZero();
+    // 680번: a level 4 C cat's gun is the whole pistol plus 25% x 4^0.1 = 29% of the boss cat's,
+    // 25% faster (sky): the team is 2.609 pistols. 689: the team's share is back at a quarter
+    // (half before 688 took it out), so (2.609 - 1) x 0.25 x 30 = 12.07, 12 shares come on top.
+    double cat = 1.25 * (1 + 0.25 * Math.pow(4, 0.1));
     state.idle.cats.put("sky", 4);
     engine.fieldCat(state, "sky", true);
-    assertThat(buyBonus()).isZero();
+    assertThat(engine.teamScale(state)).isCloseTo(1 + cat, offset(1e-9));
+    assertThat(buyBonus()).isEqualTo(12);
+    // The attack and fire upgrades are not in it: the team's share follows gear, not upgrades.
     state.capital = 1e18;
+    company.mental.buyUpgrade(state, "damage", 20);
+    company.mental.buyUpgrade(state, "fire", 20);
+    assertThat(buyBonus()).isEqualTo(12);
+    // Fifty buy levels: 200 fixed shares, and the team's part grows by 0.4 shares a level (648):
+    // 1.609 x 0.25 x (30 + 0.4 x 50) = 20.1.
     company.mental.buyUpgrade(state, "buy", 50);
-    assertThat(buyBonus()).isEqualTo(200);
+    assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(cat * 0.25 * 50));
+    assertThat(buyBonus()).isEqualTo(220);
     // The wall's depth changes nothing (573), and the server accepts an order of that size.
     state.idle.wall = 100;
+    assertThat(buyBonus()).isEqualTo(220);
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 1, 1e9));
-    assertThat(state.idle.damage).isCloseTo(1.0 + 200 / 30.0, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(1.0 + 220 / 30.0, offset(1e-9));
+    // 영구 강화(생선)는 고정 수량에 6주를 더하고 팀의 몫에는 한 단계에 1%를 곱한다 (644번).
     state.fishLevels.put("buy", 10);
-    assertThat(buyBonus()).isEqualTo(200 + 60);
+    assertThat(buyBonus()).isEqualTo(200 + 60 + (long) Math.floor(cat * 0.25 * 50 * 1.1));
   }
 
   private long buyBonus() {
-    return company.mental.upgradeViews(state).stream()
+    return engine.upgradeViews(state).stream()
         .filter(u -> "buy".equals(u.kind()))
         .findFirst()
         .orElseThrow()
