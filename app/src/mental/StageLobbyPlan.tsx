@@ -7,7 +7,7 @@ import { stageTeamOf } from '../idle/stageTeam'
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
 /**
- * 출전 화면의 출전 고양이 줄 (decisions.md 678번): 고양이 카드를 고를 때마다 나올 고양이를 출전 칸의 차례대로 보인다(669번).
+ * 출전 화면의 출전 고양이 줄 (decisions.md 681번): 고양이 카드를 고를 때마다 나올 고양이를 출전 칸의 차례대로 보인다(669번).
  * 사장냥이 쉬면(672번) 맨 앞 고양이는 처음부터 나온다.
  */
 export function StageLobbyTeam({ company }: { company: Company }) {

@@ -301,7 +301,7 @@ export function MentalWindow({
                   {levelWhy(company.invest?.outcome?.battle?.levelParts)}
                 </span>
               )}
-              {/* 메인 스테이지의 출전 화면에는 사장냥 뒷모습과 무기 칸을 두지 않는다 (678번). */}
+              {/* 메인 스테이지의 출전 화면에는 사장냥 뒷모습과 무기 칸을 두지 않는다 (681번). */}
               {!crowd && <StagePortrait weapon={heroOf(company).weapon} />}
               {mode === 'assault' && <small>패닉셀·투매를 뚫고 전진!</small>}
               {mode !== 'assault' && (
@@ -339,7 +339,7 @@ export function MentalWindow({
               </p>
             )}
             {crowd && <StageLobbyTeam company={company} />}
-            {/* 메인 스테이지의 출전 화면에는 적 범례를 두지 않는다 (678번). */}
+            {/* 메인 스테이지의 출전 화면에는 적 범례를 두지 않는다 (681번). */}
             {!crowd && (
               <div className="stage-enemies">
                 {(mode === 'assault'
@@ -716,6 +716,7 @@ function CardPick({
   levels,
   skills,
   skillCodes,
+  catMagic,
   paused,
   onPick,
 }: {
@@ -726,6 +727,8 @@ function CardPick({
   skills: boolean
   /** 나올 수 있는 사장냥 스킬 카드 (676번). 없으면 여섯 모두. */
   skillCodes?: Parameters<typeof pickCards>[3]
+  /** 디펜스 스테이지 (678번): 마법은 출전한 고양이의 것이라 사장냥의 마법 카드가 나오지 않는다. */
+  catMagic: boolean
   paused: boolean
   onPick: (card: Card) => void
 }) {
@@ -746,7 +749,7 @@ function CardPick({
         return skillCard(code as Parameters<typeof skillCard>[0])
       })
     }
-    return pickCards(levels, Math.random, skills, skillCodes)
+    return pickCards(levels, Math.random, skills, skillCodes, catMagic)
   })
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const plan = useMemo(() => revealPlan(cards.map((c) => c.grade)), [cards])
@@ -1439,6 +1442,7 @@ function Battle({
             levels={loadout.current}
             skills={stageCards}
             skillCodes={mode === 'assault' ? undefined : DEFENSE_SKILL_CODES}
+            catMagic={stageCards && mode !== 'assault'}
             paused={asking}
             onPick={(card) => {
               loadout.current = applyCard(loadout.current, card)

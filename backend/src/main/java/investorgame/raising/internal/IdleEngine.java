@@ -567,7 +567,7 @@ class IdleEngine {
       shooters.add(
           shooter(
               s.catWeapons.get(code),
-              damageUp * power(s.cats.get(code)) * CAT_DAMAGE[cat] * GRADE_DAMAGE[CAT_GRADE[cat]],
+              damageUp * catDamage(cat, s.cats.get(code)),
               fireUp * CAT_FIRE[cat],
               CAT_CRITICAL[cat]));
     }
@@ -582,6 +582,20 @@ class IdleEngine {
   /** 실제로 쏘는 총 (672번): shooters의 맨 앞은 늘 사장냥의 총이고(스킬 피해의 바탕이라 쉬어도 남는다), 사장냥이 쉬면 그 총은 쏘지 않는다. */
   private List<Shooter> firing(CompanyState c, List<Shooter> shooters) {
     return bossOut(state(c)) ? shooters.subList(1, shooters.size()) : shooters;
+  }
+
+  // 680: every cat's gun gets the whole weapon on top of its old share, and the SS cat twice the
+  // weapon. A cat used to shoot a quarter of the weapon, so drawing one added little.
+  static final double CAT_BASE = 1;
+  static final double CAT_BASE_SS = 2;
+
+  /**
+   * 고양이 총의 공격력 (무기 공격력에 곱하는 값, 680번): 무기의 100%(SS등급은 200%)를 기본으로 받고, 그 위에 전의 몫(레벨·특성·등급 배수를 곱한
+   * 25%)이 더해진다. 레벨 1 C등급은 125%, S등급은 140%, SS등급 극광냥은 300%다.
+   */
+  private static double catDamage(int cat, int level) {
+    double base = CAT_GRADE[cat] == 4 ? CAT_BASE_SS : CAT_BASE;
+    return base + power(level) * CAT_DAMAGE[cat] * GRADE_DAMAGE[CAT_GRADE[cat]];
   }
 
   private static double power(int level) {
@@ -1730,12 +1744,7 @@ class IdleEngine {
                       code,
                       CAT_NAMES[cat],
                       level,
-                      (int)
-                          Math.round(
-                              100
-                                  * power(Math.max(1, level))
-                                  * CAT_DAMAGE[cat]
-                                  * GRADE_DAMAGE[CAT_GRADE[cat]]),
+                      (int) Math.round(100 * catDamage(cat, level)),
                       (int) Math.round(100 * CAT_FIRE[cat]),
                       (int) Math.round(100 * CAT_CRITICAL[cat]),
                       s.fielded.contains(code),

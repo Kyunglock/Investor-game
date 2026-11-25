@@ -398,3 +398,68 @@ describe('디펜스 스테이지의 사장냥 스킬 카드 (676번)', () => {
     expect([...seen].sort()).toEqual(['limitUp', 'rally'])
   })
 })
+
+describe('마법은 고양이의 것 (678번, 디펜스 스테이지)', () => {
+  const team = [
+    { name: '밤냥', skills: ['메테오'] },
+    { name: '하늘냥', skills: [] },
+  ]
+  const codes = (state: Parameters<typeof pickCards>[0]) => {
+    const seen = new Set<string>()
+    for (let seed = 0; seed < 400; seed++) {
+      for (const card of pickCards(state, rng(seed), true, DEFENSE_SKILL_CODES, true)) {
+        expect(new Set(pickCards(state, rng(seed), true, DEFENSE_SKILL_CODES, true)).size).toBe(3)
+        seen.add(card.code)
+      }
+    }
+    return seen
+  }
+  it('사장냥이 배우는 마법 카드는 나오지 않고, 메테오는 밤냥의 카드로만 온다', () => {
+    const base = { ...BASE_LOADOUT, stageCats: team, mateMagicLevels: [1, 1] }
+    const before = codes(base)
+    for (const magic of MAGICS) expect(before.has(magic)).toBe(false)
+    expect(before.has('cat')).toBe(true)
+    // 밤냥이 나오기 전에는 스킬 강화도 없다: 나온 뒤에야 메테오를 올린다.
+    expect(before.has('cat-skill')).toBe(false)
+    const after = codes({ ...base, mates: 1 })
+    expect(after.has('cat-skill')).toBe(true)
+    for (const magic of MAGICS) expect(after.has(magic)).toBe(false)
+  })
+  it('출전한 고양이가 없으면 마법도 이름 없는 동료도 없다', () => {
+    const seen = codes({ ...BASE_LOADOUT })
+    expect([...seen].sort()).toEqual(['atk', 'limitUp', 'rally', 'spd'])
+  })
+})
+
+describe('공격력·공격 속도 카드는 모두에게 붙는다 (679번)', () => {
+  const gun = {
+    kind: 'pistol' as const,
+    grade: 'F' as const,
+    damage: 2,
+    bulletPower: 0,
+    fireMs: 400,
+    bulletSpeed: 600,
+    critical: 1,
+    look: 0,
+  }
+  const base = { ...BASE_LOADOUT, damage: 4, fireMs: 200, mateGuns: [gun, { ...gun, fireMs: 62 }] }
+  const card = (code: string) => {
+    const found = SIMPLE_CARDS.find((c) => c.code === code)
+    if (!found) throw new Error(code)
+    return found
+  }
+  it('제 총을 든 고양이의 총도 같은 비율로 오른다', () => {
+    const atk = applyCard(base, card('atk'))
+    expect(atk.damage).toBeCloseTo(4.4)
+    expect(atk.mateGuns.map((g) => g.damage)).toEqual([2 * 1.1, 2 * 1.1])
+    const spd = applyCard(base, card('spd'))
+    expect(spd.fireMs).toBeCloseTo(200 / 1.1)
+    // 가장 빠른 간격(60ms)은 그대로다.
+    expect(spd.mateGuns.map((g) => g.fireMs)).toEqual([400 / 1.1, 60])
+    expect(card('atk').effect).toBe('모두의 공격력 +10%')
+  })
+  it('스킬 피해의 바탕이 따로 있으면 그것도 오른다', () => {
+    expect(applyCard({ ...base, skillDamage: 10 }, card('atk')).skillDamage).toBeCloseTo(11)
+    expect(applyCard(base, card('atk')).skillDamage).toBeUndefined()
+  })
+})

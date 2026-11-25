@@ -139,7 +139,7 @@
   border-radius: 50%;
   margin-right: 4px;
 }
-/* 출전 화면의 출전 고양이 줄 (decisions.md 678번). */
+/* 출전 화면의 출전 고양이 줄 (decisions.md 681번). */
 /* 메인 스테이지의 출전 화면은 사장냥 뒷모습·무기 칸이 없어 짧다: 가운데로 모으고, 멘탈벽은 뒷모습 밑으로 파고들지 않는다. */
 .stage-lobby.is-crowd {
   justify-content: safe center;
@@ -1322,7 +1322,7 @@
   .stage-summary > .stage-primary {
     margin-bottom: auto;
   }
-  /* 짧은 화면에서는 출전 고양이 줄을 줄여 출발 단추가 덜 밀려나게 한다 (678번). */
+  /* 짧은 화면에서는 출전 고양이 줄을 줄여 출발 단추가 덜 밀려나게 한다 (681번). */
   .stage-lobby-team {
     padding: 7px 10px;
   }
