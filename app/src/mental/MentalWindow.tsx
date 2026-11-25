@@ -9,7 +9,7 @@ import { type BattleEntry, useAppUi } from '../app/ui'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { stageLoadout, stageTeamOf } from '../idle/stageTeam'
+import { stageLoadout, stageOrder, stageTeamOf } from '../idle/stageTeam'
 import { DEFENSE_SKILL_CODES, SKILL_CODES } from './actives'
 
 import {
@@ -370,7 +370,12 @@ export function MentalWindow({
                 sfx.stamp()
                 haptic.medium()
                 if (entry.kind === 'assault') {
-                  setStart(stageLoadout(company, stageTeamOf(company)))
+                  // 고양이가 나오는 차례는 판마다 섞는다 (695번). 개발 서버의 확인 스크립트는 출전 칸의 차례로 고정할 수 있다.
+                  const team = stageTeamOf(company)
+                  const fixed =
+                    import.meta.env.DEV &&
+                    (window as { __mentalCatOrder?: boolean }).__mentalCatOrder
+                  setStart(stageLoadout(company, fixed ? team : stageOrder(team)))
                 }
                 setHero(heroOf(company))
               }}

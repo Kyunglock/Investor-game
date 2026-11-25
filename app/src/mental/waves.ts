@@ -17,7 +17,14 @@ export const STAGE_WAVE = {
   pour: 10,
   /** 웨이브 하나를 다 물리치면 오르는 레벨 수 (694번): 한 번에서 한 번 반 사이. */
   levels: 1.25,
+  /** 첫 세 웨이브에 나오는 몬스터 수의 배율 (695번): 카드가 쌓이기 전이라 덜 나온다. 넷째 웨이브부터는 그대로다. */
+  early: [0.6, 0.7, 0.8],
 } as const
+
+/** at번째 웨이브에 나오는 몬스터 수의 배율: 첫 세 웨이브는 STAGE_WAVE.early, 그 뒤는 1. */
+export function waveCrowd(at: number): number {
+  return STAGE_WAVE.early[Math.floor(at) - 1] ?? 1
+}
 
 /** 줄기에 섞여 나오는 몬스터와 그 몫: 패닉셀이 여섯에 하나꼴로 많고 투기는 드물다. */
 export const WAVE_STREAM = [

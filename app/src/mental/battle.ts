@@ -197,6 +197,7 @@ import {
   PANIC_RUSH,
   panicRushGap,
   STAGE_WAVE,
+  waveCrowd,
   waveCurve,
   waveKind,
   waveProgress,
@@ -3100,6 +3101,11 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** 지금 나올 적의 수 배율. 웨이브 판의 첫 세 웨이브는 덜 나온다 (695번). */
+  private crowd() {
+    return this.staged(this.countScale) * (this.waveTotal ? waveCrowd(this.waveAt) : 1)
+  }
+
   /**
    * 스테이지 배율을 판 안에서 천천히 건다 (#565): 처음에는 STAGE_RAMP.from만큼만, STAGE_RAMP.seconds에 걸쳐 끝까지. 카드가 쌓이기 전 첫 20초에 판이
    * 갈려 결과가 운(첫 카드)에 달리던 것을 줄인다.
@@ -3155,7 +3161,7 @@ class BattleScene extends Phaser.Scene {
     this.waveRest = STAGE_WAVE.rest
     const last = this.waveAt >= this.waveTotal
     const head = last ? '마지막 웨이브' : `웨이브 ${this.waveAt}/${this.waveTotal}`
-    this.waveStream = waveStreamCount(this.waveAt, this.waveTotal, this.staged(this.countScale))
+    this.waveStream = waveStreamCount(this.waveAt, this.waveTotal, this.crowd())
     this.waveStreamEvery = STAGE_WAVE.pour / this.waveStream
     this.waveStreamClock = 0
     if (last && this.defenseBoss) {
@@ -3188,10 +3194,7 @@ class BattleScene extends Phaser.Scene {
     const { w } = this.view()
     const grow = 1 + Math.min(1.5, this.curve() / 120)
     // 세 줄로 쏟아진다: 처음 15, 뒤로 갈수록 36까지. 전에는 6~15로 '쏟아진다'는 말이 무색했다.
-    const n = Math.min(
-      60,
-      Math.round(15 * grow * this.staged(this.countScale) * (this.assault ? 0.6 : 1)),
-    )
+    const n = Math.min(60, Math.round(15 * grow * this.crowd() * (this.assault ? 0.6 : 1)))
     const cols = Math.ceil(n / 3)
     for (let i = 0; i < n; i++) {
       this.spawn('dump', [
@@ -3207,7 +3210,7 @@ class BattleScene extends Phaser.Scene {
     const grow = this.waveTotal
       ? waveProgress(this.waveAt, this.waveTotal) * 6
       : Math.min(6, this.elapsed / 30)
-    const count = Math.min(24, Math.round((6 + grow) * this.staged(this.countScale)))
+    const count = Math.min(24, Math.round((6 + grow) * this.crowd()))
     const cols = Math.ceil(count / 2)
     for (let i = 0; i < count; i++) {
       this.spawn('short', [
@@ -3249,11 +3252,11 @@ class BattleScene extends Phaser.Scene {
   /** 투기 세력: 크고 느린 투기 몬스터 몇과 그 앞의 손절매 한 줄. */
   private raidSpec() {
     const { w } = this.view()
-    const specs = Math.min(8, Math.round(3 * this.staged(this.countScale)))
+    const specs = Math.min(8, Math.round(3 * this.crowd()))
     for (let i = 0; i < specs; i++) {
       this.spawn('spec', [w * 0.16 + ((i + 0.5) * w * 0.68) / specs, -70])
     }
-    const stops = Math.min(12, Math.round(5 * this.staged(this.countScale)))
+    const stops = Math.min(12, Math.round(5 * this.crowd()))
     for (let i = 0; i < stops; i++) {
       this.spawn('stop', [w * 0.16 + ((i + 0.5) * w * 0.68) / stops, -24])
     }
@@ -3277,7 +3280,7 @@ class BattleScene extends Phaser.Scene {
   private startPanicRush() {
     this.panicRushLeft = Math.max(
       8,
-      Math.round(PANIC_RUSH.count * this.staged(this.countScale) * (this.assault ? 0.6 : 1)),
+      Math.round(PANIC_RUSH.count * this.crowd() * (this.assault ? 0.6 : 1)),
     )
     this.panicRushEvery = PANIC_RUSH.seconds / this.panicRushLeft
     this.panicRushClock = 0
@@ -3303,11 +3306,7 @@ class BattleScene extends Phaser.Scene {
     // 두 겹의 반원 떼: 처음 24, 뒤로 갈수록 44까지. 전에는 10~20이라 떼 같지 않았다.
     const n = Math.min(
       80,
-      Math.round(
-        (24 + Math.min(20, this.curve() / 8)) *
-          this.staged(this.countScale) *
-          (this.assault ? 0.6 : 1),
-      ),
+      Math.round((24 + Math.min(20, this.curve() / 8)) * this.crowd() * (this.assault ? 0.6 : 1)),
     )
     const half = Math.ceil(n / 2)
     for (let i = 0; i < n; i++) {
@@ -5868,7 +5867,7 @@ class BattleScene extends Phaser.Scene {
 
     // 생성: 한 판(2분)에 걸쳐 갈수록 빨라진다. 파도는 15초마다 패닉셀 → 투매 → 공매도 순으로 돌고 뒤로 갈수록 커진다 (340·363번).
     // 웨이브 판 (690번)은 시간이 아니라 웨이브로 나온다: 다 물리쳐야 다음 웨이브가 온다.
-    const every = Math.max(200, 700 - this.curve() * 2.6) / this.staged(this.countScale)
+    const every = Math.max(200, 700 - this.curve() * 2.6) / this.crowd()
     if (this.waveTotal) {
       this.waveStep(dt)
       if (this.over) return

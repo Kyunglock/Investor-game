@@ -72,6 +72,8 @@ try {
     })
     await page.addInitScript(() => {
       window.__mentalCards = ['rally', 'stopLoss', 'cat']
+      // 고양이가 나오는 차례는 판마다 무작위다 (695번): 확인하는 동안에는 출전 칸의 차례로 고정한다.
+      window.__mentalCatOrder = true
     })
     await page.goto(process.env.APP_URL ?? 'http://localhost:5182/app/')
     await page.locator('[data-testid=idle-canvas] canvas').waitFor()

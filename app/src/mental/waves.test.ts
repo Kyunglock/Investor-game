@@ -9,6 +9,7 @@ import {
   PANIC_RUSH,
   panicRushGap,
   STAGE_WAVE,
+  waveCrowd,
   waveCurve,
   waveKind,
   waveProgress,
@@ -106,4 +107,16 @@ it('줄기의 몬스터는 패닉셀이 가장 많고 몫을 다 더하면 1이�
       ENEMIES.stop.reward * 0.13 +
       ENEMIES.spec.reward * 0.05,
   )
+})
+
+it('첫 세 웨이브는 몬스터가 덜 나오고 넷째 웨이브부터는 그대로다 (695번)', () => {
+  const crowds = [1, 2, 3].map(waveCrowd)
+  expect(crowds).toEqual([...crowds].sort((a, b) => a - b))
+  for (const crowd of crowds) {
+    expect(crowd).toBeLessThan(1)
+    expect(crowd).toBeGreaterThanOrEqual(0.5)
+  }
+  expect(waveCrowd(4)).toBe(1)
+  expect(waveCrowd(15)).toBe(1)
+  expect(waveCrowd(0)).toBe(1)
 })
