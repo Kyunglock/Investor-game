@@ -2,6 +2,7 @@ import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 
 import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { JackpotFx, REVEAL_HOLD_MS } from './JackpotFx'
 import './weapon-reveal.css'
 
 /** 10연차에서 나온 한 장 (517번). */
@@ -24,6 +25,10 @@ export type TenCard = {
   /** S등급 이상 (576번): 더 좋은 장은 열리기 전의 뜸이 더 길다 */
   starlight?: boolean
   jackpot: boolean
+  /**
+   * 넘길 수 없는 장 (693번)의 축하 문구: "S 등급 새 고양이!". 이 장은 "모두 보기"로도 건너뛰지 못하고, 열린 뒤 3초 동안 축하 연출이 나온다.
+   */
+  hold?: string
 }
 
 /** 상자의 뜸(ms)은 무엇이 들었든 같다 (687번): 전에는 가장 좋은 장이 뜸의 길이와 빛을 정했다. */
@@ -52,6 +57,8 @@ export function TenBonus({ count }: { count: number }) {
  * 10연차 연출 (decisions.md 517·526·574번): 한 번 뽑기와 같은 창·상자를 쓴다. 상자가 열리면 받은 장을 **한 장씩 크게** 보여 주고(누르면 다음
  * 장, "모두 보기"로 건너뛴다), 마지막에 뽑힌 장을 모두 모아 보여 준다. A등급 이상은 빛난다. 가장 좋은 한 장이 상자의 뜸과 모아 보기의 빛을
  * 정한다. 결과는 이번 서버 응답의 스냅샷이다.
+ *
+ * 넘길 수 없는 장(hold, 693번)이 있으면 "모두 보기"와 닫기는 결과로 가지 않고 그 장에서 멈춘다. 그 장은 열린 뒤 3초가 지나야 넘어간다.
  */
 export function TenReveal({
   label,
@@ -84,6 +91,8 @@ export function TenReveal({
   // 열린 장의 번호로 적는다: 다음 장으로 넘어가면 그 장은 저절로 뒷면이다.
   const [openedAt, setOpenedAt] = useState(-1)
   const opened = openedAt === at
+  // 넘길 수 없는 장의 3초가 지난 장의 번호 (693번).
+  const [releasedAt, setReleasedAt] = useState(-1)
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const sounded = useRef(-1)
   const best =
@@ -135,6 +144,14 @@ export function TenReveal({
     const open = setTimeout(() => setOpenedAt(at), wait)
     return () => clearTimeout(open)
   }, [at, phase === 'cards', reduced])
+  // 넘길 수 없는 장 (693번): 뒷면일 때부터 열리고 3초가 지날 때까지 잠근다.
+  const locked = Boolean(shown?.hold) && releasedAt !== at
+  const holding = locked && opened
+  useEffect(() => {
+    if (!holding) return
+    const release = setTimeout(() => setReleasedAt(at), REVEAL_HOLD_MS)
+    return () => clearTimeout(release)
+  }, [holding, at])
   // 열리는 순간 그 장의 등급으로 소리와 떨림을 낸다. 빛나는 장은 더 세게.
   useEffect(() => {
     if (!shown || !opened || sounded.current === at || reduced) return
@@ -155,11 +172,22 @@ export function TenReveal({
     if (!cards) return
     // 아직 뒷면이면 누른 것은 열기다.
     if (!opened) return setOpenedAt(at)
+    if (locked) return
     if (at + 1 >= cards.length) setPhase('result')
     else setAt(at + 1)
   }
+  /** 남은 장을 건너뛴다. 넘길 수 없는 장이 남았으면 그 장으로 가서 멈추고, 없으면 true다. */
+  const skip = () => {
+    if (!cards || locked) return false
+    const from = phase === 'cards' ? at + 1 : 0
+    const stop = cards.findIndex((card, i) => i >= from && card.hold)
+    if (stop < 0) return true
+    setAt(stop)
+    setPhase('cards')
+    return false
+  }
   const close = () => {
-    if (cards) onClose()
+    if (cards && (phase === 'result' || skip())) onClose()
   }
   const fresh = cards?.filter((c) => c.isNew).length ?? 0
   const shiny = cards?.filter((c) => c.shiny).length ?? 0
@@ -178,6 +206,7 @@ export function TenReveal({
       data-power={lead?.power ?? 0}
       data-starlight={lead?.starlight || undefined}
       data-shiny={lead?.shiny ?? false}
+      data-hold={holding || undefined}
       style={{ '--reveal-color': lead?.color ?? '#cbd5e1' } as CSSProperties}
       onCancel={(e) => {
         e.preventDefault()
@@ -211,6 +240,7 @@ export function TenReveal({
               data-shiny={opened && shown.shiny}
               data-jackpot={opened && shown.jackpot}
               data-open={opened}
+              data-hold={Boolean(shown.hold)}
               aria-label={opened ? undefined : '뒤집힌 카드 · 누르면 바로 열기'}
               style={{ '--card-color': shown.color } as CSSProperties}
             >
@@ -234,17 +264,21 @@ export function TenReveal({
               {/* 열리는 순간의 번쩍임: 빛나는 장에만. */}
               {shown.shiny && opened && <i className="ten-burst" aria-hidden="true" />}
             </button>
+            {holding && <b className="jackpot-title">✦ {shown.hold} ✦</b>}
             <small className="ten-single-hint">
-              {!opened
-                ? '카드가 열려요'
-                : at + 1 < cards.length
-                  ? '카드를 누르면 다음 카드'
-                  : '카드를 누르면 결과 모아 보기'}
+              {holding
+                ? '잠시 감상해요…'
+                : !opened
+                  ? '카드가 열려요'
+                  : at + 1 < cards.length
+                    ? '카드를 누르면 다음 카드'
+                    : '카드를 누르면 결과 모아 보기'}
             </small>
             <button
               type="button"
               className="ten-single-all"
-              onClick={() => setPhase('result')}
+              disabled={holding}
+              onClick={() => skip() && setPhase('result')}
               data-testid={`${testId}-all`}
             >
               모두 보기
@@ -312,6 +346,7 @@ export function TenReveal({
             </section>
           )
         )}
+        {holding && <JackpotFx key={at} />}
       </div>
     </dialog>,
     document.body,
