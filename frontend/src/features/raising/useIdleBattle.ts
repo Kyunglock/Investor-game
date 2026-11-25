@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { API_BASE, api, extraHeaders } from '../../api/client'
 import { type IdleContact, IdleContacts } from './idleContacts'
+import { IDLE_HOLD_EVENT, idleHeld } from './idleHold'
 import { IdlePredictor, type IdleServer, type IdleShown } from './idlePredict'
 import { useRaisingStore } from './store'
 
@@ -91,7 +92,8 @@ export function useIdleBattle(companyId?: string) {
     let blocked = false
     let generation = 0
     const contacts = new IdleContacts()
-    const visible = () => !document.hidden && nativeActive
+    // 스테이지 한 판이나 광고를 보는 동안에도 (682번) 앱이 뒤로 간 때처럼 끊는다.
+    const visible = () => !document.hidden && nativeActive && !idleHeld()
     const stop = () => {
       contacts.clear()
       // The server drops pending hits on a stop or a gap, so the screen stops counting on them.
@@ -180,6 +182,7 @@ export function useIdleBattle(companyId?: string) {
     window.addEventListener('pagehide', stop)
     window.addEventListener('idle-wall-hit', hit)
     window.addEventListener('idle-app-active', native)
+    window.addEventListener(IDLE_HOLD_EVENT, visibility)
     const moved = () => contacts.clear()
     window.addEventListener('idle-moved', moved)
     const timer = setInterval(() => void tick(), 1000)
@@ -191,6 +194,7 @@ export function useIdleBattle(companyId?: string) {
       window.removeEventListener('pagehide', stop)
       window.removeEventListener('idle-wall-hit', hit)
       window.removeEventListener('idle-app-active', native)
+      window.removeEventListener(IDLE_HOLD_EVENT, visibility)
       window.removeEventListener('idle-moved', moved)
       stop()
     }

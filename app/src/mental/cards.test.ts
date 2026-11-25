@@ -463,3 +463,20 @@ describe('공격력·공격 속도 카드는 모두에게 붙는다 (679번)', (
     expect(applyCard(base, card('atk')).skillDamage).toBeUndefined()
   })
 })
+
+describe('이미 도는 스킬은 다시 내지 않는다 (683번)', () => {
+  it('낼 스킬이 없으면 스킬 카드 없이 석 장을 채운다', () => {
+    const team = [
+      { name: '밤냥', skills: ['메테오'] },
+      { name: '하늘냥', skills: [] },
+    ]
+    const state = { ...BASE_LOADOUT, stageCats: team, mateMagicLevels: [1, 1], mates: 1 }
+    for (let seed = 0; seed < 300; seed++) {
+      const only = pickCards(state, rng(seed), true, ['limitUp'], true)
+      expect(only.some((c) => c.code === 'rally')).toBe(false)
+      const none = pickCards(state, rng(seed), true, [], true)
+      expect(none).toHaveLength(3)
+      expect(none.some((c) => (SKILL_CODES as readonly string[]).includes(c.code))).toBe(false)
+    }
+  })
+})

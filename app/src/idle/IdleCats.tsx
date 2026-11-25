@@ -377,10 +377,10 @@ export function IdleCats({
                 {cat
                   ? `무기 공격력의 ${cat.damagePercent}%로 쏴요 · ${catTrait(cat)}`
                   : bossResting
-                    ? '쉬는 중이에요 · 고양이들만 싸워요 · 고양이 스킬은 그대로 사장냥 무기를 따라요'
+                    ? "쉬는 중이에요 · 고양이들만 싸워요 · '사장냥 출전'을 누르면 다시 싸워요"
                     : fielded.length > 0
-                      ? '맨 앞에서 싸워요 · 쉬게 하면 고양이들만 싸워요 · 무기는 바꾸거나 뺄 수 있어요'
-                      : '맨 앞에서 싸워요 · 고양이가 출전하면 쉬게 할 수 있어요 · 무기는 바꾸거나 뺄 수 있어요'}
+                      ? "출전 중이에요 · '사장냥 빼기'를 누르면 고양이들만 싸워요 · 무기는 바꾸거나 뺄 수 있어요"
+                      : '출전 중이에요 · 고양이를 한 마리라도 출전시키면 사장냥을 뺄 수 있어요'}
               </small>
             )}
           </div>
@@ -437,7 +437,8 @@ export function IdleCats({
                 void useRaisingStore.getState().fieldBoss(bossResting)
               }}
             >
-              {bossResting ? '출전' : '출전 중'}
+              {/* 누르면 무엇이 되는지 적는다 (685번): "출전 중"만으로는 빼는 단추로 보이지 않았다. */}
+              {bossResting ? '사장냥 출전' : '사장냥 빼기'}
             </button>
           )}
           {onSkills ? (

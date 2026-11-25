@@ -1,4 +1,5 @@
 import type { Company } from '@web/api/client'
+import { IDLE_HOLD_EVENT, idleHeld } from '@web/features/raising/idleHold'
 import { shownIdle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import type { ActiveCode } from '../mental/actives'
@@ -60,7 +61,9 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
         stall = window.setTimeout(stalled, STALL_MS)
     }
     const pause = () =>
-      battle.current?.setPaused(!foreground || !nativeActive || !latest.current.connected)
+      battle.current?.setPaused(
+        !foreground || !nativeActive || idleHeld() || !latest.current.connected,
+      )
     const visibility = () => {
       foreground = !document.hidden
       pause()
@@ -83,6 +86,8 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     window.addEventListener('idle-power-save', powerSave)
     document.addEventListener('visibilitychange', visibility)
     window.addEventListener('idle-app-active', native)
+    // 스테이지 한 판이나 광고를 보는 동안에는 (682번) 전투를 세운다.
+    window.addEventListener(IDLE_HOLD_EVENT, pause)
     window.addEventListener('idle-test-raid', raidCalled)
     window.addEventListener('idle-active', activeUsed)
     setError(null)
@@ -198,6 +203,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       window.clearTimeout(stall)
       document.removeEventListener('visibilitychange', visibility)
       window.removeEventListener('idle-app-active', native)
+      window.removeEventListener(IDLE_HOLD_EVENT, pause)
       window.removeEventListener('idle-test-raid', raidCalled)
       window.removeEventListener('idle-active', activeUsed)
       window.removeEventListener('idle-power-save', powerSave)
@@ -207,7 +213,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
   }, [company.companyId, attempt, equipped.kind, equipped.grade])
   useEffect(() => {
     battle.current?.applyLoadout(idleLoadout(company))
-    battle.current?.setPaused(!connected || document.hidden)
+    battle.current?.setPaused(!connected || document.hidden || idleHeld())
   }, [company, connected])
   return (
     <>

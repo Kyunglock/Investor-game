@@ -83,7 +83,7 @@ class IdleEngine {
           "boostDamage",
           "boostBuy");
   private static final String[] ACTIVE_NAMES = {
-    "매수세례", "불장", "방어선 구축", "상한가", "손절", "물타기", "공격속도 3배", "공격력 3배", "매수공격 3배"
+    "매수세례", "불장", "방어선 구축", "상한가", "손절", "물타기", "공격속도 2배", "공격력 2배", "매수공격 2배"
   };
 
   private static final double[] ACTIVE_COOLDOWN = {60, 90, 90, 90, 90, 90, 270, 270, 270};
@@ -99,7 +99,8 @@ class IdleEngine {
   static final double AVERAGING_MAX = 3;
 
   /** 광고 스킬의 배수 (588번). Matches the app's mental/actives.ts. */
-  static final double BOOST = 3;
+  // 3 before 686: the ad skills were too strong, so they double now.
+  static final double BOOST = 2;
 
   // A boosted bullet or buy order may land a moment after its boost ended.
   private static final double BOOST_GRACE = 2;
@@ -1107,7 +1108,7 @@ class IdleEngine {
     s.circuitSeconds -= stopped;
     double active = seconds - stopped;
     // 불장 (503): bullets come twice as often while it burns. A beat that starts inside it counts.
-    // 광고 스킬 (588): 공격속도 3배 is not stacked on the rally; the larger of the two counts.
+    // 광고 스킬 (588): 공격속도 2배 is not stacked on the rally; the larger of the two counts.
     double rally =
         Math.max(
             s.activeSeconds < s.rallyUntil ? RALLY_FIRE : 1,
@@ -1242,7 +1243,7 @@ class IdleEngine {
       s.damage += amount;
       dealt += amount;
     }
-    // 손절 (591): the one big hit the press paid for. It is a buy-side hit, so 매수공격 3배 counts;
+    // 손절 (591): the one big hit the press paid for. It is a buy-side hit, so 매수공격 2배 counts;
     // 물타기 does not.
     double stopLossMax = buyBoost * buyOrder(c) * STOP_LOSS_ORDERS;
     for (IdleHit hit : hits) {

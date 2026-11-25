@@ -26,9 +26,15 @@ export type TenCard = {
   jackpot: boolean
 }
 
-/** 한 장이 뒷면으로 나와 열리기까지의 뜸(ms, 576번): 보통 장은 금방, A등급은 0.5초, S등급 이상은 1초. */
-export function cardSuspense(card: Pick<TenCard, 'shiny' | 'jackpot'>): number {
-  return card.jackpot ? 1000 : card.shiny ? 500 : 220
+/** 상자의 뜸(ms)은 무엇이 들었든 같다 (687번): 전에는 가장 좋은 장이 뜸의 길이와 빛을 정했다. */
+const charge = 1000
+
+/**
+ * 한 장이 뒷면으로 나와 열리기까지의 뜸(ms). 전에는 좋은 장일수록 길었다(576번: A등급 0.5초, S등급 이상 1초). 뒤집기도 전에 무엇이 나올지
+ * 짐작되어 모든 장을 같게 했다 (687번).
+ */
+export function cardSuspense(_card?: Pick<TenCard, 'shiny' | 'jackpot'>): number {
+  return 350
 }
 
 /** 10연차 단추에 붙는 덤 표시 (526번): 10연차는 열 개 값에 tenCount개가 나온다. 덤이 없으면 그리지 않는다. */
@@ -85,8 +91,6 @@ export function TenReveal({
       (a, b) => (b.power > a.power || (b.starlight && !a.starlight) ? b : a),
       cards[0],
     ) ?? null
-  const power = best?.power ?? 0
-  const charge = [700, 1000, 1500, 2200][power] ?? 700
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     dialog.current?.showModal()
@@ -115,7 +119,7 @@ export function TenReveal({
       clearTimeout(open)
       clearTimeout(reveal)
     }
-  }, [cards, reduced, charge])
+  }, [cards, reduced])
   const shown = phase === 'cards' ? (cards?.[at] ?? null) : null
   // 장은 뒷면으로 나온다 (576번). 뜸을 들인 뒤 스스로 열리고, 좋은 장일수록 뜸이 길다. 그동안 뒷면이 떨며 빛을 모은다.
   // biome-ignore lint/correctness/useExhaustiveDependencies: 장이 바뀔 때만 다시 덮는다.
@@ -126,8 +130,8 @@ export function TenReveal({
       return
     }
     const wait = cardSuspense(shown)
-    if (shown.shiny) sfx.cardTease(wait)
-    else sfx.cardDeal()
+    // 뒷면인 동안의 소리도 모든 장이 같다 (687번).
+    sfx.cardDeal()
     const open = setTimeout(() => setOpenedAt(at), wait)
     return () => clearTimeout(open)
   }, [at, phase === 'cards', reduced])
@@ -161,7 +165,8 @@ export function TenReveal({
   const shiny = cards?.filter((c) => c.shiny).length ?? 0
   // 한 장씩 볼 때는 그 장이, 그 밖에는 가장 좋은 장이 창의 빛을 정한다.
   // 뒷면인 동안에는 창이 등급을 미리 알려 주지 않는다.
-  const lead = phase === 'cards' ? (opened ? shown : null) : best
+  // 상자가 열리기 전에도 알려 주지 않는다 (687번): 다 열어 본 뒤(result)에만 가장 좋은 장의 빛이 난다.
+  const lead = phase === 'cards' ? (opened ? shown : null) : phase === 'result' ? best : null
   return createPortal(
     <dialog
       ref={dialog}
@@ -202,8 +207,9 @@ export function TenReveal({
               onClick={next}
               data-testid={`${testId}-single`}
               data-new={shown.isNew}
-              data-shiny={shown.shiny}
-              data-jackpot={shown.jackpot}
+              // 등급에 따른 꾸밈은 열린 뒤에만 붙는다 (687번): 뒷면은 모든 장이 똑같다.
+              data-shiny={opened && shown.shiny}
+              data-jackpot={opened && shown.jackpot}
               data-open={opened}
               aria-label={opened ? undefined : '뒤집힌 카드 · 누르면 바로 열기'}
               style={{ '--card-color': shown.color } as CSSProperties}
@@ -230,9 +236,7 @@ export function TenReveal({
             </button>
             <small className="ten-single-hint">
               {!opened
-                ? shown.shiny
-                  ? '두근두근…'
-                  : '카드가 열려요'
+                ? '카드가 열려요'
                 : at + 1 < cards.length
                   ? '카드를 누르면 다음 카드'
                   : '카드를 누르면 결과 모아 보기'}

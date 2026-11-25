@@ -10,7 +10,7 @@ import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { stageLoadout, stageTeamOf } from '../idle/stageTeam'
-import { DEFENSE_SKILL_CODES } from './actives'
+import { DEFENSE_SKILL_CODES, SKILL_CODES } from './actives'
 
 import {
   type BattleMode,
@@ -21,7 +21,7 @@ import {
   stageSpec,
 } from './advance'
 import { GRADE_BADGE } from './armory'
-import { type AssaultSpec, assaultSpec, wallBrief } from './assault'
+import { type AssaultSpec, assaultSpec, IDLE_GAME_SPEED, wallBrief } from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import { ASSAULT_AD_BONUS, assaultBonusPercent } from './buyWall'
@@ -1124,6 +1124,8 @@ function Battle({
         }
         handle.current = startBattle(el, {
           speed: loadGameSpeed(),
+          // 스테이지의 1배는 메인 화면의 자동 전투와 같은 빠르기다 (683번). 그 위에 1.5배·2배를 건다.
+          speedBase: IDLE_GAME_SPEED,
           mode,
           stage,
           assault,
@@ -1441,7 +1443,10 @@ function Battle({
             }
             levels={loadout.current}
             skills={stageCards}
-            skillCodes={mode === 'assault' ? undefined : DEFENSE_SKILL_CODES}
+            // 이미 도는 스킬은 다시 내지 않는다 (683번): 켜진 불장 위에 불장 카드가 또 뜨지 않는다.
+            skillCodes={(mode === 'assault' ? SKILL_CODES : DEFENSE_SKILL_CODES).filter(
+              (code) => !hud.skills.includes(code),
+            )}
             catMagic={stageCards && mode !== 'assault'}
             paused={asking}
             onPick={(card) => {

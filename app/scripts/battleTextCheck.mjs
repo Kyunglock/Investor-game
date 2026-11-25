@@ -35,9 +35,9 @@ const idle = {
   income: { perSecond: 1, staffPerSecond: 0, bonusPercent: 0 },
   offline: null,
   actives: [
-    ['boostFire', '공격속도 3배', 180, 180, true],
-    ['boostDamage', '공격력 3배', 180, 180, true],
-    ['boostBuy', '매수공격 3배', 180, 180, true],
+    ['boostFire', '공격속도 2배', 180, 180, true],
+    ['boostDamage', '공격력 2배', 180, 180, true],
+    ['boostBuy', '매수공격 2배', 180, 180, true],
   ].map(([code, name, cooldown, seconds, ad]) => ({
     code,
     name,
@@ -124,10 +124,24 @@ async function run(browser, width, height) {
 
   // #915: 한꺼번에 닿은 물량은 "매수 -N주" 하나로 합쳐지고, 화면 끝에 맞아도 잘리지 않는다.
   for (const x of [0, layout.view]) {
-    const note = await page.evaluate((x) => {
-      for (let i = 0; i < 5; i++) window.__mentalBuyWallHit(1 + i, x)
-      return window.__mentalMarket().buyWall.lossNote
-    }, x)
+    // 매수벽이 서 있는 바로 그 순간에 친다: 매도 물량이 세진 뒤(684번) 벽이 자주 무너져 재건을 기다리고, 무너진 벽에는 글자가 뜨지
+    // 않는다. 서 있는지 본 뒤 따로 치면 그사이에 무너질 수 있어 같은 프레임에서 보고 친다.
+    const note = await page.evaluate(
+      (x) =>
+        new Promise((resolve, reject) => {
+          const until = performance.now() + 30000
+          const attempt = () => {
+            const wall = window.__mentalMarket().buyWall
+            if (wall.hp >= Math.min(wall.maxHp, 40)) {
+              for (let i = 0; i < 5; i++) window.__mentalBuyWallHit(1 + i, x)
+              resolve(window.__mentalMarket().buyWall.lossNote)
+            } else if (performance.now() > until) reject(new Error('the buy wall never stood'))
+            else requestAnimationFrame(attempt)
+          }
+          attempt()
+        }),
+      x,
+    )
     // 다섯 번에 15(450주, 653번 전에는 2,250주)를 깎았다. 바로 앞에 닿은 매도 물량이 있으면 그것도 같은 글자에 합쳐진다.
     const shares = Number(note.text.match(/^매수 -([\d,]+)주$/)?.[1].replaceAll(',', ''))
     assert.ok(shares >= 450, `one note carries all five hits: ${note.text}`)

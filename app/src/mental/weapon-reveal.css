@@ -500,24 +500,7 @@
   background: #ffffff12;
   font-size: 40px;
 }
-/* 뜸 (576번): 좋은 장은 열리기 전에 뒷면이 떨며 빛을 모은다. A등급 0.5초, S등급 이상 1초. */
-.ten-single[data-shiny="true"]:not([data-open="true"]) {
-  animation:
-    ten-single-in 0.3s ease-out both,
-    ten-tease-shake 0.12s linear 0.1s infinite;
-}
-.ten-single[data-shiny="true"] .ten-back {
-  border-color: #fff3b0;
-  animation: ten-tease-glow 0.5s ease-in both;
-}
-.ten-single[data-jackpot="true"] .ten-back {
-  animation-duration: 1s;
-}
-.ten-single[data-shiny="true"] .ten-back-mark {
-  border-color: #fff3b0;
-  color: #fff3b0;
-  animation: ten-shiny-wow 0.25s ease-in-out infinite alternate;
-}
+/* 뒷면은 모든 장이 똑같다 (687번): 전에는 좋은 장의 뒷면이 떨며 빛나(576번) 뒤집기 전에 무엇이 나올지 짐작됐다. */
 /* 열리는 순간: 카드 뒤에서 빛이 터져 나간다. */
 .ten-burst {
   position: absolute;
@@ -531,33 +514,6 @@
 .ten-single[data-jackpot="true"] .ten-burst {
   inset: -60%;
   animation-duration: 0.95s;
-}
-@keyframes ten-tease-shake {
-  0%,
-  100% {
-    translate: 0 0;
-    rotate: 0deg;
-  }
-  25% {
-    translate: -3px 1px;
-    rotate: -1.2deg;
-  }
-  75% {
-    translate: 3px -1px;
-    rotate: 1.2deg;
-  }
-}
-@keyframes ten-tease-glow {
-  from {
-    box-shadow: 0 0 0 0 transparent;
-    filter: brightness(1);
-  }
-  to {
-    box-shadow:
-      0 0 0 3px #fff3b0,
-      0 0 46px 14px var(--card-color);
-    filter: brightness(1.5);
-  }
 }
 @keyframes ten-burst {
   from {

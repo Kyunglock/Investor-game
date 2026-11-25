@@ -546,7 +546,7 @@ export function pickCards(
         if (targets.length > 0) {
           card = stageSkillCard(state, targets[Math.floor(random() * targets.length)])
         }
-      } else if (roll < cat + catSkill + skill) {
+      } else if (roll < cat + catSkill + skill && skillCodes.length > 0) {
         card = skillCard(skillCodes[Math.floor(random() * skillCodes.length)])
       }
     } else if (team) {
@@ -564,7 +564,7 @@ export function pickCards(
         if (targets.length > 0) {
           card = stageSkillCard(state, targets[Math.floor(random() * targets.length)])
         }
-      } else if (roll < cat + magic + catSkill + skill) {
+      } else if (roll < cat + magic + catSkill + skill && skillCodes.length > 0) {
         card = skillCard(skillCodes[Math.floor(random() * skillCodes.length)])
       }
     } else if (roll < MATE_CHANCE) {
@@ -583,7 +583,8 @@ export function pickCards(
         card = mateMagicUpCard()
       } else if (
         roll >= from + MATE_MAGIC_CHANCE &&
-        roll < from + MATE_MAGIC_CHANCE + SKILL_CHANCE
+        roll < from + MATE_MAGIC_CHANCE + SKILL_CHANCE &&
+        skillCodes.length > 0
       ) {
         card = skillCard(skillCodes[Math.floor(random() * skillCodes.length)])
       }
