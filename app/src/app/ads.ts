@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { holdIdle } from '@web/features/raising/idleHold'
 
 /**
  * 보상형 광고 (decisions.md 586·589번, #888). "광고 보기" 단추가 모두 이 함수를 거친다.
@@ -77,6 +78,8 @@ export async function watchRewardedAd(_placement: AdPlacement): Promise<AdResult
   }
   // 받아 둔 광고는 한 번만 쓴다.
   loading = null
+  // 광고를 보는 동안에는 (682번) 방치형 전투를 세운다.
+  holdIdle('ad', true)
   try {
     const { AdMob, RewardAdPluginEvents } = await plugin()
     // 보상은 광고가 닫힌 뒤에 준다: 끝까지 봤는지는 닫히기 전의 알림으로 안다. 중간에 닫으면 보상 알림 없이 닫힘만 온다.
@@ -111,6 +114,7 @@ export async function watchRewardedAd(_placement: AdPlacement): Promise<AdResult
   } catch {
     return 'unavailable'
   } finally {
+    holdIdle('ad', false)
     // 다음 광고를 미리 받아 둔다.
     void load()
   }

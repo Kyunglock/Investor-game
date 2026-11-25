@@ -1,12 +1,13 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { diamondText } from '@web/features/raising/gachaRules'
+import { holdIdle } from '@web/features/raising/idleHold'
 import { idleBossChallenge } from '@web/features/raising/idlePredict'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useShownIdle } from '@web/features/raising/useIdleBattle'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { preloadRewardedAd } from '../app/ads'
-import { rate, readOfflineSeen, shouldShowOffline } from '../app/income'
+import { rate, readOfflineSeen, saveOfflineSeen, shouldShowOffline } from '../app/income'
 import { meetingReady } from '../app/meeting'
 import { Sheet } from '../app/Sheet'
 import { AssaultSelect } from '../app/toy-city/ToyCityHome'
@@ -106,6 +107,9 @@ function buyNote(company: Company, u: Upgrade) {
   return `매수 주문 한 장 ${sharesOf(damage).toLocaleString()}주 · 무기와 동료가 셀수록 덤이 붙어요`
 }
 
+/** 스테이지에서 돌아온 뒤 이만큼 안에 온 "자리를 비운 동안" 알림은 그 판 때문이라 띄우지 않는다 (682번). */
+const HOLD_NOTICE_MS = 15000
+
 export function IdleHome({
   company,
   connected,
@@ -175,6 +179,25 @@ export function IdleHome({
   const [offlineSeen, setOfflineSeen] = useState(readOfflineSeen)
   const offlineShowing = shouldShowOffline(idle?.offline, offlineSeen)
   const elsewhere = useAppUi((s) => s.battle != null || s.investOpen)
+  // 스테이지 한 판을 하는 동안에는 (682번) 방치형 전투를 세운다: 화면의 전투도, 서버로 가는 박동도 멈춘다.
+  const inBattle = useAppUi((s) => s.battle != null)
+  const heldUntil = useRef(0)
+  useEffect(() => {
+    holdIdle('battle', inBattle)
+    if (!inBattle) return
+    return () => {
+      heldUntil.current = Date.now()
+      holdIdle('battle', false)
+    }
+  }, [inBattle])
+  // 세워 둔 동안의 시간 수입은 자리를 비운 것으로 셈해 들어온다. 한 판을 하고 온 것이라 "자리를 비운 동안" 알림은 띄우지 않는다.
+  const offlineAt = idle?.offline?.at
+  useEffect(() => {
+    if (offlineAt == null || offlineAt === offlineSeen) return
+    if (!inBattle && Date.now() - heldUntil.current > HOLD_NOTICE_MS) return
+    saveOfflineSeen(offlineAt)
+    setOfflineSeen(offlineAt)
+  }, [offlineAt, offlineSeen, inBattle])
   const exReady = stageBadge(company) !== null
   // 광고 단추를 누르자마자 광고가 뜨도록 앱에서는 미리 받아 둔다 (589번).
   useEffect(preloadRewardedAd, [])
