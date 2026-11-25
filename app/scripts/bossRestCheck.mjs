@@ -76,7 +76,7 @@ try {
     await page.getByTestId('cat-boss').click()
     const bossField = page.getByTestId('boss-field')
     // 고양이가 없으면 사장냥은 쉴 수 없다.
-    await expect(bossField).toHaveText('출전 중')
+    await expect(bossField).toHaveText('사장냥 빼기')
     await expect(bossField).toBeDisabled()
 
     // 하늘냥을 출전시키면 사장냥이 쉴 수 있다.
@@ -87,7 +87,7 @@ try {
     await expect(bossField).toBeEnabled()
     await bossField.click()
     assert.deepEqual(calls, [{ fielded: false }])
-    await expect(bossField).toHaveText('출전')
+    await expect(bossField).toHaveText('사장냥 출전')
     await expect(page.getByTestId('cat-boss')).toHaveAttribute('aria-label', /쉬는 중/)
     await expect(page.getByTestId('cat-boss')).toHaveAttribute('data-fielded', 'false')
 
