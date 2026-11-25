@@ -46,7 +46,11 @@ try {
     income: { perSecond: 0, staffPerSecond: 0, bonusPercent: 0 },
     offline: null,
     lastDraws: [],
-    cats: [cat('sky', '하늘냥', 'C', 1), cat('silver', '은빛냥', 'S', 0), cat('star', '별빛냥', 'S', 0)],
+    cats: [
+      cat('sky', '하늘냥', 'C', 1),
+      cat('silver', '은빛냥', 'S', 0),
+      cat('star', '별빛냥', 'S', 0),
+    ],
   }
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
   const errors = []
