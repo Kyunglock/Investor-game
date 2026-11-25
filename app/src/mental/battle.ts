@@ -195,7 +195,11 @@ import {
   idleRaidKind,
   PANIC_RUSH,
   panicRushGap,
+  STAGE_WAVE,
+  waveCurve,
   waveKind,
+  waveProgress,
+  waveStreamCount,
 } from './waves'
 import {
   aimWithJitter,
@@ -218,7 +222,10 @@ import { BULLET_ART, BULLET_VISUAL_SCALE, GRADE_FIRE, gradeTint, sparkles } from
 export interface Hud {
   mental: number
   maxMental: number
+  /** 남은 시간(초). 웨이브 판(690번)은 제한 시간이 없어 0이다. */
   secondsLeft: number
+  /** 웨이브 판 (690번): 지금 몇 번째 웨이브(1부터)인지와 전체 수. 시간을 버티는 판은 null. */
+  wave: { at: number; total: number } | null
   kills: number
   score: number
   level: number
@@ -261,6 +268,8 @@ export interface Outcome {
   stars: number
   /** 싸운 시간(초, 소수 한 자리). 카드를 고르거나 멈춘 동안은 빼고 잰다. */
   seconds: number
+  /** 웨이브 판 (690번)에서 닿은 웨이브와 전체 수. 시간 판은 null. */
+  wave: { at: number; total: number } | null
   /** 공격 판(413번)에서 부순 매도벽 수와 전체 벽 수. 다른 모드는 0. */
   wallsBroken: number
   wallsTotal: number
@@ -862,6 +871,15 @@ class BattleScene extends Phaser.Scene {
   /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
   private begun = false
   private nextWave = WAVE_SECONDS
+  /** 웨이브 판 (690번): 전체 웨이브 수(시간 판은 0)와 지금 웨이브(시작 전 0). */
+  private waveTotal = 0
+  private waveAt = 0
+  /** 다음 웨이브까지 남은 쉬는 시간(초): 화면의 몬스터를 다 물리친 동안에만 준다. */
+  private waveRest: number = STAGE_WAVE.first
+  /** 이 웨이브의 줄기에서 아직 나올 몬스터 수와 그 간격(초)·시계. */
+  private waveStream = 0
+  private waveStreamEvery = 0
+  private waveStreamClock = 0
   /** 공격 판에서 이미 출현 배너를 띄운 몹(손절·투기·공매도). */
   private assaultSeen = new Set<string>()
   /** 다음 패닉셀 러시 시각(초)과, 러시 중이면 아직 나올 패닉셀 수·다음 한 마리까지 남은 시간. */
@@ -909,6 +927,7 @@ class BattleScene extends Phaser.Scene {
     this.speedScale = this.assault?.enemySpeed ?? scaled?.speedScale ?? 1
     this.dmgScale = this.assault?.enemyDmg ?? scaled?.dmgScale ?? 1
     this.defenseBoss = opts.mode === 'defense' && Boolean(opts.stage?.boss)
+    this.waveTotal = opts.mode === 'defense' ? Math.max(0, Math.floor(opts.stage?.waves ?? 0)) : 0
     this.loadout = opts.loadout
   }
 
@@ -1533,7 +1552,8 @@ class BattleScene extends Phaser.Scene {
   /** 디펜스 보스 스테이지 (509번): 한 판의 한가운데에 보스가 나와 위에서 졸개를 부른다. 보스를 쓰러뜨리면 깬다. */
   private defenseBossStep() {
     if (!this.bossCalled) {
-      if (this.elapsed >= this.defenseBossSeconds()) {
+      // 웨이브 판 (690번)의 보스는 마지막 웨이브가 부른다(startWave).
+      if (!this.waveTotal && this.elapsed >= DEFENSE_BOSS_SECONDS) {
         this.bossCalled = true
         sfx.levelUp()
         this.opts.onBanner(`${BOSS.name} 등장!!`, '#ff4f6d')
@@ -3074,7 +3094,11 @@ class BattleScene extends Phaser.Scene {
    */
   private staged(scale: number) {
     if (this.mode === 'defense' && this.opts.stage) {
-      return numberedStageScale(scale, this.elapsed)
+      // 웨이브 판 (690번)은 웨이브로 센다: 첫 웨이브는 60%, 넷째 웨이브부터 끝까지.
+      return numberedStageScale(
+        scale,
+        this.waveTotal ? Math.max(0, this.waveAt - 1) * WAVE_SECONDS : this.elapsed,
+      )
     }
     const k = Math.min(
       1,
@@ -3085,20 +3109,63 @@ class BattleScene extends Phaser.Scene {
 
   /** 난이도 곡선의 시각(초): 예전 4분 판 기준으로 잡은 곡선을 2분 판에 맞춰 PACE배 빨리 돈다 (363번). */
   private curve() {
-    // 길이가 정해진 판 (677번, 3분 스테이지)은 그 길이의 끝에 같은 세기에 닿게 돈다.
-    const seconds = this.stageSeconds()
-    return this.elapsed * (seconds ? 240 / seconds : PACE)
+    // 웨이브 판 (690번)은 시간이 아니라 웨이브로 돈다: 마지막 웨이브에 같은 세기에 닿는다.
+    return this.waveTotal ? waveCurve(this.waveAt, this.waveTotal) : this.elapsed * PACE
   }
 
-  /** 디펜스 번호 스테이지가 제 길이를 정했으면 그 길이(초). */
-  private stageSeconds() {
-    return this.mode === 'defense' ? this.opts.stage?.seconds : undefined
+  /**
+   * 웨이브 판 (690번): 화면의 몬스터를 다 물리치면 잠깐 쉬고 다음 웨이브가 온다. 마지막 웨이브까지 물리치면 깬다(보스 스테이지는 마지막 웨이브의
+   * 보스를 쓰러뜨려야 깬다, 509번). 제한 시간은 없다.
+   */
+  private waveStep(dt: number) {
+    if (this.waveStream > 0) {
+      this.waveStreamClock = Math.min(this.waveStreamClock + dt, this.waveStreamEvery * 3)
+      while (this.waveStream > 0 && this.waveStreamClock >= this.waveStreamEvery) {
+        const r = Math.random()
+        // 화면이 꽉 차 못 꺼내면 자리가 날 때까지 기다린다: 줄기의 수는 줄지 않는다.
+        if (!this.spawn(r < 0.6 ? 'panic' : r < 0.82 ? 'dump' : r < 0.95 ? 'stop' : 'spec')) break
+        this.waveStreamClock -= this.waveStreamEvery
+        this.waveStream--
+      }
+      return
+    }
+    if (this.waveAt > 0 && this.enemies.countActive() > 0) return
+    if (this.waveAt >= this.waveTotal) {
+      // 보스 웨이브는 보스가 쓰러질 때 끝난다(kill).
+      if (!this.bossEnemy) this.finish(true, 'clear')
+      return
+    }
+    this.waveRest -= dt
+    if (this.waveRest <= 0) this.startWave()
   }
 
-  /** 디펜스 보스가 나오는 때: 한 판의 한가운데 (509번). */
-  private defenseBossSeconds() {
-    const seconds = this.stageSeconds()
-    return seconds ? seconds / 2 : DEFENSE_BOSS_SECONDS
+  private startWave() {
+    this.waveAt++
+    this.waveRest = STAGE_WAVE.rest
+    const last = this.waveAt >= this.waveTotal
+    const head = last ? '마지막 웨이브' : `웨이브 ${this.waveAt}/${this.waveTotal}`
+    this.waveStream = waveStreamCount(this.waveAt, this.waveTotal, this.staged(this.countScale))
+    this.waveStreamEvery = STAGE_WAVE.pour / this.waveStream
+    this.waveStreamClock = 0
+    if (last && this.defenseBoss) {
+      this.bossCalled = true
+      sfx.levelUp()
+      this.opts.onBanner(`${head} · ${BOSS.name} 등장!!`, '#ff4f6d')
+      this.startBoss()
+    } else {
+      const kind = waveKind(this.waveAt - 1)
+      if (kind === 'panic') {
+        this.wavePanic()
+        this.opts.onBanner(`${head} · 패닉셀 떼가 몰려온다!`, '#82bbff')
+      } else if (kind === 'dump') {
+        this.waveDump()
+        this.opts.onBanner(`${head} · 투매가 쏟아진다!`, '#c5a1ff')
+      } else {
+        this.waveShort(false)
+        this.opts.onBanner(`${head} · 공매도 대열이 밀려온다!`, '#9eb7ff')
+      }
+    }
+    this.pushHud(true)
   }
 
   private waveDump() {
@@ -3118,12 +3185,13 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  private waveShort() {
+  private waveShort(banner = true) {
     const { w } = this.view()
-    const count = Math.min(
-      24,
-      Math.round((6 + Math.min(6, this.elapsed / 30)) * this.staged(this.countScale)),
-    )
+    // 뒤로 갈수록 여섯에서 열둘까지: 시간 판은 30초마다 하나, 웨이브 판 (690번)은 마지막 웨이브에 열둘.
+    const grow = this.waveTotal
+      ? waveProgress(this.waveAt, this.waveTotal) * 6
+      : Math.min(6, this.elapsed / 30)
+    const count = Math.min(24, Math.round((6 + grow) * this.staged(this.countScale)))
     const cols = Math.ceil(count / 2)
     for (let i = 0; i < count; i++) {
       this.spawn('short', [
@@ -3131,7 +3199,7 @@ class BattleScene extends Phaser.Scene {
         -40 - Math.floor(i / cols) * 64,
       ])
     }
-    this.opts.onBanner('공매도 웨이브! 방패 대열이 밀려온다!', '#9eb7ff')
+    if (banner) this.opts.onBanner('공매도 웨이브! 방패 대열이 밀려온다!', '#9eb7ff')
   }
 
   /**
@@ -3780,7 +3848,10 @@ class BattleScene extends Phaser.Scene {
       const e = child as Enemy
       if (e.active && !e.dying) live.push(e)
     }
-    return spreadTargets(shooters, live, 520)
+    const targets = spreadTargets(shooters, live, 520)
+    // 웨이브 판 (690번)은 제한 시간이 없다: 가까운 몬스터가 없는 손은 멀리 있는 보스를 쏜다. 아니면 손을 대지 않는 판에서 보스 웨이브가 끝나지 않는다.
+    const boss = this.bossEnemy?.active && !this.bossEnemy.dying ? this.bossEnemy : null
+    return this.waveTotal && boss ? targets.map((t) => t ?? boss) : targets
   }
 
   /** 초당 발사 수를 기존의 80%로 낮춘다. */
@@ -5347,6 +5418,9 @@ class BattleScene extends Phaser.Scene {
         reason,
         segments: this.mode === 'advance' ? this.segment : this.assault ? this.wallsBroken : 0,
         seconds: Math.round(Math.min(this.limitSeconds(), this.elapsed) * 10) / 10,
+        wave: this.waveTotal
+          ? { at: Math.min(this.waveTotal, Math.max(1, this.waveAt)), total: this.waveTotal }
+          : null,
         wallsBroken: this.assault ? this.wallsBroken : 0,
         wallsTotal,
         priceStart: this.assault?.startPrice ?? 0,
@@ -5372,11 +5446,11 @@ class BattleScene extends Phaser.Scene {
     )
   }
 
-  /** 이 판의 제한 시간(초): 공격 판은 3분(#593), 나머지는 BATTLE_SECONDS. */
+  /** 이 판의 제한 시간(초): 공격 판은 3분(#593), 나머지는 BATTLE_SECONDS. 웨이브 판 (690번)은 제한 시간이 없다. */
   private limitSeconds() {
     return (
       this.opts.vault?.score?.seconds ??
-      (this.assault ? ASSAULT_SECONDS : (this.stageSeconds() ?? BATTLE_SECONDS))
+      (this.assault ? ASSAULT_SECONDS : this.waveTotal ? Number.POSITIVE_INFINITY : BATTLE_SECONDS)
     )
   }
 
@@ -5394,7 +5468,10 @@ class BattleScene extends Phaser.Scene {
     this.opts.onHud({
       mental: Math.ceil(this.mental),
       maxMental: this.loadout.maxMental,
-      secondsLeft: Math.max(0, Math.ceil(this.limitSeconds() - this.elapsed)),
+      secondsLeft: this.waveTotal ? 0 : Math.max(0, Math.ceil(this.limitSeconds() - this.elapsed)),
+      wave: this.waveTotal
+        ? { at: Math.min(this.waveTotal, Math.max(1, this.waveAt)), total: this.waveTotal }
+        : null,
       kills: this.kills,
       score: this.score,
       level: this.level,
@@ -5753,14 +5830,20 @@ class BattleScene extends Phaser.Scene {
     }
 
     // 생성: 한 판(2분)에 걸쳐 갈수록 빨라진다. 파도는 15초마다 패닉셀 → 투매 → 공매도 순으로 돌고 뒤로 갈수록 커진다 (340·363번).
+    // 웨이브 판 (690번)은 시간이 아니라 웨이브로 나온다: 다 물리쳐야 다음 웨이브가 온다.
     const every = Math.max(200, 700 - this.curve() * 2.6) / this.staged(this.countScale)
-    if (this.mode === 'defense' && time - this.lastSpawn > every) {
+    if (this.waveTotal) {
+      this.waveStep(dt)
+      if (this.over) return
+    } else if (this.mode === 'defense' && time - this.lastSpawn > every) {
       this.lastSpawn = time
       const r = Math.random()
       this.spawn(r < 0.6 ? 'panic' : r < 0.82 ? 'dump' : r < 0.95 ? 'stop' : 'spec')
     }
     if (this.opts.idle) this.idleRaidStep(dt)
-    else if ((this.mode === 'defense' || this.assault) && this.elapsed >= this.nextWave) {
+    else if (this.waveTotal) {
+      // 웨이브는 위의 waveStep이 낸다: 15초마다의 파도와 패닉셀 러시는 없다.
+    } else if ((this.mode === 'defense' || this.assault) && this.elapsed >= this.nextWave) {
       const kind = waveKind(Math.round(this.nextWave / WAVE_SECONDS) - 1)
       if (kind === 'panic') {
         this.wavePanic()
@@ -5771,7 +5854,8 @@ class BattleScene extends Phaser.Scene {
       } else this.waveShort()
       this.nextWave += WAVE_SECONDS
     }
-    if (!this.opts.idle && (this.mode === 'defense' || this.assault)) this.panicRushStep(dt)
+    if (!this.opts.idle && !this.waveTotal && (this.mode === 'defense' || this.assault))
+      this.panicRushStep(dt)
 
     // 적 움직임: 매 프레임 새 객체를 만들지 않는다.
     const list = this.enemies.getChildren()

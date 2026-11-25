@@ -9,6 +9,7 @@ import {
   SEGMENTS,
   stageLabel,
   stageSpec,
+  stageWaves,
   stars,
 } from './advance'
 
@@ -99,9 +100,22 @@ describe('번호 스테이지 초반 난이도', () => {
 })
 
 describe('스테이지의 판 (676번)', () => {
-  it('번호 스테이지의 판에 적의 수가 두 배고 3분을 버틴다', () => {
+  it('번호 스테이지의 판에 적의 수가 두 배고, 시간 대신 웨이브를 물리친다 (690번)', () => {
     const base = stageSpec(3)
-    expect(crowdStageSpec(3)).toEqual({ ...base, countScale: base.countScale * 2, seconds: 180 })
+    expect(crowdStageSpec(3)).toEqual({ ...base, countScale: base.countScale * 2, waves: 11 })
     expect(crowdStageSpec(10).boss).toBe(true)
+  })
+
+  it('웨이브는 챕터 안에서 10에서 14까지 늘고, 챕터 끝의 보스 스테이지는 15다', () => {
+    expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((stage) => stageWaves(stage))).toEqual([
+      10, 10, 11, 11, 12, 12, 13, 13, 14, 15,
+    ])
+    // 다음 챕터도 같은 차례로 돈다.
+    expect(stageWaves(11)).toBe(10)
+    expect(stageWaves(20)).toBe(15)
+    for (let stage = 1; stage <= 60; stage++) {
+      expect(stageWaves(stage, 6)).toBeGreaterThanOrEqual(10)
+      expect(stageWaves(stage, 6)).toBeLessThanOrEqual(15)
+    }
   })
 })
