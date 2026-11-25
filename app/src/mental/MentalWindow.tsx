@@ -52,6 +52,7 @@ import { FirstClear } from './FirstClear'
 import { GunSprite } from './GunSprite'
 import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './gameSpeed'
 import { BATTLE_SECONDS, type Genre } from './genres'
+import { StageLobbyTeam } from './StageLobbyPlan'
 import { StagePortrait } from './StagePortrait'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './stage.css'
@@ -250,7 +251,7 @@ export function MentalWindow({
           />
         )}
         {!started && (
-          <div className="stage-lobby" data-testid="mental-lobby">
+          <div className={`stage-lobby${crowd ? ' is-crowd' : ''}`} data-testid="mental-lobby">
             <header className="stage-heading">
               <span className="stage-eyebrow">
                 {crowd
@@ -300,7 +301,8 @@ export function MentalWindow({
                   {levelWhy(company.invest?.outcome?.battle?.levelParts)}
                 </span>
               )}
-              <StagePortrait weapon={heroOf(company).weapon} />
+              {/* 메인 스테이지의 출전 화면에는 사장냥 뒷모습과 무기 칸을 두지 않는다 (681번). */}
+              {!crowd && <StagePortrait weapon={heroOf(company).weapon} />}
               {mode === 'assault' && <small>패닉셀·투매를 뚫고 전진!</small>}
               {mode !== 'assault' && (
                 <>
@@ -322,33 +324,39 @@ export function MentalWindow({
                 </>
               )}
             </div>
-            <EquippedWeapon
-              weapon={heroOf(company).weapon}
-              onChange={() => {
-                sfx.tap()
-                onChangeWeapon()
-              }}
-            />
+            {!crowd && (
+              <EquippedWeapon
+                weapon={heroOf(company).weapon}
+                onChange={() => {
+                  sfx.tap()
+                  onChangeWeapon()
+                }}
+              />
+            )}
             {apiError && (
               <p role="alert" className="stage-error">
                 {apiError}
               </p>
             )}
-            <div className="stage-enemies">
-              {(mode === 'assault'
-                ? [
-                    { label: '시장가 매도', fill: '#5b8def' },
-                    { label: '대량 매도', fill: '#2f5fbf' },
-                    { label: '허매도', fill: '#a9c1f0' },
-                  ]
-                : Object.values(ENEMIES)
-              ).map((e) => (
-                <span key={e.label}>
-                  <i style={{ background: e.fill }} />
-                  {e.label}
-                </span>
-              ))}
-            </div>
+            {crowd && <StageLobbyTeam company={company} />}
+            {/* 메인 스테이지의 출전 화면에는 적 범례를 두지 않는다 (681번). */}
+            {!crowd && (
+              <div className="stage-enemies">
+                {(mode === 'assault'
+                  ? [
+                      { label: '시장가 매도', fill: '#5b8def' },
+                      { label: '대량 매도', fill: '#2f5fbf' },
+                      { label: '허매도', fill: '#a9c1f0' },
+                    ]
+                  : Object.values(ENEMIES)
+                ).map((e) => (
+                  <span key={e.label}>
+                    <i style={{ background: e.fill }} />
+                    {e.label}
+                  </span>
+                ))}
+              </div>
+            )}
             <button
               type="button"
               disabled={busy}

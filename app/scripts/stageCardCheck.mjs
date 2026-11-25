@@ -80,6 +80,28 @@ try {
     // 스테이지: 첫 카드 석 장에 사장냥의 스킬과 고양이 마법 강화가 나온다.
     // 출전 화면: 무기를 보고 들어간다.
     await expect(page.getByTestId('stage-mode')).toContainText('디펜스 · 3분 버티기')
+    // 출전 화면의 출전 고양이 줄 (681번): 출전 칸의 차례대로, 쉬는 노을냥은 없다. 밤냥은 제 고유 스킬을 단다.
+    const lobbyCats = page.getByTestId('stage-lobby-cat')
+    assert.deepEqual(await lobbyCats.evaluateAll((els) => els.map((el) => el.dataset.code)), [
+      'night',
+      'sky',
+      'mint',
+      'lilac',
+    ])
+    // 스킬은 글이 아니라 그림으로: 밤냥에 메테오 그림 하나, 스킬 없는 하늘냥은 비고 "총만 쏜다"도 없다.
+    await expect(lobbyCats.first().getByRole('img', { name: '메테오' })).toHaveCount(1)
+    await expect(lobbyCats.nth(1).locator('.stage-lobby-team-skills > *')).toHaveCount(0)
+    await expect(page.getByTestId('stage-lobby-team')).not.toContainText('총만 쏜다')
+    // 메인 스테이지의 출전 화면에는 사장냥 뒷모습과 무기 칸이 없다.
+    await expect(page.locator('.stage-portrait')).toHaveCount(0)
+    await expect(page.getByTestId('stage-weapon')).toHaveCount(0)
+    // 미니맵(타임라인)과 적 범례는 두지 않는다.
+    await expect(page.getByTestId('stage-timeline')).toHaveCount(0)
+    await expect(page.locator('.stage-enemies')).toHaveCount(0)
+    const lobby = page.getByTestId('mental-lobby')
+    const overflow = await lobby.evaluate((el) => el.scrollWidth - el.clientWidth)
+    assert.equal(overflow, 0, '출전 화면이 옆으로 넘치지 않는다')
+    await page.screenshot({ path: `/tmp/stage-lobby-${width}.png` })
     await page.getByRole('button', { name: /출발/ }).click()
     const pick = page.getByTestId('mental-levelup')
     await expect(pick).toBeVisible({ timeout: 60000 })
