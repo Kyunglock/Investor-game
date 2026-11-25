@@ -611,10 +611,11 @@ class IdleEngineTest {
 
   @Test
   void powerIsOneNumberThatEveryUpgradeRaisesAndTheWallDoesNotChange() {
-    // 전투력 (538·635번): 권총·강화 없음이면 100 × √(2배속 × 초당 피해와 매수 주문의 합 6.69) = 365.
+    // 전투력 (538·635번): 권총·강화 없음이면 100 × √(2배속 × 초당 피해와 매수 주문의 합 5.69) = 337 (688번: 매수 주문이 1.5에서 1.0이
+    // 되어 6.69·365에서).
     start(1);
     double base = engine.view(state).power();
-    assertThat(base).isEqualTo(365);
+    assertThat(base).isEqualTo(337);
     state.idle.wall = 500;
     assertThat(engine.view(state).power()).as("the wall is not in it").isEqualTo(base);
     double last = base;
@@ -1414,7 +1415,7 @@ class IdleEngineTest {
     state.idle.wall = 100;
     tick(1000);
     // A deep wall does not make a buy order stronger (573): the order scale is not in it.
-    double order = 1.5;
+    double order = 1.0;
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
     // The order scale follows the wall's health (653; 1.5 in 646, 3.2 in 644, 4.0 with × 1.003^d
     // before): d = 99, health 208.0097 × (1 + 396 ÷ 724) = 321.78, 1 + 321.78 / 380 = 1.847, two
@@ -1456,44 +1457,28 @@ class IdleEngineTest {
   }
 
   @Test
-  void theTeamsGunsAddTheirShareToABuyOrder() {
-    // 638: a starting pistol alone adds nothing, so the order is what it was (225 shares).
+  void theTeamsGunsAddNothingToABuyOrder() {
+    // 688: the team's share (638) is gone. A fielded cat does not make a buy order stronger: only
+    // the buy upgrade (four shares a level) and the fish upgrade (six shares a level) do.
     start(1);
-    assertThat(engine.teamScale(state)).isCloseTo(1, offset(1e-9));
     assertThat(buyBonus()).isZero();
-    // A level 4 C cat with the starting pistol shoots 25% x 4^0.1 = 29% of the boss cat, 25%
-    // faster (sky, 646; 4^0.3 = 38% in 644, as hard as the boss cat before): the team is 1.359
-    // pistols, and (1.359 - 1) x 0.5 x 45 = 8.08, 8 shares come on top (653: one order is 45
-    // shares at 30 shares a health point; 40 of 225 in 646, 53 in 644, 140 before).
-    // 680번: the cat's gun is the whole pistol plus that old share, 129% of the boss cat's, so the
-    // team is 2.609 pistols and (2.609 - 1) x 0.5 x 45 = 36.2, 36 shares come on top.
-    double cat = 1.25 * (1 + 0.25 * Math.pow(4, 0.1));
     state.idle.cats.put("sky", 4);
     engine.fieldCat(state, "sky", true);
-    assertThat(engine.teamScale(state)).isCloseTo(1 + cat, offset(1e-9));
-    assertThat(buyBonus()).isEqualTo(36);
-    // The attack and fire upgrades are not in it: the team's share follows gear, not upgrades.
+    assertThat(buyBonus()).isZero();
     state.capital = 1e18;
-    company.mental.buyUpgrade(state, "damage", 20);
-    company.mental.buyUpgrade(state, "fire", 20);
-    assertThat(buyBonus()).isEqualTo(36);
-    // Fifty buy levels: 200 fixed shares, and the team's part grows by 0.4 shares a level (648).
     company.mental.buyUpgrade(state, "buy", 50);
-    assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(cat * 0.5 * 65));
+    assertThat(buyBonus()).isEqualTo(200);
     // The wall's depth changes nothing (573), and the server accepts an order of that size.
     state.idle.wall = 100;
-    // 1.609 x 0.5 x (45 + 0.4 x 50) = 52.29 (680; 0.359 x 0.5 x 65 = 11.67 in 653).
-    assertThat(buyBonus()).isEqualTo(200 + 52);
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 1, 1e9));
-    assertThat(state.idle.damage).isCloseTo(1.5 + 252 / 30.0, offset(1e-9));
-    // 영구 강화(생선)는 고정 수량에 6주(653번, 전에는 30주: 피해로는 같다)를 더하고 팀의 몫에는 한 단계에 1%를 곱한다 (644번).
+    assertThat(state.idle.damage).isCloseTo(1.0 + 200 / 30.0, offset(1e-9));
     state.fishLevels.put("buy", 10);
-    assertThat(buyBonus()).isEqualTo(200 + 60 + (long) Math.floor(cat * 0.5 * 65 * 1.1));
+    assertThat(buyBonus()).isEqualTo(200 + 60);
   }
 
   private long buyBonus() {
-    return engine.upgradeViews(state).stream()
+    return company.mental.upgradeViews(state).stream()
         .filter(u -> "buy".equals(u.kind()))
         .findFirst()
         .orElseThrow()

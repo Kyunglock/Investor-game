@@ -13,13 +13,13 @@ export const BUY_WALL = {
   retreatDistance: 80,
   /** 자동 전투의 재건 시간(초, 492번): 그동안 공격이 멈춘다. 무너져도 벽 번호는 그대로다 (584번). */
   idleRebuildSeconds: 2,
-  /** 매수 주문 한 장의 바탕 피해 (514번, 서버 IdleEngine.BUY_ORDER_DAMAGE). 0.75에서 두 배로 올렸다 (594번). */
-  orderDamage: 1.5,
+  /** 매수 주문 한 장의 바탕 피해 (514번, 서버 IdleEngine.BUY_ORDER_DAMAGE). 0.75에서 두 배로 올렸다가 (594번) 너무 세서 1.0으로 낮췄다 (688번). */
+  orderDamage: 1.0,
 } as const
 
 /**
  * 자동 전투의 매수 주문 한 장의 피해 (514·573·579번): 벽의 깊이(물량 배율)는 따르지 않는다. 바탕 피해에 매수벽 공격
- * 강화가 더한 피해(buyBonus, %가 아니라 더하는 값)를 얹는다. buyBonus에는 팀 화력을 따르는 덤(638번)이 서버에서 더해져 온다. 서버 IdleEngine.buyOrder와 같다.
+ * 강화가 더한 피해(buyBonus, %가 아니라 더하는 값)를 얹는다. 팀 화력의 덤(638번)은 688번에 뺐다. 서버 IdleEngine.buyOrder와 같다.
  */
 export function idleBuyOrderDamage(buyBonus: number) {
   return BUY_WALL.orderDamage + buyBonus
