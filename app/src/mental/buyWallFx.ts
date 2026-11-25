@@ -236,7 +236,10 @@ export class BuyWallFx {
         }
       }
       // 벽 밑의 체력 막대는 없앴다 (583번): 남은 수량은 벽 위의 숫자와 절반에서 금 가는 그림이 알린다.
-      this.title.setText(shareLabel(wall.hp)).setPosition(left + width / 2, top + height * 0.58)
+      // 숫자는 벽의 위쪽에 적는다: 가운데에 적으면 벽 앞에 선 고양이의 머리 위 스킬 그림과 겹쳐 그림을 가렸다.
+      this.title
+        .setText(shareLabel(wall.hp))
+        .setPosition(left + width / 2, top + Math.max(12, height * 0.28))
     } else {
       this.surface.setVisible(false)
       g.lineStyle(1, 0xe78181, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)

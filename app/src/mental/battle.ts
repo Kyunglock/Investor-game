@@ -52,6 +52,7 @@ import {
   RAM_ART,
   SKILL_MARK,
   SKILL_MARK_COLORS,
+  SKILL_MARK_RISE,
   skillMarkKey,
   spellKey,
   WALL_H,
@@ -1455,7 +1456,7 @@ class BattleScene extends Phaser.Scene {
         .setVisible(false),
       skillMarks: [0, 1, 2].map(() =>
         this.add
-          .image(body.x, body.y - 58, skillMarkKey('water'))
+          .image(body.x, body.y - SKILL_MARK_RISE, skillMarkKey('water'))
           .setDisplaySize(SKILL_MARK, SKILL_MARK)
           .setDepth(7)
           .setVisible(false),
@@ -5633,7 +5634,10 @@ class BattleScene extends Phaser.Scene {
       m.tag.setPosition(b.x, b.y + TAG_DROP)
       // 스킬이 둘이면 머리 위에 나란히 선다.
       m.skillMarks.forEach((mark, k) => {
-        mark.setPosition(b.x + (k - (m.skillCount - 1) / 2) * (SKILL_MARK - 4), b.y - 58)
+        mark.setPosition(
+          b.x + (k - (m.skillCount - 1) / 2) * (SKILL_MARK - 4),
+          b.y - SKILL_MARK_RISE,
+        )
       })
       if (!this.tweens.isTweening(b)) {
         b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)

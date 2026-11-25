@@ -18,7 +18,8 @@ import { IdleIcon } from './icons'
 
 /** 카드 초상화 아틀라스(scripts/catFaceAtlas.py가 만든다). 전투 원본 대신 이 작은 그림 하나만 받는다. */
 export const CAT_FACES_URL = facesUrl
-const SPECIAL_PORTRAITS: Partial<Record<CatCode, string>> = {
+/** 따로 그린 초상화가 있는 고양이. 식빵 그림이 없는 고양이는 공방에서도 이 그림을 쓴다(LoafCat.tsx). */
+export const SPECIAL_PORTRAITS: Partial<Record<CatCode, string>> = {
   star,
   silver,
   wisteria,
