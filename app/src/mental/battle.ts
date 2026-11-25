@@ -10,6 +10,7 @@ import {
   BOOST,
   type BoostCode,
   CARD_SECONDS,
+  type SkillCode,
   stopLossDamage,
 } from './actives'
 import {
@@ -231,6 +232,8 @@ export interface Hud {
   assault: AssaultHud | null
   /** 금고 보스전 (641번)에서 지금까지 넣은 피해량. 다른 판은 0. */
   damage: number
+  /** 카드로 켠 사장냥 스킬 가운데 아직 도는 것 (683번): 도는 동안에는 같은 카드를 다시 내지 않는다. */
+  skills: SkillCode[]
 }
 
 export interface AssaultHud {
@@ -319,6 +322,11 @@ export interface BattleOptions {
 
   /** 처음 배속(gameSpeed.ts). 없으면 1배. */
   speed?: GameSpeed
+  /**
+   * 배속의 바탕 (683번): 배속 1배의 빠르기에 곱하는 값. 스테이지는 메인 화면의 자동 전투와 같은 빠르기(IDLE_GAME_SPEED)를 1배로 삼고 그 위에
+   * 1.5배·2배를 건다. 없으면 1.
+   */
+  speedBase?: number
   /** 전진 모드 또는 디펜스(EX·번호 스테이지) (364번), 공격 판 (413번). */
   mode: BattleMode
   /** 전진 모드의 스테이지 판 (369번). 없으면 다섯 구간 + 보스. */
@@ -868,6 +876,7 @@ class BattleScene extends Phaser.Scene {
   private barrageLeft = 0
   private barrageClock = 0
   private rallyUntil = 0
+  private fortifyUntil = 0
   /** 광고 스킬 (588번): 배수가 끝나는 전투 초. */
   private boostUntil: Record<BoostCode, number> = { boostFire: 0, boostDamage: 0, boostBuy: 0 }
   /** 상한가·물타기 (591번)가 끝나는 전투 초, 그리고 눌러 놓고 아직 치지 못한 손절. */
@@ -3812,6 +3821,7 @@ class BattleScene extends Phaser.Scene {
       this.rallyUntil = this.elapsed + (left ?? CARD_SECONDS)
     } else if (code === 'fortify') {
       this.buyWall?.fortify(left ?? CARD_SECONDS)
+      this.fortifyUntil = this.elapsed + (left ?? CARD_SECONDS)
       this.buyWallFx?.fortify()
       this.drawBuyWall()
     } else if (code === 'limitUp') {
@@ -5416,7 +5426,19 @@ class BattleScene extends Phaser.Scene {
           }
         : null,
       damage: this.vaultDamage,
+      skills: this.runningSkills(),
     })
+  }
+
+  /** 지금 도는 사장냥 스킬 (683번). 한 방에 끝나는 손절은 돌지 않는다. */
+  private runningSkills(): SkillCode[] {
+    const running: SkillCode[] = []
+    if (this.barrageLeft > 0) running.push('barrage')
+    if (this.elapsed < this.rallyUntil) running.push('rally')
+    if (this.elapsed < this.fortifyUntil) running.push('fortify')
+    if (this.elapsed < this.limitUpUntil) running.push('limitUp')
+    if (this.elapsed < this.averagingUntil) running.push('averaging')
+    return running
   }
 
   /** 큰손 체력 막대를 보스 발밑에 그린다 (457번). 보스가 없거나 공격 판이 아니면 지운다. */
@@ -5565,7 +5587,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 플레이어 배속(gameSpeed.ts). 확인 스크립트가 빠르기를 덮어쓴 동안에는 그쪽을 따른다. */
   setGameSpeed(speed: GameSpeed) {
-    this.playerScale = simScale(speed)
+    this.playerScale = simScale(speed) * (this.opts.speedBase ?? 1)
     this.applySpeed()
   }
 
