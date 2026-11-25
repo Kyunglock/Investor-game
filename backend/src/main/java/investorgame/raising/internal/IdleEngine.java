@@ -111,8 +111,8 @@ class IdleEngine {
   // A buy order's damage is its own number (514): this base times the wall's order scale (the
   // same scale the sell orders and the buy wall's health use, 498) times the buy upgrade. It does
   // not follow the weapon. Matches the app's mental/buyWall.ts BUY_WALL.orderDamage.
-  // Doubled from 0.75 in 594.
-  private static final double BUY_ORDER_DAMAGE = 1.5;
+  // Doubled from 0.75 in 594, then 1.0 in 688 (too strong all game long).
+  private static final double BUY_ORDER_DAMAGE = 1.0;
   // The buy wall answers every sell order with two buy orders, a pair every 0.15 game seconds at
   // the fastest (buyWall.ts shotSeconds - shotJitter).
   private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;
@@ -905,72 +905,20 @@ class IdleEngine {
   static final double SHARES_PER_HP = 30;
 
   /**
-   * One buy order's damage (514, 573, 579, 638). The wall's depth is not in it. The buy wall attack
-   * upgrade raises it by a fixed number of shares a level, and the team's guns add their share on
-   * top (teamShares).
+   * One buy order's damage (514, 573, 579). The wall's depth is not in it, and neither are the
+   * team's guns (688: the team's share of 638 is gone). The buy wall attack upgrade and the fish
+   * upgrade raise it by a fixed number of shares a level.
    */
   private double buyOrder(CompanyState c) {
     return BUY_ORDER_DAMAGE + buyUp(c);
   }
 
-  /** The damage added to one buy order: the buy wall attack upgrade's and the team's shares. */
+  /** The damage the buy wall attack upgrade adds to one buy order. */
   private double buyUp(CompanyState c) {
-    for (CompanyView.BattleUpgrade u : upgradeViews(c)) {
+    for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
       if ("buy".equals(u.kind())) return u.bonusShares() / SHARES_PER_HP;
     }
     return 0;
-  }
-
-  /**
-   * 매수 주문의 팀 덤 (decisions.md 638번): 벽 체력이 지수로 크면서(636번) 고정 수량뿐인 매수 주문은 깊은 벽에서 의미가 없었다. 팀 화력 배율(강화를
-   * 뺀 총들의 화력 ÷ 처음 권총)에서 1을 뺀 만큼, 바탕 수량(225주 + 단계당 BUY_TEAM_STEP_SHARES주)의 BUY_TEAM_SHARE배를 얹는다. 처음
-   * 권총뿐이면 덤이 없어 전과 같다. 벽의 깊이는 여전히 보지 않는다 (573번): 무기와 동료가 세질수록 커진다.
-   */
-  static final double BUY_TEAM_SHARE = 0.5;
-
-  // 648번: 강화 단계가 다섯 배로 많아져 2주에서 0.4주로 낮췄다(매수 4주와 같은 비율). 653번에 주의 크기가 5분의 1이 되어 피해로는 646번과 같다.
-  static final double BUY_TEAM_STEP_SHARES = 0.4;
-
-  /** 팀 화력 배율 (638번): 강화를 뺀 모든 총의 (한 발 × 초당 발수 × 탄 강화)를 처음 권총의 그것으로 나눈 값. 처음 권총뿐이면 1. */
-  double teamScale(CompanyState c) {
-    double total = 0;
-    for (Shooter shooter : firing(c, shooters(c, 1, 1))) {
-      total += shooter.damage() * shooter.perSecond() * shooter.power();
-    }
-    return total / (1000.0 / PISTOL_FIRE_MS);
-  }
-
-  /** 매수벽 공격 level단계에서 팀이 매수 주문 한 장에 얹는 수량(주, 638번). 영구 강화(fish단계)는 한 단계에 3%를 곱한다. */
-  private long teamShares(CompanyState c, int level) {
-    int fish = c.fishLevels.getOrDefault("buy", 0);
-    double shares =
-        Math.max(0, teamScale(c) - 1)
-            * BUY_TEAM_SHARE
-            * (BUY_ORDER_DAMAGE * SHARES_PER_HP + BUY_TEAM_STEP_SHARES * level)
-            * (1 + MentalEngine.FISH_STEP_PERCENT / 100.0 * fish);
-    return (long) Math.min(Long.MAX_VALUE / 4, Math.floor(shares));
-  }
-
-  /** 전투 강화의 화면 값: 매수벽 공격에는 팀의 덤(638번)이 더해져 있다. 화면과 서버가 이 수량으로 매수 주문 한 장을 센다. */
-  List<CompanyView.BattleUpgrade> upgradeViews(CompanyState c) {
-    return engine.mental.upgradeViews(c).stream()
-        .map(
-            u ->
-                "buy".equals(u.kind())
-                    ? new CompanyView.BattleUpgrade(
-                        u.kind(),
-                        u.level(),
-                        u.price(),
-                        u.priceGrowthPercent(),
-                        u.bonusPercent(),
-                        u.nextBonusPercent(),
-                        u.stepBonusPercent(),
-                        u.nextStepBonusPercent(),
-                        u.bonusShares() + teamShares(c, u.level()),
-                        u.nextBonusShares() + teamShares(c, u.level() + 1),
-                        u.maxLevel())
-                    : u)
-        .toList();
   }
 
   /**
