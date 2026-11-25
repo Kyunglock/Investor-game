@@ -10,6 +10,7 @@ import { idleLoadout } from './loadout'
 import {
   bossEncounter,
   bossScale,
+  bossTier,
   cardMods,
   dungeonEncounter,
   scoreText,
@@ -65,7 +66,7 @@ export function VaultField({
           mapWall: 151,
           guardianArt,
           scale: bossScale(vault.boss),
-          score: { seconds: vault.boss.seconds * VAULT_SIM },
+          score: { seconds: vault.boss.seconds * VAULT_SIM, tier: bossTier },
         },
       }
     }
@@ -160,7 +161,8 @@ export function VaultField({
           {hud &&
             (boss ? (
               <small data-testid="vault-score">
-                피해량 {scoreText(hud.damage)} · {seconds}초
+                피해량 {scoreText(hud.damage)}
+                {hud.damage >= 10 && ` · ${bossTier(hud.damage).name}`} · {seconds}초
               </small>
             ) : (
               <small>
