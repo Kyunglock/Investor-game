@@ -4,6 +4,7 @@ import { BASE_LOADOUT, type Loadout } from '../mental/cards'
 import {
   bossEncounter,
   bossScale,
+  bossTier,
   cardMods,
   DUNGEON_FLOW,
   dungeonEncounter,
@@ -151,5 +152,17 @@ describe('금고 도전', () => {
     expect(leftText(5 * 3_600_000 + 12 * 60_000)).toBe('5시간 12분')
     expect(leftText(8 * 60_000)).toBe('8분')
     expect(leftText(-5)).toBe('0분')
+  })
+})
+
+describe('보스전 등급 게이지 (692번)', () => {
+  it('문턱은 10에서 1.5배씩이고 이름은 서버와 같다', () => {
+    expect(bossTier(0)).toEqual({ tier: 0, name: '등급 없음', fill: 0 })
+    expect(bossTier(5).fill).toBeCloseTo(0.5)
+    expect(bossTier(10)).toMatchObject({ tier: 1, name: '브론즈 1', fill: 0 })
+    expect(bossTier(15)).toMatchObject({ tier: 2, name: '브론즈 2' })
+    expect(bossTier(12.5).fill).toBeCloseTo(0.5)
+    expect(bossTier(10 * 1.5 ** 10).name).toBe('실버 1')
+    expect(bossTier(10 * 1.5 ** 64.5).name).toBe('마스터 15')
   })
 })

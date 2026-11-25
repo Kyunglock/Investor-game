@@ -147,6 +147,74 @@
   background: #173b6a;
   padding: 12px;
 }
+/* 입장 장면: 금고 도전 창의 그림을 화면 가득 보인다. 가로 그림이라 뒤에는 흐리게 채우고 앞에는 온전히 세운다. */
+.vault-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 18px;
+  overflow: hidden;
+  background: #0b1020;
+  text-align: center;
+}
+.vault-intro-back {
+  position: absolute;
+  inset: -24px;
+  width: calc(100% + 48px);
+  height: calc(100% + 48px);
+  object-fit: cover;
+  filter: blur(14px) brightness(0.45);
+}
+.vault-intro-art {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  max-height: 62dvh;
+  object-fit: cover;
+  border-block: 3px solid #f0c860;
+  box-shadow: 0 0 40px #000c;
+}
+.vault-intro > div {
+  position: relative;
+  padding: 0 16px;
+  text-shadow: 0 2px 6px #000;
+}
+.vault-intro small {
+  color: #f0c860;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+.vault-intro h2 {
+  margin: 2px 0 8px;
+  font-size: 34px;
+  line-height: 1.15;
+}
+.vault-intro p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.8;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vault-intro {
+    animation: vault-intro-in 0.25s ease-out;
+  }
+  .vault-intro-art {
+    animation: vault-intro-zoom 2.4s ease-out both;
+  }
+}
+@keyframes vault-intro-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vault-intro-zoom {
+  from {
+    transform: scale(1.12);
+  }
+}
 .vault-room p {
   font-size: 14px;
   line-height: 1.45;

@@ -204,6 +204,27 @@ export function dungeonEncounter(
   }
 }
 
+/** 보스전 등급의 규칙 (서버 VaultEngine과 같다): 문턱은 피해량 10에서 한 등급마다 1.5배, 열 등급씩 리그가 바뀌고 마스터는 끝이 없다. */
+const TIER_BASE = 10
+const TIER_GROWTH = 1.5
+const LEAGUES = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터'] as const
+const LEAGUE_TIERS = 10
+
+/** 피해량이 닿은 등급과 그 이름, 다음 등급까지 찬 만큼(0~1). 등급이 없으면 tier 0이고 첫 등급까지 찬 만큼이다. */
+export function bossTier(damage: number): { tier: number; name: string; fill: number } {
+  if (!(damage >= TIER_BASE)) {
+    return { tier: 0, name: '등급 없음', fill: Math.max(0, damage) / TIER_BASE }
+  }
+  const tier = 1 + Math.floor(Math.log(damage / TIER_BASE) / Math.log(TIER_GROWTH) + 1e-9)
+  const floor = TIER_BASE * TIER_GROWTH ** (tier - 1)
+  const league = Math.min(LEAGUES.length - 1, Math.floor((tier - 1) / LEAGUE_TIERS))
+  return {
+    tier,
+    name: `${LEAGUES[league]} ${tier - league * LEAGUE_TIERS}`,
+    fill: Math.min(1, (damage - floor) / (floor * (TIER_GROWTH - 1))),
+  }
+}
+
 const UNITS = ['', '만', '억', '조', '경', '해', '자', '양'] as const
 
 /** 피해량을 화면의 글로: 전투의 피해 숫자처럼 10배로 적고(damageNumbers.ts), 만 단위로 끊어 큰 자리 둘만 보인다. */

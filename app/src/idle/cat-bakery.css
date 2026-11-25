@@ -95,6 +95,15 @@
   transform-origin: center 95%;
   filter: drop-shadow(0 3px 1px #6f3e302f);
 }
+.baking-cat.is-portrait {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 3px;
+  border: 3px solid #fff4de;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px #d5ad81;
+}
 @media (prefers-reduced-motion: no-preference) {
   .baking-cat {
     animation: bakery-breathe 3.4s ease-in-out infinite alternate;

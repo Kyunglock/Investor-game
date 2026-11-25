@@ -339,6 +339,11 @@ try {
     await page.getByTestId('vault-party-recommend').click()
     await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(0)
     await page.getByRole('button', { name: '보스 도전' }).click()
+    // 입장 장면 (691번): 금고 도전 창의 수호냥 그림이 화면 가득 뜨고, 그동안 전투는 멈춰 있다가 걷힌다.
+    await expect(page.getByTestId('vault-intro')).toBeVisible()
+    await expect(page.getByTestId('vault-intro')).toContainText('흑금 수호냥')
+    await expect(page.getByTestId('vault-intro')).toHaveCount(0, { timeout: 60000 })
+    await expect(page.getByTestId('vault-score')).toContainText('60초')
     const score = page.getByTestId('vault-score')
     await expect(score).toContainText('피해량')
     await fight(page)

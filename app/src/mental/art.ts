@@ -226,6 +226,8 @@ export const mateKey = (i: number) => `mate-${i}`
 
 /** 스킬 표식의 한 변 (557번). */
 export const SKILL_MARK = 28
+/** 스킬 표식의 가운데가 고양이 가운데에서 올라간 높이: 머리에 닿을 만큼만 띄워 위의 매수벽 숫자와 겹치지 않게 한다. */
+export const SKILL_MARK_RISE = 54
 /** spellbook 마법의 전투 그림 (563번). */
 export const spellKey = (spell: ExtraSpell) => `magic-${spell}`
 export const skillMarkKey = (magic: Spell) => `skill-mark-${magic}`

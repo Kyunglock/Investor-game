@@ -52,6 +52,7 @@ import {
   RAM_ART,
   SKILL_MARK,
   SKILL_MARK_COLORS,
+  SKILL_MARK_RISE,
   skillMarkKey,
   spellKey,
   WALL_H,
@@ -300,7 +301,11 @@ export interface BattleOptions {
     mapWall: number
     guardianArt: string
     scale?: (kind: DamageKind) => number
-    score?: { seconds: number }
+    /** tier를 주면 수호냥 발밑의 막대가 체력 대신 다음 등급까지 찬 만큼을 보이고, 등급이 오를 때마다 그 이름을 띄운다 (692번). */
+    score?: {
+      seconds: number
+      tier?: (damage: number) => { tier: number; name: string; fill: number }
+    }
   }
   /** Foreground idle mode: the wall and its health come from this snapshot, never from the renderer's own count. */
   idle?: () => IdleSnapshot
@@ -705,6 +710,8 @@ class BattleScene extends Phaser.Scene {
   private wallsBroken = 0
   /** 금고 보스전 (641번)에서 수호냥과 금고벽에 넣은 피해량. */
   private vaultDamage = 0
+  /** 보스전에서 이번 판에 닿은 등급 (692번). -1은 아직 재지 않음. */
+  private vaultTier = -1
   private sinceBreak = 0
   private stuck = 0
   private lastFlow = 0
@@ -1455,7 +1462,7 @@ class BattleScene extends Phaser.Scene {
         .setVisible(false),
       skillMarks: [0, 1, 2].map(() =>
         this.add
-          .image(body.x, body.y - 58, skillMarkKey('water'))
+          .image(body.x, body.y - SKILL_MARK_RISE, skillMarkKey('water'))
           .setDisplaySize(SKILL_MARK, SKILL_MARK)
           .setDepth(7)
           .setVisible(false),
@@ -5529,6 +5536,22 @@ class BattleScene extends Phaser.Scene {
     const h = 8
     const x = boss.x - w / 2
     const y = boss.y + boss.displayHeight / 2 + 4
+    // 피해량을 겨루는 보스전 (692번): 수호냥은 체력이 줄지 않으니 다음 등급까지 찬 만큼을 금빛으로 보인다. 등급을 모르면 막대를 그리지 않는다.
+    const score = this.opts.vault?.score
+    if (score) {
+      const at = score.tier?.(this.vaultDamage)
+      if (!at) return
+      if (at.tier > this.vaultTier) {
+        if (this.vaultTier >= 0)
+          this.pop(boss.x, y - boss.displayHeight - 8, `${at.name}!`, '#ffd866', 20)
+        this.vaultTier = at.tier
+      }
+      const fill = Phaser.Math.Clamp(at.fill, 0, 1)
+      g.fillStyle(0x2b2340, 0.85).fillRoundedRect(x - 2, y - 2, w + 4, h + 4, 5)
+      g.fillStyle(0xffffff, 0.25).fillRoundedRect(x, y, w, h, 4)
+      if (fill > 0) g.fillStyle(0xffc93c, 1).fillRoundedRect(x, y, Math.max(h, w * fill), h, 4)
+      return
+    }
     const ratio = Phaser.Math.Clamp(boss.hp / this.bossMax, 0, 1)
     g.fillStyle(0x2b2340, 0.85).fillRoundedRect(x - 2, y - 2, w + 4, h + 4, 5)
     g.fillStyle(0xffffff, 0.25).fillRoundedRect(x, y, w, h, 4)
@@ -5633,7 +5656,10 @@ class BattleScene extends Phaser.Scene {
       m.tag.setPosition(b.x, b.y + TAG_DROP)
       // 스킬이 둘이면 머리 위에 나란히 선다.
       m.skillMarks.forEach((mark, k) => {
-        mark.setPosition(b.x + (k - (m.skillCount - 1) / 2) * (SKILL_MARK - 4), b.y - 58)
+        mark.setPosition(
+          b.x + (k - (m.skillCount - 1) / 2) * (SKILL_MARK - 4),
+          b.y - SKILL_MARK_RISE,
+        )
       })
       if (!this.tweens.isTweening(b)) {
         b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
