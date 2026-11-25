@@ -100,13 +100,13 @@ describe('금고 도전', () => {
     expect(eased.enemySpeed).toBeCloseTo(plain.enemySpeed * 0.75)
   })
 
-  it('금고 팀은 배율을 총·스킬·멘탈에 붙이고 천적 고양이의 총만 더 세다', () => {
-    const tuned = vaultLoadout(team, { damage: 2, fire: 2, skill: 1.5, mental: 0.5 }, ['sky'], 3)
+  it('금고 팀은 배율을 총·스킬·멘탈에 붙인다', () => {
+    const tuned = vaultLoadout(team, { damage: 2, fire: 2, skill: 1.5, mental: 0.5 })
     expect(tuned.damage).toBe(8)
     expect(tuned.fireMs).toBe(BASE_LOADOUT.fireMs / 2)
     expect(tuned.skillDamage).toBe(12)
     expect(tuned.maxMental).toBe(50)
-    expect(tuned.mateGuns.map((g) => g.damage)).toEqual([12, 12])
+    expect(tuned.mateGuns.map((g) => g.damage)).toEqual([4, 12])
     expect(tuned.mateGuns[0].fireMs).toBe(BASE_LOADOUT.fireMs / 2)
     // 연사 간격의 바닥(60ms)은 그대로다.
     expect(vaultLoadout(team, { fire: 100 }).fireMs).toBe(60)

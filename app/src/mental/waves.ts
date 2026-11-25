@@ -15,7 +15,43 @@ export const STAGE_WAVE = {
   rest: 1.5,
   /** 줄기가 쏟아지는 시간(초): 시간 판(363번)이 이만큼 동안 내던 몬스터가 한 웨이브의 줄기다. */
   pour: 10,
+  /** 웨이브 하나를 다 물리치면 오르는 레벨 수 (694번): 한 번에서 한 번 반 사이. */
+  levels: 1.25,
 } as const
+
+/** 줄기에 섞여 나오는 몬스터와 그 몫: 패닉셀이 여섯에 하나꼴로 많고 투기는 드물다. */
+export const WAVE_STREAM = [
+  ['panic', 0.6],
+  ['dump', 0.22],
+  ['stop', 0.13],
+  ['spec', 0.05],
+] as const
+
+/** 줄기의 다음 몬스터. rand는 0~1. */
+export function waveStreamKind(rand: number) {
+  let left = rand
+  for (const [kind, share] of WAVE_STREAM) {
+    left -= share
+    if (left < 0) return kind
+  }
+  return WAVE_STREAM[WAVE_STREAM.length - 1][0]
+}
+
+/** 줄기의 몬스터 한 마리가 주는 값(reward)의 평균. */
+export function waveStreamReward(
+  units: Record<(typeof WAVE_STREAM)[number][0], { reward: number }>,
+) {
+  return WAVE_STREAM.reduce((sum, [kind, share]) => sum + units[kind].reward * share, 0)
+}
+
+/**
+ * 웨이브 판의 경험치 (694번): 몬스터의 값을 그대로 주지 않고, 그 웨이브의 몬스터를 다 잡으면 STAGE_WAVE.levels번 레벨이 오르게 나눠 준다.
+ * reward는 잡은 몬스터의 값, waveReward는 그 웨이브에 나오는 몬스터의 값을 다 더한 것, xpNeeded는 지금 레벨에서 다음 레벨까지 드는 경험치다.
+ * 전에는 값을 그대로 줘서 첫 웨이브에 세 번, 그 뒤로도 웨이브마다 두 번쯤 올랐다.
+ */
+export function waveXp(reward: number, waveReward: number, xpNeeded: number): number {
+  return waveReward > 0 ? (reward / waveReward) * STAGE_WAVE.levels * xpNeeded : 0
+}
 
 /** 웨이브가 판의 어디쯤인가(0~1): 첫 웨이브가 0, 마지막이 1. */
 export function waveProgress(at: number, total: number): number {

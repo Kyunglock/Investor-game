@@ -738,7 +738,7 @@ class CompanyApiTest {
     assertThat(opened.read("$.vault.boss.seconds", Integer.class)).isEqualTo(60);
     assertThat(opened.<List<String>>read("$.vault.boss.weakSkills[*].code")).hasSize(4);
     assertThat(opened.<List<String>>read("$.vault.boss.resistSkills[*].code")).hasSize(4);
-    assertThat(opened.<List<String>>read("$.vault.boss.rivals[*].code")).hasSize(4);
+    assertThat(opened.<List<String>>read("$.vault.boss.rivals[*].code")).isEmpty();
     assertThat(opened.read("$.vault.dungeon.cleared", Integer.class)).isZero();
     List<String> offers = opened.read("$.vault.dungeon.offers[*].code");
     assertThat(offers).hasSize(3);

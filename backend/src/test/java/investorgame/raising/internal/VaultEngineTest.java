@@ -126,18 +126,18 @@ class VaultEngineTest {
   }
 
   @Test
-  void 약점과_내성은_겹치지_않고_천적은_스킬_없는_고양이다() {
+  void 약점과_내성은_겹치지_않고_천적은_없다() {
     for (long week = 2960; week < 3000; week++) {
       List<Integer> order = VaultEngine.skillOrder(week);
       assertThat(new HashSet<>(order)).hasSize(VaultEngine.WEAK_SKILLS * 2);
-      List<String> rivals = VaultEngine.rivals(week);
-      assertThat(new HashSet<>(rivals)).hasSize(VaultEngine.RIVAL_CATS);
-      assertThat(rivals).allMatch(code -> List.of("C", "B").contains(IdleEngine.catGrade(code)));
     }
     assertThat(VaultEngine.skillOrder(2970)).isNotEqualTo(VaultEngine.skillOrder(2971));
     CompanyView.VaultBoss boss = vault.view(opened()).boss();
     assertThat(boss.weakSkills()).hasSize(4);
     assertThat(boss.resistSkills()).hasSize(4);
+    // 천적 고양이는 없앴다 (694번): 빈 목록과 100%다.
+    assertThat(boss.rivals()).isEmpty();
+    assertThat(boss.rivalPercent()).isEqualTo(100);
     assertThat(boss.weakSkills()).noneMatch(skill -> skill.name().contains("스킬"));
   }
 

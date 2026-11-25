@@ -201,6 +201,9 @@ import {
   waveKind,
   waveProgress,
   waveStreamCount,
+  waveStreamKind,
+  waveStreamReward,
+  waveXp,
 } from './waves'
 import {
   aimWithJitter,
@@ -883,6 +886,8 @@ class BattleScene extends Phaser.Scene {
   private waveAt = 0
   /** 다음 웨이브까지 남은 쉬는 시간(초): 화면의 몬스터를 다 물리친 동안에만 준다. */
   private waveRest: number = STAGE_WAVE.first
+  /** 이번 웨이브에 나오는 몬스터의 값을 다 더한 것: 경험치를 웨이브마다 같은 레벨 수로 나눠 준다 (694번). */
+  private waveReward = 0
   /** 이 웨이브의 줄기에서 아직 나올 몬스터 수와 그 간격(초)·시계. */
   private waveStream = 0
   private waveStreamEvery = 0
@@ -3128,9 +3133,8 @@ class BattleScene extends Phaser.Scene {
     if (this.waveStream > 0) {
       this.waveStreamClock = Math.min(this.waveStreamClock + dt, this.waveStreamEvery * 3)
       while (this.waveStream > 0 && this.waveStreamClock >= this.waveStreamEvery) {
-        const r = Math.random()
         // 화면이 꽉 차 못 꺼내면 자리가 날 때까지 기다린다: 줄기의 수는 줄지 않는다.
-        if (!this.spawn(r < 0.6 ? 'panic' : r < 0.82 ? 'dump' : r < 0.95 ? 'stop' : 'spec')) break
+        if (!this.spawn(waveStreamKind(Math.random()))) break
         this.waveStreamClock -= this.waveStreamEvery
         this.waveStream--
       }
@@ -3172,6 +3176,11 @@ class BattleScene extends Phaser.Scene {
         this.opts.onBanner(`${head} · 공매도 대열이 밀려온다!`, '#9eb7ff')
       }
     }
+    // 방금 나온 떼와 앞으로 나올 줄기의 값 (694번). 웨이브는 화면이 빈 뒤에 오므로 살아 있는 것이 곧 이번 떼다.
+    let horde = 0
+    for (const e of this.enemies.getChildren() as Enemy[])
+      if (e.active) horde += UNITS[e.kind].reward
+    this.waveReward = horde + this.waveStream * waveStreamReward(ENEMIES)
     this.pushHud(true)
   }
 
@@ -3607,7 +3616,9 @@ class BattleScene extends Phaser.Scene {
 
   private gainXp(amount: number, forced = false) {
     if (this.opts.idle || this.wallCards() || (!this.devXp && !forced)) return
-    this.xp += amount
+    // 웨이브 판 (694번)은 웨이브 하나에 한 번에서 한 번 반 오르게 나눠 준다.
+    this.xp +=
+      this.waveTotal && !forced ? waveXp(amount, this.waveReward, xpToNext(this.level)) : amount
     if (this.xp < xpToNext(this.level) || this.over || this.choosing) {
       return
     }

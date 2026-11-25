@@ -164,7 +164,7 @@ export function VaultChallenges({
   const store = useRaisingStore.getState()
   const cats = company.idle?.cats ?? []
   const { boss, dungeon } = vault
-  // 약점·내성·천적 칸의 "출전 중"은 돌파의 출전 칸이 아니라 보스전에 데려갈 파티를 따른다 (655번).
+  // 약점·내성 칸의 "출전 중"은 돌파의 출전 칸이 아니라 보스전에 데려갈 파티를 따른다 (655번).
   const bossParty = partyOf(company, saved.boss)
   const status = (cat?: { code: string; level: number }) =>
     !cat || cat.level <= 0 ? '없음' : bossParty.includes(cat.code) ? '출전 중' : '대기'
@@ -273,19 +273,6 @@ export function VaultChallenges({
                     <dd>
                       {boss.resistSkills.map((skill) => (
                         <Trait key={skill.code} name={skill.name} cat={owner(skill.code)} />
-                      ))}
-                    </dd>
-                    <dt className="weak">천적 고양이 · 총 피해 {times(boss.rivalPercent)}</dt>
-                    <dd>
-                      {boss.rivals.map((rival) => (
-                        <Trait
-                          key={rival.code}
-                          name={`${rival.grade} ${rival.name}`}
-                          cat={{
-                            name: '',
-                            state: status(cats.find((cat) => cat.code === rival.code)),
-                          }}
-                        />
                       ))}
                     </dd>
                   </dl>

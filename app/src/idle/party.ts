@@ -4,11 +4,12 @@ import { fieldedInOrder } from './seats'
 import { bossScale, teamDps, type Vault, vaultLoadout } from './vaultBattle'
 
 /**
- * 파티 (decisions.md 654번): 금고 도전(보스전·주간 던전)에 데려갈 고양이를 돌파의 출전 칸과 따로 저장하고, 상대에 맞춰 추천 편성을 고른다.
+ * 파티 (decisions.md 654번): 금고 도전(보스전·주간 던전)에 데려갈 고양이를 돌파의 출전 칸과 따로 저장하고, 던전에서는 추천 편성을 고른다.
  *
  * - 금고 전투는 화면이 판을 차리므로(641번) 파티는 이 기기에 저장한다. 회사마다, 보스전·던전마다 따로다. 저장한 적이 없으면 출전 칸의 고양이다.
  * - 추천은 팀 화력의 어림(teamDps)으로 고른다. 사장냥의 총은 누구를 데려가도 같고 고양이의 몫은 서로 더해지므로, 고양이마다 따로 잰 몫이 큰 차례로
- *   칸 수만큼 고르면 그것이 가장 센 파티다. 보스전에서는 약점·내성 스킬과 천적 고양이의 배율을 곱해 잰다.
+ *   칸 수만큼 고르면 그것이 가장 센 파티다. 보스전의 어림에는 약점·내성 스킬의 배율을 곱한다.
+ * - 보스전에는 추천 편성 단추와 천적 고양이가 없다 (694번): 누구를 데려갈지는 약점·내성을 보고 직접 고른다.
  */
 export type PartyMode = 'boss' | 'dungeon'
 type Cat = NonNullable<Company['idle']>['cats'][number]
@@ -44,7 +45,7 @@ export function partyOf(company: Company, saved: readonly string[] | null): stri
   return [...new Set(codes)].filter((code) => owned.has(code)).slice(0, slots)
 }
 
-/** 금고 상대의 배율: 보스전이면 약점·내성 스킬과 천적 고양이, 던전이면 없다. 금고 훈련은 둘 다 곱한다. */
+/** 금고 상대의 배율: 보스전이면 약점·내성 스킬, 던전이면 없다. 금고 훈련은 둘 다 곱한다. */
 export interface Matchup {
   vault: Vault
   boss: boolean
@@ -56,16 +57,7 @@ export function partyDps(company: Company, party: readonly string[] | undefined,
   if (!vs) return teamDps(team)
   const training = 1 + vs.vault.trainingPercent / 100
   if (!vs.boss) return teamDps(vaultLoadout(team, { damage: training }))
-  const boss = vs.vault.boss
-  return teamDps(
-    vaultLoadout(
-      team,
-      { damage: training },
-      boss.rivals.map((r) => r.code),
-      boss.rivalPercent / 100,
-    ),
-    bossScale(boss),
-  )
+  return teamDps(vaultLoadout(team, { damage: training }), bossScale(vs.vault.boss))
 }
 
 /** 고양이 한 마리가 팀에 더하는 초당 피해(사장냥의 몫을 뺀 것). */
@@ -84,19 +76,18 @@ export function recommendParty(company: Company, vs?: Matchup): string[] {
     .map((c) => c.code)
 }
 
-export type Mark = 'weak' | 'resist' | 'rival'
-/** 이번 주 수호냥에게 이 고양이가 약점 스킬·내성 스킬·천적 가운데 어디에 드는가. */
+export type Mark = 'weak' | 'resist'
+/** 이번 주 수호냥에게 이 고양이가 약점 스킬·내성 스킬 가운데 어디에 드는가. */
 export function bossMarks(cat: Pick<Cat, 'code' | 'skills'>, boss: Vault['boss']): Mark[] {
   const marks: Mark[] = []
   const has = (list: Vault['boss']['weakSkills']) =>
     cat.skills.some((s) => list.some((w) => w.code === s.code))
   if (has(boss.weakSkills)) marks.push('weak')
   if (has(boss.resistSkills)) marks.push('resist')
-  if (boss.rivals.some((r) => r.code === cat.code)) marks.push('rival')
   return marks
 }
 
-export const MARK_NAMES: Record<Mark, string> = { weak: '약점', resist: '내성', rival: '천적' }
+export const MARK_NAMES: Record<Mark, string> = { weak: '약점', resist: '내성' }
 
 /**
  * 돌파의 출전 칸을 target으로 바꾸는 차례 (654번): 서버의 출전 요청을 하나씩 보낸다. 빈 칸이 있으면 세우고, 칸이 다 찼으면 target에 없는

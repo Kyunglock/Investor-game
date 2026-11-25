@@ -444,9 +444,6 @@
 .vault-mark.is-resist {
   background: #4f74b5;
 }
-.vault-mark.is-rival {
-  background: #b0761b;
-}
 .vault-party-actions {
   display: flex;
   gap: 6px;

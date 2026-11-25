@@ -13,6 +13,9 @@ import {
   waveKind,
   waveProgress,
   waveStreamCount,
+  waveStreamKind,
+  waveStreamReward,
+  waveXp,
 } from './waves'
 
 it('패닉셀·투매·공매도 순서로 반복하고 공매도는 느리고 단단하다', () => {
@@ -68,4 +71,39 @@ it('웨이브 판 (690번): 줄기의 몬스터는 뒤 웨이브일수록, 적 �
     expect(counts[i]).toBeGreaterThanOrEqual(counts[i - 1])
   }
   expect(waveStreamCount(1, 10, 0)).toBeGreaterThanOrEqual(1)
+})
+
+it('웨이브 판의 경험치 (694번): 웨이브 하나를 다 물리치면 한 번에서 한 번 반 레벨이 오른다', () => {
+  expect(STAGE_WAVE.levels).toBeGreaterThanOrEqual(1)
+  expect(STAGE_WAVE.levels).toBeLessThanOrEqual(1.5)
+  // 몬스터가 많든 적든, 레벨이 높든 낮든 웨이브 하나의 몫은 같다.
+  for (const [count, needed] of [
+    [20, 105],
+    [160, 6000],
+  ]) {
+    const waveReward = count * 25
+    let xp = 0
+    for (let i = 0; i < count; i++) xp += waveXp(25, waveReward, needed)
+    expect(xp / needed).toBeCloseTo(STAGE_WAVE.levels)
+  }
+  // 값이 큰 몬스터가 더 많이 준다. 웨이브의 값을 모르면 주지 않는다.
+  expect(waveXp(80, 1000, 500)).toBeGreaterThan(waveXp(10, 1000, 500))
+  expect(waveXp(80, 0, 500)).toBe(0)
+})
+
+it('줄기의 몬스터는 패닉셀이 가장 많고 몫을 다 더하면 1이다', () => {
+  expect(waveStreamKind(0)).toBe('panic')
+  expect(waveStreamKind(0.59)).toBe('panic')
+  expect(waveStreamKind(0.7)).toBe('dump')
+  expect(waveStreamKind(0.9)).toBe('stop')
+  expect(waveStreamKind(0.99)).toBe('spec')
+  expect(waveStreamKind(1)).toBe('spec')
+  const same = { reward: 10 }
+  expect(waveStreamReward({ panic: same, dump: same, stop: same, spec: same })).toBeCloseTo(10)
+  expect(waveStreamReward(ENEMIES)).toBeCloseTo(
+    ENEMIES.panic.reward * 0.6 +
+      ENEMIES.dump.reward * 0.22 +
+      ENEMIES.stop.reward * 0.13 +
+      ENEMIES.spec.reward * 0.05,
+  )
 })

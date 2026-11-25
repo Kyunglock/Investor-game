@@ -55,12 +55,7 @@ export function VaultField({
     if (boss) {
       return {
         hero,
-        loadout: vaultLoadout(
-          team,
-          { damage: training },
-          vault.boss.rivals.map((cat) => cat.code),
-          vault.boss.rivalPercent / 100,
-        ),
+        loadout: vaultLoadout(team, { damage: training }),
         spec: bossEncounter(),
         vault: {
           mapWall: 151,
