@@ -60,8 +60,8 @@ describe('금고 도전', () => {
     expect(teamScale({ ...BASE_LOADOUT, damage: 0.1 })).toBe(1)
   })
 
-  it('보스전은 수호냥의 벽 하나다', () => {
-    expect(bossEncounter().walls.map((w) => w.boss)).toEqual([true])
+  it('보스전에는 매도벽이 없다', () => {
+    expect(bossEncounter().walls).toHaveLength(0)
   })
 
   it('던전은 층마다 벽이 늘고 팀 화력과 층을 따라 단단해지며 물량은 그대로다', () => {

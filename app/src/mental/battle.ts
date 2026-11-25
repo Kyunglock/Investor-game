@@ -277,7 +277,7 @@ export interface Outcome {
   /** 공격 판의 시작 가격과 끝난 때의 가격(벽·잡은 물량으로 오른 만큼, #591·#593). 다른 모드는 0. */
   priceStart: number
   priceEnd: number
-  /** 금고 보스전 (641번)에서 수호냥과 금고벽에 넣은 피해량. 다른 판은 0. */
+  /** 금고 보스전 (641번)에서 수호냥에게 넣은 피해량. 다른 판은 0. */
   damage: number
 }
 
@@ -295,7 +295,7 @@ export interface IdleSnapshot {
 export interface BattleOptions {
   /**
    * 금고 도전 (641번): 전장 그림과 수호냥 그림. scale은 공격 종류마다의 피해 배율(이번 주의 약점·내성)이고, score가 있으면 피해량을
-   * 겨루는 보스전이다: 수호냥과 금고벽은 체력이 줄지 않고, seconds(전투 초)가 지나면 넣은 피해량(Outcome.damage)으로 끝난다.
+   * 겨루는 보스전이다: 수호냥은 체력이 줄지 않고, seconds(전투 초)가 지나면 넣은 피해량(Outcome.damage)으로 끝난다.
    */
   vault?: {
     mapWall: number
@@ -708,7 +708,7 @@ class BattleScene extends Phaser.Scene {
   private wallStoodAt = 0
   private runRush = 0
   private wallsBroken = 0
-  /** 금고 보스전 (641번)에서 수호냥과 금고벽에 넣은 피해량. */
+  /** 금고 보스전 (641번)에서 수호냥에게 넣은 피해량. */
   private vaultDamage = 0
   /** 보스전에서 이번 판에 닿은 등급 (692번). -1은 아직 재지 않음. */
   private vaultTier = -1
@@ -1063,6 +1063,7 @@ class BattleScene extends Phaser.Scene {
       }
       if (this.player && this.heroGun) this.poseGun(this.player, this.aim, this.heroKick)
       if (this.player) this.drawBuyWall()
+      if (this.opts.vault?.score && this.bossEnemy) this.placeGuardian(this.bossEnemy)
       for (const [i, m] of this.mates.entries()) {
         m.body.setX(this.standX(i + 1))
         this.poseGun(m.body, m.aim, m.kick, m)
@@ -1311,10 +1312,14 @@ class BattleScene extends Phaser.Scene {
             .setVisible(false),
         )
       }
-      this.addWall(
-        0,
-        this.opts.idle ? this.stopY() : Math.min(this.holdY(), this.stopY() - h * 0.5),
-      )
+      if (this.opts.vault?.score) {
+        this.startWhale()
+      } else {
+        this.addWall(
+          0,
+          this.opts.idle ? this.stopY() : Math.min(this.holdY(), this.stopY() - h * 0.5),
+        )
+      }
     }
 
     this.syncHero()
@@ -2075,30 +2080,47 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 보스 벽이 화면에 들어오면 큰손도 등장한다. 이동 중 벽을 깨도 보스를 건너뛸 수 없다. */
-  private startWhale(wall: WallState) {
+  private startWhale(wall?: WallState) {
     const spec = this.assault
     if (!spec || (this.bossEnemy?.active && !this.bossEnemy.dying)) return
-    const mid = Boolean(wall.spec.mid)
-    const e = this.spawn('whale', [this.view().w / 2, wall.y - 40], true)
+    const mid = Boolean(wall?.spec.mid)
+    const e = this.spawn('whale', [this.view().w / 2, (wall?.y ?? 0) - 40], true)
     if (!e) return
-    wall.bossStarted = true
+    if (wall) wall.bossStarted = true
     this.tweens.killTweensOf(e)
     e.boss = true
     this.bossMid = mid
     this.bossMax = mid ? spec.midBossHp : spec.bossHp
     e.hp = this.bossMax
     e.maxHp = this.bossMax
-    e.setScale(unitK('whale') * (mid ? 0.8 : 1))
+    if (wall) e.setScale(unitK('whale') * (mid ? 0.8 : 1))
+    else {
+      e.setTexture('vault-guard')
+      this.placeGuardian(e)
+      const radius = e.width * 0.43
+      e.body?.setCircle(radius, e.width / 2 - radius, e.height / 2 - radius)
+    }
     e.baseK = e.scaleX
     e.setDepth(3.5)
     this.bossEnemy = e
     this.lastSummon = this.elapsed
     sfx.levelUp()
     this.opts.onBanner(
-      mid ? `${MID_BOSS_NAME} 등장! 중간 매도벽` : `${ASSAULT_BOSS.name} 등장!! 대량 매도벽`,
+      wall
+        ? mid
+          ? `${MID_BOSS_NAME} 등장! 중간 매도벽`
+          : `${ASSAULT_BOSS.name} 등장!! 대량 매도벽`
+        : spec.name,
       '#ff4f6d',
     )
     this.pushHud(true)
+  }
+
+  private placeGuardian(boss: Enemy) {
+    const { w, h } = this.view()
+    const top = 76
+    const size = Math.min(w * 0.94, Math.max(1, h * 0.58 - top))
+    boss.setScale(size / boss.width).setPosition(w / 2, top + size / 2)
   }
 
   /**
@@ -2638,6 +2660,7 @@ class BattleScene extends Phaser.Scene {
     if (
       boss?.active &&
       !boss.dying &&
+      !this.opts.vault?.score &&
       this.elapsed - this.lastSummon > whaleSummonSeconds(boss.hp, this.bossMax)
     ) {
       this.lastSummon = this.elapsed
@@ -3449,14 +3472,14 @@ class BattleScene extends Phaser.Scene {
       this.hitSpark.explode(2, e.x - Math.cos(angle) * 10, e.y + 10)
       return
     }
-    // 금고 도전 (641번): 이번 주의 약점·내성 스킬은 수호냥과 금고벽에만 통한다.
+    // 금고 도전 (641번): 이번 주의 약점·내성 스킬은 수호냥에게 적용한다.
     const vault = this.opts.vault
-    if (vault?.scale && (e.cell || e.boss)) dmg *= vault.scale(kind)
+    if (vault?.scale && e.boss) dmg *= vault.scale(kind)
     if (this.opts.idle && e.cell) {
       // 벽의 체력은 여기서 깎지 않는다: 알린 명중이 예측(idlePredict.ts)에 얹혀 다음 프레임의 스냅샷으로 돌아온다 (532번).
       if (!this.idleTransition) this.reportIdleHit(this.idleWall, kind, dmg, 0)
-    } else if (vault?.score && (e.cell || e.boss)) {
-      // 피해량을 겨루는 보스전: 수호냥과 금고벽은 쓰러지지 않고 맞은 만큼 점수가 된다.
+    } else if (vault?.score && e.boss) {
+      // 피해량을 겨루는 보스전: 수호냥은 쓰러지지 않고 맞은 만큼 점수가 된다.
       this.vaultDamage += dmg
     } else {
       if (this.opts.idle && !this.idleTransition) {
@@ -5543,7 +5566,7 @@ class BattleScene extends Phaser.Scene {
       if (!at) return
       if (at.tier > this.vaultTier) {
         if (this.vaultTier >= 0)
-          this.pop(boss.x, y - boss.displayHeight - 8, `${at.name}!`, '#ffd866', 20)
+          this.pop(boss.x, boss.y + boss.displayHeight * 0.3, `${at.name}!`, '#ffd866', 20)
         this.vaultTier = at.tier
       }
       const fill = Phaser.Math.Clamp(at.fill, 0, 1)
@@ -5867,21 +5890,24 @@ class BattleScene extends Phaser.Scene {
       this.spawn(r < 0.6 ? 'panic' : r < 0.82 ? 'dump' : r < 0.95 ? 'stop' : 'spec')
     }
     if (this.opts.idle) this.idleRaidStep(dt)
-    else if (this.waveTotal) {
-      // 웨이브는 위의 waveStep이 낸다: 15초마다의 파도와 패닉셀 러시는 없다.
-    } else if ((this.mode === 'defense' || this.assault) && this.elapsed >= this.nextWave) {
-      const kind = waveKind(Math.round(this.nextWave / WAVE_SECONDS) - 1)
-      if (kind === 'panic') {
-        this.wavePanic()
-        this.opts.onBanner('패닉셀 웨이브! 떼가 몰려온다!', '#82bbff')
-      } else if (kind === 'dump') {
-        this.waveDump()
-        this.opts.onBanner('투매 웨이브! 물량이 쏟아진다!', '#c5a1ff')
-      } else this.waveShort()
-      this.nextWave += WAVE_SECONDS
-    }
-    if (!this.opts.idle && !this.waveTotal && (this.mode === 'defense' || this.assault))
+    else if (
+      !this.waveTotal &&
+      !this.opts.vault?.score &&
+      (this.mode === 'defense' || this.assault)
+    ) {
+      if (this.elapsed >= this.nextWave) {
+        const kind = waveKind(Math.round(this.nextWave / WAVE_SECONDS) - 1)
+        if (kind === 'panic') {
+          this.wavePanic()
+          this.opts.onBanner('패닉셀 웨이브! 떼가 몰려온다!', '#82bbff')
+        } else if (kind === 'dump') {
+          this.waveDump()
+          this.opts.onBanner('투매 웨이브! 물량이 쏟아진다!', '#c5a1ff')
+        } else this.waveShort()
+        this.nextWave += WAVE_SECONDS
+      }
       this.panicRushStep(dt)
+    }
 
     // 적 움직임: 매 프레임 새 객체를 만들지 않는다.
     const list = this.enemies.getChildren()
@@ -5905,7 +5931,7 @@ class BattleScene extends Phaser.Scene {
         this.paint(e)
       }
       // 매도벽 칸은 움직이지 않는다: 벽과 함께 assaultStep이 옮긴다.
-      if (e.cell) continue
+      if (e.cell || (e.boss && this.opts.vault?.score)) continue
       const speed = v.speed * this.staged(this.speedScale)
       const sy = stunned ? 0 : slowed ? speed * e.slowFactor : speed
       if (e.wallPushUntil > this.elapsed) {

@@ -172,10 +172,10 @@ export function bossScale(boss: Vault['boss']): (kind: DamageKind) => number {
   return (kind) => table.get(kind) ?? 1
 }
 
-/** 보스전 한 판: 수호냥의 금고벽 하나. 벽과 수호냥은 쓰러지지 않는다(battle.ts vault.score). */
+/** 보스전은 수호냥 하나를 상대로 제한 시간 동안 피해량을 겨룬다. */
 export function bossEncounter(): AssaultSpec {
   const spec = assaultSpec(3, { name: GUARDIAN })
-  return { ...spec, walls: [spec.walls[spec.walls.length - 1]] }
+  return { ...spec, walls: [] }
 }
 
 /** 던전의 floor층: 매도벽 몇 개 뒤에 수호냥의 벽이 선다. 벽과 수호냥은 팀 화력과 층을 따라 단단해지고 카드가 그것을 깎는다. */
