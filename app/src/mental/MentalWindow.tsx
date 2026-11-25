@@ -289,9 +289,13 @@ export function MentalWindow({
             <div className="stage-hero-card">
               {mode !== 'assault' && (
                 <span className="stage-mode" data-testid="stage-mode">
-                  {spec?.boss
-                    ? `디펜스 · ${minutes(spec.seconds ? spec.seconds / 2 : DEFENSE_BOSS_SECONDS)}에 보스 · 제한 시간 ${minutes(spec.seconds ?? BATTLE_SECONDS)} 안에 격파`
-                    : `디펜스 · ${minutes(spec?.seconds ?? BATTLE_SECONDS)} 버티기`}
+                  {spec?.waves
+                    ? spec.boss
+                      ? `디펜스 · 몬스터 ${spec.waves}웨이브 · 마지막 웨이브에 보스`
+                      : `디펜스 · 몬스터 ${spec.waves}웨이브`
+                    : spec?.boss
+                      ? `디펜스 · ${minutes(DEFENSE_BOSS_SECONDS)}에 보스 · 제한 시간 ${minutes(BATTLE_SECONDS)} 안에 격파`
+                      : `디펜스 · ${minutes(BATTLE_SECONDS)} 버티기`}
                 </span>
               )}
               {entry.kind === 'invest' && (
@@ -417,6 +421,13 @@ export function MentalWindow({
                       ? '보스를 못 쓰러뜨렸다…'
                       : '멘탈이 무너졌다…'}
                 </h2>
+                {outcome.wave && (
+                  <p className="mt-1 text-[14px]" data-testid="mental-wave">
+                    {outcome.win
+                      ? `${outcome.wave.total}웨이브를 모두 물리쳤다`
+                      : `웨이브 ${outcome.wave.at}/${outcome.wave.total}에서 무너졌다`}
+                  </p>
+                )}
                 {spec && (
                   <p
                     className="mt-1 text-[30px] tracking-[4px]"
@@ -1225,9 +1236,16 @@ function Battle({
                   </em>
                 </div>
               )}
-              <time data-testid="battle-timer">
-                {Math.floor(hud.secondsLeft / 60)}:{String(hud.secondsLeft % 60).padStart(2, '0')}
-              </time>
+              {hud.wave ? (
+                // 웨이브 판 (690번): 남은 시간 대신 지금 웨이브를 보인다.
+                <b className="battle-segment" data-testid="battle-wave">
+                  {hud.boss ? '보스 · ' : ''}웨이브 {hud.wave.at}/{hud.wave.total}
+                </b>
+              ) : (
+                <time data-testid="battle-timer">
+                  {Math.floor(hud.secondsLeft / 60)}:{String(hud.secondsLeft % 60).padStart(2, '0')}
+                </time>
+              )}
               <button
                 type="button"
                 aria-label={`전투 배속 ${speed}배, 눌러서 바꾸기`}

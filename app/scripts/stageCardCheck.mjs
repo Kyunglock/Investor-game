@@ -84,7 +84,7 @@ try {
     await page.locator('[data-testid=assault-stage][data-stage="1"]').click()
     // 스테이지: 첫 카드 석 장에 사장냥의 스킬과 고양이 마법 강화가 나온다.
     // 출전 화면: 무기를 보고 들어간다.
-    await expect(page.getByTestId('stage-mode')).toContainText('디펜스 · 3분 버티기')
+    await expect(page.getByTestId('stage-mode')).toContainText('디펜스 · 몬스터 10웨이브')
     // 출전 화면의 출전 고양이 줄 (682번): 출전 칸의 차례대로, 쉬는 노을냥은 없다. 밤냥은 제 고유 스킬을 단다.
     const lobbyCats = page.getByTestId('stage-lobby-cat')
     assert.deepEqual(await lobbyCats.evaluateAll((els) => els.map((el) => el.dataset.code)), [
@@ -118,6 +118,9 @@ try {
     // 확인하는 동안에는 적을 잡아도 레벨이 오르지 않게 둔다: 카드 고르기는 아래에서 부를 때만 뜬다.
     await page.evaluate(() => window.__mentalXp(false))
     await expect(pick.locator('[data-card]')).toHaveCount(3)
+    // 웨이브 판 (690번): 남은 시간이 아니라 지금 웨이브를 보인다.
+    await expect(page.getByTestId('battle-timer')).toHaveCount(0)
+    await expect(page.getByTestId('battle-wave')).toHaveText('웨이브 1/10')
     await expect(pick.locator('[data-card=rally]')).toContainText('불장')
     await expect(pick.locator('[data-card=rally]')).toContainText('1분 동안')
     await expect(pick.locator('[data-card=rally]')).toContainText('사장냥 스킬')
@@ -202,11 +205,29 @@ try {
     await page.screenshot({ path: `/tmp/stage-defense-card-${width}.png` })
     await pick.locator('[data-card=limitUp]').click()
     await expect(pick).toHaveCount(0, { timeout: 15000 })
+    // 웨이브 판 (690번): 제한 시간 없이 몬스터 웨이브가 차례로 오고, 열 웨이브를 다 물리치면 깬다. 나오는 것은 몬스터뿐이다(매도벽 없음).
+    await page.evaluate(() => {
+      window.__mentalXp(false)
+      window.__mentalMagic({ damage: 100000, maxMental: 100000 })
+      window.__mentalSpeed?.(6)
+    })
+    await expect(page.getByTestId('battle-wave')).toHaveText(/웨이브 ([3-9]|10)\/10/, {
+      timeout: 90000,
+    })
+    assert.equal(await page.evaluate(() => window.__mentalWalls().length), 0)
+    await page.screenshot({ path: `/tmp/stage-wave-${width}.png` })
+    const result = page.getByTestId('mental-result')
+    await expect(result).toBeVisible({ timeout: 180000 })
+    await expect(page.getByTestId('mental-wave')).toHaveText('10웨이브를 모두 물리쳤다')
+    await expect
+      .poll(() => reports.at(-1), { timeout: 15000 })
+      .toMatchObject({ stage: 1, cleared: true })
+    await page.screenshot({ path: `/tmp/stage-wave-clear-${width}.png` })
     assert.deepEqual(errors, [])
     await page.close()
   }
   console.log(
-    '스테이지 320/390px: 디펜스·출전한 고양이의 카드·스킬 강화·사장냥 스킬·경험치 레벨업 통과',
+    '스테이지 320/390px: 디펜스·출전한 고양이의 카드·스킬 강화·사장냥 스킬·경험치 레벨업·웨이브 열 번 통과',
   )
 } finally {
   await browser.close()

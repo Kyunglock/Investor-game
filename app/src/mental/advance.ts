@@ -86,9 +86,10 @@ export interface StageSpec {
   dmgScale: number
   boss: boolean
   /**
-   * 이 판의 길이(초). 없으면 BATTLE_SECONDS(2분). 길이가 달라도 난이도 곡선은 끝에 같은 세기에 닿고, 보스는 한가운데에 나온다 (677번).
+   * 웨이브 판 (690번)의 웨이브 수. 있으면 제한 시간이 없다: 몬스터 웨이브를 차례로 다 물리치면 깬다. 난이도 곡선은 마지막 웨이브에 같은 세기에 닿고,
+   * 보스는 마지막 웨이브에 나온다. 없으면 BATTLE_SECONDS(2분)를 버티는 판이다.
    */
-  seconds?: number
+  waves?: number
 }
 
 /**
@@ -127,19 +128,32 @@ export function stageSpec(stage: number, perChapter: number = PER_CHAPTER): Stag
   }
 }
 
-/** 스테이지 한 판의 길이(초): 3분 버티기 (677번). */
-export const STAGE_SECONDS = 180
+/** 스테이지 한 판의 웨이브 수 (690번): 챕터 안에서 뒤로 갈수록 10에서 14까지 늘고, 챕터 끝의 보스 스테이지는 15다. */
+export const STAGE_WAVES = { min: 10, max: 15 }
+
+export function stageWaves(stage: number, perChapter: number = PER_CHAPTER): number {
+  const n = ((stage - 1) % perChapter) + 1
+  if (n === perChapter) {
+    return STAGE_WAVES.max
+  }
+  const span = STAGE_WAVES.max - STAGE_WAVES.min
+  return Math.min(STAGE_WAVES.max - 1, STAGE_WAVES.min + Math.floor(((n - 1) * span) / perChapter))
+}
 
 /** 스테이지 (676번)에서 적이 나오는 수의 배율: 번호 스테이지 판의 두 배. 몰려오는 적을 쓸어 담아 경험치로 카드를 고르는 판이다. */
 export const STAGE_CROWD = 2
 
 /**
  * 메인 화면의 스테이지 (decisions.md 676번): 디펜스다. 번호 스테이지의 판(stageSpec)에 적의 수만 STAGE_CROWD배로 늘린다. 체력·빠르기·멘탈
- * 피해와 챕터 끝의 보스는 그대로다.
+ * 피해와 챕터 끝의 보스는 그대로다. 시간을 버티는 대신 몬스터 웨이브(stageWaves)를 다 물리치면 깬다 (690번).
  */
 export function crowdStageSpec(stage: number, perChapter: number = PER_CHAPTER): StageSpec {
   const spec = stageSpec(stage, perChapter)
-  return { ...spec, countScale: spec.countScale * STAGE_CROWD, seconds: STAGE_SECONDS }
+  return {
+    ...spec,
+    countScale: spec.countScale * STAGE_CROWD,
+    waves: stageWaves(stage, perChapter),
+  }
 }
 
 /** 챕터 이름 (407번): 챕터 보스를 깨면 다음 챕터가 열린다. 서버의 챕터 수(stages.last ÷ perChapter)보다 많으면 남는 이름은 쓰지 않는다. */
