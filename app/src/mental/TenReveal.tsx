@@ -26,6 +26,9 @@ export type TenCard = {
   jackpot: boolean
 }
 
+/** 상자의 뜸(ms)은 무엇이 들었든 같다 (687번): 전에는 가장 좋은 장이 뜸의 길이와 빛을 정했다. */
+const charge = 1000
+
 /**
  * 한 장이 뒷면으로 나와 열리기까지의 뜸(ms). 전에는 좋은 장일수록 길었다(576번: A등급 0.5초, S등급 이상 1초). 뒤집기도 전에 무엇이 나올지
  * 짐작되어 모든 장을 같게 했다 (687번).
@@ -88,8 +91,6 @@ export function TenReveal({
       (a, b) => (b.power > a.power || (b.starlight && !a.starlight) ? b : a),
       cards[0],
     ) ?? null
-  // 상자의 뜸도 무엇이 들었는지 알려 주지 않는다 (687번): 전에는 가장 좋은 장이 뜸의 길이와 빛을 정했다.
-  const charge = 1000
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     dialog.current?.showModal()
@@ -118,7 +119,7 @@ export function TenReveal({
       clearTimeout(open)
       clearTimeout(reveal)
     }
-  }, [cards, reduced, charge])
+  }, [cards, reduced])
   const shown = phase === 'cards' ? (cards?.[at] ?? null) : null
   // 장은 뒷면으로 나온다 (576번). 뜸을 들인 뒤 스스로 열리고, 좋은 장일수록 뜸이 길다. 그동안 뒷면이 떨며 빛을 모은다.
   // biome-ignore lint/correctness/useExhaustiveDependencies: 장이 바뀔 때만 다시 덮는다.
