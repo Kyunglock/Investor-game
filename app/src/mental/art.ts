@@ -547,6 +547,85 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
       c.fill()
     }
   })
+  // 장막 한가운데에서 양쪽으로 꼬리를 펼치는 별자리 고양이.
+  bake(scene, 'aurora-familiar', 320, 132, (c) => {
+    const silk = c.createLinearGradient(0, 22, 0, 115)
+    silk.addColorStop(0, '#9b70ffcc')
+    silk.addColorStop(0.48, '#493891ee')
+    silk.addColorStop(0.8, '#269caaed')
+    silk.addColorStop(1, '#9effde55')
+    c.lineJoin = 'round'
+    c.lineCap = 'round'
+    c.shadowColor = '#82ffe9'
+    c.shadowBlur = 5
+    for (const direction of [1, -1]) {
+      c.save()
+      c.translate(160, 0)
+      c.scale(direction, 1)
+      c.fillStyle = silk
+      c.strokeStyle = '#afffe8'
+      c.lineWidth = 2.5
+      c.beginPath()
+      c.moveTo(12, 91)
+      c.bezierCurveTo(52, 92, 71, 39, 108, 40)
+      c.quadraticCurveTo(131, 42, 154, 16)
+      c.bezierCurveTo(143, 61, 97, 52, 81, 78)
+      c.quadraticCurveTo(116, 59, 145, 68)
+      c.bezierCurveTo(98, 72, 69, 122, 14, 105)
+      c.closePath()
+      c.fill()
+      c.stroke()
+      c.restore()
+    }
+    c.fillStyle = silk
+    c.strokeStyle = '#cbfff1'
+    c.lineWidth = 4
+    c.beginPath()
+    c.moveTo(113, 60)
+    c.lineTo(110, 10)
+    c.lineTo(143, 33)
+    c.quadraticCurveTo(160, 26, 177, 33)
+    c.lineTo(210, 10)
+    c.lineTo(207, 60)
+    c.bezierCurveTo(222, 86, 189, 105, 160, 111)
+    c.bezierCurveTo(128, 105, 98, 86, 113, 60)
+    c.closePath()
+    c.fill()
+    c.stroke()
+    c.shadowBlur = 0
+    c.fillStyle = '#ffcaff'
+    for (const x of [119, 201]) {
+      const inward = x < 160 ? 1 : -1
+      c.beginPath()
+      c.moveTo(x, 25)
+      c.lineTo(x + 15 * inward, 38)
+      c.lineTo(x + 2 * inward, 45)
+      c.fill()
+    }
+    c.strokeStyle = '#fff3c8'
+    c.beginPath()
+    c.moveTo(127, 69)
+    c.quadraticCurveTo(136, 58, 145, 67)
+    c.moveTo(175, 67)
+    c.quadraticCurveTo(184, 58, 193, 69)
+    c.stroke()
+    c.fillStyle = '#fff4b9'
+    c.beginPath()
+    c.moveTo(160, 36)
+    c.lineTo(164, 46)
+    c.lineTo(173, 49)
+    c.lineTo(164, 53)
+    c.lineTo(160, 63)
+    c.lineTo(156, 53)
+    c.lineTo(147, 49)
+    c.lineTo(156, 46)
+    c.fill()
+    c.beginPath()
+    c.moveTo(154, 78)
+    c.lineTo(166, 78)
+    c.lineTo(160, 84)
+    c.fill()
+  })
   bake(scene, 'aurora-paw', 80, 80, (c) => {
     c.shadowBlur = 8
     c.shadowColor = '#48ffe0'
