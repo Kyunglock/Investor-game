@@ -10,6 +10,7 @@ import {
   assaultSpec,
   assaultStars,
   assaultTarget,
+  assaultTimeoutText,
   cellShares,
   climbSpeed,
   IDLE_GAME_SPEED,
@@ -44,6 +45,11 @@ const seq = (...xs: number[]) => {
 }
 
 describe('공격 판: 매도벽 (decisions.md 413번)', () => {
+  it('시간이 다 되면 마지막으로 남은 목표를 알려준다', () => {
+    expect(assaultTimeoutText(9, 10)).toContain('매도벽')
+    expect(assaultTimeoutText(10, 10)).toContain('마지막 보스')
+  })
+
   it('열 벽(#593): 다섯째는 중간 큰손, 마지막만 대량 매도벽+큰손이고 가장 두껍다. 벽 뒤로 갈수록 물량이 잦다', () => {
     expect(ASSAULT_WALLS).toHaveLength(10)
     expect(ASSAULT_WALLS.map((w) => Boolean(w.mid))).toEqual([

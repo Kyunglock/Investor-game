@@ -68,6 +68,7 @@ import {
   assaultSpec,
   assaultStars,
   assaultTarget,
+  assaultTimeoutText,
   cellShares,
   climbSpeed,
   IDLE_MOMENTUM_FADE,
@@ -5901,7 +5902,11 @@ class BattleScene extends Phaser.Scene {
         // 금고 보스전 (641번): 시간이 다 되면 넣은 피해량으로 끝난다.
         this.finish(true, 'time')
       } else if (this.mode === 'advance' || this.mode === 'assault' || this.defenseBoss) {
-        if (this.assault) this.opts.onBanner('시간 초과… 매도벽에 막혔다', '#6b7a99')
+        if (this.assault)
+          this.opts.onBanner(
+            `시간 초과 · ${assaultTimeoutText(this.wallsBroken, this.assault.walls.length)}`,
+            '#6b7a99',
+          )
         this.finish(false, 'time')
       } else {
         this.finish(true, 'clear')

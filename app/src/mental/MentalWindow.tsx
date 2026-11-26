@@ -21,7 +21,13 @@ import {
   stageSpec,
 } from './advance'
 import { GRADE_BADGE } from './armory'
-import { type AssaultSpec, assaultSpec, IDLE_GAME_SPEED, wallBrief } from './assault'
+import {
+  type AssaultSpec,
+  assaultSpec,
+  assaultTimeoutText,
+  IDLE_GAME_SPEED,
+  wallBrief,
+} from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import { ASSAULT_AD_BONUS, assaultBonusPercent } from './buyWall'
@@ -578,7 +584,7 @@ function AssaultResult({
         {outcome.win
           ? '매도벽 돌파!'
           : outcome.reason === 'time'
-            ? '매도벽에 막혔다…'
+            ? assaultTimeoutText(outcome.wallsBroken, outcome.wallsTotal)
             : '멘탈이 무너졌다…'}
       </h2>
       <p

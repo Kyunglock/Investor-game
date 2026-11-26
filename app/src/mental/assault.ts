@@ -489,6 +489,12 @@ export function assaultStars(win: boolean, wallsBroken: number): number {
   return wallsBroken * 4 >= total ? 1 : 0
 }
 
+export function assaultTimeoutText(wallsBroken: number, wallsTotal: number): string {
+  return wallsTotal > 0 && wallsBroken >= wallsTotal
+    ? '마지막 보스를 쓰러뜨리지 못했어요'
+    : '매도벽을 모두 돌파하지 못했어요'
+}
+
 /**
  * 매도벽 경험치 (#700): 벽 층 하나를 부수면 enemies.ts의 매도벽 reward(30), 벽 하나를 통째로 무너뜨리면 다음 레벨까지 드는 경험치의
  * WALL_BREAK_XP_SHARE만큼을 한 번 더 준다. 전에는 층 하나에 5뿐이고 무너뜨려도 따로 없어 카드 강화가 늦었다.
