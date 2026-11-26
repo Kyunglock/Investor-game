@@ -267,8 +267,9 @@ raising:
         capital-per-stage: 1000000
         bonus-per-stage: 3
         max-bonus: 30
-        # 매도벽 돌파 스테이지를 처음 깰 때 주는 다이아 (697번). 자본은 주지 않는다.
-        assault-diamonds: 100
+        # 매도벽 돌파 스테이지에서 별을 처음 얻을 때 주는 다이아 (697번): 1개째 100 · 2개째 50 · 3개째 50
+        # (별 하나면 100, 둘이면 150, 셋이면 200). 자본은 주지 않는다.
+        assault-diamonds: [100, 50, 50]
       # 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사를 단계마다 step-percent%씩, 최대 단계 없이 끝없이. 값은 처음
       # base-price(1b)이고 단계마다 price-growth-percent%씩 오른다(30%면 50단계째 약 5,000억, 100단계째 약 25경). 한 요청에 max-batch단계까지 묶어 산다.
       # price-growth-percent는 자동 전투의 물가(CompanyEngine.INFLATION, 4%)보다 훨씬 가파르다 (646번 30%, 644번 8%, 553번에는 4%로 같았다): 돈이

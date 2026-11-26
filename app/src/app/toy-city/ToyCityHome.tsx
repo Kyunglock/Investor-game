@@ -390,8 +390,8 @@ function SideGames({ company, onMental }: { company: Company; onMental: () => vo
 }
 
 /**
- * 매도벽 돌파 스테이지 선택 (#698): 주 게임. 1-1부터 차례로 열리고 챕터 끝은 보스다. 스테이지 번호가 매도벽의 세기라 뒤로 갈수록 세진다. 처음 깨면
- * 다이아 100개를 받는다 (697번).
+ * 매도벽 돌파 스테이지 선택 (#698): 주 게임. 1-1부터 차례로 열리고 챕터 끝은 보스다. 스테이지 번호가 매도벽의 세기라 뒤로 갈수록 세진다. 별을 처음
+ * 얻을 때마다 다이아를 받는다 (697번: 별 하나 100 · 둘 150 · 셋 200).
  */
 export function AssaultSelect({ company }: { company: Company }) {
   const assaults = company.assaults
@@ -441,7 +441,7 @@ export function AssaultSelect({ company }: { company: Company }) {
       <p className="text-sm text-muted" data-testid="assault-lead">
         {chapter > openChapter
           ? `챕터 ${chapter - 1} 보스를 깨면 열린다`
-          : '처음 깨면 다이아 100개를 받아요.'}
+          : '별 1개 100 · 2개 150 · 3개 200 다이아를 받아요.'}
       </p>
       <ol className="toy-stage-grid" data-testid="assault-grid">
         {numbers.map((n) => {

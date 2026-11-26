@@ -79,12 +79,14 @@ class MentalEngineTest {
     ENGINE.mental.reportAssault(c, 1, true, 2);
     assertThat(ENGINE.mental.bestAssault(c)).isEqualTo(1);
     assertThat(c.capital).as("자본은 주지 않는다 (697번)").isEqualTo(capital);
-    assertThat(c.diamonds).as("처음 깨면 다이아 100개").isEqualTo(diamonds + 100);
-    assertThat(c.lastAssault.diamonds).isEqualTo(100);
+    assertThat(c.diamonds).as("별 둘이면 다이아 150개").isEqualTo(diamonds + 150);
+    assertThat(c.lastAssault.diamonds).isEqualTo(150);
     assertThat(c.lastAssault.firstClear).isTrue();
+    ENGINE.mental.reportAssault(c, 1, true, 1);
+    assertThat(c.diamonds).as("이미 얻은 별은 다시 주지 않는다").isEqualTo(diamonds + 150);
     ENGINE.mental.reportAssault(c, 1, true, 3);
-    assertThat(c.diamonds).as("다시 깨거나 별을 더 얻어도 더 주지 않는다").isEqualTo(diamonds + 100);
-    assertThat(c.lastAssault.diamonds).isZero();
+    assertThat(c.diamonds).as("셋째 별에 50개: 별 셋이면 모두 200개").isEqualTo(diamonds + 200);
+    assertThat(c.lastAssault.diamonds).isEqualTo(50);
     assertThat(ENGINE.mental.bestStage(c)).as("멘탈 스테이지와 따로다").isZero();
     assertThat(ENGINE.mental.bonusPercent(c)).as("분기 강화율에는 안 든다").isZero();
     assertThat(c.lastStage).isNull();
