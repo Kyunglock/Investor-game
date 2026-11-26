@@ -30,7 +30,7 @@ import {
   stars,
   TRICKLE_SECONDS,
 } from './advance'
-import { ARENA_FRAME, ARENA_MAPS, arenaMap } from './arenaMaps'
+import { ARENA_FRAME, ARENA_MAPS, arenaMap, stageArenaMap } from './arenaMaps'
 import {
   auroraEdge,
   auroraFold,
@@ -349,6 +349,7 @@ export interface BattleOptions {
   mode: BattleMode
   /** 전진 모드의 스테이지 판 (369번). 없으면 다섯 구간 + 보스. */
   stage?: StageSpec
+  mapStage?: number
   /** 공격 판의 판 (413번, assault.ts assaultSpec). 없으면 assaultSpec(1). */
   assault?: AssaultSpec
   genre: Genre
@@ -853,6 +854,7 @@ class BattleScene extends Phaser.Scene {
   private kills = 0
   private auroraSweep: {
     released: boolean
+    stamped: boolean
     started: number
     origin: { x: number; y: number }
     ribbon: Phaser.GameObjects.Image
@@ -1090,8 +1092,9 @@ class BattleScene extends Phaser.Scene {
       // 같은 그림을 위에 하나 더 이어 붙여 함께 내린다: 그림 하나로 끝없이 올라가는 길. 뒤집어 붙이면 이음매는 맞지만 집이 거꾸로 보였다.
       this.bg2 = this.add.image(0, -h, 'art-street').setOrigin(0).setDisplaySize(w, h)
     }
-    if (this.opts.idle) this.setArenaMap(this.opts.idle().wall)
-    if (this.opts.vault) this.setArenaMap(this.opts.vault.mapWall)
+    if (this.opts.idle) this.setArenaMap(arenaMap(this.opts.idle().wall))
+    if (this.opts.vault) this.setArenaMap(arenaMap(this.opts.vault.mapWall))
+    if (this.opts.mapStage !== undefined) this.setArenaMap(stageArenaMap(this.opts.mapStage))
     this.scale.on('resize', fitView)
     this.events.once('shutdown', () => this.scale.off('resize', fitView))
 
@@ -1624,8 +1627,7 @@ class BattleScene extends Phaser.Scene {
 
   // ── 공격 판: 매도벽을 부수고 올라간다 (413번, #573)
 
-  private setArenaMap(wall: number) {
-    const map = arenaMap(wall)
+  private setArenaMap(map: (typeof ARENA_MAPS)[number]) {
     if (this.bg?.frame.name === map.key) return
     const { w, h } = this.view()
     for (const bg of [this.bg, this.bg2]) {
@@ -2050,7 +2052,7 @@ class BattleScene extends Phaser.Scene {
         const snapshot = this.opts.idle?.()
         this.idleWall = snapshot?.wall ?? this.idleWall
         this.idleSerial = snapshot?.serial
-        this.setArenaMap(this.idleWall)
+        this.setArenaMap(arenaMap(this.idleWall))
         // 벽이 깊어질수록 미션처럼 물량이 잦고 무거워진다 (493번).
         Object.assign(spec, idleAssaultSpec(this.idleWall, snapshot?.maxHp))
         this.countScale = spec.enemyCount
@@ -4418,24 +4420,23 @@ class BattleScene extends Phaser.Scene {
         yoyo: true,
       })
     }
-    const focus = { x: origin.x, y: origin.y - 40 }
     sfx.charge()
-    this.auroraFlare(focus.x, focus.y, 50, 360 / AURORA_CAST_SPEED)
+    this.auroraFlare(origin.x, origin.y, 38, 360 / AURORA_CAST_SPEED, true)
     if (!this.reducedMotion) {
       for (let i = 0; i < 6; i++) {
         const angle = (i * Math.PI) / 3
         const spark = this.add
           .image(
-            focus.x + 55 * Math.cos(angle),
-            focus.y + 32 * Math.sin(angle),
+            origin.x + 55 * Math.cos(angle),
+            origin.y + 32 * Math.sin(angle),
             'aurora-polar-star',
           )
           .setDisplaySize(13, 13)
           .setDepth(7)
         this.tweens.add({
           targets: spark,
-          x: focus.x,
-          y: focus.y,
+          x: origin.x,
+          y: origin.y,
           duration: 310 / AURORA_CAST_SPEED,
           ease: 'Quad.easeIn',
           onComplete: () => spark.destroy(),
@@ -4449,6 +4450,7 @@ class BattleScene extends Phaser.Scene {
       .setDepth(6)
     this.auroraSweep = {
       released: false,
+      stamped: false,
       started: this.elapsed,
       origin,
       ribbon,
@@ -4482,13 +4484,16 @@ class BattleScene extends Phaser.Scene {
     return true
   }
 
-  private auroraFlare(x: number, y: number, size: number, duration: number) {
-    const star = this.add.image(x, y, 'aurora-polar-star').setDisplaySize(size, size).setDepth(7)
+  private auroraFlare(x: number, y: number, size: number, duration: number, paw = false) {
+    const star = this.add
+      .image(x, y, paw ? 'aurora-paw' : 'aurora-polar-star')
+      .setDisplaySize(size, size)
+      .setDepth(7)
     if (!this.reducedMotion) {
       this.tweens.add({
         targets: star,
         scale: { from: star.scaleX * 0.4, to: star.scaleX },
-        angle: 30,
+        angle: paw ? 0 : 30,
         duration: duration * 0.55,
         ease: 'Cubic.easeOut',
       })
@@ -4553,7 +4558,9 @@ class BattleScene extends Phaser.Scene {
         const next = sweep.nextHit.get(key)
         if (next && next.born === born && sweep.step < next.step) continue
         sweep.nextHit.set(key, { step: sweep.step + AURORA_TICK_STEPS, born })
-        this.auroraFlare(enemy.x, enemy.y, enemy.boss || wall ? 68 : 44, 210)
+        const stamp = !sweep.stamped
+        sweep.stamped = true
+        this.auroraFlare(enemy.x, enemy.y, stamp ? 58 : 24, stamp ? 370 : 115, stamp)
         this.hit(target, sweep.damage, -Math.PI / 2, 'auroraNight', true)
       }
       // 뒤 매도벽 (675번): 장막이 겹쳐 있는 동안 맨 앞 벽처럼 느려지고 0.125초마다 맞는다. 피해는 벽 하나를 지날 때마다 절반이다.
@@ -4565,7 +4572,9 @@ class BattleScene extends Phaser.Scene {
         sweep.nextHit.set(layer.key, { step: sweep.step + AURORA_TICK_STEPS, born: 0 })
         const damage = sweep.damage * IDLE_PIERCE[layer.behind]
         this.reportIdleHit(layer.wall, 'auroraNight', damage, layer.behind)
-        this.auroraFlare(layer.x, layer.y, 56, 210)
+        const stamp = !sweep.stamped
+        sweep.stamped = true
+        this.auroraFlare(layer.x, layer.y, stamp ? 58 : 20, stamp ? 370 : 115, stamp)
         this.damageNumberAt(
           this.pierceOwners[layer.behind - 1],
           layer.x,

@@ -237,6 +237,7 @@ export function MentalWindow({
         {hero && !outcome && (
           <Battle
             mode={mode}
+            mapStage={entry.kind === 'stage' || entry.kind === 'assault' ? entry.stage : undefined}
             stage={mode === 'assault' ? undefined : spec}
             assault={assault}
             genre={genre}
@@ -1066,6 +1067,7 @@ function CardPick({
  */
 function Battle({
   mode,
+  mapStage,
   stage,
   assault,
   genre,
@@ -1079,6 +1081,7 @@ function Battle({
   onQuit,
 }: {
   mode: BattleMode
+  mapStage?: number
   stage?: StageSpec
   /** 공격 판(mode 'assault', decisions.md 413번)의 판: assaultSpec(level)을 useMemo로 한 번만 만들어 넘긴다(새 객체면 판이 다시 시작된다). */
   assault?: AssaultSpec
@@ -1139,6 +1142,7 @@ function Battle({
           return
         }
         handle.current = startBattle(el, {
+          mapStage,
           speed: loadGameSpeed(),
           // 스테이지의 1배는 메인 화면의 자동 전투와 같은 빠르기다 (683번). 그 위에 1.5배·2배를 건다.
           speedBase: IDLE_GAME_SPEED,
@@ -1179,7 +1183,7 @@ function Battle({
       handle.current?.stop()
       handle.current = null
     }
-  }, [mode, stage, assault, genre, hero, onDone, attempt])
+  }, [mode, mapStage, stage, assault, genre, hero, onDone, attempt])
 
   return (
     <>

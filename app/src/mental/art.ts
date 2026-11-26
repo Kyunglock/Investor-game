@@ -506,12 +506,12 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
         light.addColorStop(0, back ? '#daaaff00' : '#8bfaff00')
         light.addColorStop(0.42, back ? '#ac74ee90' : '#58c6bd90')
         light.addColorStop(0.75, back ? '#805ce3cb' : '#1dc4adce')
-        light.addColorStop(0.92, back ? '#e3c3ffeb' : '#95ffe3fa')
+        light.addColorStop(0.92, back ? '#f0c8fffa' : '#a4ffdcfa')
         light.addColorStop(0.97, back ? '#fff0ffef' : '#fff4c7')
         light.addColorStop(1, '#fff4c700')
         c.fillStyle = light
         c.fillRect(x, edge - height, 1, height + 2)
-        const filament = Math.sin(146 * u + 7 * fold) ** 12
+        const filament = Math.sin(112 * u + 9 * fold) ** 8
         if (filament > 0.4) {
           c.strokeStyle = back ? '#f3d6ff70' : '#c2fff68a'
           c.beginPath()
@@ -545,6 +545,36 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
       c.quadraticCurveTo(x, y, x - r, y)
       c.quadraticCurveTo(x, y, x, y - r)
       c.fill()
+    }
+  })
+  bake(scene, 'aurora-paw', 80, 80, (c) => {
+    c.shadowBlur = 8
+    c.shadowColor = '#48ffe0'
+    c.fillStyle = '#39677fc4'
+    c.strokeStyle = '#d0fff1'
+    c.lineWidth = 2.6
+    c.beginPath()
+    c.moveTo(21, 54)
+    c.bezierCurveTo(22, 46, 31, 39, 35, 35)
+    c.quadraticCurveTo(41, 28, 48, 36)
+    c.bezierCurveTo(53, 42, 64, 51, 60, 58)
+    c.bezierCurveTo(55, 66, 46, 57, 40, 58)
+    c.bezierCurveTo(31, 58, 19, 66, 21, 54)
+    c.fill()
+    c.stroke()
+    for (const [x, y, tilt] of [
+      [17, 32, -0.5],
+      [31, 21, -0.2],
+      [47, 20, 0.2],
+      [62, 30, 0.5],
+    ]) {
+      c.beginPath()
+      c.ellipse(x, y, 4, 6, tilt, 0, Math.PI * 2)
+      c.fill()
+      c.stroke()
+      c.fillStyle = '#fff6bb'
+      c.fillRect(x - 1, y - 1, 2, 2)
+      c.fillStyle = '#39677fc4'
     }
   })
   bake(scene, 'aurora-polar-star', 96, 96, (c) => {

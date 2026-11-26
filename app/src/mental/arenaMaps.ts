@@ -12,3 +12,7 @@ export const ARENA_FRAME = { y: 59, width: 458, height: 764 }
 export function arenaMap(wall: number) {
   return ARENA_MAPS[Math.floor((Math.max(1, wall) - 1) / 50) % ARENA_MAPS.length]
 }
+
+export function stageArenaMap(stage: number) {
+  return ARENA_MAPS[(Math.max(1, stage) - 1) % ARENA_MAPS.length]
+}
