@@ -12,6 +12,7 @@ import greenhouseHarbor from './assets/greenhouse-harbor.webp'
 import hero from './assets/hero-unarmed.png'
 import shortSeller from './assets/short-seller.png'
 import sprout from './assets/sprout.webp'
+import stageMonsters from './assets/stage-monsters.png'
 import street from './assets/toy-arena.png'
 import wallBlocks from './assets/wall-blocks-toy.png'
 import weapons from './assets/weapon-arcade-atlas.png'
@@ -36,6 +37,7 @@ export const STAGE_ASSETS = {
   coinCrab,
   hero,
   enemies,
+  stageMonsters,
   wallBlocks,
   shortSeller,
   weapons,
