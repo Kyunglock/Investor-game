@@ -18,10 +18,10 @@ export function StageLobbyTeam({ company }: { company: Company }) {
     <section className="stage-lobby-team" data-testid="stage-lobby-team" aria-label="출전 고양이">
       <header>
         <b>출전 고양이</b>
-        <span>{benched ? '사장냥은 쉬어요' : '고양이 카드를 고르면 차례로 나와요'}</span>
+        <span>{benched ? '사장냥은 쉬어요' : `${team.length}마리`}</span>
       </header>
       {team.length === 0 ? (
-        <p className="stage-lobby-team-empty">출전한 고양이가 없어요 · 사장냥 혼자 싸워요</p>
+        <p className="stage-lobby-team-empty">사장냥 단독 출전</p>
       ) : (
         <ol>
           {team.map((cat: Cat, i) => (

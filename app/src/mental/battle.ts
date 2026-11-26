@@ -30,7 +30,14 @@ import {
   stars,
   TRICKLE_SECONDS,
 } from './advance'
-import { ARENA_FRAME, ARENA_MAPS, arenaMap, stageArenaMap } from './arenaMaps'
+import {
+  ARENA_FRAME,
+  ARENA_MAPS,
+  ARENA_SHEETS,
+  arenaMap,
+  type StageRoster,
+  stageArenaMap,
+} from './arenaMaps'
 import {
   auroraEdge,
   auroraFold,
@@ -48,6 +55,7 @@ import {
   DPR,
   enemyKey,
   HERO_SIZE,
+  hasStageMonster,
   mateKey,
   RAM_ART,
   SKILL_MARK,
@@ -139,6 +147,7 @@ import {
 import {
   crossOrders,
   ENEMIES,
+  type EnemyKind,
   isOrder,
   orderHp,
   orderShares,
@@ -412,6 +421,7 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   kbx: number
   kby: number
   born: number
+  stageVariant: boolean
   walkOffset: number
   look: number
   /** 죽는 연출 중: 몸은 이미 꺼졌고 그림만 부풀며 사라진다. */
@@ -884,6 +894,7 @@ class BattleScene extends Phaser.Scene {
   /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
   private begun = false
   private nextWave = WAVE_SECONDS
+  private readonly stageRoster: StageRoster
   /** 웨이브 판 (690번): 전체 웨이브 수(시간 판은 0)와 지금 웨이브(시작 전 0). */
   private waveTotal = 0
   private waveAt = 0
@@ -942,6 +953,7 @@ class BattleScene extends Phaser.Scene {
     this.speedScale = this.assault?.enemySpeed ?? scaled?.speedScale ?? 1
     this.dmgScale = this.assault?.enemyDmg ?? scaled?.dmgScale ?? 1
     this.defenseBoss = opts.mode === 'defense' && Boolean(opts.stage?.boss)
+    this.stageRoster = stageArenaMap(opts.mapStage ?? opts.stage?.stage ?? 1).roster
     this.waveTotal = opts.mode === 'defense' ? Math.max(0, Math.floor(opts.stage?.waves ?? 0)) : 0
     this.loadout = opts.loadout
   }
@@ -1026,16 +1038,23 @@ class BattleScene extends Phaser.Scene {
       return
     }
     this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
-    const mapTexture = this.textures.get('art-arenaMaps')
     for (const map of ARENA_MAPS) {
+      const mapTexture = this.textures.get(`art-${map.sheet}`)
       if (!mapTexture.has(map.key)) {
-        mapTexture.add(map.key, 0, map.x, ARENA_FRAME.y, ARENA_FRAME.width, ARENA_FRAME.height)
+        mapTexture.add(
+          map.key,
+          0,
+          map.x,
+          ARENA_SHEETS[map.sheet].y,
+          ARENA_FRAME.width,
+          ARENA_FRAME.height,
+        )
       }
     }
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero.weapon.grade)
     this.bakeMateGuns()
-    bakeEnemies(this)
+    bakeEnemies(this, this.waveTotal > 0)
     bakeMagic(this, Boolean(this.opts.idle))
     if (this.assault) bakeOrders(this, this.sellScale())
 
@@ -1620,7 +1639,7 @@ class BattleScene extends Phaser.Scene {
     for (let i = 0; i < count; i++) {
       const spread = (i - (count - 1) / 2) * 46
       const x = Phaser.Math.Clamp(boss.x + spread, w * 0.1, w * 0.9)
-      this.spawn('panic', [x, boss.y + 40])
+      this.spawn(this.waveTotal ? this.stageRoster[0] : 'panic', [x, boss.y + 40])
     }
     this.pop(boss.x, boss.y - 70, '다 팔아!!', '#3a86ff', 26)
   }
@@ -1631,7 +1650,7 @@ class BattleScene extends Phaser.Scene {
     if (this.bg?.frame.name === map.key) return
     const { w, h } = this.view()
     for (const bg of [this.bg, this.bg2]) {
-      bg?.setTexture('art-arenaMaps', map.key).setDisplaySize(w, h)
+      bg?.setTexture(`art-${map.sheet}`, map.key).setDisplaySize(w, h)
     }
   }
 
@@ -3034,7 +3053,9 @@ class BattleScene extends Phaser.Scene {
     const v = UNITS[kind]
     const k = unitK(kind)
     e.baseK = k
-    e.setTexture(enemyKey(kind, 0))
+    e.walkOffset = Phaser.Math.Between(0, WALK_FRAMES - 1)
+    e.stageVariant = this.waveTotal > 0 && !force && hasStageMonster(kind) && e.walkOffset % 2 === 1
+    e.setTexture(enemyKey(kind, 0, e.stageVariant))
       .enableBody(true, x, y, true, true)
       .setScale(k)
       .setAngle(0)
@@ -3043,7 +3064,6 @@ class BattleScene extends Phaser.Scene {
       .setDepth(3)
     enemyBody(e, v.r)
     e.look = 0
-    e.walkOffset = Phaser.Math.Between(0, WALK_FRAMES - 1)
     e.dying = false
     e.kind = kind
     if (kind !== 'spec') {
@@ -3164,7 +3184,7 @@ class BattleScene extends Phaser.Scene {
       this.waveStreamClock = Math.min(this.waveStreamClock + dt, this.waveStreamEvery * 3)
       while (this.waveStream > 0 && this.waveStreamClock >= this.waveStreamEvery) {
         // 화면이 꽉 차 못 꺼내면 자리가 날 때까지 기다린다: 줄기의 수는 줄지 않는다.
-        if (!this.spawn(waveStreamKind(Math.random()))) break
+        if (!this.spawn(waveStreamKind(Math.random(), this.stageRoster))) break
         this.waveStreamClock -= this.waveStreamEvery
         this.waveStream--
       }
@@ -3194,41 +3214,36 @@ class BattleScene extends Phaser.Scene {
       this.opts.onBanner(`${head} · ${BOSS.name} 등장!!`, '#ff4f6d')
       this.startBoss()
     } else {
-      const kind = waveKind(this.waveAt - 1)
-      if (kind === 'panic') {
-        this.wavePanic()
-        this.opts.onBanner(`${head} · 패닉셀 떼가 몰려온다!`, '#82bbff')
-      } else if (kind === 'dump') {
-        this.waveDump()
-        this.opts.onBanner(`${head} · 투매가 쏟아진다!`, '#c5a1ff')
-      } else {
-        this.waveShort(false)
-        this.opts.onBanner(`${head} · 공매도 대열이 밀려온다!`, '#9eb7ff')
-      }
+      const formation = (this.waveAt - 1) % this.stageRoster.length
+      const mob = this.stageRoster[formation]
+      if (formation === 0) this.wavePanic(mob)
+      else if (formation === 1) this.waveDump(mob)
+      else this.waveShort(false, mob)
+      this.opts.onBanner(`${head} · ${ENEMIES[mob].label} 등장!`, ENEMIES[mob].fill)
     }
     // 방금 나온 떼와 앞으로 나올 줄기의 값 (694번). 웨이브는 화면이 빈 뒤에 오므로 살아 있는 것이 곧 이번 떼다.
     let horde = 0
     for (const e of this.enemies.getChildren() as Enemy[])
       if (e.active) horde += UNITS[e.kind].reward
-    this.waveReward = horde + this.waveStream * waveStreamReward(ENEMIES)
+    this.waveReward = horde + this.waveStream * waveStreamReward(this.stageRoster)
     this.pushHud(true)
   }
 
-  private waveDump() {
+  private waveDump(kind: EnemyKind = 'dump') {
     const { w } = this.view()
     const grow = 1 + Math.min(1.5, this.curve() / 120)
     // 세 줄로 쏟아진다: 처음 15, 뒤로 갈수록 36까지. 전에는 6~15로 '쏟아진다'는 말이 무색했다.
     const n = Math.min(60, Math.round(15 * grow * this.crowd() * (this.assault ? 0.6 : 1)))
     const cols = Math.ceil(n / 3)
     for (let i = 0; i < n; i++) {
-      this.spawn('dump', [
+      this.spawn(kind, [
         w * 0.16 + (Math.floor(i / 3) + 0.5) * ((w * 0.68) / cols),
         -30 - (i % 3) * 44,
       ])
     }
   }
 
-  private waveShort(banner = true) {
+  private waveShort(banner = true, kind: EnemyKind = 'short') {
     const { w } = this.view()
     // 뒤로 갈수록 여섯에서 열둘까지: 시간 판은 30초마다 하나, 웨이브 판 (690번)은 마지막 웨이브에 열둘.
     const grow = this.waveTotal
@@ -3237,7 +3252,7 @@ class BattleScene extends Phaser.Scene {
     const count = Math.min(24, Math.round((6 + grow) * this.crowd()))
     const cols = Math.ceil(count / 2)
     for (let i = 0; i < count; i++) {
-      this.spawn('short', [
+      this.spawn(kind, [
         w * 0.16 + (((i % cols) + 0.5) * w * 0.68) / cols,
         -40 - Math.floor(i / cols) * 64,
       ])
@@ -3325,7 +3340,7 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  private wavePanic() {
+  private wavePanic(kind: EnemyKind = 'panic') {
     const { w, h } = this.view()
     // 두 겹의 반원 떼: 처음 24, 뒤로 갈수록 44까지. 전에는 10~20이라 떼 같지 않았다.
     const n = Math.min(
@@ -3340,7 +3355,7 @@ class BattleScene extends Phaser.Scene {
       const a = Math.PI + ((j + 0.5) / m) * Math.PI
       const rw = w * (0.28 + ring * 0.05)
       const rh = h * (0.5 + ring * 0.14)
-      this.spawn('panic', [w / 2 + Math.cos(a) * rw, -35 + Math.sin(a) * rh])
+      this.spawn(kind, [w / 2 + Math.cos(a) * rw, -35 + Math.sin(a) * rh])
     }
   }
 
@@ -6079,7 +6094,9 @@ class BattleScene extends Phaser.Scene {
         const drift = Phaser.Math.Clamp(p.x - e.x, -1, 1) * 25
         e.setVelocity(e.kbx + (e.blocker ? drift : 0), (e.blocker ? sy * 0.55 : sy * 1.4) + e.kby)
       } else {
-        e.setVelocity(e.kbx, sy + e.kby)
+        const sideways =
+          e.kind === 'coinCrab' ? Math.cos((this.elapsed - e.born) * 2.5) * sy * 0.65 : 0
+        e.setVelocity(e.kbx + sideways, sy + e.kby)
       }
       e.kbx *= 0.86
       e.kby *= 0.86
@@ -6092,7 +6109,7 @@ class BattleScene extends Phaser.Scene {
         : walkFrame(e.kind, this.elapsed - e.born, e.walkOffset, this.reducedMotion)
       if (frame !== e.look) {
         e.look = frame
-        e.setTexture(enemyKey(e.kind, frame))
+        e.setTexture(enemyKey(e.kind, frame, e.stageVariant))
       }
     }
     for (const child of this.bullets.getChildren()) {

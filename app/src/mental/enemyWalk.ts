@@ -3,7 +3,19 @@ import { ENEMIES, type EnemyKind } from './enemies'
 export const WALK_FRAMES = 8
 
 /** 두 발을 한 번씩 내딛는 거리. 속도가 빠른 적은 발걸음도 빨라진다. */
-const STRIDE: Record<EnemyKind, number> = { panic: 48, dump: 38, spec: 32, stop: 42, short: 36 }
+const STRIDE: Record<EnemyKind, number> = {
+  panic: 48,
+  dump: 38,
+  spec: 32,
+  stop: 42,
+  short: 36,
+  honeyBear: 31,
+  pearlSeal: 42,
+  starPuff: 34,
+  blossomBun: 46,
+  iceChick: 28,
+  coinCrab: 30,
+}
 
 export function walkFrame(kind: EnemyKind, ageSeconds: number, offset: number, reduced = false) {
   if (reduced) return 0

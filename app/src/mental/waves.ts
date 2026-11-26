@@ -1,3 +1,6 @@
+import type { StageRoster } from './arenaMaps'
+import { ENEMIES } from './enemies'
+
 /** 15초마다 패닉셀 → 투매 → 공매도. 투기 몹은 일반 생성으로 계속 등장한다. */
 export const WAVE_ORDER = ['panic', 'dump', 'short'] as const
 export function waveKind(index: number) {
@@ -26,29 +29,17 @@ export function waveCrowd(at: number): number {
   return STAGE_WAVE.early[Math.floor(at) - 1] ?? 1
 }
 
-/** 줄기에 섞여 나오는 몬스터와 그 몫: 패닉셀이 여섯에 하나꼴로 많고 투기는 드물다. */
-export const WAVE_STREAM = [
-  ['panic', 0.6],
-  ['dump', 0.22],
-  ['stop', 0.13],
-  ['spec', 0.05],
-] as const
+/** 줄기의 비율은 떼 60%, 줄 25%, 대열 15%. 같은 편성으로 실제 경험치도 계산한다. */
+const STREAM_WEIGHTS = [0.6, 0.25, 0.15] as const
 
-/** 줄기의 다음 몬스터. rand는 0~1. */
-export function waveStreamKind(rand: number) {
-  let left = rand
-  for (const [kind, share] of WAVE_STREAM) {
-    left -= share
-    if (left < 0) return kind
-  }
-  return WAVE_STREAM[WAVE_STREAM.length - 1][0]
+export function waveStreamKind(rand: number, roster: StageRoster) {
+  if (rand < STREAM_WEIGHTS[0]) return roster[0]
+  if (rand < STREAM_WEIGHTS[0] + STREAM_WEIGHTS[1]) return roster[1]
+  return roster[2]
 }
 
-/** 줄기의 몬스터 한 마리가 주는 값(reward)의 평균. */
-export function waveStreamReward(
-  units: Record<(typeof WAVE_STREAM)[number][0], { reward: number }>,
-) {
-  return WAVE_STREAM.reduce((sum, [kind, share]) => sum + units[kind].reward * share, 0)
+export function waveStreamReward(roster: StageRoster) {
+  return roster.reduce((sum, kind, i) => sum + ENEMIES[kind].reward * STREAM_WEIGHTS[i], 0)
 }
 
 /**

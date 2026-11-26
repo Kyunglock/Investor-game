@@ -8,7 +8,7 @@ import { CAT_SCALE, type CatModel } from './catModels'
 import { drawCatPose } from './catPoseArt'
 import { drawCatRun } from './catRunArt'
 import { drawEmber, drawGust, drawIceLance, drawPillar } from './effectArt'
-import { orderShares, type UnitKind } from './enemies'
+import { isLocalMob, LOCAL_MOBS, orderShares, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
@@ -319,65 +319,84 @@ export function bakeMates(scene: Phaser.Scene, _grades: readonly GunGrade[]) {
   }
 }
 /** 고정된 크기의 8프레임 보행. 그림만 변형하고 충돌 원은 유지한다. */
-export function enemyKey(kind: UnitKind, frame: number): string {
-  return `${kind}-${frame}`
+export function enemyKey(kind: UnitKind, frame: number, variant = false): string {
+  return variant ? `${kind}-alt-${frame}` : `${kind}-${frame}`
 }
 
-export function bakeEnemies(scene: Phaser.Scene) {
+const STAGE_MONSTER_COL = { panic: 0, dump: 1, spec: 2 } as const
+
+export function hasStageMonster(kind: UnitKind): kind is keyof typeof STAGE_MONSTER_COL {
+  return Object.hasOwn(STAGE_MONSTER_COL, kind)
+}
+
+export function bakeEnemies(scene: Phaser.Scene, stageVariants: boolean) {
   const source = scene.textures.get('art-enemies').getSourceImage() as HTMLImageElement
-  const kinds = ['panic', 'dump', 'spec', 'stop', 'short'] as const
+  const kinds = ['panic', 'dump', 'spec', 'stop', 'short', ...LOCAL_MOBS] as const
   for (const [i, kind] of kinds.entries()) {
-    const sprite = document.createElement('canvas')
-    sprite.width = sprite.height = ENEMY_SIZE * DPR
-    const paint = sprite.getContext('2d')
-    if (!paint) continue
-    paint.scale(DPR, DPR)
-    const size = kind === 'spec' ? 55 : kind === 'panic' ? 43 : 49
-    const image =
-      kind === 'short'
-        ? (scene.textures.get('art-shortSeller').getSourceImage() as HTMLImageElement)
-        : source
-    const cell =
-      kind === 'short'
-        ? { x: 0, y: 0, w: image.width, h: image.height }
-        : {
-            x: ((i % 2) * source.width) / 2,
-            y: (Math.floor(i / 2) * source.height) / 2,
-            w: source.width / 2,
-            h: source.height / 2,
-          }
-    drawSprite(paint, image, cell, { x: 32 - size / 2, y: 32 - size / 2, w: size, h: size })
-    for (let frame = 0; frame < WALK_FRAMES; frame++) {
-      bake(scene, enemyKey(kind, frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
-        const pose = walkPose(kind, frame)
-        c.fillStyle = '#477c6533'
-        c.beginPath()
-        c.ellipse(32, 55, 19 * pose.shadow, 4 * pose.shadow, 0, 0, Math.PI * 2)
-        c.fill()
-        c.save()
-        c.translate(32, 48 + pose.bob)
-        c.rotate(pose.tilt)
-        c.scale(1 / pose.squash, pose.squash)
-        c.translate(-32, -48)
-        // 발목 위는 한 장으로, 아래는 좌우를 나눠 늘리고 접는다.
-        // 경계의 시작점은 고정이므로 몸통과 발 사이가 벌어지지 않는다.
-        const ankle = kind === 'spec' ? 48 : 46
-        c.drawImage(sprite, 0, 0, 64 * DPR, ankle * DPR, 0, 0, 64, ankle)
-        for (const [side, step] of [pose.leftFoot, pose.rightFoot].entries()) {
-          c.drawImage(
-            sprite,
-            side * 32 * DPR,
-            ankle * DPR,
-            32 * DPR,
-            (64 - ankle) * DPR,
-            side * 32,
-            ankle,
-            32,
-            (64 - ankle) * (1 + step),
-          )
+    const single = kind === 'short' || isLocalMob(kind)
+    const image = single
+      ? (scene.textures
+          .get(`art-${kind === 'short' ? 'shortSeller' : kind}`)
+          .getSourceImage() as HTMLImageElement)
+      : source
+    const cell = single
+      ? { x: 0, y: 0, w: image.width, h: image.height }
+      : {
+          x: ((i % 2) * source.width) / 2,
+          y: (Math.floor(i / 2) * source.height) / 2,
+          w: source.width / 2,
+          h: source.height / 2,
         }
-        c.restore()
+    const variants = [{ image, cell, variant: false }]
+    if (stageVariants && hasStageMonster(kind)) {
+      const sheet = scene.textures.get('art-stageMonsters').getSourceImage() as HTMLImageElement
+      const w = sheet.width / 3
+      variants.push({
+        image: sheet,
+        cell: { x: STAGE_MONSTER_COL[kind] * w, y: 0, w, h: sheet.height },
+        variant: true,
       })
+    }
+    for (const { image, cell, variant } of variants) {
+      const sprite = document.createElement('canvas')
+      sprite.width = sprite.height = ENEMY_SIZE * DPR
+      const paint = sprite.getContext('2d')
+      if (!paint) continue
+      paint.scale(DPR, DPR)
+      const size = kind === 'spec' ? 55 : kind === 'panic' ? 43 : 49
+      drawSprite(paint, image, cell, { x: 32 - size / 2, y: 32 - size / 2, w: size, h: size })
+      for (let frame = 0; frame < WALK_FRAMES; frame++) {
+        bake(scene, enemyKey(kind, frame, variant), ENEMY_SIZE, ENEMY_SIZE, (c) => {
+          const pose = walkPose(kind, frame)
+          c.fillStyle = '#477c6533'
+          c.beginPath()
+          c.ellipse(32, 55, 19 * pose.shadow, 4 * pose.shadow, 0, 0, Math.PI * 2)
+          c.fill()
+          c.save()
+          c.translate(32, 48 + pose.bob)
+          c.rotate(pose.tilt)
+          c.scale(1 / pose.squash, pose.squash)
+          c.translate(-32, -48)
+          // 발목 위는 한 장으로, 아래는 좌우를 나눠 늘리고 접는다.
+          // 경계의 시작점은 고정이므로 몸통과 발 사이가 벌어지지 않는다.
+          const ankle = kind === 'spec' ? 48 : 46
+          c.drawImage(sprite, 0, 0, 64 * DPR, ankle * DPR, 0, 0, 64, ankle)
+          for (const [side, step] of [pose.leftFoot, pose.rightFoot].entries()) {
+            c.drawImage(
+              sprite,
+              side * 32 * DPR,
+              ankle * DPR,
+              32 * DPR,
+              (64 - ankle) * DPR,
+              side * 32,
+              ankle,
+              32,
+              (64 - ankle) * (1 + step),
+            )
+          }
+          c.restore()
+        })
+      }
     }
   }
 }

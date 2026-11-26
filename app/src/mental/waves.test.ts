@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest'
+import { ARENA_MAPS } from './arenaMaps'
 import { ENEMIES } from './enemies'
 import {
   IDLE_RAID,
@@ -92,23 +93,6 @@ it('웨이브 판의 경험치 (694번): 웨이브 하나를 다 물리치면 �
   expect(waveXp(80, 0, 500)).toBe(0)
 })
 
-it('줄기의 몬스터는 패닉셀이 가장 많고 몫을 다 더하면 1이다', () => {
-  expect(waveStreamKind(0)).toBe('panic')
-  expect(waveStreamKind(0.59)).toBe('panic')
-  expect(waveStreamKind(0.7)).toBe('dump')
-  expect(waveStreamKind(0.9)).toBe('stop')
-  expect(waveStreamKind(0.99)).toBe('spec')
-  expect(waveStreamKind(1)).toBe('spec')
-  const same = { reward: 10 }
-  expect(waveStreamReward({ panic: same, dump: same, stop: same, spec: same })).toBeCloseTo(10)
-  expect(waveStreamReward(ENEMIES)).toBeCloseTo(
-    ENEMIES.panic.reward * 0.6 +
-      ENEMIES.dump.reward * 0.22 +
-      ENEMIES.stop.reward * 0.13 +
-      ENEMIES.spec.reward * 0.05,
-  )
-})
-
 it('첫 세 웨이브는 몬스터가 덜 나오고 넷째 웨이브부터는 그대로다 (695번)', () => {
   const crowds = [1, 2, 3].map(waveCrowd)
   expect(crowds).toEqual([...crowds].sort((a, b) => a - b))
@@ -119,4 +103,23 @@ it('첫 세 웨이브는 몬스터가 덜 나오고 넷째 웨이브부터는 �
   expect(waveCrowd(4)).toBe(1)
   expect(waveCrowd(15)).toBe(1)
   expect(waveCrowd(0)).toBe(1)
+})
+
+it('모든 전장의 줄기와 경험치가 그 전장에 편성된 세 몹만 쓴다', () => {
+  for (const { roster } of ARENA_MAPS) {
+    expect(new Set(roster).size).toBe(3)
+    expect([0, 0.59, 0.6, 0.849, 0.85, 1].map((r) => waveStreamKind(r, roster))).toEqual([
+      roster[0],
+      roster[0],
+      roster[1],
+      roster[1],
+      roster[2],
+      roster[2],
+    ])
+    expect(waveStreamReward(roster)).toBeCloseTo(
+      ENEMIES[roster[0]].reward * 0.6 +
+        ENEMIES[roster[1]].reward * 0.25 +
+        ENEMIES[roster[2]].reward * 0.15,
+    )
+  }
 })

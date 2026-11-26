@@ -35,7 +35,7 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { xpToNext } from './cards'
-import { ENEMIES, ORDERS, UNITS } from './enemies'
+import { COMMON_ENEMIES, ORDERS, UNITS } from './enemies'
 
 /** 같은 순서로 도는 가짜 난수. */
 const seq = (...xs: number[]) => {
@@ -209,8 +209,8 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     expect(ORDERS.bulk.speed).toBeLessThan(ORDERS.order.speed)
     expect(ORDERS.bulk.hp).toBeGreaterThan(ORDERS.order.hp)
     expect(ORDERS.fake.reward).toBe(0)
-    // 디펜스 출전 화면의 적 소개(ENEMIES)에는 매도 물량이 섞이지 않는다.
-    expect(Object.keys(ENEMIES).sort()).toEqual(['dump', 'panic', 'short', 'spec', 'stop'])
+    // 디펜스 출전 화면의 적 소개(COMMON_ENEMIES)에는 매도 물량이 섞이지 않는다.
+    expect(Object.keys(COMMON_ENEMIES).sort()).toEqual(['dump', 'panic', 'short', 'spec', 'stop'])
     expect(UNITS.order).toBe(ORDERS.order)
   })
 

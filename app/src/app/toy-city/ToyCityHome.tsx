@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
 import { chapterName, stageLabel } from '../../mental/advance'
+import { StageScenery } from '../../mental/StageScenery'
 import { FIRST_PLAY_KEY, firstMeeting } from '../firstPlay'
 import { ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
@@ -405,6 +406,7 @@ export function AssaultSelect({ company }: { company: Company }) {
   const numbers = Array.from({ length: per }, (_, i) => (chapter - 1) * per + i + 1).filter(
     (n) => n <= last,
   )
+  const earnedStars = numbers.reduce((sum, n) => sum + (assaults?.stars[n - 1] ?? 0), 0)
   const start = (stage: number) => {
     sfx.stamp()
     haptic.medium()
@@ -415,8 +417,9 @@ export function AssaultSelect({ company }: { company: Company }) {
     setChapter(to)
   }
   return (
-    <>
-      <div className="toy-chapter" data-testid="assault-chapter" data-chapter={chapter}>
+    <section className="assault-picker" aria-label="스테이지 선택">
+      <div className="assault-chapter" data-testid="assault-chapter" data-chapter={chapter}>
+        <StageScenery stage={numbers.includes(open) ? open : numbers[0]} />
         <button
           type="button"
           aria-label="앞 챕터"
@@ -425,10 +428,16 @@ export function AssaultSelect({ company }: { company: Company }) {
         >
           ‹
         </button>
-        <p className="toy-sheet-lead">
-          챕터 {chapter}
-          {chapter > openChapter && <small> · 잠김</small>}
-        </p>
+        <div className="assault-chapter-title" aria-live="polite">
+          <small>
+            챕터 {chapter}
+            {chapter > openChapter && ' · 잠김'}
+          </small>
+          <strong>{chapterName(chapter)}</strong>
+          <span role="img" aria-label={`챕터 별 ${earnedStars}개, 총 ${numbers.length * 3}개`}>
+            ★ {earnedStars} / {numbers.length * 3}
+          </span>
+        </div>
         <button
           type="button"
           aria-label="다음 챕터"
@@ -438,21 +447,18 @@ export function AssaultSelect({ company }: { company: Company }) {
           ›
         </button>
       </div>
-      <p className="text-sm text-muted" data-testid="assault-lead">
-        {chapter > openChapter
-          ? `챕터 ${chapter - 1} 보스를 깨면 열린다`
-          : '별 1개 100 · 2개 150 · 3개 200 다이아를 받아요.'}
-      </p>
       <ol className="toy-stage-grid" data-testid="assault-grid">
         {numbers.map((n) => {
           const stars = assaults?.stars[n - 1] ?? 0
           const locked = n > open
           const boss = n % per === 0
+          const current = n === best + 1
           return (
             <li key={n}>
               <button
                 type="button"
                 className={`toy-stage-pick ${boss ? 'is-boss' : ''} ${stars > 0 ? 'is-cleared' : ''}`}
+                aria-current={current ? 'step' : undefined}
                 disabled={locked}
                 data-testid="assault-stage"
                 data-stage={n}
@@ -460,9 +466,11 @@ export function AssaultSelect({ company }: { company: Company }) {
                 aria-label={`매도벽 돌파 ${stageLabel(n, per)}${locked ? ' 잠김' : ''}${boss ? ' 보스' : ''} 별 ${stars}개`}
                 onClick={() => start(n)}
               >
-                <b>{locked ? '🔒' : stageLabel(n, per)}</b>
+                <span className="assault-marker" aria-hidden="true">
+                  {boss ? '보스' : current ? '도전' : locked ? '🔒' : '✓'}
+                </span>
+                <b>{stageLabel(n, per)}</b>
                 <small aria-hidden="true">
-                  {boss && !locked ? '보스 ' : ''}
                   {'★'.repeat(stars)}
                   {'☆'.repeat(3 - stars)}
                 </small>
@@ -471,7 +479,7 @@ export function AssaultSelect({ company }: { company: Company }) {
           )
         })}
       </ol>
-    </>
+    </section>
   )
 }
 

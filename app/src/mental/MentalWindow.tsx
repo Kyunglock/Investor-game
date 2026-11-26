@@ -47,13 +47,14 @@ import {
   stageSkillCard,
   stageSkillTargets,
 } from './cards'
-import { ENEMIES } from './enemies'
+import { COMMON_ENEMIES } from './enemies'
 import { FirstClear } from './FirstClear'
 import { GunSprite } from './GunSprite'
 import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './gameSpeed'
 import { BATTLE_SECONDS, type Genre } from './genres'
 import { StageLobbyTeam } from './StageLobbyPlan'
 import { StagePortrait } from './StagePortrait'
+import { StageScenery } from './StageScenery'
 import { StageSkillIcon } from './StageSkillIcon'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './stage.css'
@@ -255,9 +256,10 @@ export function MentalWindow({
         {!started && (
           <div className={`stage-lobby${crowd ? ' is-crowd' : ''}`} data-testid="mental-lobby">
             <header className="stage-heading">
+              {crowd && <StageScenery stage={entry.stage} />}
               <span className="stage-eyebrow">
                 {crowd
-                  ? `스테이지 · 세기 ${entry.stage}`
+                  ? '매도벽 돌파'
                   : entry.kind === 'assault'
                     ? `매도벽 돌파 스테이지 · 세기 ${entry.stage}`
                     : entry.kind === 'stage'
@@ -310,7 +312,7 @@ export function MentalWindow({
               {/* 메인 스테이지의 출전 화면에는 사장냥 뒷모습과 무기 칸을 두지 않는다 (681번). */}
               {!crowd && <StagePortrait weapon={heroOf(company).weapon} />}
               {mode === 'assault' && <small>패닉셀·투매를 뚫고 전진!</small>}
-              {mode !== 'assault' && (
+              {!crowd && mode !== 'assault' && (
                 <>
                   <div className="stage-mini-wall">
                     <span>♡</span> 멘탈벽
@@ -321,11 +323,9 @@ export function MentalWindow({
                       : '몰려오는 불안을 막아 멘탈벽을 지키세요'}
                   </p>
                   <small>
-                    {crowd
-                      ? '적을 잡은 경험치로 레벨이 오르면 카드를 골라요 · 멘탈벽이 많이 남을수록 별이 많다'
-                      : spec
-                        ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
-                        : '누른 방향으로 발사 · 하루 한 번 다이아를 받는다'}
+                    {spec
+                      ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
+                      : '누른 방향으로 발사 · 하루 한 번 다이아를 받는다'}
                   </small>
                 </>
               )}
@@ -354,7 +354,7 @@ export function MentalWindow({
                       { label: '대량 매도', fill: '#2f5fbf' },
                       { label: '허매도', fill: '#a9c1f0' },
                     ]
-                  : Object.values(ENEMIES)
+                  : Object.values(COMMON_ENEMIES)
                 ).map((e) => (
                   <span key={e.label}>
                     <i style={{ background: e.fill }} />
