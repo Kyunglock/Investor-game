@@ -120,7 +120,8 @@ class CompanyApiTest {
     }
     postJson("/api/company/idle/tutorial", "{\"action\":\"next\",\"step\":-1}")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.idle.onboarding.step").value(0));
+        // 첫 매도벽 구경 단계 없이 바로 공격력 강화로 간다.
+        .andExpect(jsonPath("$.idle.onboarding.step").value(1));
     mvc.perform(get("/api/company").cookie(session))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.idle.onboarding.catClaimed").value(false))
