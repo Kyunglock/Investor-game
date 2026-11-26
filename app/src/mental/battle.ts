@@ -2005,19 +2005,8 @@ class BattleScene extends Phaser.Scene {
     // 벽 하나를 통째로 무너뜨리면 경험치를 한 번에 더 준다 (#700).
     const moved = this.idleMoved
     this.idleMoved = false
-    // 자동 전투는 벽 위가 남은 물량과 피해 숫자로 차 있다: 격파 알림은 비어 있는 전장 가운데에 띄운다 (#914).
-    const noteY = this.opts.idle ? (this.stopY() + this.buyWallY()) / 2 : wall.y - 36
-    if (!moved && !this.wallCards()) {
-      const breakXp = wallBreakXp(xpToNext(this.level))
-      this.pop(
-        this.view().w / 2,
-        noteY + (this.opts.idle ? 34 : -36),
-        `EXP +${breakXp}`,
-        '#7be0c3',
-        22,
-      )
-      this.gainXp(breakXp)
-    }
+    // 전장 가운데의 "매도벽 격파!"·"EXP +n" 글자는 띄우지 않는다 (701번). 경험치는 그대로 준다.
+    if (!moved && !this.wallCards()) this.gainXp(wallBreakXp(xpToNext(this.level)))
     this.sinceBreak = 0
     this.stuck = 0
     // 치고 오르는 동안 화면이 쭉 내려가 남아 있던 물량이 사장냥에게 쏟아져 맞았다: 남은 물량은 벽과 함께 체결되고, 치고 오르는 동안은 맞지 않는다.
@@ -2030,8 +2019,6 @@ class BattleScene extends Phaser.Scene {
     const burstY = wall.y - 12
     const centerX = this.view().w / 2
     this.ring(centerX, burstY, 0xffe5a3, lane.width * 0.75, 380)
-    // 부순 것이 아니라 물러난 벽에는 격파를 적지 않는다 (546번).
-    if (!moved) this.pop(centerX, noteY, '매도벽 격파!', '#ffe5a3', 28)
     for (let i = 0; i < 7; i++) {
       const x = lane.left + ((i + 0.5) * lane.width) / 7
       // 중앙부터 바깥으로 짧게 연쇄 폭발. 벽이 교체되어도 좌표는 고정한다.
