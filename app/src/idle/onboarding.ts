@@ -2,8 +2,6 @@ import type { Company } from '@web/api/client'
 
 export function tutorialReady(c: Company, step: number): boolean {
   switch (step) {
-    case 0:
-      return (c.idle?.wall ?? 1) > 1 || (c.idle?.cleared ?? 0) > 0
     case 1:
       return (c.battleUpgrades?.find((u) => u.kind === 'damage')?.level ?? 0) > 0
     case 3:

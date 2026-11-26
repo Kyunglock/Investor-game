@@ -537,6 +537,8 @@ class IdleEngine {
     c.idle.best = Math.max(c.idle.best, Math.max(c.idle.wall - 1, c.idle.bossCleared));
     // 예전 메테오 확인 단계에 머문 저장도 팀 완성 안내로 이어진다.
     if (Integer.valueOf(6).equals(c.tutorialStep)) c.tutorialStep = 7;
+    // 첫 매도벽 돌파를 지켜보는 단계는 없앴다: 그 단계에 머문 저장은 공격력 강화로 이어진다.
+    if (Integer.valueOf(0).equals(c.tutorialStep)) c.tutorialStep = 1;
     if (!c.onboardingInitialized) {
       // 이미 해금 조건을 달성한 기존 유저에게 새 안내를 강제하지 않는다.
       c.skillGuideSeen = c.tutorialStep == null && c.idle.best >= 100;
@@ -1038,7 +1040,6 @@ class IdleEngine {
     if (!required.equals(action)) throw new InvalidRequestException("안내된 뽑기를 먼저 완료해 주세요");
     boolean ready =
         switch (step) {
-          case 0 -> Math.max(s.best, s.wall - 1) >= 1;
           case 1 -> c.battleLevels.getOrDefault("damage", 0) > 0;
           case 3 -> s.fielded.contains("night");
           case 5 ->
@@ -1050,7 +1051,8 @@ class IdleEngine {
     if (!ready) throw new InvalidRequestException("안내된 행동을 먼저 완료해 주세요");
     if (step == 2) tutorialCat(c);
     if (step == 4) tutorialWeapon(c);
-    c.tutorialStep = step == 5 ? 7 : step + 1;
+    // 환영 다음은 바로 공격력 강화다 (첫 매도벽 구경 단계 없음).
+    c.tutorialStep = step == -1 || step == 0 ? 1 : step == 5 ? 7 : step + 1;
   }
 
   private void tutorialCat(CompanyState c) {

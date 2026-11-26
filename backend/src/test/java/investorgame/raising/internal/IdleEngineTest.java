@@ -54,10 +54,10 @@ class IdleEngineTest {
     assertThat(engine.view(c).onboarding().step()).isEqualTo(-1);
     engine.tutorial(c, "next", -1);
     long diamonds = c.diamonds;
-    assertThatThrownBy(() -> engine.tutorial(c, "next", 0))
-        .isInstanceOf(InvalidRequestException.class);
-    c.idle.wall = 2;
-    engine.tutorial(c, "next", 0);
+    // 첫 매도벽 구경 단계 없이 바로 공격력 강화로 간다.
+    assertThat(engine.view(c).onboarding().step()).isEqualTo(1);
+    engine.tutorial(c, "next", -1); // lost response retry
+    assertThat(engine.view(c).onboarding().step()).isEqualTo(1);
     assertThatThrownBy(() -> engine.tutorial(c, "next", 1))
         .isInstanceOf(InvalidRequestException.class);
     c.battleLevels.put("damage", 1);

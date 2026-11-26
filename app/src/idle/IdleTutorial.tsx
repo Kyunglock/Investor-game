@@ -4,10 +4,11 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { tutorialReady } from './onboarding'
 import { tutorialTargets, useTutorialFocus } from './tutorialFocus'
+import { useTutorialClickGuard } from './useTutorialClickGuard'
 import { useTutorialDragGuard } from './useTutorialDragGuard'
 import './onboarding-guide.css'
 
-/** 기존 UI 옆의 짧은 안내. 첫 돌파는 확인 후, 직접 조작하는 단계는 행동 완료 후 이어간다. */
+/** 기존 UI 옆의 짧은 안내. 직접 조작하는 단계는 행동 완료 후 이어간다. 비춘 곳 말고는 누를 수 없다. */
 export function IdleTutorial({
   company,
   replay,
@@ -33,6 +34,7 @@ export function IdleTutorial({
   const active = !!progress && step < 8
   const focus = useTutorialFocus(tutorialTargets(step, menu), active)
   useTutorialDragGuard(focus?.drop ? focus.target : undefined, focus?.drop?.target)
+  useTutorialClickGuard(active && focus ? [focus.target, focus.drop?.target] : [])
   const ready = tutorialReady(company, step)
   const advance = () => useRaisingStore.getState().tutorial('next', progress?.step ?? 8)
   useEffect(() => {
@@ -87,14 +89,9 @@ export function IdleTutorial({
         : '다음 안내'
       : step === -1
         ? '함께 시작하기'
-        : step === 0
-          ? // 652번: 돌파하기 전에는 누를 수 없는 "첫 매도벽 돌파를 기다려요" 단추를 두지 않는다.
-            ready
-            ? '첫 돌파 확인했어요'
-            : null
-          : step === 7
-            ? '안내 마치기'
-            : null
+        : step === 7
+          ? '안내 마치기'
+          : null
   const drop = focus.drop
   const windows = (drop ? [focus, drop] : [focus]).map((box) => (
     <rect key={box.target} x={box.left} y={box.top} width={box.width} height={box.height} rx={9} />
@@ -106,7 +103,7 @@ export function IdleTutorial({
   const path = `M ${fromX} ${fromY} C ${fromX} ${(fromY + toY) / 2} ${toX} ${(fromY + toY) / 2} ${toX} ${toY}`
   const next = () => {
     if (replay !== null) {
-      onReplay(step === 7 ? null : step === 5 ? 7 : step + 1)
+      onReplay(step === 7 ? null : step === 5 ? 7 : step === -1 ? 1 : step + 1)
       return
     }
     void advance()
@@ -179,24 +176,18 @@ export function IdleTutorial({
             }}
           />
         )}
-        <small>{replay !== null ? '다시 보기' : `${Math.min(step + 2, 8)} / 8`}</small>
-        <p aria-live="polite">
-          {step === 0 && ready
-            ? '첫 매도벽을 돌파했어요! 확인하고 공격력 강화를 배워봐요.'
-            : focus.text}
-        </p>
+        <small>
+          {replay !== null ? '다시 보기' : `${step === -1 ? 1 : Math.min(step + 1, 7)} / 7`}
+        </small>
+        <p aria-live="polite">{focus.text}</p>
         {error && <p role="alert">{error}</p>}
         <div className="tutorial-coach-actions">
           {action && (
-            <button
-              type="button"
-              disabled={busy || (replay === null && step === 0 && !ready)}
-              onClick={next}
-            >
+            <button type="button" disabled={busy} onClick={next}>
               {action}
             </button>
           )}
-          {error && !action && [0, 1, 3, 5].includes(step) && (
+          {error && !action && [1, 3, 5].includes(step) && (
             <button
               type="button"
               disabled={busy}
