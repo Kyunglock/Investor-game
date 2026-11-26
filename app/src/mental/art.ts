@@ -525,8 +525,8 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
     for (const back of [true, false]) {
       c.beginPath()
       for (let x = 0; x <= 512; x += 2) {
-        const { edge, height } = auroraFold(x / 512, back)
-        const y = back ? edge - height * 0.64 : edge - 1
+        const u = x / 512
+        const y = back ? auroraEdge(u) - 33 - 7 * Math.sin(3 * Math.PI * u) : auroraEdge(u) - 1
         if (x === 0) c.moveTo(x, y)
         else c.lineTo(x, y)
       }

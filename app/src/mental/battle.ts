@@ -4542,7 +4542,8 @@ class BattleScene extends Phaser.Scene {
     const age = this.elapsed - sweep.started
     const { w, h } = this.view()
     const height = 113
-    const bottom = Math.min(h - (36 * height) / 72, sweep.origin.y - height * 0.74)
+    const bottom = h - (36 * height) / 72
+    const capeTop = Math.min(bottom, sweep.origin.y - height * 0.74)
     if (age < AURORA_CHARGE_SECONDS) {
       const spread = Phaser.Math.SmoothStep(
         age,
@@ -4552,7 +4553,7 @@ class BattleScene extends Phaser.Scene {
       sweep.ribbon
         .setPosition(
           Phaser.Math.Linear(sweep.origin.x, w / 2, spread),
-          Phaser.Math.Linear(sweep.origin.y, bottom, spread),
+          Phaser.Math.Linear(sweep.origin.y, capeTop, spread),
         )
         .setDisplaySize(8 + (w - 8) * spread, 4 + (height - 4) * spread)
       return
@@ -4626,7 +4627,9 @@ class BattleScene extends Phaser.Scene {
       }
       sweep.distance += freeStep * (contact ? AURORA_CONTACT_SPEED : 1)
     }
-    sweep.ribbon.setPosition(w / 2, bottom - sweep.distance).setDisplaySize(w, height)
+    sweep.ribbon
+      .setPosition(w / 2, Math.min(capeTop, bottom - sweep.distance))
+      .setDisplaySize(w, height)
     if (sweep.distance >= bottom + height) {
       sweep.ribbon.destroy()
       this.auroraSweep = null
