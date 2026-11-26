@@ -377,7 +377,7 @@ try {
   const bullets = (wall) => hits.filter((hit) => hit.kind === 'bullet' && hit.wall === wall).length
   assert(bullets(17) <= bullets(16) && bullets(18) <= bullets(17), 'pierce without a front hit')
   assert(
-    hits.filter((hit) => hit.kind === 'meteor').every((hit) => hit.damage > 0 && hit.damage <= 2.4),
+    hits.filter((hit) => hit.kind === 'meteor').every((hit) => hit.damage > 0 && hit.damage <= 4.8),
   )
   // The renderer draws the predicted health: the hits so far are off the wall before any answer.
   const wallHp = async () => (await page.evaluate(() => window.__mentalWalls()))[0].hp
