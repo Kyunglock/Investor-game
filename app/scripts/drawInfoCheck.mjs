@@ -103,10 +103,9 @@ try {
         await page.locator('.idle-nav button', { hasText: '상점' }).last().click()
         for (const kind of ['cat', 'weapon']) {
           await page.getByTestId(`draw-kind-${kind}`).click()
-          await expect(page.getByTestId('draw-note')).toContainText(
-            kind === 'cat' ? 'SS 0.2% · S 1% · A 10% · B 28% · C 60.8%' : 'F~A 등급',
-          )
-          await expect(page.getByTestId('draw-note')).not.toContainText('모자라요')
+          // 뽑기 설명·확률 줄은 없다 (700번).
+          await expect(page.getByTestId('draw-note')).toHaveCount(0)
+          await expect(page.getByText('광고 뽑기는 고양이·무기 각각')).toHaveCount(0)
           await expect(page.getByTestId('draw-ad-status')).toContainText(
             left > 0 ? '광고로 무료 뽑기 가능' : '오늘 광고 뽑기 완료',
           )
