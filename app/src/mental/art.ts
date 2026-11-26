@@ -521,6 +521,25 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
         }
       }
     }
+    // 겹친 비단의 위쪽은 라일락, 아래쪽은 민트빛으로 번진다.
+    for (const back of [true, false]) {
+      c.beginPath()
+      for (let x = 0; x <= 512; x += 2) {
+        const u = x / 512
+        const y = back ? auroraEdge(u) - 33 - 7 * Math.sin(3 * Math.PI * u) : auroraEdge(u) - 1
+        if (x === 0) c.moveTo(x, y)
+        else c.lineTo(x, y)
+      }
+      c.shadowBlur = 9
+      c.shadowColor = back ? '#af69ff' : '#4cffe2'
+      c.lineWidth = 5
+      c.strokeStyle = back ? '#cc8cff88' : '#74ffdf99'
+      c.stroke()
+      c.shadowBlur = 0
+      c.lineWidth = 1.5
+      c.strokeStyle = back ? '#ffdcff' : '#e8fff4'
+      c.stroke()
+    }
     // 망토 자락에 수놓인 별자리도 극광과 함께 펼쳐진다.
     c.strokeStyle = '#fff2cd88'
     c.lineWidth = 0.8
@@ -546,6 +565,41 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
       c.quadraticCurveTo(x, y, x, y - r)
       c.fill()
     }
+  })
+  bake(scene, 'aurora-hem', 96, 38, (c) => {
+    const glow = c.createRadialGradient(48, 22, 2, 48, 22, 43)
+    glow.addColorStop(0, '#92ffcf99')
+    glow.addColorStop(1, '#5effda00')
+    c.fillStyle = glow
+    c.fillRect(0, 0, 96, 38)
+    c.strokeStyle = '#c2ffe4'
+    c.shadowColor = '#39ffc9'
+    c.shadowBlur = 4
+    c.lineWidth = 2
+    c.beginPath()
+    c.moveTo(11, 15)
+    c.bezierCurveTo(-1, 1, 2, 33, 20, 25)
+    c.bezierCurveTo(32, 19, 44, 36, 55, 29)
+    c.bezierCurveTo(71, 17, 86, 31, 91, 13)
+    c.quadraticCurveTo(92, 5, 85, 11)
+    c.stroke()
+  })
+  bake(scene, 'aurora-contact-star', 60, 60, (c) => {
+    c.translate(30, 30)
+    const halo = c.createRadialGradient(0, 0, 1, 0, 0, 29)
+    halo.addColorStop(0, '#fff2ae')
+    halo.addColorStop(0.27, '#ffc56b9c')
+    halo.addColorStop(1, '#ffcc7200')
+    c.fillStyle = halo
+    c.fillRect(-30, -30, 60, 60)
+    c.fillStyle = '#fff7cd'
+    c.beginPath()
+    c.moveTo(0, -28)
+    c.quadraticCurveTo(2, -2, 24, 0)
+    c.quadraticCurveTo(2, 2, 0, 28)
+    c.quadraticCurveTo(-2, 2, -24, 0)
+    c.quadraticCurveTo(-2, -2, 0, -28)
+    c.fill()
   })
   bake(scene, 'aurora-paw', 80, 80, (c) => {
     c.shadowBlur = 8
