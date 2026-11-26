@@ -2005,7 +2005,7 @@ class BattleScene extends Phaser.Scene {
     // 벽 하나를 통째로 무너뜨리면 경험치를 한 번에 더 준다 (#700).
     const moved = this.idleMoved
     this.idleMoved = false
-    // 전장 가운데의 "매도벽 격파!"·"EXP +n" 글자는 띄우지 않는다 (701번). 경험치는 그대로 준다.
+    // 전장 가운데의 "매도벽 격파!"·"EXP +n" 글자는 띄우지 않는다 (701번). 메인 화면의 자동 전투는 경험치를 쓰지 않는다(gainXp가 무시): 글자만 떠 있었다.
     if (!moved && !this.wallCards()) this.gainXp(wallBreakXp(xpToNext(this.level)))
     this.sinceBreak = 0
     this.stuck = 0
