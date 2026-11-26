@@ -1,0 +1,161 @@
+/* 매도벽 돌파 선택표. 지도 위 챕터 표지와 아래쪽 열 칸을 한 장으로 묶는다. */
+.assault-picker {
+  border: 2px solid #453451;
+  border-radius: 22px;
+  padding: 6px;
+  background: #fff6df;
+  box-shadow: 0 4px 0 #cfb38e;
+}
+.assault-chapter,
+.stage-lobby.is-crowd .stage-heading {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #344158;
+  color: #fffaf0;
+}
+.stage-scenery {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  pointer-events: none;
+}
+.assault-chapter::before,
+.stage-lobby.is-crowd .stage-heading::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, #20283df2 2%, #27314abf 50%, #26374b52);
+}
+.assault-chapter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 8px;
+  border-radius: 15px;
+}
+.assault-chapter button {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid #fff7dc85;
+  border-radius: 50%;
+  background: #262439a8;
+  color: white;
+  font: 26px / 1 var(--font-game);
+}
+.assault-chapter button:disabled {
+  opacity: 0.4;
+}
+.assault-chapter-title {
+  flex: 1;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+.assault-chapter-title small {
+  color: #ffe2a1;
+  font-weight: 700;
+}
+.assault-chapter-title strong {
+  font: 24px / 1.2 var(--font-game);
+}
+.assault-chapter-title span {
+  font-size: 12px;
+  color: #ffe6a1;
+}
+.assault-picker .toy-stage-grid {
+  gap: 5px;
+  padding: 0 1px;
+  margin: 9px 0 3px;
+}
+.assault-picker .toy-stage-pick {
+  min-height: 70px;
+  align-content: center;
+  gap: 3px;
+  border-color: #c5ad8d;
+  box-shadow: 0 2px 0 #baa185;
+  line-height: 1;
+}
+.assault-picker .toy-stage-pick:disabled {
+  background: #eee6da;
+  border-color: #dbcfbd;
+  color: #746858;
+  opacity: 1;
+  box-shadow: none;
+}
+.assault-picker .toy-stage-pick:disabled small {
+  visibility: hidden;
+}
+.assault-marker {
+  font: 10px / 1.2 var(--font-game);
+  color: #584a5e;
+}
+.assault-picker .is-boss .assault-marker {
+  color: #922f49;
+}
+.assault-picker .toy-stage-pick[aria-current="step"] {
+  background: #aaf1d8;
+  border: 2px solid #266451;
+  box-shadow: 0 3px 0 #266451;
+}
+.assault-picker button:focus-visible {
+  outline: 3px solid #4364bf;
+  outline-offset: 1px;
+}
+
+.stage-lobby.is-crowd .stage-heading {
+  width: 100%;
+  min-height: 136px;
+  display: grid;
+  align-content: end;
+  justify-items: start;
+  flex-shrink: 0;
+  padding: 20px;
+  border: 2px solid #473653;
+  border-radius: 22px;
+  box-shadow: 0 4px 0 #45345166;
+  text-align: left;
+}
+.stage-lobby.is-crowd .stage-heading .stage-eyebrow {
+  color: #ffe29d;
+}
+.stage-lobby.is-crowd .stage-heading h2 {
+  color: #fffaf0;
+  margin: 4px 0 0;
+}
+.stage-lobby.is-crowd .stage-hero-card {
+  text-align: left;
+}
+.stage-lobby.is-crowd .stage-mode {
+  background: #fff7df;
+  color: #463754;
+  font-weight: 700;
+}
+.stage-lobby.is-crowd .stage-primary {
+  width: min(100%, 440px);
+  min-height: 48px;
+}
+
+.stage-scenery-monster {
+  position: absolute;
+  right: 48px;
+  bottom: 5px;
+  width: clamp(52px, 16vw, 80px);
+  aspect-ratio: 1;
+  background-size: 340% 340%;
+  background-position: 16% 21%;
+  pointer-events: none;
+  transform: rotate(8deg);
+  z-index: -1;
+  filter: drop-shadow(0 3px 1px #15213966);
+}
+.stage-lobby.is-crowd .stage-scenery-monster {
+  right: 6%;
+  bottom: 8px;
+  width: clamp(76px, 24vw, 112px);
+}
