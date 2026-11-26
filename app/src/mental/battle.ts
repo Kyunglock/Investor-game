@@ -2097,8 +2097,7 @@ class BattleScene extends Phaser.Scene {
     else {
       e.setTexture('vault-guard')
       this.placeGuardian(e)
-      const radius = e.width * 0.43
-      e.body?.setCircle(radius, e.width / 2 - radius, e.height / 2 - radius)
+      e.body?.setSize(e.width * 0.92, e.height * 0.72, true)
     }
     e.baseK = e.scaleX
     e.setDepth(3.5)
@@ -2119,8 +2118,8 @@ class BattleScene extends Phaser.Scene {
   private placeGuardian(boss: Enemy) {
     const { w, h } = this.view()
     const top = 76
-    const size = Math.min(w * 0.94, Math.max(1, h * 0.58 - top))
-    boss.setScale(size / boss.width).setPosition(w / 2, top + size / 2)
+    const scale = Math.min((w * 1.24) / boss.width, Math.max(1, h * 0.58 - top) / boss.height)
+    boss.setScale(scale).setPosition(w / 2, top + boss.displayHeight / 2)
   }
 
   /**

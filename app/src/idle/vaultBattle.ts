@@ -25,7 +25,7 @@ export type Vault = NonNullable<Company['vault']>
 export type VaultCard = Vault['dungeon']['cards'][number]
 
 export const vaults = ['자수정 금고', '월광 금고', '황혼 금고'] as const
-export const GUARDIAN = '흑금 수호냥'
+export const GUARDIAN = '흑금 수호룡'
 
 /** 금고 전투의 실제 1초가 전투 시계로 몇 초인가 (gameSpeed.ts). */
 export const VAULT_SIM = simScale(IDLE_GAME_SPEED)
