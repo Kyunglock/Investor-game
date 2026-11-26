@@ -3,7 +3,7 @@ import type { Company } from '@web/api/client'
 export type CatGrade = NonNullable<Company['idle']>['cats'][number]['grade']
 
 /**
- * 고양이 등급 (decisions.md 539번): 종마다 정해진 C·B·A·S·SS. 등급과 그 효과는 서버가 준다. 여기는 뽑기 창에 적는 확률과 연출의 세기만 둔다.
+ * 고양이 등급 (decisions.md 539번): 종마다 정해진 C·B·A·S·SS. 등급과 그 효과는 서버가 준다. 여기는 확률(화면에는 적지 않는다)과 연출의 세기만 둔다.
  * 확률은 서버 `IdleEngine.GRADE_PER_THOUSAND`와 같다.
  */
 export const CAT_GRADES: CatGrade[] = ['SS', 'S', 'A', 'B', 'C']
@@ -17,9 +17,6 @@ export function sortCats<T extends { level: number; grade: CatGrade }>(cats: rea
   const rank = (c: T) => (c.level > 0 ? 0 : CAT_GRADES.length) + CAT_GRADES.indexOf(c.grade)
   return [...cats].sort((a, b) => rank(a) - rank(b))
 }
-
-/** 뽑기 창의 확률 한 줄: "SS 0.2% · S 1% · A 10% · B 28% · C 60.8%". */
-export const CAT_ODDS = CAT_GRADES.map((g) => `${g} ${CAT_GRADE_PERCENT[g]}%`).join(' · ')
 
 /**
  * 뽑기 연출의 세기: 등급이 높을수록 뜸이 길고 빛이 세다. 무기 뽑기의 D·B·A·S 등급 연출과 같다. 처음 얻은 고양이는 뜸·빛·소리를 한 단계 위로

@@ -11,7 +11,7 @@ import { type DrawResult, WeaponReveal } from '../mental/WeaponReveal'
 import { shinyWeapon, weaponRevealPlan } from '../mental/weaponRevealPlan'
 import { CatPortrait as Portrait } from './CatPortrait'
 import { type CatDraw, CatReveal } from './CatReveal'
-import { bestDraw, CAT_ODDS, catRevealPlan, holdsReveal, shinyCat } from './catGrade'
+import { bestDraw, catRevealPlan, holdsReveal, shinyCat } from './catGrade'
 import { RewardPlacement } from './RewardPlacement'
 import { ShopIcon } from './ShopIcon'
 import { SovereignArrival } from './SovereignArrival'
@@ -248,13 +248,12 @@ export function IdleGacha({
       },
       () => setTen(null),
     )
+  // 뽑기 설명·확률 줄은 없앤다 (700번). 첫 출근 안내의 확정 뽑기만 적는다.
   const note = tutorialDraw
     ? kind === 'cat'
       ? '첫 동료 · A등급 밤냥 확정'
       : '첫 무기 · B등급 기관단총 확정'
-    : kind === 'cat'
-      ? `${CAT_ODDS} · 또 나오면 레벨 업 · 다이아만큼 최대 10회 · 10회는 ${diamonds.tenCount}마리`
-      : `F~A 등급이 나와요 · S부터는 합쳐서 얻어요 · 다이아만큼 최대 10회 · 10회는 ${diamonds.tenCount}개`
+    : null
   const resultNote = drawn
     ? drawn.isNew
       ? `${drawn.cat.grade} 등급 ${drawn.cat.name} 합류!${drawn.cat.skills.length > 0 ? ` 고유 스킬 ${skillNames(drawn.cat)}` : ''}`
@@ -319,9 +318,11 @@ export function IdleGacha({
           </p>
         )}
         <div className="idle-gacha-row">
-          <small className="idle-gacha-note" data-testid="draw-note">
-            {note}
-          </small>
+          {note && (
+            <small className="idle-gacha-note" data-testid="draw-note">
+              {note}
+            </small>
+          )}
           <button
             type="button"
             className="idle-buy"
@@ -373,16 +374,11 @@ export function IdleGacha({
       </section>
 
       {!awaitingTutorialDraw && (
-        <>
-          <p className="idle-gacha-note" data-testid="draw-ad-status">
-            {canAd
-              ? `광고로 무료 뽑기 가능 · 오늘 ${adLeft}회 남음`
-              : '오늘 광고 뽑기 완료 · 한국 시간 자정에 다시 만나요'}
-          </p>
-          <p className="idle-gacha-note">
-            광고 뽑기는 고양이·무기 각각 하루 3회 · 한국 시간 자정 갱신
-          </p>
-        </>
+        <p className="idle-gacha-note" data-testid="draw-ad-status">
+          {canAd
+            ? `광고로 무료 뽑기 가능 · 오늘 ${adLeft}회 남음`
+            : '오늘 광고 뽑기 완료 · 한국 시간 자정에 다시 만나요'}
+        </p>
       )}
       {error && <p role="alert">{error}</p>}
       {arrivals > 0 && (
