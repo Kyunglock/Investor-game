@@ -1147,7 +1147,7 @@ class IdleEngineTest {
     assertThat(state.idle.damage).as("a resting cat's skill does nothing").isZero();
     engine.fieldCat(state, "night", true);
     tick(3000, new IdleHit(16, "meteor", 1), new IdleHit(16, "water", 1));
-    assertThat(state.idle.damage).as("only the fielded cat's own skill lands").isEqualTo(4.8);
+    assertThat(state.idle.damage).as("only the fielded cat's own skill lands").isEqualTo(9.6);
     assertThat(engine.view(state).skills())
         .filteredOn(skill -> skill.owned())
         .extracting(skill -> skill.code())
@@ -1317,7 +1317,7 @@ class IdleEngineTest {
     tick(2400, new IdleHit(100, "meteor", 2));
     assertThat(state.idle.damage)
         .as("one caster, one meteor per cooldown")
-        .isCloseTo(4.8, offset(1e-9));
+        .isCloseTo(9.6, offset(1e-9));
   }
 
   @Test
@@ -1516,15 +1516,15 @@ class IdleEngineTest {
     var cat = engine.view(state).cats().stream().filter(c -> "ocean".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(1);
     assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(10);
-    // Level 1 water: 1.5 times the gun, once per 2.4 s. 1.6 s at 1.5x (580) is one cooldown.
+    // Level 1 water: 3 times the gun (696), once per 2.4 s. 1.6 s at 1.5x (580) is one cooldown.
     tick(1600, new IdleHit(100, "water", 3, 3 * 1000.0));
-    assertThat(state.idle.damage).isCloseTo(1.5, offset(1e-9));
-    // Cat level 20 is skill level 3: 2.6 times the gun, once per 1.8 s.
+    assertThat(state.idle.damage).isCloseTo(3, offset(1e-9));
+    // Cat level 20 is skill level 3: 5.2 times the gun, once per 1.8 s.
     state.idle.cats.put("ocean", 20);
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
     tick(1200, new IdleHit(100, "water", 3, 3 * 1000.0));
-    assertThat(state.idle.damage).isCloseTo(2.6, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(5.2, offset(1e-9));
     cat = engine.view(state).cats().stream().filter(c -> "ocean".equals(c.code())).findFirst();
     assertThat(cat.orElseThrow().skillLevel()).isEqualTo(3);
     assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(30);
@@ -1540,7 +1540,7 @@ class IdleEngineTest {
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
     tick(2000, new IdleHit(100, "meteor", 10, 10 * 1000.0));
-    assertThat(state.idle.damage).isCloseTo(3 * 4.2, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(3 * 8.4, offset(1e-9));
   }
 
   @Test
@@ -1563,22 +1563,22 @@ class IdleEngineTest {
         new IdleHit(100, "fire", 1, 1000.0),
         new IdleHit(100, "wind", 1, 1000.0));
     assertThat(state.idle.damage)
-        .as("hail 2 x 2 + ice 3.2, no fire or wind")
-        .isCloseTo(7.2, offset(1e-9));
+        .as("hail 2 x 4 + ice 32, no fire or wind")
+        .isCloseTo(40, offset(1e-9));
     // The tiger cat (A grade) has the one skill: the wind.
     state.idle.cats.put("tiger", 1);
     state.idle.fielded.add("tiger");
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
     tick(1900, new IdleHit(100, "wind", 1, 1000.0));
-    assertThat(state.idle.damage).isCloseTo(1.8, offset(1e-9));
-    // A level 5 light arrow is one hit of twenty times the gun, once per real second.
+    assertThat(state.idle.damage).isCloseTo(3.6, offset(1e-9));
+    // A level 5 light arrow is one hit of two hundred times the gun (696), once per real second.
     state.idle.cats.put("silver", 40);
     state.idle.fielded.add("silver");
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "lightArrow", 3, 1000.0), new IdleHit(100, "bomb", 1, 1000.0));
-    assertThat(state.idle.damage).isCloseTo(20, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(200, offset(1e-9));
   }
 
   @Test

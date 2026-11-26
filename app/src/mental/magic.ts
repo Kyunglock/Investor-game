@@ -14,6 +14,9 @@ import {
  * 같은 마법을 또 고를 때마다 한 레벨씩 오른다(최대 MAGIC_MAX_LEVEL). 레벨이 오를수록 쿨다운·피해·범위가 좋아지고, 연출은 세 단계(MagicTier)로 눈에 띄게
  * 화려해진다. 피해는 총알 피해가 아니라 마법 자체의 배율 × 지금 공격력(무기·자본 강화·공격력 카드)이다. 이 모듈은 Phaser 없이 규칙만 가진다(그리는 것은
  * battle.ts의 마법 부분).
+ *
+ * 696번: 범위 공격은 2배, 단일 공격(번개 첫 타격·충차·얼음과 spellbook의 화살·빛·독)은 10배로 올렸다. 번개가 튀는 피해는 범위라
+ * 2배에 머물도록 chainDamage를 5분의 1로 낮췄다. 피해 배율은 서버 IdleEngine.SKILL_DAMAGE와 같아야 한다.
  */
 
 export const MAGIC_MAX_LEVEL = 5
@@ -83,17 +86,17 @@ export interface EarthStats {
 
 const EARTH: readonly EarthStats[] = [
   // 456번: 벽에 너무 셌다(벽 초당 피해가 번개의 1.4~2배). 배율을 낮추고 높은 레벨의 주기를 늘려 번개의 1.2배 남짓으로 맞춘다.
-  { cooldown: 3.6, damage: 1.2, siege: 3.4, half: 16, speed: 560, push: 260, quake: 0 },
-  { cooldown: 3.2, damage: 1.6, siege: 3.6, half: 22, speed: 600, push: 320, quake: 0 },
-  { cooldown: 3.0, damage: 2.1, siege: 3.8, half: 30, speed: 640, push: 380, quake: 70 },
-  { cooldown: 2.8, damage: 2.5, siege: 4, half: 34, speed: 680, push: 420, quake: 85 },
-  { cooldown: 2.6, damage: 2.9, siege: 4.2, half: 38, speed: 720, push: 460, quake: 100 },
+  { cooldown: 3.6, damage: 12, siege: 3.4, half: 16, speed: 560, push: 260, quake: 0 },
+  { cooldown: 3.2, damage: 16, siege: 3.6, half: 22, speed: 600, push: 320, quake: 0 },
+  { cooldown: 3.0, damage: 21, siege: 3.8, half: 30, speed: 640, push: 380, quake: 70 },
+  { cooldown: 2.8, damage: 25, siege: 4, half: 34, speed: 680, push: 420, quake: 85 },
+  { cooldown: 2.6, damage: 29, siege: 4.2, half: 38, speed: 720, push: 460, quake: 100 },
 ]
 
 const WATER: readonly WaterStats[] = [
   {
     cooldown: 2.4,
-    damage: 1.5,
+    damage: 3,
     half: 10,
     speed: 560,
     pierce: false,
@@ -105,7 +108,7 @@ const WATER: readonly WaterStats[] = [
   },
   {
     cooldown: 2.1,
-    damage: 2,
+    damage: 4,
     half: 16,
     speed: 820,
     pierce: true,
@@ -117,7 +120,7 @@ const WATER: readonly WaterStats[] = [
   },
   {
     cooldown: 1.8,
-    damage: 2.6,
+    damage: 5.2,
     half: 75,
     speed: 400,
     pierce: true,
@@ -129,7 +132,7 @@ const WATER: readonly WaterStats[] = [
   },
   {
     cooldown: 1.6,
-    damage: 3,
+    damage: 6,
     half: 85,
     speed: 420,
     pierce: true,
@@ -141,7 +144,7 @@ const WATER: readonly WaterStats[] = [
   },
   {
     cooldown: 1.4,
-    damage: 3.4,
+    damage: 6.8,
     half: 95,
     speed: 440,
     pierce: true,
@@ -158,11 +161,11 @@ const WATER: readonly WaterStats[] = [
  * 주기와 피해는 서버(IdleEngine COOLDOWNS·SKILL_DAMAGE)와 같아야 한다.
  */
 const ICE: readonly WaterStats[] = [
-  [3.2, 3.2, 12, 0.4],
-  [2.9, 4.4, 14, 0.5],
-  [2.6, 5.6, 17, 0.6],
-  [2.4, 6.6, 20, 0.7],
-  [2.2, 7.6, 23, 0.8],
+  [3.2, 32, 12, 0.4],
+  [2.9, 44, 14, 0.5],
+  [2.6, 56, 17, 0.6],
+  [2.4, 66, 20, 0.7],
+  [2.2, 76, 23, 0.8],
 ].map(([cooldown, damage, half, stunSeconds]) => ({
   cooldown,
   damage,
@@ -178,11 +181,11 @@ const ICE: readonly WaterStats[] = [
 
 /** 바람 (561번): 넓은 돌풍이 쓸고 가며 지나가는 적을 뒤로 밀어낸다. 자주 불지만 한 방은 가볍다. */
 const WIND: readonly WaterStats[] = [
-  [2.8, 1.8, 55, 0.12],
-  [2.5, 2.4, 65, 0.15],
-  [2.2, 3.1, 78, 0.18],
-  [2, 3.6, 88, 0.21],
-  [1.8, 4.1, 98, 0.24],
+  [2.8, 3.6, 55, 0.12],
+  [2.5, 4.8, 65, 0.15],
+  [2.2, 6.2, 78, 0.18],
+  [2, 7.2, 88, 0.21],
+  [1.8, 8.2, 98, 0.24],
 ].map(([cooldown, damage, half, pushSeconds]) => ({
   cooldown,
   damage,
@@ -197,11 +200,11 @@ const WIND: readonly WaterStats[] = [
 }))
 
 const METEOR: readonly MeteorStats[] = [
-  { cooldown: 3.6, damage: 4.8, radius: 50, count: 1, warning: 0.5, stunSeconds: 0.3 },
-  { cooldown: 3.3, damage: 8.25, radius: 70, count: 1, warning: 0.5, stunSeconds: 0.35 },
-  { cooldown: 3, damage: 4.2, radius: 82, count: 3, warning: 0.5, stunSeconds: 0.4 },
-  { cooldown: 2.8, damage: 5.05, radius: 92, count: 3, warning: 0.5, stunSeconds: 0.45 },
-  { cooldown: 2.6, damage: 4.42, radius: 105, count: 4, warning: 0.5, stunSeconds: 0.5 },
+  { cooldown: 3.6, damage: 9.6, radius: 50, count: 1, warning: 0.5, stunSeconds: 0.3 },
+  { cooldown: 3.3, damage: 16.5, radius: 70, count: 1, warning: 0.5, stunSeconds: 0.35 },
+  { cooldown: 3, damage: 8.4, radius: 82, count: 3, warning: 0.5, stunSeconds: 0.4 },
+  { cooldown: 2.8, damage: 10.1, radius: 92, count: 3, warning: 0.5, stunSeconds: 0.45 },
+  { cooldown: 2.6, damage: 8.84, radius: 105, count: 4, warning: 0.5, stunSeconds: 0.5 },
 ]
 
 /** 중심은 100%, 가장자리는 65%. 원 밖은 피해가 없다. */
@@ -210,11 +213,11 @@ export function meteorFalloff(distance: number, radius: number): number {
 }
 
 const LIGHTNING: readonly LightningStats[] = [
-  { cooldown: 2.6, damage: 2.5, chains: 2, chainDamage: 0.6, chainRadius: 150, bolts: 1 },
-  { cooldown: 2.3, damage: 3.5, chains: 4, chainDamage: 0.6, chainRadius: 170, bolts: 1 },
-  { cooldown: 2, damage: 4.5, chains: 8, chainDamage: 0.6, chainRadius: 190, bolts: 1 },
-  { cooldown: 1.8, damage: 5.2, chains: 16, chainDamage: 0.65, chainRadius: 200, bolts: 2 },
-  { cooldown: 1.6, damage: 6, chains: 32, chainDamage: 0.7, chainRadius: 210, bolts: 2 },
+  { cooldown: 2.6, damage: 25, chains: 2, chainDamage: 0.12, chainRadius: 150, bolts: 1 },
+  { cooldown: 2.3, damage: 35, chains: 4, chainDamage: 0.12, chainRadius: 170, bolts: 1 },
+  { cooldown: 2, damage: 45, chains: 8, chainDamage: 0.12, chainRadius: 190, bolts: 1 },
+  { cooldown: 1.8, damage: 52, chains: 16, chainDamage: 0.13, chainRadius: 200, bolts: 2 },
+  { cooldown: 1.6, damage: 60, chains: 32, chainDamage: 0.14, chainRadius: 210, bolts: 2 },
 ]
 
 const at = <T>(table: readonly T[], level: number) =>
