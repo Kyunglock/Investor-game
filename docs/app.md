@@ -84,7 +84,7 @@ pnpm check && pnpm exec tsc -b && pnpm test && pnpm build
 | 변수 `APP_API_BASE` | API 주소를 운영 서버(`https://game.kwaklabs.com`)가 아닌 곳으로 바꿀 때 |
 | 시크릿 `ANDROID_KEYSTORE_BASE64` `ANDROID_KEYSTORE_PASSWORD` `ANDROID_KEY_ALIAS` `ANDROID_KEY_PASSWORD` | 있으면 서명한 배포용 APK와 Play 스토어용 AAB도 만든다. 없으면 디버그 APK만 |
 
-결과는 실행 결과의 Artifacts에서 `app-debug`(폰에 바로 설치), `app-test-debug`(테스트판: `VITE_APP_TEST=1`로 만든 화면을 담는다), `app-release`(서명 키가 있을 때), `app-release-aab`(서명 키가 있을 때, Play 콘솔에 올리는 파일)를 받는다. 배포용의 `versionCode`는 워크플로 실행 번호라 올릴 때마다 커진다(581번). 디버그 APK는 Play 프로텍트가 "잠재적으로 유해한 앱"이라 경고한다: 모르는 출처의 앱이라 그런 것이고 "무시하고 설치"·"닫기"로 지나간다. 경고를 줄이려면 고정 서명 키를, 없애려면 Play 콘솔 내부 테스트 트랙을 쓴다.
+결과는 실행 결과의 Artifacts에서 `app-debug`(폰에 바로 설치), `app-test-debug`(테스트판: 운영 웹의 `/app/?test=1`을 띄워 웹 배포가 바로 보인다. Run workflow의 `test_bundled`를 켜면 `VITE_APP_TEST=1`로 만든 화면을 담는다, 699번), `app-release`(서명 키가 있을 때), `app-release-aab`(서명 키가 있을 때, Play 콘솔에 올리는 파일)를 받는다. 배포용의 `versionCode`는 워크플로 실행 번호라 올릴 때마다 커진다(581번). 디버그 APK는 Play 프로텍트가 "잠재적으로 유해한 앱"이라 경고한다: 모르는 출처의 앱이라 그런 것이고 "무시하고 설치"·"닫기"로 지나간다. 경고를 줄이려면 고정 서명 키를, 없애려면 Play 콘솔 내부 테스트 트랙을 쓴다.
 
 ### 내 컴퓨터
 
