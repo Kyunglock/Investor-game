@@ -521,6 +521,25 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
         }
       }
     }
+    // 겹친 비단의 위쪽은 라일락, 아래쪽은 민트빛으로 번진다.
+    for (const back of [true, false]) {
+      c.beginPath()
+      for (let x = 0; x <= 512; x += 2) {
+        const { edge, height } = auroraFold(x / 512, back)
+        const y = back ? edge - height * 0.64 : edge - 1
+        if (x === 0) c.moveTo(x, y)
+        else c.lineTo(x, y)
+      }
+      c.shadowBlur = 9
+      c.shadowColor = back ? '#af69ff' : '#4cffe2'
+      c.lineWidth = 5
+      c.strokeStyle = back ? '#cc8cff88' : '#74ffdf99'
+      c.stroke()
+      c.shadowBlur = 0
+      c.lineWidth = 1.5
+      c.strokeStyle = back ? '#ffdcff' : '#e8fff4'
+      c.stroke()
+    }
     // 망토 자락에 수놓인 별자리도 극광과 함께 펼쳐진다.
     c.strokeStyle = '#fff2cd88'
     c.lineWidth = 0.8
@@ -547,83 +566,39 @@ export function bakeMagic(scene: Phaser.Scene, breakthrough = false) {
       c.fill()
     }
   })
-  // 장막 한가운데에서 양쪽으로 꼬리를 펼치는 별자리 고양이.
-  bake(scene, 'aurora-familiar', 320, 132, (c) => {
-    const silk = c.createLinearGradient(0, 22, 0, 115)
-    silk.addColorStop(0, '#9b70ffcc')
-    silk.addColorStop(0.48, '#493891ee')
-    silk.addColorStop(0.8, '#269caaed')
-    silk.addColorStop(1, '#9effde55')
-    c.lineJoin = 'round'
-    c.lineCap = 'round'
-    c.shadowColor = '#82ffe9'
-    c.shadowBlur = 5
-    for (const direction of [1, -1]) {
-      c.save()
-      c.translate(160, 0)
-      c.scale(direction, 1)
-      c.fillStyle = silk
-      c.strokeStyle = '#afffe8'
-      c.lineWidth = 2.5
-      c.beginPath()
-      c.moveTo(12, 91)
-      c.bezierCurveTo(52, 92, 71, 39, 108, 40)
-      c.quadraticCurveTo(131, 42, 154, 16)
-      c.bezierCurveTo(143, 61, 97, 52, 81, 78)
-      c.quadraticCurveTo(116, 59, 145, 68)
-      c.bezierCurveTo(98, 72, 69, 122, 14, 105)
-      c.closePath()
-      c.fill()
-      c.stroke()
-      c.restore()
-    }
-    c.fillStyle = silk
-    c.strokeStyle = '#cbfff1'
-    c.lineWidth = 4
+  bake(scene, 'aurora-hem', 96, 38, (c) => {
+    const glow = c.createRadialGradient(48, 22, 2, 48, 22, 43)
+    glow.addColorStop(0, '#92ffcf99')
+    glow.addColorStop(1, '#5effda00')
+    c.fillStyle = glow
+    c.fillRect(0, 0, 96, 38)
+    c.strokeStyle = '#c2ffe4'
+    c.shadowColor = '#39ffc9'
+    c.shadowBlur = 4
+    c.lineWidth = 2
     c.beginPath()
-    c.moveTo(113, 60)
-    c.lineTo(110, 10)
-    c.lineTo(143, 33)
-    c.quadraticCurveTo(160, 26, 177, 33)
-    c.lineTo(210, 10)
-    c.lineTo(207, 60)
-    c.bezierCurveTo(222, 86, 189, 105, 160, 111)
-    c.bezierCurveTo(128, 105, 98, 86, 113, 60)
-    c.closePath()
-    c.fill()
+    c.moveTo(11, 15)
+    c.bezierCurveTo(-1, 1, 2, 33, 20, 25)
+    c.bezierCurveTo(32, 19, 44, 36, 55, 29)
+    c.bezierCurveTo(71, 17, 86, 31, 91, 13)
+    c.quadraticCurveTo(92, 5, 85, 11)
     c.stroke()
-    c.shadowBlur = 0
-    c.fillStyle = '#ffcaff'
-    for (const x of [119, 201]) {
-      const inward = x < 160 ? 1 : -1
-      c.beginPath()
-      c.moveTo(x, 25)
-      c.lineTo(x + 15 * inward, 38)
-      c.lineTo(x + 2 * inward, 45)
-      c.fill()
-    }
-    c.strokeStyle = '#fff3c8'
+  })
+  bake(scene, 'aurora-contact-star', 60, 60, (c) => {
+    c.translate(30, 30)
+    const halo = c.createRadialGradient(0, 0, 1, 0, 0, 29)
+    halo.addColorStop(0, '#fff2ae')
+    halo.addColorStop(0.27, '#ffc56b9c')
+    halo.addColorStop(1, '#ffcc7200')
+    c.fillStyle = halo
+    c.fillRect(-30, -30, 60, 60)
+    c.fillStyle = '#fff7cd'
     c.beginPath()
-    c.moveTo(127, 69)
-    c.quadraticCurveTo(136, 58, 145, 67)
-    c.moveTo(175, 67)
-    c.quadraticCurveTo(184, 58, 193, 69)
-    c.stroke()
-    c.fillStyle = '#fff4b9'
-    c.beginPath()
-    c.moveTo(160, 36)
-    c.lineTo(164, 46)
-    c.lineTo(173, 49)
-    c.lineTo(164, 53)
-    c.lineTo(160, 63)
-    c.lineTo(156, 53)
-    c.lineTo(147, 49)
-    c.lineTo(156, 46)
-    c.fill()
-    c.beginPath()
-    c.moveTo(154, 78)
-    c.lineTo(166, 78)
-    c.lineTo(160, 84)
+    c.moveTo(0, -28)
+    c.quadraticCurveTo(2, -2, 24, 0)
+    c.quadraticCurveTo(2, 2, 0, 28)
+    c.quadraticCurveTo(-2, 2, -24, 0)
+    c.quadraticCurveTo(-2, -2, 0, -28)
     c.fill()
   })
   bake(scene, 'aurora-paw', 80, 80, (c) => {

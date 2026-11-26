@@ -141,8 +141,9 @@ try {
         wallLoss: before - wallHp(),
       }
     })
-    assert.deepEqual(result.effects.slice(0, 2), [true, true])
-    assert(result.effects.length > 2 && result.effects.slice(2).every((paw) => !paw))
+    assert.equal(result.effects[0], true)
+    assert.equal(result.effects.filter(Boolean).length, 2)
+    assert(result.effects.includes(false))
     assert.equal(result.casts, 1)
     assert(result.charging && result.released && result.finished)
     const [far, near, boss, outside, wall] = result.ticks

@@ -857,7 +857,6 @@ class BattleScene extends Phaser.Scene {
     stamped: boolean
     started: number
     origin: { x: number; y: number }
-    familiar: Phaser.GameObjects.Image
     ribbon: Phaser.GameObjects.Image
     damage: number
     step: number
@@ -4422,7 +4421,18 @@ class BattleScene extends Phaser.Scene {
       })
     }
     sfx.charge()
-    this.auroraFlare(origin.x, origin.y, 38, 360 / AURORA_CAST_SPEED, true)
+    const hem = this.add
+      .image(origin.x, origin.y + 9, 'aurora-hem')
+      .setDisplaySize(76, 30)
+      .setDepth(6)
+    this.tweens.add({
+      targets: hem,
+      alpha: 0,
+      delay: 320,
+      duration: 180,
+      onComplete: () => hem.destroy(),
+    })
+    this.auroraFlare(origin.x, origin.y + 8, 26, 420, true)
     if (!this.reducedMotion) {
       for (let i = 0; i < 6; i++) {
         const angle = (i * Math.PI) / 3
@@ -4449,17 +4459,11 @@ class BattleScene extends Phaser.Scene {
       .setOrigin(0.5, 0)
       .setDisplaySize(8, 4)
       .setDepth(6)
-    const familiar = this.add
-      .image(origin.x, origin.y, 'aurora-familiar')
-      .setOrigin(0.5, 0.82)
-      .setDisplaySize(40, 16.5)
-      .setDepth(6.5)
     this.auroraSweep = {
       released: false,
       stamped: false,
       started: this.elapsed,
       origin,
-      familiar,
       ribbon,
       damage: auroraNightStats(level).damage * this.attackDamage,
       step: 0,
@@ -4495,7 +4499,7 @@ class BattleScene extends Phaser.Scene {
     const star = this.add
       .image(x, y, paw ? 'aurora-paw' : 'aurora-polar-star')
       .setDisplaySize(size, size)
-      .setDepth(paw ? 8 : 7)
+      .setDepth(7)
     if (!this.reducedMotion) {
       this.tweens.add({
         targets: star,
@@ -4514,26 +4518,43 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
+  private auroraWallContact(y: number) {
+    const lane = this.lane()
+    this.auroraFlare(lane.left + lane.width / 2, y + 6, 42, 480, true)
+    for (const at of [0.1, 0.32, 0.68, 0.9]) {
+      const star = this.add
+        .image(lane.left + lane.width * at, y, 'aurora-contact-star')
+        .setDisplaySize(42, 42)
+        .setDepth(7)
+      this.tweens.add({
+        targets: star,
+        alpha: 0,
+        delay: 170,
+        duration: 240,
+        onComplete: () => star.destroy(),
+      })
+    }
+  }
+
   private advanceAuroraSweep() {
     const sweep = this.auroraSweep
     if (!sweep) return
     const age = this.elapsed - sweep.started
     const { w, h } = this.view()
     const height = 113
-    const bottom = h - (36 * height) / 72
-    const familiarWidth = Math.min(300, w * 0.72)
+    const bottom = Math.min(h - (36 * height) / 72, sweep.origin.y - height * 0.74)
     if (age < AURORA_CHARGE_SECONDS) {
-      const spread = Phaser.Math.SmoothStep(age, 0, AURORA_CHARGE_SECONDS)
+      const spread = Phaser.Math.SmoothStep(
+        age,
+        AURORA_CHARGE_SECONDS * 0.42,
+        AURORA_CHARGE_SECONDS,
+      )
       sweep.ribbon
         .setPosition(
           Phaser.Math.Linear(sweep.origin.x, w / 2, spread),
           Phaser.Math.Linear(sweep.origin.y, bottom, spread),
         )
         .setDisplaySize(8 + (w - 8) * spread, 4 + (height - 4) * spread)
-      const width = Phaser.Math.Linear(40, familiarWidth, spread)
-      sweep.familiar
-        .setPosition(sweep.ribbon.x, sweep.ribbon.y + sweep.ribbon.displayHeight * 0.42)
-        .setDisplaySize(width, width * (132 / 320))
       return
     }
     if (!sweep.released) {
@@ -4570,9 +4591,12 @@ class BattleScene extends Phaser.Scene {
         const next = sweep.nextHit.get(key)
         if (next && next.born === born && sweep.step < next.step) continue
         sweep.nextHit.set(key, { step: sweep.step + AURORA_TICK_STEPS, born })
-        const stamp = !sweep.stamped
-        sweep.stamped = true
-        this.auroraFlare(enemy.x, enemy.y, stamp ? 92 : 24, stamp ? 600 : 115, stamp)
+        if (wall && !sweep.stamped) {
+          sweep.stamped = true
+          this.auroraWallContact(wall.y)
+        } else {
+          this.auroraFlare(enemy.x, enemy.y, 24, 115)
+        }
         this.hit(target, sweep.damage, -Math.PI / 2, 'auroraNight', true)
       }
       // 뒤 매도벽 (675번): 장막이 겹쳐 있는 동안 맨 앞 벽처럼 느려지고 0.125초마다 맞는다. 피해는 벽 하나를 지날 때마다 절반이다.
@@ -4584,9 +4608,12 @@ class BattleScene extends Phaser.Scene {
         sweep.nextHit.set(layer.key, { step: sweep.step + AURORA_TICK_STEPS, born: 0 })
         const damage = sweep.damage * IDLE_PIERCE[layer.behind]
         this.reportIdleHit(layer.wall, 'auroraNight', damage, layer.behind)
-        const stamp = !sweep.stamped
-        sweep.stamped = true
-        this.auroraFlare(layer.x, layer.y, stamp ? 92 : 20, stamp ? 600 : 115, stamp)
+        if (!sweep.stamped) {
+          sweep.stamped = true
+          this.auroraWallContact(layer.y + this.layerHeight() / 2)
+        } else {
+          this.auroraFlare(layer.x, layer.y, 20, 115)
+        }
         this.damageNumberAt(
           this.pierceOwners[layer.behind - 1],
           layer.x,
@@ -4600,11 +4627,7 @@ class BattleScene extends Phaser.Scene {
       sweep.distance += freeStep * (contact ? AURORA_CONTACT_SPEED : 1)
     }
     sweep.ribbon.setPosition(w / 2, bottom - sweep.distance).setDisplaySize(w, height)
-    sweep.familiar
-      .setPosition(w / 2, sweep.ribbon.y + height * 0.42)
-      .setDisplaySize(familiarWidth, familiarWidth * (132 / 320))
     if (sweep.distance >= bottom + height) {
-      sweep.familiar.destroy()
       sweep.ribbon.destroy()
       this.auroraSweep = null
       this.auroraLayerKeys.clear()
