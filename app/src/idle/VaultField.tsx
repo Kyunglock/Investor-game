@@ -170,10 +170,10 @@ export function VaultField({
         </button>
       </header>
       {hud && (
-        <label className="vault-health">
+        <div className="vault-health">
           멘탈 {Math.ceil(hud.mental)} / {hud.maxMental}
-          <progress value={hud.mental} max={hud.maxMental} />
-        </label>
+          {!boss && <progress aria-label="멘탈" value={hud.mental} max={hud.maxMental} />}
+        </div>
       )}
       {intro && (
         <div className="vault-intro" data-testid="vault-intro" role="status">
