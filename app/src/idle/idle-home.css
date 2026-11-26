@@ -2710,12 +2710,6 @@
   outline: 3px solid #237bd2;
   outline-offset: 3px;
 }
-.idle-stage-note {
-  margin: 0 0 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #6a4a2a;
-}
 .boss-skill-magic {
   display: grid;
   place-items: center;

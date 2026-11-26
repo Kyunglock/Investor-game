@@ -286,7 +286,7 @@ paths:
       operationId: reportAssault
       summary: 매도벽 돌파 스테이지 한 판의 결과를 보낸다 (#698)
       description: |
-        열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 처음 깨면 자본(번호 × 1b)을 준다. 다이아는 주지 않는다(526번).
+        열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 별을 처음 얻을 때마다 다이아를 준다(697번). 자본은 주지 않는다.
         못 깼으면 보상 없이 결과만 남는다. 결과는 assaults.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
       requestBody:
         required: true

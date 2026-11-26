@@ -612,11 +612,10 @@ class MentalEngine {
 
   /**
    * 매도벽 돌파 스테이지 한 판의 결과 (#698): 주 게임. 멘탈 스테이지(369번)와 따로 진행하며, 열린 스테이지(1 ~ 깬 최고 + 1, 마지막 스테이지까지)만
-   * 받는다. 보상 규칙은 멘탈 스테이지와 같다: 처음 깨면 자본(번호 × capitalPerStage)과 무기 뽑기권(챕터 끝이면 더), 별이 전보다 많으면 늘어난 별마다
-   * 뽑기권. 분기 강화율(bonusPercent)에는 들어가지 않는다.
+   * 받는다. 보상은 다이아뿐이다 (697번, 전에는 처음 깰 때 자본): 별을 처음 얻을 때마다 멘탈 스테이지와 같은 다이아(Diamonds.forStars)를 준다. 분기
+   * 강화율(bonusPercent)에는 들어가지 않는다.
    */
   void reportAssault(CompanyState c, int stage, boolean cleared, int stars) {
-    CompanyProperties.Stages rule = properties.mental().stages();
     if (c.assaultStars == null) {
       c.assaultStars = new java.util.ArrayList<>();
     }
@@ -635,13 +634,13 @@ class MentalEngine {
       if (stage == best + 1) {
         c.assaultStars.add(0);
         r.firstClear = true;
-        r.capital = stage * rule.capitalPerStage();
       }
       int before = c.assaultStars.get(stage - 1);
       if (r.stars > before) {
+        r.diamonds = properties.diamonds().forStars(stage, before, r.stars);
         c.assaultStars.set(stage - 1, r.stars);
       }
-      c.capital += r.capital;
+      c.diamonds += r.diamonds;
     }
     c.lastAssault = r;
   }

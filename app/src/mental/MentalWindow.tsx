@@ -554,7 +554,7 @@ function AssaultResult({
   outcome: Outcome
   battle: { before: number; after?: number | null } | null | undefined
   sending: boolean
-  /** 매도벽 돌파 스테이지(주 게임, #698): 회의 손익 대신 스테이지 보상(자본)을 보인다. 다이아는 주지 않는다 (526번). */
+  /** 매도벽 돌파 스테이지(주 게임, #698): 회의 손익 대신 스테이지 보상(다이아, 697번)을 보인다. */
   stage: boolean
   reward: StageReward | null
 }) {
@@ -602,7 +602,7 @@ function AssaultResult({
                 ? rewardText(reward)
                 : outcome.win
                   ? '이번에 더 받을 보상은 없다.'
-                  : '처음 깨면 자본을 받는다.'}
+                  : '별을 얻으면 다이아를 받는다.'}
         </p>
       ) : (
         <p
