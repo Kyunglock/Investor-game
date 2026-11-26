@@ -11,10 +11,11 @@ describe('매도벽 배경 순환', () => {
     [150, 'candy-factory'],
     [151, 'space-station'],
     [200, 'space-station'],
-    [201, 'toy-city'],
-    [250, 'toy-city'],
-    [251, 'neon-street'],
-    [401, 'toy-city'],
+    [201, 'glasshouse'],
+    [250, 'glasshouse'],
+    [251, 'moonlit-harbor'],
+    [301, 'toy-city'],
+    [401, 'candy-factory'],
   ])('%i벽에서는 %s 배경이다', (wall, key) => {
     expect(arenaMap(wall).key).toBe(key)
   })
@@ -30,12 +31,14 @@ describe('매도벽 배경 순환', () => {
   })
 })
 
-it('번호 스테이지를 다시 플레이해도 같은 전장이며 네 판마다 순환한다', () => {
-  expect([1, 2, 3, 4, 5, 2].map((stage) => stageArenaMap(stage).key)).toEqual([
+it('번호 스테이지를 다시 플레이해도 같은 전장이며 여섯 판마다 순환한다', () => {
+  expect([1, 2, 3, 4, 5, 6, 7, 2].map((stage) => stageArenaMap(stage).key)).toEqual([
     'toy-city',
     'neon-street',
     'candy-factory',
     'space-station',
+    'glasshouse',
+    'moonlit-harbor',
     'toy-city',
     'neon-street',
   ])

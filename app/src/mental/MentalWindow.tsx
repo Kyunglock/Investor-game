@@ -47,7 +47,7 @@ import {
   stageSkillCard,
   stageSkillTargets,
 } from './cards'
-import { ENEMIES } from './enemies'
+import { COMMON_ENEMIES } from './enemies'
 import { FirstClear } from './FirstClear'
 import { GunSprite } from './GunSprite'
 import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './gameSpeed'
@@ -354,7 +354,7 @@ export function MentalWindow({
                       { label: '대량 매도', fill: '#2f5fbf' },
                       { label: '허매도', fill: '#a9c1f0' },
                     ]
-                  : Object.values(ENEMIES)
+                  : Object.values(COMMON_ENEMIES)
                 ).map((e) => (
                   <span key={e.label}>
                     <i style={{ background: e.fill }} />

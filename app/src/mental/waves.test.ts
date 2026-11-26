@@ -100,7 +100,16 @@ it('줄기의 몬스터는 패닉셀이 가장 많고 몫을 다 더하면 1이�
   expect(waveStreamKind(0.99)).toBe('spec')
   expect(waveStreamKind(1)).toBe('spec')
   const same = { reward: 10 }
-  expect(waveStreamReward({ panic: same, dump: same, stop: same, spec: same })).toBeCloseTo(10)
+  expect(
+    waveStreamReward({
+      panic: same,
+      dump: same,
+      stop: same,
+      spec: same,
+      sprout: same,
+      coinCrab: same,
+    }),
+  ).toBeCloseTo(10)
   expect(waveStreamReward(ENEMIES)).toBeCloseTo(
     ENEMIES.panic.reward * 0.6 +
       ENEMIES.dump.reward * 0.22 +
@@ -119,4 +128,12 @@ it('첫 세 웨이브는 몬스터가 덜 나오고 넷째 웨이브부터는 �
   expect(waveCrowd(4)).toBe(1)
   expect(waveCrowd(15)).toBe(1)
   expect(waveCrowd(0)).toBe(1)
+})
+
+it('새 전장의 줄기는 투매 자리에 토착 몹을 내고 같은 경험치를 배분한다', () => {
+  for (const mob of ['sprout', 'coinCrab'] as const) {
+    expect(waveStreamKind(0.7, mob)).toBe(mob)
+    expect(waveStreamKind(0.3, mob)).toBe('panic')
+    expect(waveStreamReward(ENEMIES, mob)).toBeCloseTo(waveStreamReward(ENEMIES))
+  }
 })

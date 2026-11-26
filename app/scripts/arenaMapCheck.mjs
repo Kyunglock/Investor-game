@@ -53,8 +53,9 @@ try {
     [150, 'candy-factory'],
     [151, 'space-station'],
     [200, 'space-station'],
-    [201, 'toy-city'],
-    [251, 'neon-street'],
+    [201, 'glasshouse'],
+    [251, 'moonlit-harbor'],
+    [301, 'toy-city'],
     [51, 'neon-street'],
   ]) {
     company.idle.wall = wall
@@ -66,7 +67,7 @@ try {
       },
     )
     await expect.poll(map, { timeout: 15000 }).toEqual({ front: key, back: key })
-    if ([1, 51, 101, 151].includes(wall)) {
+    if ([1, 51, 101, 151, 201, 251].includes(wall)) {
       await page.screenshot({ path: `/tmp/arena-map-${key}.png` })
     }
   }
@@ -81,7 +82,7 @@ try {
   await expect.poll(map).toEqual({ front: 'space-station', back: 'space-station' })
   assert.deepEqual(errors, [])
   console.log(
-    'arena maps ok: boundaries, 200-wall cycle, saved progress, reload, resize, both tiles',
+    'arena maps ok: boundaries, 300-wall cycle, saved progress, reload, resize, both tiles',
   )
 } finally {
   await browser.close()

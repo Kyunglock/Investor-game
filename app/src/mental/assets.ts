@@ -6,9 +6,12 @@ import nightPoses from './assets/cat-night-poses.png'
 import skyPoses from './assets/cat-sky-poses.png'
 import snowPoses from './assets/cat-snow-poses.png'
 import sunsetPoses from './assets/cat-sunset-poses.png'
+import coinCrab from './assets/coin-crab.webp'
 import enemies from './assets/enemies.png'
+import greenhouseHarbor from './assets/greenhouse-harbor.webp'
 import hero from './assets/hero-unarmed.png'
 import shortSeller from './assets/short-seller.png'
+import sprout from './assets/sprout.webp'
 import street from './assets/toy-arena.png'
 import wallBlocks from './assets/wall-blocks-toy.png'
 import weapons from './assets/weapon-arcade-atlas.png'
@@ -28,6 +31,9 @@ export const STAGE_ASSETS = {
 
   street,
   arenaMaps,
+  greenhouseHarbor,
+  sprout,
+  coinCrab,
   hero,
   enemies,
   wallBlocks,

@@ -1,3 +1,5 @@
+import type { LocalMob } from './arenaMaps'
+
 /** 15초마다 패닉셀 → 투매 → 공매도. 투기 몹은 일반 생성으로 계속 등장한다. */
 export const WAVE_ORDER = ['panic', 'dump', 'short'] as const
 export function waveKind(index: number) {
@@ -35,20 +37,25 @@ export const WAVE_STREAM = [
 ] as const
 
 /** 줄기의 다음 몬스터. rand는 0~1. */
-export function waveStreamKind(rand: number) {
+export function waveStreamKind(rand: number, localMob?: LocalMob) {
   let left = rand
   for (const [kind, share] of WAVE_STREAM) {
     left -= share
-    if (left < 0) return kind
+    if (left < 0) return kind === 'dump' && localMob ? localMob : kind
   }
   return WAVE_STREAM[WAVE_STREAM.length - 1][0]
 }
 
 /** 줄기의 몬스터 한 마리가 주는 값(reward)의 평균. */
 export function waveStreamReward(
-  units: Record<(typeof WAVE_STREAM)[number][0], { reward: number }>,
+  units: Record<(typeof WAVE_STREAM)[number][0] | LocalMob, { reward: number }>,
+  localMob?: LocalMob,
 ) {
-  return WAVE_STREAM.reduce((sum, [kind, share]) => sum + units[kind].reward * share, 0)
+  return WAVE_STREAM.reduce(
+    (sum, [kind, share]) =>
+      sum + units[kind === 'dump' && localMob ? localMob : kind].reward * share,
+    0,
+  )
 }
 
 /**

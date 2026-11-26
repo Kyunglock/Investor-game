@@ -30,7 +30,14 @@ import {
   stars,
   TRICKLE_SECONDS,
 } from './advance'
-import { ARENA_FRAME, ARENA_MAPS, arenaMap, stageArenaMap } from './arenaMaps'
+import {
+  ARENA_FRAME,
+  ARENA_MAPS,
+  ARENA_SHEETS,
+  arenaMap,
+  type LocalMob,
+  stageArenaMap,
+} from './arenaMaps'
 import {
   auroraEdge,
   auroraFold,
@@ -884,6 +891,7 @@ class BattleScene extends Phaser.Scene {
   /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
   private begun = false
   private nextWave = WAVE_SECONDS
+  private readonly localMob?: LocalMob
   /** 웨이브 판 (690번): 전체 웨이브 수(시간 판은 0)와 지금 웨이브(시작 전 0). */
   private waveTotal = 0
   private waveAt = 0
@@ -942,6 +950,7 @@ class BattleScene extends Phaser.Scene {
     this.speedScale = this.assault?.enemySpeed ?? scaled?.speedScale ?? 1
     this.dmgScale = this.assault?.enemyDmg ?? scaled?.dmgScale ?? 1
     this.defenseBoss = opts.mode === 'defense' && Boolean(opts.stage?.boss)
+    if (opts.mapStage !== undefined) this.localMob = stageArenaMap(opts.mapStage).mob
     this.waveTotal = opts.mode === 'defense' ? Math.max(0, Math.floor(opts.stage?.waves ?? 0)) : 0
     this.loadout = opts.loadout
   }
@@ -1026,10 +1035,17 @@ class BattleScene extends Phaser.Scene {
       return
     }
     this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
-    const mapTexture = this.textures.get('art-arenaMaps')
     for (const map of ARENA_MAPS) {
+      const mapTexture = this.textures.get(`art-${map.sheet}`)
       if (!mapTexture.has(map.key)) {
-        mapTexture.add(map.key, 0, map.x, ARENA_FRAME.y, ARENA_FRAME.width, ARENA_FRAME.height)
+        mapTexture.add(
+          map.key,
+          0,
+          map.x,
+          ARENA_SHEETS[map.sheet].y,
+          ARENA_FRAME.width,
+          ARENA_FRAME.height,
+        )
       }
     }
     bakeStage(this, this.opts.genre)
@@ -1631,7 +1647,7 @@ class BattleScene extends Phaser.Scene {
     if (this.bg?.frame.name === map.key) return
     const { w, h } = this.view()
     for (const bg of [this.bg, this.bg2]) {
-      bg?.setTexture('art-arenaMaps', map.key).setDisplaySize(w, h)
+      bg?.setTexture(`art-${map.sheet}`, map.key).setDisplaySize(w, h)
     }
   }
 
@@ -3164,7 +3180,7 @@ class BattleScene extends Phaser.Scene {
       this.waveStreamClock = Math.min(this.waveStreamClock + dt, this.waveStreamEvery * 3)
       while (this.waveStream > 0 && this.waveStreamClock >= this.waveStreamEvery) {
         // 화면이 꽉 차 못 꺼내면 자리가 날 때까지 기다린다: 줄기의 수는 줄지 않는다.
-        if (!this.spawn(waveStreamKind(Math.random()))) break
+        if (!this.spawn(waveStreamKind(Math.random(), this.localMob))) break
         this.waveStreamClock -= this.waveStreamEvery
         this.waveStream--
       }
@@ -3210,7 +3226,7 @@ class BattleScene extends Phaser.Scene {
     let horde = 0
     for (const e of this.enemies.getChildren() as Enemy[])
       if (e.active) horde += UNITS[e.kind].reward
-    this.waveReward = horde + this.waveStream * waveStreamReward(ENEMIES)
+    this.waveReward = horde + this.waveStream * waveStreamReward(ENEMIES, this.localMob)
     this.pushHud(true)
   }
 
@@ -6079,7 +6095,9 @@ class BattleScene extends Phaser.Scene {
         const drift = Phaser.Math.Clamp(p.x - e.x, -1, 1) * 25
         e.setVelocity(e.kbx + (e.blocker ? drift : 0), (e.blocker ? sy * 0.55 : sy * 1.4) + e.kby)
       } else {
-        e.setVelocity(e.kbx, sy + e.kby)
+        const sideways =
+          e.kind === 'coinCrab' ? Math.cos((this.elapsed - e.born) * 2.5) * sy * 0.65 : 0
+        e.setVelocity(e.kbx + sideways, sy + e.kby)
       }
       e.kbx *= 0.86
       e.kby *= 0.86
