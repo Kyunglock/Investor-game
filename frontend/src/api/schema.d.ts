@@ -1636,7 +1636,7 @@ export interface components {
                     }[];
                     weakPercent: number;
                     resistPercent: number;
-                    /** @description 천적 고양이. 그 고양이 총의 피해가 rivalPercent%다 */
+                    /** @description 천적 고양이. 없앴다(694번). 늘 비어 있고 rivalPercent는 100이다. 이미 깔린 앱이 읽어 자리만 남긴다 */
                     rivals: {
                         code: string;
                         name: string;

@@ -52,8 +52,8 @@ const boss = (over: Partial<Vault['boss']> = {}) =>
     weakPercent: 300,
     resistSkills: [{ code: 'meteor', name: '메테오' }],
     resistPercent: 50,
-    rivals: [{ code: 'sky', name: 'sky', grade: 'C' }],
-    rivalPercent: 300,
+    rivals: [],
+    rivalPercent: 100,
     seconds: 60,
     ...over,
   }) as Vault['boss']
@@ -92,7 +92,7 @@ describe('파티 (654번)', () => {
     expect(recommendParty(c)).toEqual(['mint', 'lilac'])
   })
 
-  it('보스전 추천은 약점 스킬과 천적의 배율을 넣고 내성 스킬은 낮게 본다', () => {
+  it('보스전의 어림은 약점 스킬의 배율을 넣고 내성 스킬은 낮게 본다', () => {
     const c = company(
       [
         { code: 'sky', fielded: false, damagePercent: 50 },
@@ -109,15 +109,14 @@ describe('파티 (654번)', () => {
     const meteorBoss = catDps(c, 'lilac', vs)
     expect(meteorBoss).toBeLessThan(meteorPlain)
     expect(water).toBeGreaterThan(catDps(c, 'mint'))
-    // 천적(sky)의 총은 세 배라 공격력이 높은 night보다 낫다.
-    expect(catDps(c, 'sky', vs)).toBeGreaterThan(catDps(c, 'night', vs))
-    expect(recommendParty(c, vs)).toContain('sky')
-    expect(recommendParty(c, vs)).not.toContain('lilac')
+    // 천적 고양이는 없다 (694번): 스킬 없는 고양이는 공격력대로다.
+    expect(catDps(c, 'sky', vs)).toBeLessThan(catDps(c, 'night', vs))
+    expect(catDps(c, 'sky', vs)).toBeCloseTo(catDps(c, 'sky'))
   })
 
-  it('고양이마다 약점·내성·천적을 표시한다', () => {
+  it('고양이마다 약점·내성을 표시한다', () => {
     const b = boss()
-    expect(bossMarks({ code: 'sky', skills: [] }, b)).toEqual(['rival'])
+    expect(bossMarks({ code: 'sky', skills: [] }, b)).toEqual([])
     expect(bossMarks({ code: 'mint', skills: [{ code: 'water', name: '' }] }, b)).toEqual(['weak'])
     expect(
       bossMarks(
@@ -130,7 +129,7 @@ describe('파티 (654번)', () => {
         },
         b,
       ),
-    ).toEqual(['weak', 'resist', 'rival'])
+    ).toEqual(['weak', 'resist'])
   })
 
   it('출전 칸을 추천으로 바꾸는 차례: 빈 칸에 세우고, 찼으면 빠질 고양이와 바꾸고, 남은 것은 뺀다', () => {

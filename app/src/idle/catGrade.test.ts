@@ -6,6 +6,7 @@ import {
   CAT_GRADE_PERCENT,
   CAT_ODDS,
   catRevealPlan,
+  holdsReveal,
   shinyCat,
   sortCats,
 } from './catGrade'
@@ -45,6 +46,16 @@ describe('고양이 등급 (539번)', () => {
     const { color: _, ...strength } = catRevealPlan('B', false)
     expect(catRevealPlan('C', true)).toMatchObject(strength)
     expect(catRevealPlan('S', true)).toEqual(catRevealPlan('S', false))
+  })
+
+  it('S등급 이상을 처음 얻으면 뽑기를 넘길 수 없다 (693번)', () => {
+    expect(holdsReveal('S', true)).toBe(true)
+    expect(holdsReveal('SS', true)).toBe(true)
+    // 이미 가진 고양이(레벨 업)와 A등급 이하는 전처럼 넘길 수 있다.
+    expect(holdsReveal('S', false)).toBe(false)
+    expect(holdsReveal('SS', false)).toBe(false)
+    expect(holdsReveal('A', true)).toBe(false)
+    expect(holdsReveal('C', true)).toBe(false)
   })
 
   it('카드의 색은 등급으로만 정한다: 처음 얻었어도 윗등급 색을 쓰지 않는다 (#917)', () => {

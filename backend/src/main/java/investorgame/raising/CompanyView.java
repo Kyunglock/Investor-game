@@ -84,7 +84,7 @@ public record CompanyView(
    *
    * @param weakSkills 이번 주의 약점 스킬: 피해가 weakPercent%
    * @param resistSkills 이번 주의 내성 스킬: 피해가 resistPercent%
-   * @param rivals 이번 주의 천적 고양이: 그 고양이 총의 피해가 rivalPercent%
+   * @param rivals 천적 고양이. 없앴다 (decisions.md 694번): 늘 비어 있고 rivalPercent는 100이다
    * @param best 이번 주의 최고 피해량
    * @param record 역대 최고 피해량
    * @param tier 이번 주에 닿은 등급(0이면 아직 없다)

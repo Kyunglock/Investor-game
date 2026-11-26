@@ -11,7 +11,7 @@ import { type DrawResult, WeaponReveal } from '../mental/WeaponReveal'
 import { shinyWeapon, weaponRevealPlan } from '../mental/weaponRevealPlan'
 import { CatPortrait as Portrait } from './CatPortrait'
 import { type CatDraw, CatReveal } from './CatReveal'
-import { bestDraw, CAT_ODDS, catRevealPlan, shinyCat } from './catGrade'
+import { bestDraw, CAT_ODDS, catRevealPlan, holdsReveal, shinyCat } from './catGrade'
 import { RewardPlacement } from './RewardPlacement'
 import { ShopIcon } from './ShopIcon'
 import { SovereignArrival } from './SovereignArrival'
@@ -196,6 +196,7 @@ export function IdleGacha({
               sound: plan.sound,
               shiny: shinyCat(d.grade),
               jackpot: d.grade === 'S' || d.grade === 'SS',
+              hold: holdsReveal(d.grade, d.isNew) ? `${d.grade} 등급 새 고양이!` : undefined,
             }
           }),
         })

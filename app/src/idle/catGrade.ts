@@ -54,6 +54,13 @@ export function bestDraw<T extends { code: string; grade: CatGrade; isNew: boole
   return best && { code: best.code, isNew: fresh(best) }
 }
 
+/**
+ * 넘길 수 없는 뽑기 (693번): S등급 이상의 고양이를 처음 얻으면 축하 연출이 3초(`REVEAL_HOLD_MS`) 나오고, 그동안은 넘기거나 닫을 수 없다.
+ */
+export function holdsReveal(grade: CatGrade, isNew: boolean): boolean {
+  return isNew && (grade === 'S' || grade === 'SS')
+}
+
 /** 빛나는 등급 (574번): A등급부터는 좋은 것을 뽑았다는 느낌이 들게 뽑기 연출이 빛난다. */
 export function shinyCat(grade: CatGrade): boolean {
   return grade === 'A' || grade === 'S' || grade === 'SS'

@@ -133,13 +133,8 @@ function companyOf(team) {
         ],
         weakPercent: 200,
         resistPercent: 50,
-        rivals: [
-          { code: 'sky', name: '하늘냥', grade: 'C' },
-          { code: 'mint', name: '민트냥', grade: 'C' },
-          { code: 'mocha', name: '모카냥', grade: 'B' },
-          { code: 'peach', name: '복숭아냥', grade: 'B' },
-        ],
-        rivalPercent: 300,
+        rivals: [],
+        rivalPercent: 100,
         best: 0,
         record: 0,
         tier: 0,
@@ -308,35 +303,36 @@ try {
     const company = companyOf(TEAMS.team)
     const calls = []
     const { page, errors } = await openVault(browser, company, calls)
-    // 보스전: 약점·내성·천적과 그것을 가진 내 고양이가 보인다.
+    // 보스전: 약점·내성과 그것을 가진 내 고양이가 보인다. 천적 고양이는 없다 (694번).
     const traits = page.getByTestId('vault-traits')
     await expect(traits).toContainText('약점 스킬 ×2')
     await expect(traits).toContainText('내성 스킬 ×0.5')
-    await expect(traits).toContainText('총 피해 ×3')
-    await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(4)
+    await expect(traits).not.toContainText('천적')
+    await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(2)
     await expect(traits).toContainText('은빛냥 · 출전 중')
     await expect(page.getByTestId('vault-sheet')).toContainText('새 금고까지 3일 4시간')
-    // 파티 (654번): 저장한 적이 없으면 출전 칸의 고양이를 데려간다. 고양이마다 약점·내성·천적을 표시하고 예상 피해량을 적는다.
+    // 파티 (654번): 저장한 적이 없으면 출전 칸의 고양이를 데려간다. 고양이마다 약점·내성을 표시하고 예상 피해량을 적는다.
     const party = page.getByTestId('vault-party-boss')
     await expect(party.locator('.vault-party-row li:not(.is-empty)')).toHaveCount(4)
-    await expect(party.locator('.vault-mark.is-rival')).toHaveCount(2)
+    await expect(party.locator('.vault-mark.is-rival')).toHaveCount(0)
     await expect(party.locator('.vault-mark.is-weak')).toHaveCount(1)
     await expect(party.locator('.vault-mark.is-resist')).toHaveCount(1)
     await expect(page.getByTestId('vault-party-estimate')).toContainText('예상 피해량')
-    // 가진 고양이가 넷뿐이라 지금 파티가 곧 추천 편성이다.
-    await expect(page.getByTestId('vault-party-recommend')).toBeDisabled()
+    // 보스전에는 추천 편성 단추가 없다 (694번).
+    await expect(party.getByTestId('vault-party-recommend')).toHaveCount(0)
     // 편성을 펴서 한 마리를 빼면 그 파티가 저장되고, 추천 편성으로 되돌릴 수 있다.
     await page.getByTestId('vault-party-edit').click()
     await page.getByTestId('vault-party-pick').locator('[data-code="night"]').click()
     await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(1)
-    // 약점·내성·천적 칸의 "출전 중"은 보스전 파티를 따른다 (655번): 파티에서 뺀 밤냥은 대기다.
-    await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(3)
+    // 약점·내성 칸의 "출전 중"은 보스전 파티를 따른다 (655번): 파티에서 뺀 밤냥은 대기다.
+    await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(1)
     await expect(traits).toContainText('밤냥 · 대기')
     await page.reload()
     await expect(page.getByTestId('idle-canvas-loading')).toHaveCount(0, { timeout: 30000 })
     await page.getByTestId('vault-entry').click()
     await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(1)
-    await page.getByTestId('vault-party-recommend').click()
+    await page.getByTestId('vault-party-edit').click()
+    await page.getByTestId('vault-party-pick').locator('[data-code="night"]').click()
     await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(0)
     await page.getByRole('button', { name: '보스 도전' }).click()
     // 입장 장면 (691번): 금고 도전 창의 수호냥 그림이 화면 가득 뜨고, 그동안 전투는 멈춰 있다가 걷힌다.

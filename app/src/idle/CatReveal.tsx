@@ -4,8 +4,9 @@ import { createPortal } from 'react-dom'
 import { useModalBack } from '../app/useModalBack'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { JackpotFx, REVEAL_HOLD_MS } from '../mental/JackpotFx'
 import { CatPortrait, catTrait } from './CatPortrait'
-import { catRevealPlan, shinyCat } from './catGrade'
+import { catRevealPlan, holdsReveal, shinyCat } from './catGrade'
 import { DrawAgain, type RepeatDraw } from './DrawAgain'
 import { SkillBadge } from './SkillBadge'
 import { skillNames } from './skills'
@@ -17,6 +18,8 @@ export type CatDraw = { cat: Cat; isNew: boolean }
 /**
  * 고양이 뽑기 연출 (decisions.md 508번): 무기 뽑기(WeaponReveal)와 같은 창·상자·빛을 쓴다. 상자가 떨다 열리고 고양이가 나온다. 결과는 이번
  * 서버 응답의 스냅샷이다.
+ *
+ * S등급 이상을 처음 얻으면 (693번) 결과 앞에 축하 장면(wow)이 3초 나온다. 상자의 뜸은 눌러서 건너뛸 수 있지만 이 장면은 넘기거나 닫을 수 없다.
  */
 export function CatReveal({
   result,
@@ -38,11 +41,12 @@ export function CatReveal({
   onAgain: () => void
 }) {
   // 응답을 기다릴 때도 뒤로 가기를 소비해 상점이 함께 닫히지 않게 한다.
-  useModalBack(() => {
-    if (result) onClose()
-  })
+  useModalBack(() => close())
   const dialog = useRef<HTMLDialogElement>(null)
-  const [phase, setPhase] = useState<'charge' | 'open' | 'result'>('charge')
+  const [phase, setPhase] = useState<'charge' | 'open' | 'wow' | 'result'>('charge')
+  const hold = result ? holdsReveal(result.cat.grade, result.isNew) : false
+  /** 상자가 열리면 갈 곳: 넘길 수 없는 뽑기는 축하 장면을 거친다. */
+  const shown = hold ? 'wow' : 'result'
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const sounded = useRef(false)
   const plan = catRevealPlan(result?.cat.grade ?? 'C', result?.isNew ?? false)
@@ -57,22 +61,30 @@ export function CatReveal({
   useEffect(() => {
     if (!result) return
     if (reduced) {
-      setPhase('result')
+      setPhase(shown)
       return
     }
     sfx.charge()
     const open = setTimeout(
-      () => setPhase((current) => (current === 'result' ? current : 'open')),
+      () => setPhase((current) => (current === 'charge' ? 'open' : current)),
       plan.charge,
     )
-    const reveal = setTimeout(() => setPhase('result'), plan.charge + 220)
+    const reveal = setTimeout(
+      () => setPhase((current) => (current === 'wow' || current === 'result' ? current : shown)),
+      plan.charge + 220,
+    )
     return () => {
       clearTimeout(open)
       clearTimeout(reveal)
     }
-  }, [result, reduced, plan.charge])
+  }, [result, reduced, plan.charge, shown])
   useEffect(() => {
-    if (phase !== 'result' || !result || sounded.current || reduced) return
+    if (phase !== 'wow') return
+    const done = setTimeout(() => setPhase('result'), REVEAL_HOLD_MS)
+    return () => clearTimeout(done)
+  }, [phase])
+  useEffect(() => {
+    if ((phase !== 'wow' && phase !== 'result') || !result || sounded.current || reduced) return
     sounded.current = true
     if (result.cat.grade === 'S') sfx.celebrate()
     else sfx.weaponReveal(plan.sound)
@@ -83,7 +95,8 @@ export function CatReveal({
     if (phase === 'result') dialog.current?.querySelector<HTMLButtonElement>('button')?.focus()
   }, [phase])
   const close = () => {
-    if (result) onClose()
+    // 넘길 수 없는 뽑기는 축하 장면이 끝나 결과가 나온 뒤에만 닫힌다 (693번).
+    if (result && (!hold || phase === 'result')) onClose()
   }
   return createPortal(
     <dialog
@@ -96,6 +109,7 @@ export function CatReveal({
       data-starlight={result?.cat.grade === 'S' || result?.cat.grade === 'SS' || undefined}
       data-power={plan.power}
       data-shiny={result ? shinyCat(result.cat.grade) : false}
+      data-hold={phase === 'wow' || undefined}
       style={{ '--reveal-color': plan.color } as CSSProperties}
       onCancel={(e) => {
         e.preventDefault()
@@ -115,11 +129,20 @@ export function CatReveal({
         <div className="weapon-reveal-sparks" aria-hidden="true">
           ✦ ✧ ✦ ✧ ✦
         </div>
-        {phase !== 'result' ? (
+        {phase === 'wow' && result ? (
+          <section className="jackpot-view" data-testid="cat-reveal-wow" aria-live="polite">
+            <p className="jackpot-title">✦ {result.cat.grade} 등급 새 고양이! ✦</p>
+            <div className="weapon-reveal-art cat-reveal-art">
+              <CatPortrait code={result.cat.code} grade={result.cat.grade} />
+            </div>
+            <h2>{result.cat.name}</h2>
+            <small>엄청난 고양이가 찾아왔어요!</small>
+          </section>
+        ) : phase !== 'result' ? (
           <button
             type="button"
             className="weapon-reveal-stage"
-            onClick={() => result && setPhase('result')}
+            onClick={() => result && setPhase(shown)}
             disabled={!result}
             data-testid="cat-reveal-skip"
           >
@@ -204,6 +227,7 @@ export function CatReveal({
             </section>
           )
         )}
+        {phase === 'wow' && <JackpotFx />}
       </div>
     </dialog>,
     document.body,

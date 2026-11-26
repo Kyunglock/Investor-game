@@ -42,13 +42,11 @@ class VaultEngine {
 
   private static final String[] LEAGUES = {"브론즈", "실버", "골드", "플래티넘", "다이아", "마스터"};
 
-  /** 약점·내성 스킬의 수와 피해 배율(%), 천적 고양이의 수와 그 고양이 총의 피해 배율(%). */
+  /** 약점·내성 스킬의 수와 피해 배율(%). */
   static final int WEAK_SKILLS = 4;
 
   static final int WEAK_PERCENT = 200;
   static final int RESIST_PERCENT = 50;
-  static final int RIVAL_CATS = 4;
-  static final int RIVAL_PERCENT = 300;
 
   /** 화면이 보낸 피해량을 받아 주는 상한: 지금 팀의 초당 피해로 보스전 내내 때린 것의 이 배수. 약점·치명타·훈련을 넉넉히 덮는다. */
   static final double SCORE_SLACK = 12;
@@ -174,18 +172,6 @@ class VaultEngine {
     for (int i = 0; i < IdleEngine.skillCount(); i++) order.add(i);
     java.util.Collections.shuffle(order, new Random(week * 31 + 7));
     return order.subList(0, WEAK_SKILLS * 2);
-  }
-
-  /** 그 주의 천적 고양이: 스킬이 없는 C·B등급에서 반씩 고른다. 스킬 없는 고양이도 쓸 자리가 생긴다. */
-  static List<String> rivals(long week) {
-    Random random = new Random(week * 131 + 17);
-    List<String> picked = new ArrayList<>();
-    for (String grade : List.of("C", "B")) {
-      List<String> pool = new ArrayList<>(IdleEngine.catsOf(grade));
-      java.util.Collections.shuffle(pool, random);
-      picked.addAll(pool.subList(0, Math.min(pool.size(), RIVAL_CATS / 2)));
-    }
-    return picked;
   }
 
   /** 지금 골라야 할 카드들. 고를 차례가 아니면(이미 골랐거나 다 깼으면) 비어 있다. 같은 주·같은 차례에는 늘 같은 석 장이고 이미 고른 카드는 빠진다. */
@@ -333,12 +319,6 @@ class VaultEngine {
         order.subList(0, WEAK_SKILLS).stream().map(IdleEngine::vaultSkill).toList();
     List<CompanyView.VaultSkill> resist =
         order.subList(WEAK_SKILLS, WEAK_SKILLS * 2).stream().map(IdleEngine::vaultSkill).toList();
-    List<CompanyView.VaultRival> rivals =
-        rivals(v.week).stream()
-            .map(
-                code ->
-                    new CompanyView.VaultRival(code, idle.catName(code), IdleEngine.catGrade(code)))
-            .toList();
     CompanyView.VaultBoss boss =
         new CompanyView.VaultBoss(
             BOSS_SECONDS,
@@ -346,8 +326,9 @@ class VaultEngine {
             resist,
             WEAK_PERCENT,
             RESIST_PERCENT,
-            rivals,
-            RIVAL_PERCENT,
+            // 천적 고양이는 없앴다 (decisions.md 694번). 이미 깔린 앱이 읽는 자리라 빈 목록과 100%로 남긴다.
+            List.of(),
+            100,
             v.bossBest,
             v.bossRecord,
             v.bossTier,

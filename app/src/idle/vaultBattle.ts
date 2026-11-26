@@ -126,14 +126,12 @@ export function cardMods(cards: readonly VaultCard[]): Mods {
 }
 
 /**
- * 금고 전투에 나가는 팀의 수치: 공격력(damage)·공격 속도(fire)·스킬 피해(skill)·최대 멘탈(mental) 배율을 붙이고, rivals의 고양이는
- * 총 피해에 rival배를 더 곱한다.
+ * 금고 전투에 나가는 팀의 수치: 공격력(damage)·공격 속도(fire)·스킬 피해(skill)·최대 멘탈(mental) 배율을 붙인다. 천적 고양이의 총 피해
+ * 배율은 없앴다 (694번).
  */
 export function vaultLoadout(
   loadout: Loadout,
   mods: Partial<Pick<Mods, 'damage' | 'fire' | 'skill' | 'mental'>>,
-  rivals: readonly string[] = [],
-  rival = 1,
 ): Loadout {
   const damage = mods.damage ?? 1
   const fire = mods.fire ?? 1
@@ -145,7 +143,7 @@ export function vaultLoadout(
     skillDamage: (loadout.skillDamage ?? loadout.damage) * damage * (mods.skill ?? 1),
     mateGuns: loadout.mateGuns.map((gun) => ({
       ...gun,
-      damage: gun.damage * damage * (gun.tag && rivals.includes(gun.tag.code) ? rival : 1),
+      damage: gun.damage * damage,
       fireMs: Math.max(60, gun.fireMs / fire),
     })),
   }

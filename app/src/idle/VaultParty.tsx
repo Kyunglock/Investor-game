@@ -18,8 +18,8 @@ import { scoreText, VAULT_SIM, type Vault } from './vaultBattle'
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
 /**
- * 금고 도전의 파티 칸 (decisions.md 654번): 입장하기 전에 데려갈 고양이를 고르고 저장한다. 보스전에서는 고양이마다 약점·내성·천적을 표시하고,
- * 상대의 배율을 넣은 예상 피해량과 추천 편성을 보여 준다.
+ * 금고 도전의 파티 칸 (decisions.md 654번): 입장하기 전에 데려갈 고양이를 고르고 저장한다. 보스전에서는 고양이마다 약점·내성을 표시하고
+ * 상대의 배율을 넣은 예상 피해량을 보여 준다. 추천 편성은 던전에만 있다 (694번).
  */
 export function VaultParty({
   company,
@@ -100,22 +100,24 @@ export function VaultParty({
         >
           {editing ? '편성 닫기' : '파티 편성'}
         </button>
-        <button
-          type="button"
-          data-testid="vault-party-recommend"
-          disabled={same}
-          onClick={() => {
-            sfx.tap()
-            haptic.light()
-            onChange(recommended)
-          }}
-        >
-          {same ? '추천 편성 사용 중' : '추천 편성'}
-        </button>
+        {!boss && (
+          <button
+            type="button"
+            data-testid="vault-party-recommend"
+            disabled={same}
+            onClick={() => {
+              sfx.tap()
+              haptic.light()
+              onChange(recommended)
+            }}
+          >
+            {same ? '추천 편성 사용 중' : '추천 편성'}
+          </button>
+        )}
       </div>
       <p className="vault-party-note">
         {boss
-          ? '약점 스킬·천적 고양이의 배율을 넣은 어림이에요(치명타·범위 피해 제외). 추천 편성은 이 값이 가장 큰 파티예요.'
+          ? '약점·내성 스킬의 배율을 넣은 어림이에요(치명타·범위 피해 제외).'
           : '추천 편성은 팀 화력이 가장 큰 파티예요. 금고의 벽도 팀 화력만큼 단단해져요.'}
       </p>
       {editing && (
