@@ -231,9 +231,15 @@ public record CompanyProperties(
    * @param capitalPerStage 처음 깰 때 주는 자본 = 스테이지 번호 × 이것
    * @param bonusPerStage 분기 강화율: 깬 최고 스테이지 하나에 이만큼(%)
    * @param maxBonus 분기 강화율 상한(%)
+   * @param assaultDiamonds 매도벽 돌파 스테이지에서 별을 처음 얻을 때 주는 다이아: 1개째·2개째·3개째 (697번)
    */
   public record Stages(
-      int perChapter, int chapters, long capitalPerStage, int bonusPerStage, int maxBonus) {}
+      int perChapter,
+      int chapters,
+      long capitalPerStage,
+      int bonusPerStage,
+      int maxBonus,
+      List<Long> assaultDiamonds) {}
 
   /** 무기 종류 하나의 바탕 수치 (346번). damagePercent 100이 탄 하나에 적 체력 1. power는 탄 강화 단계(362번). */
   public record Weapon(int damagePercent, int fireMs, int power, int bulletSpeed) {}

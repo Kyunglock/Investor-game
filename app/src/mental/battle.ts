@@ -4926,9 +4926,19 @@ class BattleScene extends Phaser.Scene {
   // 충차는 매도벽만 겨냥한다. 이동 중 일반 적과 보스는 통과한다.
   private isSiege = (e: Enemy) => Boolean(e.cell)
 
+  /**
+   * 매도벽이 없는 판(스테이지·수련·EX의 디펜스)에서는 충차가 몬스터를 들이받는다 (698번): 벽만 겨냥하면 충차가 한 번도 나가지 않아
+   * 판다냥이 쓸모없었다. 자동 전투와 매도벽 돌파 판은 전처럼 벽만 친다.
+   */
+  private get ramHitsMonsters() {
+    return !this.opts.idle && !this.assault
+  }
+
   private castEarth(from: { x: number; y: number }, level: number): boolean {
     const st = earthStats(level)
-    const target = siegeTarget(this.magicTargets(), from, this.isSiege)
+    const target = this.ramHitsMonsters
+      ? nearestTo(this.magicTargets(), from)
+      : siegeTarget(this.magicTargets(), from, this.isSiege)
     const s = this.rams.find((r) => !r.active)
     if (!target || !s) return false
     const tier = magicTier(level)
@@ -5013,6 +5023,23 @@ class BattleScene extends Phaser.Scene {
           s.nextSpike += SPIKE_GAP
         }
       }
+    }
+    if (this.ramHitsMonsters) {
+      // 벽이 없는 판 (698번): 멈추지 않고 달리며 지나가는 몬스터를 한 번씩 들이받고 옆으로 밀친다. 보스는 밀리지 않는다.
+      const dmg = st.damage * st.siege * this.attackDamage
+      for (const e of this.magicTargets()) {
+        if (s.hitList.includes(e) || !sweepHits(s, e, UNITS[e.kind].r)) continue
+        if (s.hitList.length === 0) {
+          this.playSound('ram')
+          haptic.medium()
+          this.damageStats.rams++
+        }
+        s.hitList.push(e)
+        this.rockFx.explode(this.fx(3 + tier * 2), e.x, e.y)
+        if (!e.boss) e.setX(Phaser.Math.Clamp(e.x + (e.x < s.x ? -1 : 1) * 26, 16, w - 16))
+        this.hit(e, dmg, -Math.PI / 2, 'siege')
+      }
+      return
     }
     for (const e of this.magicTargets()) {
       if (!this.isSiege(e)) continue

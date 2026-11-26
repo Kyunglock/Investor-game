@@ -229,11 +229,11 @@ describe('메테오 착탄', () => {
     expect(meteorFalloff(100, 100)).toBeCloseTo(0.65)
     expect(meteorFalloff(101, 100)).toBe(0)
   })
-  it('화상 포함 옛 불 마법의 중심 초당 피해를 유지하며 유성우 수가 늘어난다', () => {
+  it('화상 포함 옛 불 마법의 중심 초당 피해의 두 배이고 (696번) 유성우 수가 늘어난다', () => {
     const old = [4 / 3, 6.75 / 2.7, 10 / 2.4, 11.8 / 2.2, 13.6 / 2]
     for (let l = 1; l <= 5; l++) {
       const s = meteorStats(l)
-      expect((s.damage * s.count) / s.cooldown / old[l - 1]).toBeCloseTo(1, 1)
+      expect((s.damage * s.count) / s.cooldown / old[l - 1]).toBeCloseTo(2, 1)
       expect(s.warning).toBeGreaterThanOrEqual(0.4)
       expect(s.warning).toBeLessThanOrEqual(0.6)
       expect(s.stunSeconds).toBeGreaterThanOrEqual(0.3)

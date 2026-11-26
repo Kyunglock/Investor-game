@@ -61,11 +61,10 @@ class MentalEngineTest {
     assertThat(c.weaponOff).isFalse();
   }
 
-  /** 매도벽 돌파 스테이지 (#698): 멘탈 스테이지와 따로 차례로 열리고, 보상 규칙은 같으며, 분기 강화율에는 들어가지 않는다. */
+  /** 매도벽 돌파 스테이지 (#698): 멘탈 스테이지와 따로 차례로 열리고, 보상은 다이아뿐이며 (697번), 분기 강화율에는 들어가지 않는다. */
   @Test
   void 매도벽_돌파_스테이지는_멘탈_스테이지와_따로_차례로_열린다() {
     CompanyState c = company(9);
-    CompanyProperties.Stages rule = PROPERTIES.mental().stages();
     assertThatThrownBy(() -> ENGINE.mental.reportAssault(c, 2, true, 3))
         .as("아직 안 열린 스테이지")
         .isInstanceOf(InvalidRequestException.class);
@@ -74,13 +73,20 @@ class MentalEngineTest {
     ENGINE.mental.reportAssault(c, 1, false, 0);
     assertThat(ENGINE.mental.bestAssault(c)).as("못 깨면 그대로").isZero();
     assertThat(c.capital).isEqualTo(capital);
+    assertThat(c.diamonds).isEqualTo(diamonds);
     assertThat(c.lastAssault.cleared).isFalse();
 
     ENGINE.mental.reportAssault(c, 1, true, 2);
     assertThat(ENGINE.mental.bestAssault(c)).isEqualTo(1);
-    assertThat(c.capital).isEqualTo(capital + rule.capitalPerStage());
-    assertThat(c.diamonds).as("매도벽 돌파 스테이지는 다이아를 주지 않는다").isEqualTo(diamonds);
+    assertThat(c.capital).as("자본은 주지 않는다 (697번)").isEqualTo(capital);
+    assertThat(c.diamonds).as("별 둘이면 다이아 150개").isEqualTo(diamonds + 150);
+    assertThat(c.lastAssault.diamonds).isEqualTo(150);
     assertThat(c.lastAssault.firstClear).isTrue();
+    ENGINE.mental.reportAssault(c, 1, true, 1);
+    assertThat(c.diamonds).as("이미 얻은 별은 다시 주지 않는다").isEqualTo(diamonds + 150);
+    ENGINE.mental.reportAssault(c, 1, true, 3);
+    assertThat(c.diamonds).as("셋째 별에 50개: 별 셋이면 모두 200개").isEqualTo(diamonds + 200);
+    assertThat(c.lastAssault.diamonds).isEqualTo(50);
     assertThat(ENGINE.mental.bestStage(c)).as("멘탈 스테이지와 따로다").isZero();
     assertThat(ENGINE.mental.bonusPercent(c)).as("분기 강화율에는 안 든다").isZero();
     assertThat(c.lastStage).isNull();
@@ -88,7 +94,7 @@ class MentalEngineTest {
     ENGINE.mental.reportAssault(c, 2, true, 3);
     CompanyView.Assaults view = ENGINE.mental.assaultsView(c);
     assertThat(view.best()).isEqualTo(2);
-    assertThat(view.stars()).containsExactly(2, 3);
+    assertThat(view.stars()).containsExactly(3, 3);
     assertThat(view.lastResult().stage()).isEqualTo(2);
     assertThat(view.last()).isEqualTo(ENGINE.mental.lastStage());
 

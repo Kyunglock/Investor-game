@@ -1071,9 +1071,12 @@ try {
     await levelButton.click()
     const stageSelect = page.getByTestId('stage-select')
     await expect(stageSelect).toBeVisible()
-    await expect(stageSelect).toContainText('레벨이 오를 때마다 카드 석 장')
+    // 설명 글은 없앴다 (697번): 보상 한 줄만 있다.
+    await expect(stageSelect).not.toContainText('레벨이 오를 때마다 카드 석 장')
+    await expect(stageSelect.getByTestId('assault-lead')).toHaveText(
+      '별 1개 100 · 2개 150 · 3개 200 다이아를 받아요.',
+    )
     // 출전 고양이는 출전 탭에서 고른다 (669번): 스테이지 고르기에는 따로 고르는 칸이 없다.
-    await expect(stageSelect).toContainText('출전 탭에서 출전시킨 고양이')
     await expect(stageSelect.getByTestId('stage-team')).toHaveCount(0)
     await expect(stageSelect.getByTestId('assault-stage')).toHaveCount(10)
     await expect(stageSelect.locator('[data-testid=assault-stage][data-stage="1"]')).toBeEnabled()
