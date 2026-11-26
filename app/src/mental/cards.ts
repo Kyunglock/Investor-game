@@ -1,3 +1,4 @@
+import type { Company } from '@web/api/client'
 import { ACTIVE_HINTS, SKILL_CODES, SKILL_NAMES, type SkillCode } from './actives'
 import type { CatTag } from './catTag'
 import type { Weapon } from './hero'
@@ -47,6 +48,7 @@ export interface Card {
   awakening?: { from: number; to: number }
   /** 고양이 스킬 강화 (669번): 몇 번째로 나온 고양이의 스킬인가(0부터). */
   target?: number
+  cat?: StageCat
 }
 
 export const GRADE_NAMES: Record<CardGrade, string> = {
@@ -188,11 +190,10 @@ export function mateCard(have: number): Card {
 /** 마법마다 지금 레벨. */
 export type MagicLevels = Record<Magic, number>
 
-/** 스테이지에 데려온 고양이 한 마리 (669번): 카드에 적을 이름과 고유 스킬 이름들(없으면 빈 목록). */
-export interface StageCat {
-  name: string
-  skills: string[]
-}
+export type StageCat = Pick<
+  NonNullable<Company['idle']>['cats'][number],
+  'code' | 'name' | 'grade' | 'skills'
+>
 
 type MateMagicState = MagicLevels & {
   mates?: number
@@ -237,8 +238,9 @@ export function stageCatCard(state: MateMagicState): Card | null {
     code: 'cat',
     grade: 'R',
     name: `${next.name} 출전`,
+    cat: next,
     effect: next.skills.length
-      ? `제 무기로 함께 싸워요 · 고유 스킬 ${next.skills.join('·')} Lv.1`
+      ? `제 무기로 함께 싸워요 · 고유 스킬 ${next.skills.map((skill) => skill.name).join('·')} Lv.1`
       : '제 무기로 함께 싸워요 · 고유 스킬 없음',
     icon: '🐱',
     color: '#ff9db8',
@@ -267,7 +269,8 @@ export function stageSkillCard(state: MateMagicState, target: number): Card {
     code: 'cat-skill',
     grade: magicGrade(to),
     name: `${cat.name} 스킬 강화`,
-    effect: `${cat.skills.join('·')} 레벨 +1 · 더 세고 더 자주`,
+    cat,
+    effect: `${cat.skills.map((skill) => skill.name).join('·')} 레벨 +1 · 더 세고 더 자주`,
     icon: '🐱✨',
     color: '#c7a4ff',
     level: { from, to },

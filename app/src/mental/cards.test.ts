@@ -18,6 +18,7 @@ import {
   mateMagicUpCard,
   pickCards,
   SIMPLE_CARDS,
+  type StageCat,
   skillCard,
   skillPower,
   stageCatCard,
@@ -330,10 +331,18 @@ describe('매도벽 돌파 스테이지의 카드 (667번)', () => {
 })
 
 describe('스테이지에 데려온 고양이 (669번)', () => {
-  const team = [
-    { name: '밤냥', skills: ['메테오'] },
-    { name: '하늘냥', skills: [] },
-    { name: '눈꽃냥', skills: ['얼음', '바람'] },
+  const team: StageCat[] = [
+    { code: 'night', grade: 'A', name: '밤냥', skills: [{ code: 'meteor', name: '메테오' }] },
+    { code: 'sky', grade: 'C', name: '하늘냥', skills: [] },
+    {
+      code: 'snow',
+      grade: 'S',
+      name: '눈꽃냥',
+      skills: [
+        { code: 'ice', name: '얼음' },
+        { code: 'wind', name: '바람' },
+      ],
+    },
   ]
   const base = { ...BASE_LOADOUT, stageCats: team, mateMagicLevels: [1, 1, 1] }
   it('고양이 카드는 고른 차례대로 그 고양이를 부른다', () => {
@@ -349,7 +358,14 @@ describe('스테이지에 데려온 고양이 (669번)', () => {
     loadout = { ...loadout, mates: 3 }
     expect(stageCatCard(loadout)).toBeNull()
     // 메인 화면처럼 네 마리까지 데려간다.
-    const four = { ...base, stageCats: [...team, { name: '민트냥', skills: [] }], mates: 3 }
+    const four = {
+      ...base,
+      stageCats: [
+        ...team,
+        { code: 'mint', grade: 'B', name: '민트냥', skills: [] } satisfies StageCat,
+      ],
+      mates: 3,
+    }
     expect(stageCatCard(four)).toMatchObject({ name: '민트냥 출전' })
     expect(applyCard(four, mateCard(3)).mates).toBe(4)
     expect(stageCatCard({ ...four, mates: 4 })).toBeNull()
@@ -400,9 +416,9 @@ describe('디펜스 스테이지의 사장냥 스킬 카드 (676번)', () => {
 })
 
 describe('마법은 고양이의 것 (678번, 디펜스 스테이지)', () => {
-  const team = [
-    { name: '밤냥', skills: ['메테오'] },
-    { name: '하늘냥', skills: [] },
+  const team: StageCat[] = [
+    { code: 'night', grade: 'A', name: '밤냥', skills: [{ code: 'meteor', name: '메테오' }] },
+    { code: 'sky', grade: 'C', name: '하늘냥', skills: [] },
   ]
   const codes = (state: Parameters<typeof pickCards>[0]) => {
     const seen = new Set<string>()
@@ -466,9 +482,9 @@ describe('공격력·공격 속도 카드는 모두에게 붙는다 (679번)', (
 
 describe('이미 도는 스킬은 다시 내지 않는다 (683번)', () => {
   it('낼 스킬이 없으면 스킬 카드 없이 석 장을 채운다', () => {
-    const team = [
-      { name: '밤냥', skills: ['메테오'] },
-      { name: '하늘냥', skills: [] },
+    const team: StageCat[] = [
+      { code: 'night', grade: 'A', name: '밤냥', skills: [{ code: 'meteor', name: '메테오' }] },
+      { code: 'sky', grade: 'C', name: '하늘냥', skills: [] },
     ]
     const state = { ...BASE_LOADOUT, stageCats: team, mateMagicLevels: [1, 1], mates: 1 }
     for (let seed = 0; seed < 300; seed++) {

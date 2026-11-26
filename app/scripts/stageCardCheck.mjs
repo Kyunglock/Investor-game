@@ -25,6 +25,19 @@ try {
       grade,
       weapon: null,
     })
+    const first =
+      width === 320
+        ? cat('night', '밤냥', 'A', [{ code: 'meteor', name: '메테오' }], true)
+        : cat(
+            'silver',
+            '은빛냥',
+            'S',
+            [
+              { code: 'bolt', name: '번개' },
+              { code: 'lightArrow', name: '빛화살' },
+            ],
+            true,
+          )
     company.idle = {
       wall: 1,
       hp: 1200,
@@ -44,9 +57,9 @@ try {
       lastDraws: [],
       actives: [],
       cats: [
-        // 출전 칸의 차례(slot)대로 나온다: 밤냥 → 하늘냥 → 민트냥 → 라일락냥. 노을냥은 쉬고 있어 나오지 않는다.
+        // 확인할 팀은 첫 고양이 → 하늘냥 → 민트냥 → 라일락냥 순서다. 노을냥은 쉬고 있어 나오지 않는다.
         { ...cat('sky', '하늘냥', 'C', [], true), slot: 1 },
-        { ...cat('night', '밤냥', 'A', [{ code: 'meteor', name: '메테오' }], true), slot: 0 },
+        { ...first, slot: 0 },
         { ...cat('mint', '민트냥', 'B', [], true), slot: 2 },
         { ...cat('lilac', '라일락냥', 'B', [], true), slot: 3 },
         cat('sunset', '노을냥', 'C', [], false),
@@ -87,16 +100,21 @@ try {
     // 스테이지: 첫 카드 석 장에 사장냥의 스킬과 고양이 마법 강화가 나온다.
     // 출전 화면: 무기를 보고 들어간다.
     await expect(page.getByTestId('stage-mode')).toContainText('디펜스 · 몬스터 10웨이브')
-    // 출전 화면의 출전 고양이 줄 (682번): 출전 칸의 차례대로, 쉬는 노을냥은 없다. 밤냥은 제 고유 스킬을 단다.
+    // 출전 화면의 출전 고양이 줄 (682번): 출전 칸의 차례대로, 쉬는 노을냥은 없다.
     const lobbyCats = page.getByTestId('stage-lobby-cat')
     assert.deepEqual(await lobbyCats.evaluateAll((els) => els.map((el) => el.dataset.code)), [
-      'night',
+      first.code,
       'sky',
       'mint',
       'lilac',
     ])
-    // 스킬은 글이 아니라 그림으로: 밤냥에 메테오 그림 하나, 스킬 없는 하늘냥은 비고 "총만 쏜다"도 없다.
-    await expect(lobbyCats.first().getByRole('img', { name: '메테오' })).toHaveCount(1)
+    // 스킬은 글이 아니라 그림으로: 첫 고양이의 고유 스킬을 모두 보이고, 스킬 없는 하늘냥은 비고 "총만 쏜다"도 없다.
+    for (const skill of first.skills)
+      await expect(lobbyCats.first().getByRole('img', { name: skill.name })).toBeVisible()
+    const face = lobbyCats.first().locator('.idle-cat-face')
+    const faceAttr = width === 320 ? 'viewBox' : 'src'
+    const portrait = await face.getAttribute(faceAttr)
+    assert.ok(portrait)
     await expect(lobbyCats.nth(1).locator('.stage-lobby-team-skills > *')).toHaveCount(0)
     await expect(page.getByTestId('stage-lobby-team')).not.toContainText('총만 쏜다')
     // 메인 스테이지의 출전 화면에는 사장냥 뒷모습과 무기 칸이 없다.
@@ -127,27 +145,37 @@ try {
     await expect(pick.locator('[data-card=rally]')).toContainText('1분 동안')
     await expect(pick.locator('[data-card=rally]')).toContainText('사장냥 스킬')
     await expect(pick.locator('[data-card=stopLoss]')).toContainText('바로 발동')
-    // 고양이 카드는 1번으로 고른 밤냥을 부른다.
-    await expect(pick.locator('[data-card=cat]')).toContainText('밤냥 출전')
-    await expect(pick.locator('[data-card=cat]')).toContainText('고유 스킬 메테오 Lv.1')
+    // 고양이 카드는 첫 칸의 고양이를 부른다.
+    await expect(pick.locator('[data-card=cat]')).toContainText(`${first.name} 출전`)
+    await expect(pick.locator('[data-card=cat] .idle-cat-face')).toHaveAttribute(faceAttr, portrait)
+    await expect(pick.locator('[data-card=cat]')).toContainText(
+      `고유 스킬 ${first.skills.map((s) => s.name).join('·')} Lv.1`,
+    )
     await page.screenshot({ path: `/tmp/stage-cards-${width}.png` })
     await pick.locator('[data-card=cat]').click()
     await expect(pick).toHaveCount(0, { timeout: 15000 })
-    // 밤냥이 제 이름표를 달고 나와 제 스킬(메테오)을 쓴다.
+    // 첫 고양이가 제 고유 스킬을 쓴다.
     await expect
       .poll(() => page.evaluate(() => window.__mentalDamage?.mates ?? 0), { timeout: 15000 })
       .toBe(1)
-    assert.deepEqual(await page.evaluate(() => window.__mentalDamage.skillMarks), [['meteor']])
+    assert.deepEqual(
+      await page.evaluate(() => window.__mentalDamage.skillMarks),
+      width === 320 ? [['meteor']] : [['lightning', 'lightArrow']],
+    )
     await page.screenshot({ path: `/tmp/stage-cat-${width}.png` })
-    // 다음 레벨업: 밤냥의 스킬 강화 카드가 나오고, 고르면 메테오가 Lv.2가 된다. 불장도 함께 나온다.
+    // 다음 레벨업: 출전한 고양이의 스킬이 모두 Lv.2로 오른다. 불장도 함께 나온다.
     await page.evaluate(() => {
       window.__mentalCards = ['cat-skill', 'rally', 'cat']
       window.__mentalLevelUp()
     })
     await expect(pick).toBeVisible({ timeout: 15000 })
-    await expect(pick.locator('[data-card=cat-skill]')).toContainText('밤냥 스킬 강화')
+    await expect(pick.locator('[data-card=cat-skill]')).toContainText(`${first.name} 스킬 강화`)
     await expect(pick.locator('[data-card=cat-skill]')).toContainText('Lv.1 → Lv.2')
     await expect(pick.locator('[data-card=cat]')).toContainText('하늘냥 출전')
+    for (const skill of first.skills)
+      await expect(
+        pick.locator(`[data-card=cat-skill] [data-skill="${skill.code}"]`),
+      ).toHaveAttribute('data-level', '2')
     await page.screenshot({ path: `/tmp/stage-cat-skill-${width}.png` })
     await pick.locator('[data-card=cat-skill]').click()
     await expect(pick).toHaveCount(0, { timeout: 15000 })
@@ -179,6 +207,11 @@ try {
         .poll(() => page.evaluate(() => window.__mentalDamage.mates), { timeout: 15000 })
         .toBe(count)
     }
+    await expect(page.locator('.battle-cards .idle-cat-portrait')).toHaveCount(4)
+    await expect(page.locator('.battle-cards .idle-cat-face').first()).toHaveAttribute(
+      faceAttr,
+      portrait,
+    )
     await page.waitForTimeout(800)
     await page.screenshot({ path: `/tmp/stage-four-${width}.png` })
     // 고른 불장이 1분 동안 켜진다(전투 초).
@@ -210,7 +243,8 @@ try {
     // 웨이브 판 (690번): 제한 시간 없이 몬스터 웨이브가 차례로 오고, 열 웨이브를 다 물리치면 깬다. 나오는 것은 몬스터뿐이다(매도벽 없음).
     await page.evaluate(() => {
       window.__mentalXp(false)
-      window.__mentalMagic({ damage: 100000, maxMental: 100000 })
+      // 결과 화면까지 검사할 수 있도록 최대치와 현재 멘탈을 함께 채운다.
+      window.__mentalMagic({ damage: 100000, maxMental: 100000, heal: 100000 })
       window.__mentalSpeed?.(6)
     })
     await expect(page.getByTestId('battle-wave')).toHaveText(/웨이브 ([3-9]|10)\/10/, {
