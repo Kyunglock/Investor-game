@@ -48,11 +48,11 @@ export function VaultParty({
   const same = recommended.length === party.length && recommended.every((c) => party.includes(c))
   const shares = new Map(owned.map((c) => [c.code, total(catDps(company, c.code, vs))]))
   const ranked = [...owned].sort((a, b) => (shares.get(b.code) ?? 0) - (shares.get(a.code) ?? 0))
+  const full = party.length >= slots
   const toggle = (code: string) => {
     sfx.tap()
     if (party.includes(code)) onChange(party.filter((c) => c !== code))
-    else if (party.length < slots) onChange([...party, code])
-    else haptic.error()
+    else if (!full) onChange([...party, code])
   }
   const marks = (cat: Cat) =>
     boss &&
@@ -116,9 +116,11 @@ export function VaultParty({
         )}
       </div>
       <p className="vault-party-note">
-        {boss
-          ? '약점·내성 스킬의 배율을 넣은 어림이에요(치명타·범위 피해 제외).'
-          : '추천 편성은 팀 화력이 가장 큰 파티예요. 금고의 벽도 팀 화력만큼 단단해져요.'}
+        {editing && full && owned.length > party.length
+          ? '파티가 가득 찼어요. 데려가는 고양이를 눌러 빼면 다른 고양이를 추가할 수 있어요.'
+          : boss
+            ? '약점·내성 스킬의 배율을 넣은 어림이에요(치명타·범위 피해 제외).'
+            : '추천 편성은 팀 화력이 가장 큰 파티예요. 금고의 벽도 팀 화력만큼 단단해져요.'}
       </p>
       {editing && (
         <ul className="vault-party-pick" data-testid="vault-party-pick">
@@ -128,6 +130,7 @@ export function VaultParty({
               <li key={cat.code}>
                 <button
                   type="button"
+                  disabled={!on && full}
                   aria-pressed={on}
                   data-code={cat.code}
                   onClick={() => toggle(cat.code)}
@@ -143,7 +146,7 @@ export function VaultParty({
                     </small>
                     <span className="vault-marks">{marks(cat)}</span>
                   </span>
-                  <i>{on ? '데려감' : party.length >= slots ? '칸 가득' : '추가'}</i>
+                  <i>{on ? '데려감' : full ? '칸 가득' : '추가'}</i>
                 </button>
               </li>
             )
