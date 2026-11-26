@@ -602,7 +602,7 @@ function AssaultResult({
                 ? rewardText(reward)
                 : outcome.win
                   ? '이번에 더 받을 보상은 없다.'
-                  : '별을 얻으면 다이아를 받는다.'}
+                  : '처음 깨면 다이아 100개를 받는다.'}
         </p>
       ) : (
         <p
