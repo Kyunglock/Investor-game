@@ -54,6 +54,7 @@ import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './g
 import { BATTLE_SECONDS, type Genre } from './genres'
 import { StageLobbyTeam } from './StageLobbyPlan'
 import { StagePortrait } from './StagePortrait'
+import { StageSkillIcon } from './StageSkillIcon'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './stage.css'
 import { type Hero, heroOf, type Weapon } from './hero'
@@ -998,7 +999,7 @@ function CardPick({
                     <span className="stage-card-back-emblem">✦</span>
                   </span>
                   <span className="stage-card-icon" aria-hidden="true">
-                    <span>{c.icon}</span>
+                    <StageSkillIcon code={c.code} />
                   </span>
                   <span className="stage-card-copy">
                     <span className="stage-card-meta">
@@ -1387,7 +1388,7 @@ function Battle({
                       role="img"
                       aria-label={label}
                     >
-                      {top.icon}
+                      <StageSkillIcon code={code} />
                       <small>{same.length}</small>
                     </span>
                   )

@@ -423,7 +423,7 @@
 }
 .stage-card-icon {
   width: 48px;
-  height: 52px;
+  height: 48px;
   flex: none;
   display: grid;
   place-items: center;
@@ -435,8 +435,14 @@
     0 3px 0 #81949b25;
   font-size: 26px;
 }
-.stage-card-icon > span {
-  filter: drop-shadow(0 3px 0 #ffffff88);
+.stage-skill-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background-image: url("./assets/stage-skill-icons.webp");
+  background-size: 400% 400%;
+  background-repeat: no-repeat;
 }
 .stage-card-copy {
   min-width: 0;
@@ -834,7 +840,7 @@
   position: absolute;
   bottom: -3px;
   right: -3px;
-  background: #a77749;
+  background: #503452;
   color: white;
   border: 1px solid white;
   border-radius: 9px;
@@ -1310,7 +1316,7 @@
   }
   .stage-card-icon {
     width: 42px;
-    height: 44px;
+    height: 42px;
     font-size: 22px;
   }
   .stage-summary {
