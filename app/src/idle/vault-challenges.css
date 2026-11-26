@@ -177,6 +177,12 @@
   border-block: 3px solid #f0c860;
   box-shadow: 0 0 40px #000c;
 }
+.vault-scene img.vault-guardian-art,
+.vault-intro-art.vault-guardian-art {
+  object-fit: contain;
+  object-position: center;
+  background: radial-gradient(ellipse at center, #755c36, #302b34 60%, #171728);
+}
 .vault-intro > div {
   position: relative;
   padding: 0 16px;

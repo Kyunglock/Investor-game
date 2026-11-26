@@ -59,7 +59,7 @@ export function VaultField({
         spec: bossEncounter(),
         vault: {
           mapWall: 151,
-          guardianArt,
+          guardianArt: bossScene,
           scale: bossScale(vault.boss),
           score: { seconds: vault.boss.seconds * VAULT_SIM, tier: bossTier },
         },
@@ -178,7 +178,11 @@ export function VaultField({
       {intro && (
         <div className="vault-intro" data-testid="vault-intro" role="status">
           <img className="vault-intro-back" src={boss ? bossScene : dungeonScene} alt="" />
-          <img className="vault-intro-art" src={boss ? bossScene : dungeonScene} alt="" />
+          <img
+            className={boss ? 'vault-intro-art vault-guardian-art' : 'vault-intro-art'}
+            src={boss ? bossScene : dungeonScene}
+            alt=""
+          />
           <div>
             <small>{boss ? '보스전' : `주간 던전 · ${floor}층`}</small>
             <h2>{setup.spec.name}</h2>

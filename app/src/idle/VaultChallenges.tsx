@@ -239,7 +239,7 @@ export function VaultChallenges({
               {tab === 'boss' && (
                 <>
                   <div className="vault-scene">
-                    <img src={guardian} alt="" />
+                    <img className="vault-guardian-art" src={guardian} alt="" />
                     <div>
                       <small>
                         이번 주 {boss.tier > 0 ? boss.tierName : '기록 없음'}
