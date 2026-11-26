@@ -170,7 +170,11 @@ export function VaultChallenges({
     !cat || cat.level <= 0 ? '없음' : bossParty.includes(cat.code) ? '출전 중' : '대기'
   /** 그 스킬을 가진 고양이와 그 고양이의 상태. */
   const owner = (code: string) => {
-    const cat = cats.find((c) => c.skills.some((skill) => skill.code === code))
+    const owners = cats.filter((cat) => cat.skills.some((skill) => skill.code === code))
+    const cat =
+      owners.find((cat) => bossParty.includes(cat.code)) ??
+      owners.find((cat) => cat.level > 0) ??
+      owners[0]
     return cat && { name: cat.name, state: status(cat) }
   }
   const floor = dungeon.cleared + 1

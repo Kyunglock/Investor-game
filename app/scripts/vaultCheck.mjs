@@ -301,6 +301,10 @@ try {
     }
   } else {
     const company = companyOf(TEAMS.team)
+    // 같은 약점 스킬을 가진 대기 고양이가 도감에서 먼저 나와도 출전 상태를 우선한다.
+    company.idle.cats.unshift(
+      cat('mint', '민트냥', 'C', { skills: [{ code: 'bolt', name: '번개' }] }),
+    )
     const calls = []
     const { page, errors } = await openVault(browser, company, calls)
     // 보스전: 약점·내성과 그것을 가진 내 고양이가 보인다. 천적 고양이는 없다 (694번).
@@ -322,7 +326,10 @@ try {
     await expect(party.getByTestId('vault-party-recommend')).toHaveCount(0)
     // 편성을 펴서 한 마리를 빼면 그 파티가 저장되고, 추천 편성으로 되돌릴 수 있다.
     await page.getByTestId('vault-party-edit').click()
+    const reserve = page.getByTestId('vault-party-pick').locator('[data-code="mint"]')
+    await expect(reserve).toBeDisabled()
     await page.getByTestId('vault-party-pick').locator('[data-code="night"]').click()
+    await expect(reserve).toBeEnabled()
     await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(1)
     // 약점·내성 칸의 "출전 중"은 보스전 파티를 따른다 (655번): 파티에서 뺀 밤냥은 대기다.
     await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(1)
