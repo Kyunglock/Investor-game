@@ -9,6 +9,7 @@ import sunsetPoses from './assets/cat-sunset-poses.png'
 import enemies from './assets/enemies.png'
 import hero from './assets/hero-unarmed.png'
 import shortSeller from './assets/short-seller.png'
+import stageMonsters from './assets/stage-monsters.png'
 import street from './assets/toy-arena.png'
 import wallBlocks from './assets/wall-blocks-toy.png'
 import weapons from './assets/weapon-arcade-atlas.png'
@@ -30,6 +31,7 @@ export const STAGE_ASSETS = {
   arenaMaps,
   hero,
   enemies,
+  stageMonsters,
   wallBlocks,
   shortSeller,
   weapons,

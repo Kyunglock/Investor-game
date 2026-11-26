@@ -48,6 +48,7 @@ import {
   DPR,
   enemyKey,
   HERO_SIZE,
+  hasStageMonster,
   mateKey,
   RAM_ART,
   SKILL_MARK,
@@ -412,6 +413,7 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   kbx: number
   kby: number
   born: number
+  stageVariant: boolean
   walkOffset: number
   look: number
   /** 죽는 연출 중: 몸은 이미 꺼졌고 그림만 부풀며 사라진다. */
@@ -1035,7 +1037,7 @@ class BattleScene extends Phaser.Scene {
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero.weapon.grade)
     this.bakeMateGuns()
-    bakeEnemies(this)
+    bakeEnemies(this, this.waveTotal > 0)
     bakeMagic(this, Boolean(this.opts.idle))
     if (this.assault) bakeOrders(this, this.sellScale())
 
@@ -3034,7 +3036,9 @@ class BattleScene extends Phaser.Scene {
     const v = UNITS[kind]
     const k = unitK(kind)
     e.baseK = k
-    e.setTexture(enemyKey(kind, 0))
+    e.walkOffset = Phaser.Math.Between(0, WALK_FRAMES - 1)
+    e.stageVariant = this.waveTotal > 0 && !force && hasStageMonster(kind) && e.walkOffset % 2 === 1
+    e.setTexture(enemyKey(kind, 0, e.stageVariant))
       .enableBody(true, x, y, true, true)
       .setScale(k)
       .setAngle(0)
@@ -3043,7 +3047,6 @@ class BattleScene extends Phaser.Scene {
       .setDepth(3)
     enemyBody(e, v.r)
     e.look = 0
-    e.walkOffset = Phaser.Math.Between(0, WALK_FRAMES - 1)
     e.dying = false
     e.kind = kind
     if (kind !== 'spec') {
@@ -6092,7 +6095,7 @@ class BattleScene extends Phaser.Scene {
         : walkFrame(e.kind, this.elapsed - e.born, e.walkOffset, this.reducedMotion)
       if (frame !== e.look) {
         e.look = frame
-        e.setTexture(enemyKey(e.kind, frame))
+        e.setTexture(enemyKey(e.kind, frame, e.stageVariant))
       }
     }
     for (const child of this.bullets.getChildren()) {
