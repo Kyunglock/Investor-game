@@ -18,11 +18,8 @@ describe('첫 출근 안내', () => {
     expect(tutorialMenuLocked(company(8), 'skills')).toBe(false)
     expect(tutorialMenuLocked(company(0), 'shop')).toBe(false)
   })
-  it('첫 돌파와 공격력 강화를 실제 서버 상태로 확인한다', () => {
-    const c = company(0)
-    expect(tutorialReady(c, 0)).toBe(false)
-    if (c.idle) c.idle.wall = 2
-    expect(tutorialReady(c, 0)).toBe(true)
+  it('공격력 강화를 실제 서버 상태로 확인한다', () => {
+    const c = company(1)
     expect(tutorialReady(c, 1)).toBe(false)
     c.battleUpgrades = [{ kind: 'damage', level: 1 }] as Company['battleUpgrades']
     expect(tutorialReady(c, 1)).toBe(true)

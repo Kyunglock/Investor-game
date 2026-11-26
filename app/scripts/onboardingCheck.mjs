@@ -116,7 +116,7 @@ try {
             })
           }
           if (p.step === 4) c.armory.lastDraw = { ...c.weapons[1], isNew: true }
-          p.step = p.step === 5 ? 7 : p.step + 1
+          p.step = p.step === 5 ? 7 : p.step === -1 ? 1 : p.step + 1
         } else if (body.action === 'skills') p.skillGuideSeen = true
         else if (body.action === 'start') p.step = -1
         else assert.fail('unexpected tutorial action')
@@ -197,13 +197,10 @@ try {
         )
       })
       .toBe(true)
-    if (width === 390) {
-      c.idle.wall = 2
-      c.idle.cleared = 1
-    }
     await guide.getByRole('button', { name: '함께 시작하기' }).click()
-    await expect(guide).toHaveAttribute('data-step', '0')
-    await expect(page.getByRole('button', { name: '성장', exact: false }).first()).toBeDisabled()
+    // 첫 매도벽이 깨지는 걸 지켜보는 단계 없이 바로 공격력 강화로 간다.
+    await expect(guide).toHaveAttribute('data-step', '1')
+    await expect(guide).toContainText('2 / 7')
     await expect(page.getByTestId('idle-active')).toHaveCount(0)
     await page.locator('[data-testid=idle-canvas] canvas').waitFor()
     await expect(page.getByTestId('loading')).toHaveCount(0, { timeout: 30000 })
@@ -222,24 +219,10 @@ try {
         })
         .toBe(true)
     }
-    await expect(windows).toHaveCount(1)
-    await checkWindow(windows.first(), page.getByTestId('idle-wall-number'))
     const canvas = page.getByTestId('idle-canvas')
     await expect(canvas).toHaveCSS('border-left-width', '0px')
     await expect(canvas).toHaveCSS('border-right-width', '0px')
-    // 652번: 첫 돌파 전에는 기다리라는 단추가 없다.
-    await expect(guide.getByRole('button', { name: /기다려요/ })).toHaveCount(0)
-    if (width === 320)
-      await expect(guide.getByRole('button', { name: '첫 돌파 확인했어요' })).toHaveCount(0)
     await page.screenshot({ path: `/tmp/tutorial-existing-${width}.png` })
-    c.idle.wall = 2
-    c.idle.cleared = 1
-    await refresh()
-    await page.waitForTimeout(400)
-    await expect(guide).toHaveAttribute('data-step', '0')
-    await expect(guide).toContainText('첫 매도벽을 돌파했어요')
-    await guide.getByRole('button', { name: '첫 돌파 확인했어요' }).click()
-    await expect(guide).toHaveAttribute('data-step', '1')
     const nav = (name) => page.locator(`[data-tutorial-menu="${name}"]`).last()
     const target = guide
     const locked = async (step) => {
@@ -262,6 +245,10 @@ try {
       assert.equal(await sheet.evaluate((el) => el.scrollTop), before)
     }
     await expect(target).toHaveAttribute('data-target', '[data-tutorial-menu="growth"]')
+    // 비춘 곳 말고는 누를 수 없다.
+    await nav('shop').click()
+    await expect(target).toHaveAttribute('data-target', '[data-tutorial-menu="growth"]')
+    await expect(page.getByTestId('cat-draw')).toHaveCount(0)
     await nav('growth').click()
     await expect(target).toHaveAttribute(
       'data-target',
@@ -324,7 +311,7 @@ try {
     )
     await expect(guide).toHaveAttribute('data-step', '7')
     await expect(page.locator('body')).not.toHaveAttribute('data-tutorial-drag-lock', 'true')
-    await expect(guide).toContainText('8 / 8')
+    await expect(guide).toContainText('7 / 7')
     await guide.getByRole('button', { name: '안내 마치기' }).click()
     await expect(guide).toHaveCount(0)
     await expect(shade).toHaveCount(0)
@@ -338,7 +325,7 @@ try {
     await page.getByTestId('idle-options').click()
     await page.getByRole('button', { name: '첫 출근 안내 다시 보기' }).click()
     await expect(guide).toContainText('다시 보기')
-    for (const step of [-1, 0, 1, 2, 3, 4, 5]) {
+    for (const step of [-1, 1, 2, 3, 4, 5]) {
       await expect(guide).toHaveAttribute('data-step', String(step))
       await guide.getByRole('button', { name: '다음 안내' }).click()
     }

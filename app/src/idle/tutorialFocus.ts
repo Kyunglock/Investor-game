@@ -131,13 +131,7 @@ export function tutorialTargets(step: number, menu: string): FocusTarget[] {
           text: '매도벽 돌파냥에 오신 걸 환영해요! 사장냥과 함께 매도벽을 깨고, 든든한 동료를 만나볼까요?',
         },
       ]
-    case 0:
-      return [
-        {
-          selector: '[data-testid="idle-wall-number"]',
-          text: '사장냥은 자동으로 공격해요. 첫 매도벽이 깨지는 걸 지켜봐요!',
-        },
-      ]
+    // 첫 매도벽이 깨지는 걸 지켜보는 0단계는 없앴다: 환영 다음은 바로 공격력 강화다.
     case 1:
       return menu === 'growth'
         ? [
