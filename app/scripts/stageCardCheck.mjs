@@ -243,7 +243,8 @@ try {
     // 웨이브 판 (690번): 제한 시간 없이 몬스터 웨이브가 차례로 오고, 열 웨이브를 다 물리치면 깬다. 나오는 것은 몬스터뿐이다(매도벽 없음).
     await page.evaluate(() => {
       window.__mentalXp(false)
-      window.__mentalMagic({ damage: 100000, maxMental: 100000 })
+      // 결과 화면까지 검사할 수 있도록 최대치와 현재 멘탈을 함께 채운다.
+      window.__mentalMagic({ damage: 100000, maxMental: 100000, heal: 100000 })
       window.__mentalSpeed?.(6)
     })
     await expect(page.getByTestId('battle-wave')).toHaveText(/웨이브 ([3-9]|10)\/10/, {
