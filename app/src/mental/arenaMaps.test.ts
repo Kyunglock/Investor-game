@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arenaMap } from './arenaMaps'
+import { arenaMap, stageArenaMap } from './arenaMaps'
 
 describe('매도벽 배경 순환', () => {
   it.each([
@@ -28,4 +28,15 @@ describe('매도벽 배경 순환', () => {
       'neon-street',
     ])
   })
+})
+
+it('번호 스테이지를 다시 플레이해도 같은 전장이며 네 판마다 순환한다', () => {
+  expect([1, 2, 3, 4, 5, 2].map((stage) => stageArenaMap(stage).key)).toEqual([
+    'toy-city',
+    'neon-street',
+    'candy-factory',
+    'space-station',
+    'toy-city',
+    'neon-street',
+  ])
 })

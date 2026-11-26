@@ -92,6 +92,12 @@ try {
       // 합류 애니메이션이 끝난 시점부터 시전·명중 시계를 직접 진행한다.
       scene.mates[0].drop = 0
       scene.elapsed += 1
+      const effects = []
+      const flare = scene.auroraFlare.bind(scene)
+      scene.auroraFlare = (...args) => {
+        effects.push(args[4] === true)
+        return flare(...args)
+      }
       scene.castMagic()
       const casts = scene.damageStats.casts.auroraNight
       const damage = auroraNightStats(1).damage
@@ -124,6 +130,7 @@ try {
       scene.updateMagic(0)
       return {
         casts,
+        effects,
         charging,
         released,
         ticks,
@@ -134,6 +141,8 @@ try {
         wallLoss: before - wallHp(),
       }
     })
+    assert.deepEqual(result.effects.slice(0, 2), [true, true])
+    assert(result.effects.length > 2 && result.effects.slice(2).every((paw) => !paw))
     assert.equal(result.casts, 1)
     assert(result.charging && result.released && result.finished)
     const [far, near, boss, outside, wall] = result.ticks
