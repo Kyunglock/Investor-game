@@ -9,7 +9,11 @@ const STRIDE: Record<EnemyKind, number> = {
   spec: 32,
   stop: 42,
   short: 36,
-  sprout: 32,
+  honeyBear: 31,
+  pearlSeal: 42,
+  starPuff: 34,
+  blossomBun: 46,
+  iceChick: 28,
   coinCrab: 30,
 }
 

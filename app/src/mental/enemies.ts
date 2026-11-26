@@ -1,7 +1,18 @@
-import type { LocalMob } from './arenaMaps'
 import { SHARES_PER_HP } from './shares'
 
-/** 패닉셀·투매·투기·손절·공매도: 이름이 곧 행동이다. 일자로 천천히 내려온다. 그림은 art.ts. */
+export const LOCAL_MOBS = [
+  'coinCrab',
+  'honeyBear',
+  'pearlSeal',
+  'starPuff',
+  'blossomBun',
+  'iceChick',
+] as const
+export type LocalMob = (typeof LOCAL_MOBS)[number]
+
+export function isLocalMob(kind: EnemyKind): kind is LocalMob {
+  return (LOCAL_MOBS as readonly EnemyKind[]).includes(kind)
+}
 export type EnemyKind = 'panic' | 'dump' | 'spec' | 'stop' | 'short' | LocalMob
 
 export interface EnemySpec {
@@ -32,7 +43,11 @@ export const COMMON_ENEMIES: Record<Exclude<EnemyKind, LocalMob>, EnemySpec> = {
 
 export const ENEMIES: Record<EnemyKind, EnemySpec> = {
   ...COMMON_ENEMIES,
-  sprout: { r: 18, fill: '#8fbf68', label: '금뿌리', hp: 6, speed: 38, dmg: 8, reward: 25 },
+  honeyBear: { r: 17, fill: '#e6ac55', label: '꿀단지곰', hp: 5, speed: 43, dmg: 8, reward: 28 },
+  pearlSeal: { r: 17, fill: '#72c7c9', label: '진주물범', hp: 2, speed: 78, dmg: 5, reward: 15 },
+  starPuff: { r: 17, fill: '#b393e1', label: '별모찌', hp: 1, speed: 90, dmg: 5, reward: 10 },
+  blossomBun: { r: 17, fill: '#e898ae', label: '꽃송이토끼', hp: 1, speed: 93, dmg: 5, reward: 10 },
+  iceChick: { r: 17, fill: '#85bfe1', label: '목도리펭귄', hp: 1, speed: 85, dmg: 5, reward: 10 },
   coinCrab: { r: 18, fill: '#ff9668', label: '동전게', hp: 3, speed: 58, dmg: 8, reward: 25 },
 }
 

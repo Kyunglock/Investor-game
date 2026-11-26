@@ -55,7 +55,12 @@ try {
     [200, 'space-station'],
     [201, 'glasshouse'],
     [251, 'moonlit-harbor'],
-    [301, 'toy-city'],
+    [301, 'honey-bakery'],
+    [351, 'pearl-aquarium'],
+    [401, 'star-observatory'],
+    [451, 'blossom-garden'],
+    [501, 'snow-rink'],
+    [551, 'toy-city'],
     [51, 'neon-street'],
   ]) {
     company.idle.wall = wall
@@ -82,7 +87,7 @@ try {
   await expect.poll(map).toEqual({ front: 'space-station', back: 'space-station' })
   assert.deepEqual(errors, [])
   console.log(
-    'arena maps ok: boundaries, 300-wall cycle, saved progress, reload, resize, both tiles',
+    'arena maps ok: boundaries, 550-wall cycle, saved progress, reload, resize, both tiles',
   )
 } finally {
   await browser.close()

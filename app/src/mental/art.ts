@@ -8,7 +8,7 @@ import { CAT_SCALE, type CatModel } from './catModels'
 import { drawCatPose } from './catPoseArt'
 import { drawCatRun } from './catRunArt'
 import { drawEmber, drawGust, drawIceLance, drawPillar } from './effectArt'
-import { orderShares, type UnitKind } from './enemies'
+import { isLocalMob, LOCAL_MOBS, orderShares, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
@@ -331,9 +331,9 @@ export function hasStageMonster(kind: UnitKind): kind is keyof typeof STAGE_MONS
 
 export function bakeEnemies(scene: Phaser.Scene, stageVariants: boolean) {
   const source = scene.textures.get('art-enemies').getSourceImage() as HTMLImageElement
-  const kinds = ['panic', 'dump', 'spec', 'stop', 'short', 'sprout', 'coinCrab'] as const
+  const kinds = ['panic', 'dump', 'spec', 'stop', 'short', ...LOCAL_MOBS] as const
   for (const [i, kind] of kinds.entries()) {
-    const single = kind === 'short' || kind === 'sprout' || kind === 'coinCrab'
+    const single = kind === 'short' || isLocalMob(kind)
     const image = single
       ? (scene.textures
           .get(`art-${kind === 'short' ? 'shortSeller' : kind}`)
