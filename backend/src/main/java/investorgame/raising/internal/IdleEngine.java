@@ -442,12 +442,12 @@ class IdleEngine {
   // 출전 칸 (704번): 사장냥도 고양이와 같은 칸 하나를 차지한다. 사장냥이 쉬면 그 칸에 고양이가 하나 더 선다.
   private static final int SEATS = FIELD_SLOTS + 1;
   static final String BOSS = "boss";
-  // A cat's gun hits for this share of the weapon's damage times its level to CAT_LEVEL_EXPONENT
-  // (646): level 10 is 1.26 times level 1, level 100 1.58 times, level 1000 twice. It was the
-  // level to the 0.3 (644), half the weapon times the square root (636, level 1000 about 32 times)
-  // and 1 + 0.2 per level above 1 before that.
+  // 고양이 총의 몫 (705번): 무기의 CAT_POWER(25%)에서 시작해 레벨이 하나 오를 때마다 CAT_LEVEL_STEP(무기의 10%)씩 는다. 고유 특성과
+  // 등급 배수가 이 몫 전체에 곱해진다. C등급은 Lv1 125%, Lv5 165%, Lv10 215%다. 전에는 25% × 레벨^0.1(646번)이라 Lv100도 140%에
+  // 그쳐
+  // 레벨이 올라도 거의 세지지 않았다.
   private static final double CAT_POWER = 0.25;
-  private static final double CAT_LEVEL_EXPONENT = 0.1;
+  private static final double CAT_LEVEL_STEP = 0.1;
   // 벽 보상 (553번): 벽 하나를 깨면 그 벽 번호와 같은 단계의 전투 강화 값 REWARD_UPGRADES개 어치를 준다. 물가가 강화 값과 같은
   // 빠르기로 크므로(CompanyEngine.inflation), N번째 벽을 깰 때까지 번 돈이 끝없는 강화(공격력·체력·매수)를 평균 N단계쯤 올린다.
   // 보스 벽은 BOSS_REWARD배. 전에는 그 벽의 시간 수입 10초 어치였다 (537·552번). 세 단계 어치를 한 단계 반으로 낮췄다 (559번).
@@ -606,7 +606,7 @@ class IdleEngine {
   }
 
   private static double power(int level) {
-    return CAT_POWER * Math.pow(Math.max(1, level), CAT_LEVEL_EXPONENT);
+    return CAT_POWER + CAT_LEVEL_STEP * (Math.max(1, level) - 1);
   }
 
   /** A cat without a gun, and a company from before weapons, shoots the starting pistol. */
