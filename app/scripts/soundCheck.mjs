@@ -23,6 +23,7 @@ try {
     }
   })
   await page.goto(process.env.APP_URL ?? 'http://localhost:5182/app/')
+  await page.getByTestId('shell').waitFor()
   // 첫 터치에 오디오가 깨어나고 파일을 받는다.
   const status = () =>
     page.evaluate(async () => (await import('/app/src/fx/sound.ts')).soundStatus())
@@ -41,6 +42,7 @@ try {
   await page.evaluate(async () => (await import('/app/src/fx/sound.ts')).setMuted(true))
   await expect.poll(playing).toBe(false)
   await page.reload()
+  await page.getByTestId('shell').waitFor()
   await page.keyboard.press('Tab')
   assert.equal(await playing(), false)
   await page.evaluate(async () => (await import('/app/src/fx/sound.ts')).setMuted(false))
