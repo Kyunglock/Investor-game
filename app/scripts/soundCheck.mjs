@@ -16,6 +16,12 @@ try {
   )
   await page.addInitScript(() => {
     const start = AudioBufferSourceNode.prototype.start
+    window.musicStarts = 0
+    const play = HTMLMediaElement.prototype.play
+    HTMLMediaElement.prototype.play = function () {
+      if (this.loop) window.musicStarts++
+      return play.call(this)
+    }
     window.sampleStarts = 0
     AudioBufferSourceNode.prototype.start = function (...args) {
       window.sampleStarts++
@@ -27,44 +33,44 @@ try {
   // 첫 터치에 오디오가 깨어나고 파일을 받는다.
   const status = () =>
     page.evaluate(async () => (await import('/app/src/fx/sound.ts')).soundStatus())
-  const playing = () => status().then((s) => s.musicPlaying)
-  assert.equal(await playing(), false)
+  const plays = (key) =>
+    page.evaluate(async (key) => {
+      const { sfx } = await import('/app/src/fx/sound.ts')
+      const before = window.sampleStarts
+      sfx[key]()
+      return window.sampleStarts > before
+    }, key)
+  const loaded = () => expect.poll(async () => (await status()).loaded).toBe(15)
   await page.mouse.click(195, 300)
-  await expect.poll(async () => (await status()).loaded, { timeout: 15000 }).toBe(12)
-  assert.equal((await status()).total, 12)
-  await expect.poll(playing).toBe(true)
-  // 낼 때 오류가 없다.
-  await page.evaluate(async () => {
-    const { sfx } = await import('/app/src/fx/sound.ts')
-    for (const play of Object.values(sfx)) play()
-  })
-  assert.ok(await page.evaluate(() => window.sampleStarts > 0))
+  await loaded()
+  for (const key of ['shot', 'cast', 'zap', 'boom']) await expect.poll(() => plays(key)).toBe(true)
+  assert.equal(await page.evaluate(() => window.musicStarts), 0)
   await page.evaluate(async () => (await import('/app/src/fx/sound.ts')).setMuted(true))
-  await expect.poll(playing).toBe(false)
+  assert.equal(await plays('tap'), false)
   await page.reload()
   await page.getByTestId('shell').waitFor()
   await page.keyboard.press('Tab')
-  assert.equal(await playing(), false)
+  assert.equal(
+    await page.evaluate(async () => (await import('/app/src/fx/sound.ts')).isMuted()),
+    true,
+  )
   await page.evaluate(async () => (await import('/app/src/fx/sound.ts')).setMuted(false))
-  await expect.poll(playing).toBe(true)
+  await loaded()
+  await expect.poll(() => plays('tap')).toBe(true)
   await page.evaluate(async () => (await import('/app/src/fx/sound.ts')).setHushed(true))
-  await expect.poll(playing).toBe(false)
-  const pausedAt = (await status()).musicTime
-  await page.waitForTimeout(300)
-  assert.equal((await status()).musicTime, pausedAt)
+  assert.equal(await plays('cast'), false)
   await page.evaluate(async () => (await import('/app/src/fx/sound.ts')).setHushed(false))
-  await expect.poll(playing).toBe(true)
+  await expect.poll(() => plays('cast')).toBe(true)
   for (const active of [false, true]) {
     await page.evaluate(
       (detail) => window.dispatchEvent(new CustomEvent('idle-app-active', { detail })),
       active,
     )
-    await expect.poll(playing).toBe(active)
+    await expect.poll(() => plays('zap')).toBe(active)
   }
+  assert.equal(await page.evaluate(() => window.musicStarts), 0)
   assert.deepEqual(errors, [])
-  console.log(
-    'sound ok: BGM playback, mute persistence, power save, native background and 12 decoded foley samples',
-  )
+  console.log('sound ok: combat effects, mute persistence, power save and native background')
 } finally {
   await browser.close()
 }
