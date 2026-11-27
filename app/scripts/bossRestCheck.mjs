@@ -116,6 +116,19 @@ try {
     await expect
       .poll(async () => (await stand()).heroShots, { timeout: 20000 })
       .toBeGreaterThan(shots)
+    // 일반 출전의 사장냥을 세워 둔 채 이번 스테이지만 하늘냥으로 시작한다.
+    await page.getByRole('button', { name: '닫기 ✕' }).click()
+    await page.getByTestId('stage-shortcut').click()
+    await page.locator('[data-testid=assault-stage][data-stage="1"]').click()
+    const starter = page.getByRole('combobox', { name: '선발 고양이' })
+    await expect(starter).toHaveValue('')
+    await starter.selectOption('sky')
+    await expect(page.getByTestId('stage-lobby-cat')).toHaveCount(0)
+    await page.getByTestId('mental-start').click()
+    await expect(page.getByRole('img', { name: '하늘냥 출전' })).toBeVisible()
+    await expect.poll(async () => (await stand())?.heroVisible).toBe(false)
+    assert.equal((await stand()).heroShots, 0)
+    assert.equal(company.idle.bossFielded, true)
     assert.deepEqual(errors, [])
     await page.close()
   }

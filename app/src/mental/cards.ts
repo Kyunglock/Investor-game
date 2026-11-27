@@ -233,7 +233,7 @@ export function stageCatCard(state: MateMagicState): Card | null {
   const team = state.stageCats ?? []
   const have = state.mates ?? 0
   const next = team[have]
-  if (!next || have >= STAGE_TEAM_MAX) return null
+  if (!next) return null
   return {
     code: 'cat',
     grade: 'R',
@@ -480,7 +480,7 @@ export function applyCard(loadout: Loadout, card: Card): Loadout {
       return {
         ...loadout,
         mates: Math.min(
-          loadout.stageCats ? Math.min(STAGE_TEAM_MAX, loadout.stageCats.length) : MAX_MATES,
+          loadout.stageCats ? loadout.stageCats.length : MAX_MATES,
           loadout.mates + 1,
         ),
       }

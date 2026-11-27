@@ -1,7 +1,8 @@
 import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
+import { applyCard, stageCatCard } from '../mental/cards'
 import { idleLoadout } from './loadout'
-import { stageLoadout, stageOrder } from './stageTeam'
+import { replaceStarter, stageLoadout, stageOrder, stageTeamOf } from './stageTeam'
 
 describe('스테이지 공격력 강화', () => {
   const company = (bonusPercent: number, permanent?: number) =>
@@ -28,6 +29,36 @@ describe('스테이지 공격력 강화', () => {
         ],
       },
     }) as unknown as Company
+
+  it('선발이 사장냥 자리에 서고 이후 카드로 동료 넷까지 부른다', () => {
+    const saved = company(0)
+    const idle = saved.idle
+    if (!idle) throw new Error('출전 정보 누락')
+    const sky = idle.cats[0]
+    const codes = ['mint', 'lilac', 'night', 'snow'] as const
+    idle.cats.push(...codes.map((code) => ({ ...sky, code, fielded: false })))
+    const formation = { starter: null, companions: [...codes] }
+    const team = replaceStarter(formation, 'sky')
+    expect(team.companions).toEqual(codes)
+    expect(replaceStarter(team, 'mint')).toEqual({
+      starter: 'mint',
+      companions: ['sky', 'lilac', 'night', 'snow'],
+    })
+    let loadout = stageLoadout(saved, team.companions, team.starter)
+    expect(loadout).toMatchObject({ heroBenched: true, mates: 1 })
+    for (const code of codes) {
+      const card = stageCatCard(loadout)
+      expect(card?.cat?.code).toBe(code)
+      if (!card) throw new Error('동료 출전 카드 누락')
+      loadout = applyCard(loadout, card)
+    }
+    expect(loadout.mates).toBe(5)
+    expect(stageCatCard(loadout)).toBeNull()
+    expect(stageTeamOf(saved)).toEqual({ starter: null, companions: ['sky'] })
+    idle.bossFielded = false
+    expect(stageTeamOf(saved)).toEqual({ starter: 'sky', companions: [] })
+    expect(stageLoadout(saved, ['sky'], null).heroBenched).toBe(false)
+  })
 
   it('일반 공격력 강화는 사장냥과 출전 고양이의 스테이지 피해를 바꾸지 않는다', () => {
     const base = stageLoadout(company(0), ['sky'])
