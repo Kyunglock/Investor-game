@@ -85,7 +85,7 @@ try {
   await expect.poll(map).toEqual({ front: 'space-station', back: 'space-station' })
   assert.deepEqual(errors, [])
   console.log(
-    'arena maps ok: boundaries, 550-wall cycle, saved progress, reload, resize, both tiles',
+    'arena maps ok: boundaries, 450-wall cycle, saved progress, reload, resize, both tiles',
   )
 } finally {
   await browser.close()

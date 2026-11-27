@@ -253,6 +253,7 @@ export function VaultChallenges({
                   <VaultParty
                     company={company}
                     vault={vault}
+                    key="boss"
                     mode="boss"
                     party={partyFor('boss')}
                     onChange={(codes) => changeParty('boss', codes)}
@@ -325,6 +326,7 @@ export function VaultChallenges({
                       <VaultParty
                         company={company}
                         vault={vault}
+                        key="dungeon"
                         mode="dungeon"
                         party={partyFor('dungeon')}
                         onChange={(codes) => changeParty('dungeon', codes)}
