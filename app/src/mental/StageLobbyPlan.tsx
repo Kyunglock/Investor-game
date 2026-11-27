@@ -1,8 +1,12 @@
 import type { Company } from '@web/api/client'
 import type { CatCode } from '@web/features/raising/store'
+import { useState } from 'react'
+import { CatFilters, DEFAULT_CAT_FILTER, filterCats } from '../idle/CatFilters'
 import { CatPortrait } from '../idle/CatPortrait'
+import { CatRosterGrid } from '../idle/CatRosterGrid'
+import { catDps } from '../idle/party'
 import { SkillBadge } from '../idle/SkillBadge'
-import { stageTeamOf } from '../idle/stageTeam'
+import { STAGE_TEAM_MAX } from './cards'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
@@ -10,10 +14,31 @@ type Cat = NonNullable<Company['idle']>['cats'][number]
  * 출전 화면의 출전 고양이 줄 (decisions.md 681번): 고양이 카드를 고를 때마다 나올 고양이를 출전 칸의 차례대로 보인다(669번).
  * 사장냥이 쉬면(672번) 맨 앞 고양이는 처음부터 나온다.
  */
-export function StageLobbyTeam({ company }: { company: Company }) {
+export function StageLobbyTeam({
+  company,
+  codes,
+  onChange,
+}: {
+  company: Company
+  codes: string[]
+  onChange: (codes: string[]) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [filter, setFilter] = useState({ ...DEFAULT_CAT_FILTER, sort: 'grade' })
+  const capacity = Math.min(company.idle?.fieldSlots ?? 0, STAGE_TEAM_MAX)
   const owned = company.idle?.cats ?? []
-  const team = stageTeamOf(company).flatMap((code) => owned.filter((c) => c.code === code))
+  const team = codes.flatMap((code) => owned.filter((c) => c.code === code))
   const benched = company.idle?.bossFielded === false && team.length > 0
+  const visible = editing
+    ? filterCats(
+        owned
+          .filter((cat) => cat.level > 0)
+          .map((cat) => ({ ...cat, fielded: codes.includes(cat.code) })),
+        filter,
+        codes,
+        (code) => catDps(company, code as CatCode),
+      )
+    : []
   return (
     <section className="stage-lobby-team" data-testid="stage-lobby-team" aria-label="출전 고양이">
       <header>
@@ -39,6 +64,44 @@ export function StageLobbyTeam({ company }: { company: Company }) {
             </li>
           ))}
         </ol>
+      )}
+      {capacity > 0 && owned.some((cat) => cat.level > 0) && (
+        <button
+          type="button"
+          className="stage-edit-team"
+          aria-expanded={editing}
+          onClick={() => setEditing(!editing)}
+        >
+          {editing ? '편성 완료' : '스테이지 출전 편성'}
+        </button>
+      )}
+      {editing && (
+        <div className="stage-team-editor">
+          <CatFilters value={filter} onChange={setFilter} count={visible.length} />
+          <p>
+            이번 판 출전 {codes.length}/{capacity} ·{' '}
+            {codes.length >= capacity
+              ? '교체하려면 출전 중인 고양이를 먼저 빼세요.'
+              : '카드를 눌러 추가하거나 빼세요.'}
+          </p>
+          {visible.length ? (
+            <CatRosterGrid
+              readable
+              cats={visible}
+              picked={null}
+              disabledCat={(cat) => !cat.fielded && codes.length >= capacity}
+              onPick={(code) =>
+                onChange(
+                  codes.includes(code)
+                    ? codes.filter((current) => current !== code)
+                    : [...codes, code],
+                )
+              }
+            />
+          ) : (
+            <p className="roster-no-results">조건에 맞는 고양이가 없어요.</p>
+          )}
+        </div>
       )}
     </section>
   )

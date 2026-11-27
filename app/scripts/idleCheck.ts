@@ -476,14 +476,15 @@ try {
     await expect(page.getByRole('tab')).toHaveCount(2)
     await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
-    // Four-column named cards show the roster without decorative empty cells.
+    // Cats are drawn with diamonds (decisions.md 526), fielded in four slots, and shown in a scrolling six-column roster (488, 493, 495).
     await page.getByRole('button', { name: CAT_MENU }).click()
-    await expect(page.locator('.idle-cat-grid > li')).toHaveCount(company.idle.cats.length)
+    await expect(page.getByRole('searchbox')).toHaveCount(0)
+    await expect(page.locator('.idle-cat-grid > li')).toHaveCount(42)
     assert.equal(
       await page
         .locator('.idle-cat-grid')
         .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length),
-      4,
+      6,
     )
     await expect(page.getByTestId('cat')).toHaveCount(39)
     await expect(page.getByTestId('cat-slot')).toHaveCount(4)

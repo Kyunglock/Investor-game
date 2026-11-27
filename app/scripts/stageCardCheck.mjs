@@ -123,6 +123,19 @@ try {
     // 미니맵(타임라인)과 적 범례는 두지 않는다.
     await expect(page.getByTestId('stage-timeline')).toHaveCount(0)
     await expect(page.locator('.stage-enemies')).toHaveCount(0)
+    await page.getByRole('button', { name: '스테이지 출전 편성' }).click()
+    const grid = page.locator('.stage-team-editor .idle-cat-grid')
+    assert.equal(
+      await grid.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length),
+      4,
+    )
+    await expect(grid.locator('[data-code="sunset"]')).toBeDisabled()
+    await grid.locator('[data-code="lilac"]').click()
+    await page.getByRole('searchbox').fill('노을')
+    await expect(grid.getByRole('button')).toHaveCount(1)
+    await grid.getByRole('button').click()
+    await page.getByRole('button', { name: '편성 완료' }).click()
+    await expect(lobbyCats.last()).toHaveAttribute('data-code', 'sunset')
     const lobby = page.getByTestId('mental-lobby')
     const overflow = await lobby.evaluate((el) => el.scrollWidth - el.clientWidth)
     assert.equal(overflow, 0, '출전 화면이 옆으로 넘치지 않는다')
@@ -193,7 +206,7 @@ try {
     for (const [name, count] of [
       ['하늘냥', 2],
       ['민트냥', 3],
-      ['라일락냥', 4],
+      ['노을냥', 4],
     ]) {
       await page.evaluate(() => {
         window.__mentalCards = ['cat', 'rally', 'stopLoss']

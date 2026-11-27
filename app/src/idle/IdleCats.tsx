@@ -8,13 +8,12 @@ import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
-import { CatFilters, DEFAULT_CAT_FILTER, filterCats } from './CatFilters'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { CatRosterGrid } from './CatRosterGrid'
 import { CompanionSkills } from './CompanionSkills'
 import { sortCats } from './catGrade'
-import { catDps, fieldSteps, recommendParty } from './party'
+import { fieldSteps, recommendParty } from './party'
 import { SkillBadge } from './SkillBadge'
 import { fieldSeats } from './seats'
 import { skillNames } from './skills'
@@ -59,18 +58,7 @@ export function IdleCats({
   // 출전 칸 (599번): 고양이는 놓은 칸에 그대로 선다. 사이에 빈 칸이 있을 수 있다.
   const seats = fieldSeats(idle?.cats ?? [], idle?.fieldSlots ?? 0)
   // 인벤토리: 가진 고양이를 등급순으로 먼저, 없는 고양이를 등급순으로 뒤에.
-  const [rosterFilter, setRosterFilter] = useState({ ...DEFAULT_CAT_FILTER, sort: 'grade' })
-  const powers = new Map(
-    (idle?.cats ?? [])
-      .filter((c) => c.level > 0)
-      .map((c) => [c.code as string, catDps(company, c.code)]),
-  )
-  const sorted = filterCats(
-    sortCats(idle?.cats ?? []),
-    rosterFilter,
-    fielded.map((c) => c.code),
-    (code) => powers.get(code) ?? 0,
-  )
+  const sorted = sortCats(idle?.cats ?? [])
   const cat = (idle?.cats ?? []).find((c) => c.code === picked && c.level > 0) ?? null
   const full = fielded.length >= (idle?.fieldSlots ?? 0)
   // 사장냥이 쉰다 (672번): 고양이들만 싸운다. 그동안 마지막 고양이는 뺄 수 없다.
@@ -490,14 +478,9 @@ export function IdleCats({
                 ? drag.over.startsWith('slot:empty')
                   ? '놓으면 이 칸에 서요'
                   : '놓으면 이 칸의 고양이와 바꿔요'
-                : '고양이 선택 → 위 출전 칸을 눌러 교체 · 꾹 눌러 끌어도 돼요'}
+                : '집어서 끌어 출전 칸에 놓기 · 출전 칸의 고양이는 꾹 눌러 끌어 자리 바꾸기'}
             </p>
-            <div className="loadout-roster-tools">
-              <CatFilters value={rosterFilter} onChange={setRosterFilter} count={sorted.length} />
-            </div>
-            {!sorted.length && <p className="roster-no-results">조건에 맞는 고양이가 없어요.</p>}
             <CatRosterGrid
-              readable
               cats={sorted}
               picked={picked}
               onPick={pick}
