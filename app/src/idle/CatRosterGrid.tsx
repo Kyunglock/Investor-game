@@ -22,6 +22,7 @@ export function CatRosterGrid({
   consumeClick,
   preview = false,
   readable = false,
+  disabledCat,
 }: {
   cats: Cat[]
   picked: CatCode | null
@@ -29,6 +30,7 @@ export function CatRosterGrid({
   down?: (code: CatCode) => PointerEventHandler<HTMLButtonElement>
   consumeClick?: (detail: number) => boolean
   preview?: boolean
+  disabledCat?: (cat: Cat) => boolean
   readable?: boolean
 }) {
   return (
@@ -50,8 +52,8 @@ export function CatRosterGrid({
               data-testid="cat"
               data-code={c.code}
               data-grade={c.grade}
-              disabled={!preview && c.level < 1}
-              aria-pressed={picked === c.code}
+              disabled={(!preview && c.level < 1) || disabledCat?.(c)}
+              aria-pressed={readable ? c.fielded : picked === c.code}
               aria-label={
                 c.level > 0
                   ? `${c.grade} 등급 ${c.name} 레벨 ${c.level}${c.fielded ? ' 출전 중' : ''} · ${skillLabel(c)}`

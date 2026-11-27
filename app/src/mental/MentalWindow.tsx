@@ -92,6 +92,8 @@ export function MentalWindow({
   const [celebrated, setCelebrated] = useState(false)
   const started = hero !== null
   // 매도벽 돌파 스테이지 (669번): 출전 탭에서 출전시킨 고양이를 데려간다. 출전을 누르는 순간 굳힌다.
+  const [stageTeam, setStageTeam] = useState<string[] | null>(null)
+  const team = stageTeam ?? stageTeamOf(company)
   const [start, setStart] = useState<Loadout | undefined>(undefined)
   const [picked, setPicked] = useState<Card[]>([])
   const [outcome, setOutcome] = useState<Outcome | null>(null)
@@ -351,7 +353,7 @@ export function MentalWindow({
                 {apiError}
               </p>
             )}
-            {crowd && <StageLobbyTeam company={company} />}
+            {crowd && <StageLobbyTeam company={company} codes={team} onChange={setStageTeam} />}
             {/* 메인 스테이지의 출전 화면에는 적 범례를 두지 않는다 (681번). */}
             {!crowd && (
               <div className="stage-enemies">
@@ -380,7 +382,6 @@ export function MentalWindow({
                 haptic.medium()
                 if (entry.kind === 'assault') {
                   // 고양이가 나오는 차례는 판마다 섞는다 (695번). 개발 서버의 확인 스크립트는 출전 칸의 차례로 고정할 수 있다.
-                  const team = stageTeamOf(company)
                   const fixed =
                     import.meta.env.DEV &&
                     (window as { __mentalCatOrder?: boolean }).__mentalCatOrder

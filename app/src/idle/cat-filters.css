@@ -56,9 +56,6 @@
   color: #8c7b94;
   font-size: 10px;
 }
-.loadout-roster-tools {
-  padding: 10px 4px;
-}
 .idle-cat-grid.is-readable {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
@@ -91,32 +88,4 @@
   text-align: center;
   font-size: 12px;
   color: #887391;
-}
-
-/* 320px에서도 편성 목록을 넓게 보이도록 선택 정보는 두 줄로 모은다. */
-.loadout-sheet .idle-cat.owned .cat-skills-link {
-  grid-column: 1 / 3;
-  min-height: 36px;
-  padding: 5px;
-  margin: 0;
-  font-size: 10px;
-}
-.loadout-sheet .idle-cat.owned:has(.cat-skills-link) .idle-cat-gun {
-  grid-column: 3 / -1;
-  grid-row: 2;
-  min-width: 0;
-  min-height: 36px;
-  padding: 4px;
-  margin: 0;
-  justify-content: center;
-}
-.loadout-sheet .idle-cat.owned:has(.cat-skills-link) .idle-cat-gun canvas {
-  width: 26px;
-  height: 26px;
-}
-.loadout-sheet .idle-cat.owned:has(.cat-skills-link) .idle-gun-text {
-  display: none;
-}
-.loadout-sheet .idle-cat.owned:has(.cat-skills-link) .idle-gun-open {
-  font-size: 9px;
 }

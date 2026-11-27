@@ -1,5 +1,5 @@
 .loadout-team .loadout-tabs {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .loadout-compare button {
   border: 2px solid #1755a4;
