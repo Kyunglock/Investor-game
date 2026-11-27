@@ -213,11 +213,12 @@ export function meteorFalloff(distance: number, radius: number): number {
 }
 
 const LIGHTNING: readonly LightningStats[] = [
-  { cooldown: 2.6, damage: 25, chains: 2, chainDamage: 0.12, chainRadius: 150, bolts: 1 },
-  { cooldown: 2.3, damage: 35, chains: 4, chainDamage: 0.12, chainRadius: 170, bolts: 1 },
-  { cooldown: 2, damage: 45, chains: 8, chainDamage: 0.12, chainRadius: 190, bolts: 1 },
-  { cooldown: 1.8, damage: 52, chains: 16, chainDamage: 0.13, chainRadius: 200, bolts: 2 },
-  { cooldown: 1.6, damage: 60, chains: 32, chainDamage: 0.14, chainRadius: 210, bolts: 2 },
+  // 703번: 너무 셌다. 피해를 절반 남짓(25·35·45·52·60 → 13·18·23·27·30)으로 줄인다.
+  { cooldown: 2.6, damage: 13, chains: 2, chainDamage: 0.12, chainRadius: 150, bolts: 1 },
+  { cooldown: 2.3, damage: 18, chains: 4, chainDamage: 0.12, chainRadius: 170, bolts: 1 },
+  { cooldown: 2, damage: 23, chains: 8, chainDamage: 0.12, chainRadius: 190, bolts: 1 },
+  { cooldown: 1.8, damage: 27, chains: 16, chainDamage: 0.13, chainRadius: 200, bolts: 2 },
+  { cooldown: 1.6, damage: 30, chains: 32, chainDamage: 0.14, chainRadius: 210, bolts: 2 },
 ]
 
 const at = <T>(table: readonly T[], level: number) =>
