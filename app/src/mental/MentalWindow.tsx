@@ -10,7 +10,7 @@ import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { CatPortrait } from '../idle/CatPortrait'
-import { stageLoadout, stageOrder, stageTeamOf } from '../idle/stageTeam'
+import { type StageTeam, stageLoadout, stageOrder, stageTeamOf } from '../idle/stageTeam'
 import { DEFENSE_SKILL_CODES, SKILL_CODES } from './actives'
 
 import {
@@ -92,7 +92,7 @@ export function MentalWindow({
   const [celebrated, setCelebrated] = useState(false)
   const started = hero !== null
   // 매도벽 돌파 스테이지 (669번): 출전 탭에서 출전시킨 고양이를 데려간다. 출전을 누르는 순간 굳힌다.
-  const [stageTeam, setStageTeam] = useState<string[] | null>(null)
+  const [stageTeam, setStageTeam] = useState<StageTeam | null>(null)
   const team = stageTeam ?? stageTeamOf(company)
   const [start, setStart] = useState<Loadout | undefined>(undefined)
   const [picked, setPicked] = useState<Card[]>([])
@@ -353,7 +353,7 @@ export function MentalWindow({
                 {apiError}
               </p>
             )}
-            {crowd && <StageLobbyTeam company={company} codes={team} onChange={setStageTeam} />}
+            {crowd && <StageLobbyTeam company={company} team={team} onChange={setStageTeam} />}
             {/* 메인 스테이지의 출전 화면에는 적 범례를 두지 않는다 (681번). */}
             {!crowd && (
               <div className="stage-enemies">
@@ -385,7 +385,13 @@ export function MentalWindow({
                   const fixed =
                     import.meta.env.DEV &&
                     (window as { __mentalCatOrder?: boolean }).__mentalCatOrder
-                  setStart(stageLoadout(company, fixed ? team : stageOrder(team)))
+                  setStart(
+                    stageLoadout(
+                      company,
+                      fixed ? team.companions : stageOrder(team.companions),
+                      team.starter,
+                    ),
+                  )
                 }
                 setHero(heroOf(company))
               }}
@@ -1490,7 +1496,7 @@ function Battle({
             skills={stageCards}
             // 이미 도는 스킬은 다시 내지 않는다 (683번): 켜진 불장 위에 불장 카드가 또 뜨지 않는다.
             skillCodes={(mode === 'assault' ? SKILL_CODES : DEFENSE_SKILL_CODES).filter(
-              (code) => !hud.skills.includes(code),
+              (code) => !loadout.current.heroBenched && !hud.skills.includes(code),
             )}
             catMagic={stageCards && mode !== 'assault'}
             paused={asking}
