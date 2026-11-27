@@ -9,6 +9,7 @@ import { type BattleEntry, useAppUi } from '../app/ui'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { CatPortrait } from '../idle/CatPortrait'
 import { stageLoadout, stageOrder, stageTeamOf } from '../idle/stageTeam'
 import { DEFENSE_SKILL_CODES, SKILL_CODES } from './actives'
 
@@ -718,6 +719,8 @@ const CARD_ROLES: Record<Card['code'], string> = {
   earth: '충차',
 }
 
+const cardGroup = (card: Card) => (card.cat ? `${card.code}:${card.cat.code}` : card.code)
+
 const GRADE_ORDER: Record<Card['grade'], number> = { N: 0, R: 1, SR: 2, UR: 3 }
 
 /** 카드 한 장의 앞뒤 (393번): 뒷면 → 떨리며 빛이 샘 → 옆으로 누움 → 앞면. */
@@ -1005,7 +1008,7 @@ function CardPick({
                     <span className="stage-card-back-emblem">✦</span>
                   </span>
                   <span className="stage-card-icon" aria-hidden="true">
-                    <StageSkillIcon code={c.code} />
+                    <StageSkillIcon card={c} />
                   </span>
                   <span className="stage-card-copy">
                     <span className="stage-card-meta">
@@ -1108,6 +1111,8 @@ function Battle({
   const host = useRef<HTMLDivElement>(null)
   const handle = useRef<BattleHandle | null>(null)
   const loadout = useRef(start ?? loadoutOf(hero.weapon, hero.upgrades))
+  const deployedCats = start?.stageCats?.slice(0, loadout.current.mates) ?? []
+  const upgrades = cards.filter((card) => !(card.code === 'cat' && card.cat))
   const [hud, setHud] = useState<Hud | null>(null)
   const [gains, setGains] = useState<WallGain[]>([])
   const gainId = useRef(0)
@@ -1372,30 +1377,35 @@ function Battle({
             </div>
             {!hud.assault && (
               <div className="battle-cards">
-                {[...new Set(cards.map((c) => c.code))].map((code) => {
-                  const same = cards.filter((c) => c.code === code)
+                {deployedCats.map((cat) => (
+                  <span key={cat.code} role="img" aria-label={`${cat.name} 출전`} title={cat.name}>
+                    <CatPortrait code={cat.code} grade={cat.grade} />
+                  </span>
+                ))}
+                {[...new Set(upgrades.map(cardGroup))].map((key) => {
+                  const same = upgrades.filter((c) => cardGroup(c) === key)
                   const top = same.reduce((a, b) =>
-                    GRADE_ORDER[b.grade] > GRADE_ORDER[a.grade] ? b : a,
+                    GRADE_ORDER[b.grade] >= GRADE_ORDER[a.grade] ? b : a,
                   )
                   // 마법은 고른 수가 곧 레벨이다(392번). 고양이 카드는 함께 싸우는 고양이 수(393번).
                   const label =
-                    code === 'cat'
+                    top.code === 'cat'
                       ? `함께 싸우는 고양이 ${same.length}마리`
-                      : code === 'cat-magic'
+                      : top.code === 'cat-magic'
                         ? `마법을 쓰는 고양이 ${same.length}마리`
                         : top.level
-                          ? `${top.name} Lv.${same.length}`
+                          ? `${top.name} Lv.${top.level.to}`
                           : `${top.name} ${same.length}장`
                   return (
                     <span
-                      key={code}
+                      key={key}
                       data-grade={top.grade}
                       title={label}
                       role="img"
                       aria-label={label}
                     >
-                      <StageSkillIcon code={code} />
-                      <small>{same.length}</small>
+                      <StageSkillIcon card={top} />
+                      <small>{top.level?.to ?? same.length}</small>
                     </span>
                   )
                 })}

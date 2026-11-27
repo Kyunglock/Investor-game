@@ -1,25 +1,31 @@
-import type { CardCode } from './cards'
+import { ActiveBadge } from '../idle/ActiveBadge'
+import { CatPortrait } from '../idle/CatPortrait'
+import { SkillBadge } from '../idle/SkillBadge'
+import { type Card, isSkillCard } from './cards'
 
-const TILE = {
-  barrage: 0,
-  rally: 1,
-  fortify: 2,
-  limitUp: 3,
-  stopLoss: 4,
-  averaging: 5,
-  atk: 6,
-  spd: 7,
-  cat: 8,
-  'cat-magic': 9,
-  'cat-skill': 10,
-  'cat-up': 11,
-  water: 12,
-  meteor: 13,
-  lightning: 14,
-  earth: 15,
-} satisfies Record<CardCode, number>
+const TILE = { atk: 6, spd: 7, cat: 8, 'cat-magic': 9, 'cat-skill': 10, 'cat-up': 11 }
+const MAGIC_SKILL = { water: 'water', meteor: 'meteor', lightning: 'bolt', earth: 'ram' } as const
 
-export function StageSkillIcon({ code }: { code: CardCode }) {
+export function StageSkillIcon({ card }: { card: Card }) {
+  const { code, cat } = card
+  if (code === 'cat' && cat) return <CatPortrait code={cat.code} grade={cat.grade} />
+  if (code === 'cat-skill' && cat?.skills.length) {
+    return (
+      <span className="stage-cat-skills" aria-hidden="true">
+        {cat.skills.map((skill) => (
+          <SkillBadge
+            key={skill.code}
+            skill={skill.code}
+            level={card.level?.to}
+            size={cat.skills.length > 1 ? 22 : 40}
+          />
+        ))}
+      </span>
+    )
+  }
+  if (isSkillCard(code)) return <ActiveBadge code={code} />
+  if (code === 'water' || code === 'meteor' || code === 'lightning' || code === 'earth')
+    return <SkillBadge skill={MAGIC_SKILL[code]} level={card.level?.to} size={40} />
   const tile = TILE[code]
   return (
     <span

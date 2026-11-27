@@ -55,6 +55,6 @@ export function stageLoadout(company: Company, team: readonly string[]): Loadout
     mateGuns: full.mateGuns,
     mateMagic: full.mateMagic,
     mateMagicLevels: cats.map(() => 1),
-    stageCats: cats.map((cat) => ({ name: cat.name, skills: cat.skills.map((s) => s.name) })),
+    stageCats: cats,
   }
 }
