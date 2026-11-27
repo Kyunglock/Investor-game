@@ -236,6 +236,8 @@ import { BULLET_ART, BULLET_VISUAL_SCALE, GRADE_FIRE, gradeTint, sparkles } from
  */
 
 export interface Hud {
+  /** 멘탈벽 그림의 윗변. 실제 벽이 있는 전장에만 보낸다. */
+  wallTop?: number
   mental: number
   maxMental: number
   /** 남은 시간(초). 웨이브 판(690번)은 제한 시간이 없어 0이다. */
@@ -1381,7 +1383,7 @@ class BattleScene extends Phaser.Scene {
     if (this.opts.idle)
       return this.view().h - 70 - this.wallFlight.strength * (24 + 3 * Math.sin(this.elapsed * 4))
     return this.mode === 'defense' && this.genre.target === 'wall'
-      ? this.wallY() + 78
+      ? this.wallY() + (this.opts.vault ? 78 : 100)
       : this.view().h - (this.assault ? 175 : 140)
   }
 
@@ -5616,6 +5618,7 @@ class BattleScene extends Phaser.Scene {
     }
     this.lastHud = now
     this.opts.onHud({
+      wallTop: this.wall ? this.wallY() - WALL_H : undefined,
       mental: Math.ceil(this.mental),
       maxMental: this.loadout.maxMental,
       secondsLeft: this.waveTotal ? 0 : Math.max(0, Math.ceil(this.limitSeconds() - this.elapsed)),
