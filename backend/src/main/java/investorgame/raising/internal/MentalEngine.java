@@ -356,7 +356,7 @@ class MentalEngine {
   }
 
   /** 영구 강화가 전투 강화에 더하는 양: buy는 주, 나머지는 %. 영구 강화가 없는 종류는 0. */
-  private static int fishBonus(CompanyState c, String kind) {
+  static int fishBonus(CompanyState c, String kind) {
     if (!FISH_UPGRADES.contains(kind)) return 0;
     return c.fishLevels.getOrDefault(kind, 0)
         * ("buy".equals(kind) ? FISH_STEP_SHARES : FISH_STEP_PERCENT);

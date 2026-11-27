@@ -30,6 +30,7 @@ class CompanyState {
   boolean skillGuideSeen;
   boolean onboardingInitialized;
 
+  @JsonIgnoreProperties({"bread", "bakingMillis", "bundleMillis"})
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
   static class Idle {
     long wall = 1;
@@ -44,9 +45,6 @@ class CompanyState {
     double[] hitCredits = new double[5];
     double earned;
     double incomeRemainder;
-    long bread;
-    long bakingMillis;
-    long bundleMillis;
     double activeSeconds;
     double circuitSeconds;
 

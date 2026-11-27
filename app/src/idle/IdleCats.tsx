@@ -8,7 +8,6 @@ import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
-import { CatBakery } from './CatBakery'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { CatRosterGrid } from './CatRosterGrid'
@@ -20,7 +19,7 @@ import { fieldSeats } from './seats'
 import { skillNames } from './skills'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
-export type LoadoutTab = '고양이' | '무기' | '식빵 공방'
+export type LoadoutTab = '고양이' | '무기'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
@@ -61,7 +60,6 @@ export function IdleCats({
   // 인벤토리: 가진 고양이를 등급순으로 먼저, 없는 고양이를 등급순으로 뒤에.
   const sorted = sortCats(idle?.cats ?? [])
   const cat = (idle?.cats ?? []).find((c) => c.code === picked && c.level > 0) ?? null
-  const bakers = sorted.filter((c) => c.level > 0 && !c.fielded)
   const full = fielded.length >= (idle?.fieldSlots ?? 0)
   // 사장냥이 쉰다 (672번): 고양이들만 싸운다. 그동안 마지막 고양이는 뺄 수 없다.
   const bossResting = idle?.bossFielded === false
@@ -74,10 +72,9 @@ export function IdleCats({
   const team = useRef<HTMLDivElement>(null)
   const detail = useRef<HTMLElement>(null)
   const [teamHeight, setTeamHeight] = useState(0)
-  const sticky = tab !== '식빵 공방'
   useEffect(() => {
     const el = team.current
-    if (!sticky || !el || typeof ResizeObserver === 'undefined') return
+    if (!el || typeof ResizeObserver === 'undefined') return
     const scroller = el.parentElement
     const measure = () => {
       setTeamHeight(el.offsetHeight)
@@ -94,7 +91,7 @@ export function IdleCats({
       observer.disconnect()
       if (scroller) scroller.style.scrollPaddingTop = ''
     }
-  }, [sticky])
+  }, [])
   // 추천 편성 (654번): 팀 화력의 어림이 가장 큰 고양이들로 출전 칸을 바꾼다.
   const recommended = recommendParty(company)
   const alreadyBest =
@@ -211,7 +208,7 @@ export function IdleCats({
   )
   const tabs = (
     <div className="idle-gacha-kinds loadout-tabs" role="tablist" aria-label="편성 목록">
-      {(['고양이', '무기', '식빵 공방'] as const).map((label) => (
+      {(['고양이', '무기'] as const).map((label) => (
         <button
           key={label}
           type="button"
@@ -229,13 +226,6 @@ export function IdleCats({
       ))}
     </div>
   )
-  if (tab === '식빵 공방')
-    return (
-      <>
-        <div className="loadout-team">{tabs}</div>
-        <CatBakery idle={idle} bakers={bakers} />
-      </>
-    )
   return (
     <>
       <div className="loadout-team" ref={team}>

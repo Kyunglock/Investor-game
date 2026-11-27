@@ -640,23 +640,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/bread/sell": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 식빵 꾸러미를 팔아 돈과 다이아를 받는다 */
-        post: operations["sellBread"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/company/cat/field": {
         parameters: {
             query?: never;
@@ -1622,13 +1605,13 @@ export interface components {
                 boss: {
                     /** @description 보스전의 길이(실제 초) */
                     seconds: number;
-                    /** @description 약점 스킬. 피해가 weakPercent%다 */
+                    /** @description 제거된 약점 스킬. 호환용 빈 목록이며 weakPercent는 100이다 */
                     weakSkills: {
                         /** @description 스킬 코드 (idle.cats[].skills[].code와 같다) */
                         code: string;
                         name: string;
                     }[];
-                    /** @description 내성 스킬. 피해가 resistPercent%다 */
+                    /** @description 제거된 내성 스킬. 호환용 빈 목록이며 resistPercent는 100이다 */
                     resistSkills: {
                         /** @description 스킬 코드 (idle.cats[].skills[].code와 같다) */
                         code: string;
@@ -1809,11 +1792,6 @@ export interface components {
                     /** @description 출전한 고양이 가운데 이 스킬의 가장 높은 레벨 (515번). 발동 중이 아니면 0 */
                     level: number;
                 }[];
-                bread?: number;
-                bundlePrice?: number;
-                bundleDiamonds?: number;
-                nextDiamondSeconds?: number;
-                bakingPercent?: number;
                 /** @description 한 번에 출전하는 고양이 수 (492·493번 */
                 fieldSlots: number;
                 /** @description 사장냥이 출전 중인가 (672번). false면 쉬고 있어 고양이들만 싸운다. 출전한 고양이가 없으면 늘 true */
@@ -2904,29 +2882,6 @@ export interface operations {
         };
         responses: {
             /** @description 올린 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    sellBread: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 바꾼 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

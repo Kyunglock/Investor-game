@@ -159,11 +159,6 @@ class IdleEngine {
   // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
   // silence is a closed or sleeping app and pays nothing.
-  // 식빵 공방 (644번에 줄임): 쉬는 고양이 하나가 5분에 식빵 하나(전에는 1분), 팔 때 굽던 30분마다 다이아 넷(659번에 하나에서 네 배로.
-  // 644번 전에는 10분에 하나).
-  private static final long DIAMOND_MILLIS = 1_800_000;
-  private static final long BAKERY_DIAMONDS = 4;
-  private static final long LOAF_MILLIS = 300_000;
   private static final long GRACE_MS = 10_000;
   // Attack kinds after the bullet (kind 0): skills. A cat's skills are its own and it casts them
   // while fielded (decisions.md 501). Only A and S grade cats have any (561): A one, S two.
@@ -655,11 +650,6 @@ class IdleEngine {
       return;
     }
     if (live) {
-      long bakers = s.cats.size() - s.fielded.size();
-      if (bakers > 0) s.bundleMillis += elapsed;
-      long work = s.bakingMillis + elapsed * bakers;
-      s.bread += work / LOAF_MILLIS;
-      s.bakingMillis = work % LOAF_MILLIS;
       tick(c, elapsed / 1000.0 * SPEED, hits == null ? List.of() : hits);
       s.lastSeen = now;
     } else {
@@ -797,7 +787,16 @@ class IdleEngine {
   /**
    * 금고 보스전의 파티 (654번): 출전 칸 대신 party의 고양이(가진 고양이만, 겹치지 않게, 출전 칸 수까지)가 나갔을 때의 초당 피해. 출전 칸은 바꾸지 않는다.
    */
+  double vaultDps(CompanyState c, List<String> party) {
+    if (party == null) return dps(c, true);
+    return partyDps(c, party, true);
+  }
+
   double partyDps(CompanyState c, List<String> party) {
+    return partyDps(c, party, false);
+  }
+
+  private double partyDps(CompanyState c, List<String> party, boolean permanentOnly) {
     CompanyState.Idle s = state(c);
     List<String> fielded = s.fielded;
     s.fielded =
@@ -807,15 +806,22 @@ class IdleEngine {
             .limit(FIELD_SLOTS)
             .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     try {
-      return dps(c);
+      return dps(c, permanentOnly);
     } finally {
       s.fielded = fielded;
     }
   }
 
   private double dps(CompanyState c) {
+    return dps(c, false);
+  }
+
+  private double dps(CompanyState c, boolean permanentOnly) {
     CompanyState.Idle s = state(c);
-    List<Shooter> shooters = shooters(c);
+    List<Shooter> shooters =
+        permanentOnly
+            ? shooters(c, 1 + MentalEngine.fishBonus(c, "damage") / 100.0, 1)
+            : shooters(c);
     double total = 0;
     for (Shooter shooter : firing(c, shooters)) {
       total += shooter.damage() * shooter.perSecond() * shooter.power() / 1.25;
@@ -1507,19 +1513,6 @@ class IdleEngine {
     engine.pass.progress(c, "forever", bought, todayDate());
   }
 
-  private double bundlePrice(CompanyState.Idle s) {
-    return 100.0 * s.wall * s.bread;
-  }
-
-  void sellBread(CompanyState c) {
-    CompanyState.Idle s = state(c);
-    if (s.bread < 1) throw new InvalidRequestException("팔 식빵이 없어요.");
-    c.capital += bundlePrice(s);
-    c.diamonds += BAKERY_DIAMONDS * (s.bundleMillis / DIAMOND_MILLIS);
-    s.bundleMillis %= DIAMOND_MILLIS;
-    s.bread = 0;
-  }
-
   void fieldCat(CompanyState c, String code, boolean fielded) {
     fieldCat(c, code, fielded, null, null);
   }
@@ -1773,11 +1766,6 @@ class IdleEngine {
         skills,
         cats,
         FIELD_SLOTS,
-        s.bread,
-        CompanyView.money(bundlePrice(s)),
-        BAKERY_DIAMONDS * (s.bundleMillis / DIAMOND_MILLIS),
-        (DIAMOND_MILLIS - s.bundleMillis % DIAMOND_MILLIS + 999) / 1000,
-        (int) (100 * s.bakingMillis / LOAF_MILLIS),
         SPEED * s.wallDps,
         s.circuitSeconds,
         List.of(

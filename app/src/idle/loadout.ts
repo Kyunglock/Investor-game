@@ -35,9 +35,14 @@ const SKILL_MAGIC = {
  * 전투에 나가는 팀의 수치. party를 주면 출전 칸 대신 그 고양이들(가진 고양이만, 준 차례대로)로 팀을 꾸린다: 금고 도전의 저장한 파티와
  * 추천 편성의 어림에 쓴다 (654번).
  */
-export function idleLoadout(company: Company, party?: readonly string[]) {
+export function idleLoadout(
+  company: Company,
+  party?: readonly string[],
+  upgrades?: Parameters<typeof loadoutOf>[1],
+) {
   const hero = heroOf(company)
-  const loadout = loadoutOf(hero.weapon, hero.upgrades)
+  const battleUpgrades = upgrades ?? hero.upgrades
+  const loadout = loadoutOf(hero.weapon, battleUpgrades)
   // 스킬은 사장냥 무기의 실효 화력을 따른다 (636번, 서버 IdleEngine과 같다).
   loadout.skillDamage =
     (loadout.damage * skillPower(hero.weapon)) / (hero.weapon.damagePercent / 100)
@@ -66,7 +71,7 @@ export function idleLoadout(company: Company, party?: readonly string[]) {
     const weapon =
       company.weapons?.find((w) => w.kind === cat.weapon?.kind && w.grade === cat.weapon.grade) ??
       DEFAULT_WEAPON
-    const gun = loadoutOf(weapon, hero.upgrades)
+    const gun = loadoutOf(weapon, battleUpgrades)
     return {
       kind: weapon.kind,
       grade: weapon.grade,
@@ -81,4 +86,14 @@ export function idleLoadout(company: Company, party?: readonly string[]) {
     }
   })
   return loadout
+}
+
+/** 금고도전·주간던전: 성장 탭은 영구 강화만 적용한다. */
+export function permanentLoadout(company: Company, party?: readonly string[]) {
+  const upgrades = (company.idle?.rebirth?.upgrades ?? []).map((upgrade) => ({
+    kind: upgrade.kind,
+    bonusPercent: upgrade.kind === 'buy' ? 0 : upgrade.bonus,
+    bonusShares: upgrade.kind === 'buy' ? upgrade.bonus : 0,
+  }))
+  return idleLoadout(company, party, upgrades)
 }

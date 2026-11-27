@@ -689,19 +689,6 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /api/company/bread/sell:
-    post:
-      operationId: sellBread
-      summary: 식빵 꾸러미를 팔아 돈과 다이아를 받는다
-      responses:
-        '200':
-          description: 바꾼 뒤의 회사
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Company' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/cat/field:
     post:
       operationId: fieldCat
@@ -1592,7 +1579,7 @@ components:
                 seconds: { type: integer, description: 보스전의 길이(실제 초) }
                 weakSkills:
                   type: array
-                  description: 약점 스킬. 피해가 weakPercent%다
+                  description: 제거된 약점 스킬. 호환용 빈 목록이며 weakPercent는 100이다
                   items:
                     type: object
                     required: [code, name]
@@ -1601,7 +1588,7 @@ components:
                       name: { type: string }
                 resistSkills:
                   type: array
-                  description: 내성 스킬. 피해가 resistPercent%다
+                  description: 제거된 내성 스킬. 호환용 빈 목록이며 resistPercent는 100이다
                   items:
                     type: object
                     required: [code, name]
@@ -1760,11 +1747,6 @@ components:
                   name: { type: string }
                   owned: { type: boolean, description: 지금 발동 중이다. 이 스킬을 가진 고양이가 출전해 있다 }
                   level: { type: integer, description: 출전한 고양이 가운데 이 스킬의 가장 높은 레벨 (515번). 발동 중이 아니면 0 }
-            bread: { type: integer, minimum: 0 }
-            bundlePrice: { type: number, minimum: 0 }
-            bundleDiamonds: { type: integer, minimum: 0 }
-            nextDiamondSeconds: { type: integer, minimum: 1, maximum: 600 }
-            bakingPercent: { type: integer, minimum: 0, maximum: 99 }
             fieldSlots: { type: integer, description: 한 번에 출전하는 고양이 수 (492·493번, 넷) }
             bossFielded: { type: boolean, description: 사장냥이 출전 중인가 (672번). false면 쉬고 있어 고양이들만 싸운다. 출전한 고양이가 없으면 늘 true }
             wallDps: { type: number, description: 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 }

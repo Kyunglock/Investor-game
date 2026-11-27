@@ -2,7 +2,7 @@ import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
 import { autoBuyPlan, nextAutoBuy } from './autoUpgrade'
 import { idleLoadout } from './loadout'
-import { bossMarks, catDps, fieldSteps, partyOf, recommendParty } from './party'
+import { catDps, fieldSteps, partyDps, partyOf, recommendParty } from './party'
 import type { Vault } from './vaultBattle'
 
 type Cat = {
@@ -60,6 +60,20 @@ const boss = (over: Partial<Vault['boss']> = {}) =>
 const vault = (b = boss()) => ({ trainingPercent: 0, boss: b }) as unknown as Vault
 
 describe('파티 (654번)', () => {
+  it.each([true, false])('금고 모드 boss=%s의 예상 DPS는 영구 강화만 반영한다', (isBoss) => {
+    const c = company([{ code: 'mint', fielded: true, skills: ['water'] }])
+    const vs = { vault: vault(), boss: isBoss }
+    const base = partyDps(c, ['mint'], vs)
+    if (!c.battleUpgrades || !c.idle) throw new Error('Missing company fixture')
+    c.battleUpgrades[0].bonusPercent = 9900
+    expect(partyDps(c, ['mint'], vs)).toBe(base)
+    expect(partyDps(c, ['mint'])).toBeGreaterThan(base)
+    c.idle.rebirth = { upgrades: [{ kind: 'damage', bonus: 100 }] } as NonNullable<
+      NonNullable<Company['idle']>['rebirth']
+    >
+    expect(partyDps(c, ['mint'], vs)).toBeCloseTo(base * 2)
+  })
+
   it('파티를 주면 출전 칸 대신 그 고양이들로 팀을 꾸린다', () => {
     const c = company([
       { code: 'sky', fielded: true },
@@ -92,7 +106,7 @@ describe('파티 (654번)', () => {
     expect(recommendParty(c)).toEqual(['mint', 'lilac'])
   })
 
-  it('보스전의 어림은 약점 스킬의 배율을 넣고 내성 스킬은 낮게 본다', () => {
+  it('이전 약점·내성 데이터가 있어도 보스전 피해량에는 반영하지 않는다', () => {
     const c = company(
       [
         { code: 'sky', fielded: false, damagePercent: 50 },
@@ -103,33 +117,15 @@ describe('파티 (654번)', () => {
       2,
     )
     const vs = { vault: vault(), boss: true }
-    // 같은 고양이라도 약점 스킬은 세 배로, 내성 스킬은 절반으로 센다.
+    // 오래된 응답에 상성 값이 남아 있어도 무시한다.
     const water = catDps(c, 'mint', vs)
     const meteorPlain = catDps(c, 'lilac')
     const meteorBoss = catDps(c, 'lilac', vs)
-    expect(meteorBoss).toBeLessThan(meteorPlain)
-    expect(water).toBeGreaterThan(catDps(c, 'mint'))
+    expect(meteorBoss).toBeCloseTo(meteorPlain)
+    expect(water).toBeCloseTo(catDps(c, 'mint'))
     // 천적 고양이는 없다 (694번): 스킬 없는 고양이는 공격력대로다.
     expect(catDps(c, 'sky', vs)).toBeLessThan(catDps(c, 'night', vs))
     expect(catDps(c, 'sky', vs)).toBeCloseTo(catDps(c, 'sky'))
-  })
-
-  it('고양이마다 약점·내성을 표시한다', () => {
-    const b = boss()
-    expect(bossMarks({ code: 'sky', skills: [] }, b)).toEqual([])
-    expect(bossMarks({ code: 'mint', skills: [{ code: 'water', name: '' }] }, b)).toEqual(['weak'])
-    expect(
-      bossMarks(
-        {
-          code: 'sky',
-          skills: [
-            { code: 'water', name: '' },
-            { code: 'meteor', name: '' },
-          ],
-        },
-        b,
-      ),
-    ).toEqual(['weak', 'resist'])
   })
 
   it('출전 칸을 추천으로 바꾸는 차례: 빈 칸에 세우고, 찼으면 빠질 고양이와 바꾸고, 남은 것은 뺀다', () => {

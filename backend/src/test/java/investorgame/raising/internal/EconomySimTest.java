@@ -12,10 +12,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * 밸런스 시뮬레이션 (decisions.md 644번): 최적으로 플레이하는 한 사람의 N일. 뽑기·합성·강화·식빵 먹이기·환생·영구 강화는 실제 엔진이 하고, 이 루프는
- * 시간과 전투(벽 체력 ÷ fieldDps)를 돌린다. 하루에 SIM_HOURS시간 화면을 켜 두고, 8시간 방치 수입을 받고, 출석·상점·시즌패스(25일에 마지막 단계)·금고
- * 다이아(주 한 번)·광고 뽑기(종류마다 하루 세 번)를 받는다. 한 벽이 30초를 넘으면 막힌 것으로 보고, 받을 생선이 지금까지 쓴 생선의 4분의 1을 넘으면 (광고 보고)
- * 환생한다.
+ * 밸런스 시뮬레이션 (decisions.md 644번): 최적으로 플레이하는 한 사람의 N일. 뽑기·합성·강화·환생·영구 강화는 실제 엔진이 하고, 이 루프는 시간과 전투(벽
+ * 체력 ÷ fieldDps)를 돌린다. 하루에 SIM_HOURS시간 화면을 켜 두고, 8시간 방치 수입을 받고, 출석·상점·시즌패스(25일에 마지막 단계)·금고 다이아(주 한
+ * 번)·광고 뽑기(종류마다 하루 세 번)를 받는다. 한 벽이 30초를 넘으면 막힌 것으로 보고, 받을 생선이 지금까지 쓴 생선의 4분의 1을 넘으면 (광고 보고) 환생한다.
  *
  * <p>CI에서는 돌지 않는다. {@code SIM=1 ./gradlew test --tests '*EconomySimTest' -i --rerun}으로 돌리고,
  * SIM_SEEDS(뽑기 운, 기본 1)·SIM_DAYS(30)·SIM_HOURS(3)·SIM_ADS(1)·SIM_STUCK(30초)로 바꾼다. 출력은 "SIM "으로
@@ -138,12 +137,6 @@ class EconomySimTest {
         double dps = idle.fieldDps(c);
         double hp = IdleEngine.maxHp(s.wall);
         c.capital += idle.perSecond(c) * tick;
-        // Bakery: every benched cat bakes one loaf a minute; one diamond every 10 minutes.
-        long bakers = s.cats.size() - s.fielded.size();
-        if (bakers > 0) s.bundleMillis += tick * 1000L;
-        s.bakingMillis += tick * 1000L * bakers;
-        s.bread += s.bakingMillis / 300_000;
-        s.bakingMillis %= 300_000;
         boolean stuck = hp / dps > stuckSec;
         if (!stuck) {
           done += dps * tick;
@@ -171,12 +164,6 @@ class EconomySimTest {
           }
         }
         if (t % 60 == 0) manage(c, random);
-      }
-      // Bread sold at the end of the day keeps the diamonds of the bakery.
-      if (s.bread >= 1 && s.bundleMillis >= 1_800_000) {
-        long before = c.diamonds;
-        idle.sellBread(c);
-        got.merge("bakery", c.diamonds - before, Long::sum);
       }
       if (verbose && (day <= 3 || day % 5 == 0 || day == days)) {
         log.add(

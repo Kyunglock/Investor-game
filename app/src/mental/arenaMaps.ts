@@ -63,13 +63,6 @@ export const ARENA_MAPS: readonly ArenaMap[] = [
     roster: ['panic', 'coinCrab', 'short'],
   },
   {
-    key: 'honey-bakery',
-    name: '꿀빛 제과점',
-    sheet: 'marketArenas',
-    x: 0,
-    roster: ['panic', 'honeyBear', 'dump'],
-  },
-  {
     key: 'pearl-aquarium',
     name: '진주 수족관',
     sheet: 'marketArenas',
@@ -82,13 +75,6 @@ export const ARENA_MAPS: readonly ArenaMap[] = [
     sheet: 'marketArenas',
     x: 916,
     roster: ['starPuff', 'stop', 'spec'],
-  },
-  {
-    key: 'blossom-garden',
-    name: '벚꽃 정원',
-    sheet: 'picnicArenas',
-    x: 0,
-    roster: ['blossomBun', 'dump', 'stop'],
   },
   {
     key: 'snow-rink',

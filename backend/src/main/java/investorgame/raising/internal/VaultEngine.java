@@ -12,8 +12,7 @@ import org.springframework.stereotype.Component;
  * 금고 도전 (decisions.md 641번): 보스전과 주간 던전의 규칙과 보상. 전투는 화면이 돌리고 서버는 결과를 받아 금괴를 준다.
  *
  * <ul>
- *   <li>보스전은 정해진 시간 동안 넣은 피해량을 겨룬다. 피해량이 등급의 문턱을 넘을 때마다 그 주에 한 번씩 금괴를 준다. 수호냥의 약점·내성 스킬과 천적 고양이는
- *       주마다 바뀐다.
+ *   <li>보스전은 정해진 시간 동안 넣은 피해량을 겨룬다. 피해량이 등급의 문턱을 넘을 때마다 그 주에 한 번씩 금괴를 준다. 스킬별 약점·내성 보정은 없다.
  *   <li>주간 던전은 세 층이고, 층에 들어가기 전에 카드 석 장 가운데 한 장을 골라 그 주 내내 쓴다. 층을 처음 깨면 금괴를 준다.
  *   <li>금괴는 금고 상점에서만 쓴다.
  * </ul>
@@ -42,13 +41,7 @@ class VaultEngine {
 
   private static final String[] LEAGUES = {"브론즈", "실버", "골드", "플래티넘", "다이아", "마스터"};
 
-  /** 약점·내성 스킬의 수와 피해 배율(%). */
-  static final int WEAK_SKILLS = 4;
-
-  static final int WEAK_PERCENT = 200;
-  static final int RESIST_PERCENT = 50;
-
-  /** 화면이 보낸 피해량을 받아 주는 상한: 지금 팀의 초당 피해로 보스전 내내 때린 것의 이 배수. 약점·치명타·훈련을 넉넉히 덮는다. */
+  /** 화면이 보낸 피해량을 받아 주는 상한: 지금 팀의 초당 피해로 보스전 내내 때린 것의 이 배수. 치명타·훈련을 넉넉히 덮는다. */
   static final double SCORE_SLACK = 12;
 
   static final int FLOORS = 3;
@@ -166,14 +159,6 @@ class VaultEngine {
     return LEAGUES[league] + " " + (tier - league * LEAGUE_TIERS);
   }
 
-  /** 그 주의 약점 스킬(앞 WEAK_SKILLS개)과 내성 스킬(그다음 WEAK_SKILLS개): 스킬의 차례를 주 번호로 섞는다. */
-  static List<Integer> skillOrder(long week) {
-    List<Integer> order = new ArrayList<>();
-    for (int i = 0; i < IdleEngine.skillCount(); i++) order.add(i);
-    java.util.Collections.shuffle(order, new Random(week * 31 + 7));
-    return order.subList(0, WEAK_SKILLS * 2);
-  }
-
   /** 지금 골라야 할 카드들. 고를 차례가 아니면(이미 골랐거나 다 깼으면) 비어 있다. 같은 주·같은 차례에는 늘 같은 석 장이고 이미 고른 카드는 빠진다. */
   private List<Card> offers(CompanyState.Vault v) {
     if (v.floors >= FLOORS || v.cards.size() > v.floors) return List.of();
@@ -228,7 +213,7 @@ class VaultEngine {
     }
     CompanyState.Vault v = state(c);
     double cap =
-        (party == null ? idle.fieldDps(c) : idle.partyDps(c, party))
+        idle.vaultDps(c, party)
             * BOSS_SECONDS
             * SCORE_SLACK
             * (1 + v.training * TRAINING_STEP_PERCENT / 100.0);
@@ -314,18 +299,13 @@ class VaultEngine {
 
   CompanyView.Vault view(CompanyState c) {
     CompanyState.Vault v = state(c);
-    List<Integer> order = skillOrder(v.week);
-    List<CompanyView.VaultSkill> weak =
-        order.subList(0, WEAK_SKILLS).stream().map(IdleEngine::vaultSkill).toList();
-    List<CompanyView.VaultSkill> resist =
-        order.subList(WEAK_SKILLS, WEAK_SKILLS * 2).stream().map(IdleEngine::vaultSkill).toList();
     CompanyView.VaultBoss boss =
         new CompanyView.VaultBoss(
             BOSS_SECONDS,
-            weak,
-            resist,
-            WEAK_PERCENT,
-            RESIST_PERCENT,
+            List.of(),
+            List.of(),
+            100,
+            100,
             // 천적 고양이는 없앴다 (decisions.md 694번). 이미 깔린 앱이 읽는 자리라 빈 목록과 100%로 남긴다.
             List.of(),
             100,

@@ -1,11 +1,12 @@
 import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
 import { multiDraw } from './IdleGacha'
-import { idleLoadout } from './loadout'
+import { idleLoadout, permanentLoadout } from './loadout'
 
 type Cat = {
   code: string
   fielded: boolean
+  level?: number
   skills?: string[]
   skillLevel?: number
   damagePercent?: number
@@ -49,6 +50,33 @@ const company = (owned: string[], cats: Cat[] = [], bonus = 0) =>
   }) as unknown as Company
 
 describe('방치형 전투 획득 상태', () => {
+  it('금고 전투는 일반 강화 없이 영구 공격력·체력·매수 강화만 반영한다', () => {
+    const c = company([], [{ code: 'mint', level: 1, fielded: true, skills: ['water'] }], 9900)
+    c.battleUpgrades = [
+      { kind: 'damage', bonusPercent: 9900 },
+      { kind: 'fire', bonusPercent: 9900 },
+      { kind: 'hp', bonusPercent: 9900 },
+      { kind: 'buy', bonusPercent: 0, bonusShares: 9999 },
+    ] as Company['battleUpgrades']
+    const base = permanentLoadout(c, ['mint'])
+    expect(base).toEqual(idleLoadout(c, ['mint'], []))
+    if (!c.idle) throw new Error('Missing idle fixture')
+    c.idle.rebirth = {
+      upgrades: [
+        { kind: 'damage', bonus: 100 },
+        { kind: 'hp', bonus: 50 },
+        { kind: 'buy', bonus: 60 },
+      ],
+    } as NonNullable<NonNullable<Company['idle']>['rebirth']>
+    const boosted = permanentLoadout(c, ['mint'])
+    expect(boosted.damage).toBe(base.damage * 2)
+    expect(boosted.skillDamage).toBe((base.skillDamage ?? base.damage) * 2)
+    expect(boosted.mateGuns[0].damage).toBe(base.mateGuns[0].damage * 2)
+    expect(boosted.fireMs).toBe(base.fireMs)
+    expect(boosted.maxMental).toBe(base.maxMental * 1.5)
+    expect(boosted.buyBonus).toBeGreaterThan(base.buyBonus)
+  })
+
   it('획득하지 않은 마법과 고양이는 전투에 나오지 않는다', () => {
     expect(idleLoadout(company([]))).toMatchObject({
       water: 0,

@@ -4,22 +4,13 @@ import { useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { CatPortrait } from './CatPortrait'
-import {
-  bossMarks,
-  catDps,
-  MARK_NAMES,
-  type Matchup,
-  type PartyMode,
-  partyDps,
-  recommendParty,
-} from './party'
+import { catDps, type Matchup, type PartyMode, partyDps, recommendParty } from './party'
 import { scoreText, VAULT_SIM, type Vault } from './vaultBattle'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
 /**
- * 금고 도전의 파티 칸 (decisions.md 654번): 입장하기 전에 데려갈 고양이를 고르고 저장한다. 보스전에서는 고양이마다 약점·내성을 표시하고
- * 상대의 배율을 넣은 예상 피해량을 보여 준다. 추천 편성은 던전에만 있다 (694번).
+ * 금고 도전의 파티 칸 (decisions.md 654번): 입장하기 전에 데려갈 고양이를 고르고 저장한다. 영구 강화를 적용한 예상 피해량을 보여 준다. 추천 편성은 던전에만 있다 (694번).
  */
 export function VaultParty({
   company,
@@ -54,13 +45,6 @@ export function VaultParty({
     if (party.includes(code)) onChange(party.filter((c) => c !== code))
     else if (!full) onChange([...party, code])
   }
-  const marks = (cat: Cat) =>
-    boss &&
-    bossMarks(cat, vault.boss).map((mark) => (
-      <em key={mark} className={`vault-mark is-${mark}`}>
-        {MARK_NAMES[mark]}
-      </em>
-    ))
   return (
     <section className="vault-party" data-testid={`vault-party-${mode}`} aria-label="데려갈 파티">
       <header>
@@ -80,7 +64,6 @@ export function VaultParty({
               <>
                 <CatPortrait code={cat.code as CatCode} grade={cat.grade} />
                 <small>Lv.{cat.level}</small>
-                <span className="vault-marks">{marks(cat)}</span>
               </>
             ) : (
               <small>빈 칸</small>
@@ -119,8 +102,8 @@ export function VaultParty({
         {editing && full && owned.length > party.length
           ? '파티가 가득 찼어요. 데려가는 고양이를 눌러 빼면 다른 고양이를 추가할 수 있어요.'
           : boss
-            ? '약점·내성 스킬의 배율을 넣은 어림이에요(치명타·범위 피해 제외).'
-            : '추천 편성은 팀 화력이 가장 큰 파티예요. 금고의 벽도 팀 화력만큼 단단해져요.'}
+            ? '영구 강화가 적용된 예상 피해량이에요(치명타·범위 피해 제외).'
+            : '일반 강화는 적용되지 않아요. 영구 강화 기준으로 팀 화력을 계산해요.'}
       </p>
       {editing && (
         <ul className="vault-party-pick" data-testid="vault-party-pick">
@@ -144,7 +127,6 @@ export function VaultParty({
                       {boss ? '피해량' : '화력'} +{scoreText(shares.get(cat.code) ?? 0)}
                       {!boss && '/초'}
                     </small>
-                    <span className="vault-marks">{marks(cat)}</span>
                   </span>
                   <i>{on ? '데려감' : full ? '칸 가득' : '추가'}</i>
                 </button>

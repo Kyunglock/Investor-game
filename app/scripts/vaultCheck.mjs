@@ -301,26 +301,17 @@ try {
     }
   } else {
     const company = companyOf(TEAMS.team)
-    // 같은 약점 스킬을 가진 대기 고양이가 도감에서 먼저 나와도 출전 상태를 우선한다.
     company.idle.cats.unshift(
       cat('mint', '민트냥', 'C', { skills: [{ code: 'bolt', name: '번개' }] }),
     )
     const calls = []
     const { page, errors } = await openVault(browser, company, calls)
-    // 보스전: 약점·내성과 그것을 가진 내 고양이가 보인다. 천적 고양이는 없다 (694번).
-    const traits = page.getByTestId('vault-traits')
-    await expect(traits).toContainText('약점 스킬 ×2')
-    await expect(traits).toContainText('내성 스킬 ×0.5')
-    await expect(traits).not.toContainText('천적')
-    await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(2)
-    await expect(traits).toContainText('은빛냥 · 출전 중')
     await expect(page.getByTestId('vault-sheet')).toContainText('새 금고까지 3일 4시간')
-    // 파티 (654번): 저장한 적이 없으면 출전 칸의 고양이를 데려간다. 고양이마다 약점·내성을 표시하고 예상 피해량을 적는다.
     const party = page.getByTestId('vault-party-boss')
     await expect(party.locator('.vault-party-row li:not(.is-empty)')).toHaveCount(4)
     await expect(party.locator('.vault-mark.is-rival')).toHaveCount(0)
-    await expect(party.locator('.vault-mark.is-weak')).toHaveCount(1)
-    await expect(party.locator('.vault-mark.is-resist')).toHaveCount(1)
+    await expect(party.locator('.vault-mark.is-weak')).toHaveCount(0)
+    await expect(party.locator('.vault-mark.is-resist')).toHaveCount(0)
     await expect(page.getByTestId('vault-party-estimate')).toContainText('예상 피해량')
     // 보스전에는 추천 편성 단추가 없다 (694번).
     await expect(party.getByTestId('vault-party-recommend')).toHaveCount(0)
@@ -331,9 +322,6 @@ try {
     await page.getByTestId('vault-party-pick').locator('[data-code="night"]').click()
     await expect(reserve).toBeEnabled()
     await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(1)
-    // 약점·내성 칸의 "출전 중"은 보스전 파티를 따른다 (655번): 파티에서 뺀 밤냥은 대기다.
-    await expect(traits.locator('[data-state="출전 중"]')).toHaveCount(1)
-    await expect(traits).toContainText('밤냥 · 대기')
     await page.reload()
     await expect(page.getByTestId('idle-canvas-loading')).toHaveCount(0, { timeout: 30000 })
     await page.getByTestId('vault-entry').click()

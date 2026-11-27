@@ -34,9 +34,18 @@ export function stageOrder(team: readonly string[], rand: () => number = Math.ra
  */
 export function stageLoadout(company: Company, team: readonly string[]): Loadout {
   const hero = heroOf(company)
-  const base = loadoutOf(hero.weapon, hero.upgrades)
+  // 스테이지 공격력에는 성장 탭의 영구 강화만 적용한다. 일반 강화는 방치 전투에만 남긴다.
+  const upgrades = [
+    ...hero.upgrades.filter((upgrade) => upgrade.kind !== 'damage'),
+    {
+      kind: 'damage' as const,
+      bonusPercent:
+        company.idle?.rebirth?.upgrades.find((upgrade) => upgrade.kind === 'damage')?.bonus ?? 0,
+    },
+  ]
+  const base = loadoutOf(hero.weapon, upgrades)
   if (team.length === 0) return base
-  const full = idleLoadout(company, team)
+  const full = idleLoadout(company, team, upgrades)
   const cats = team.flatMap((code) => (company.idle?.cats ?? []).filter((c) => c.code === code))
   return {
     ...base,
