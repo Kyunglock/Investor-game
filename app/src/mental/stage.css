@@ -807,7 +807,7 @@
   background: #49b9b0;
   transition: height 0.15s;
 }
-/* 멘탈은 하단에 고정하고 보유 카드는 그 위에 놓는다. */
+/* 멘탈벽이 없는 전장의 하단 상태 표시. */
 .battle-wall {
   width: 100%;
   max-width: 420px;
@@ -896,6 +896,35 @@
   border-radius: 9px;
   padding: 0 4px;
   font-size: 9px;
+}
+.battle-footer.battle-wall-overlay {
+  bottom: auto;
+  flex-direction: column;
+  gap: 1px;
+}
+.battle-wall-value {
+  border-radius: 8px;
+  padding: 0 7px;
+  background: #153f49df;
+  color: #fff;
+  font-size: 12px;
+  line-height: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.battle-wall-overlay .battle-cards {
+  max-width: 100%;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  padding: 1px 3px 4px;
+  scrollbar-width: none;
+  pointer-events: auto;
+}
+.battle-wall-overlay .battle-cards > span {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
 }
 .stage-banner {
   pointer-events: none;

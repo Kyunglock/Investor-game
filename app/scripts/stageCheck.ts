@@ -532,7 +532,14 @@ try {
     assert(timer.x > width / 2 && pause.x + pause.width <= width, 'timer and pause at top right')
     assert(timer.y + timer.height < 70 && pause.y + pause.height < 70, 'corner stays small')
     const wall = await box('battle-wall')
-    assert(wall.y > height - 100 && wall.y + wall.height <= height - 10, 'mental gauge at bottom')
+    if (await page.locator('.battle-wall-overlay').count()) {
+      assert(
+        Math.abs(wall.y - (height - Math.max(150, Math.min(230, height * 0.26)) - 18)) < 2,
+        'health on mental wall',
+      )
+    } else {
+      assert(wall.y > height - 100 && wall.y + wall.height <= height - 10, 'mental gauge at bottom')
+    }
     assert(wall.x >= 0 && wall.x + wall.width <= width, 'mental gauge fits screen')
     await expect(page.locator('.battle-footer')).not.toContainText('누른 방향으로 발사')
   }
@@ -779,10 +786,7 @@ try {
   await expect(page.getByTestId('mental-quit-ask')).toHaveCount(0)
   // 아래로 쏘아 멘탈벽의 피격·균열·패배 및 저장 재시도를 실제 전투로 확인한다. 깎이는 것은 벽 위의 게이지에서 보인다.
   const mentalNow = () =>
-    page
-      .getByRole('progressbar', { name: '멘탈벽 내구도' })
-      .getAttribute('aria-valuenow')
-      .then(Number)
+    page.getByRole('meter', { name: '멘탈벽 내구도' }).getAttribute('value').then(Number)
   const fullMental = await mentalNow()
   await page.mouse.move(195, 800)
   await page.mouse.down()

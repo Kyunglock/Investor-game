@@ -1356,32 +1356,48 @@ function Battle({
             />
           )}
           <div
-            className={`battle-footer${hud.assault ? ' battle-footer-assault' : ''}`}
+            className={`battle-footer${hud.wallTop !== undefined ? ' battle-wall-overlay' : hud.assault ? ' battle-footer-assault' : ''}`}
+            style={hud.wallTop !== undefined ? { top: hud.wallTop + 6 } : undefined}
             data-testid="battle-footer"
           >
-            <div className="battle-wall" data-testid="battle-wall">
-              {hud.assault && (
-                <span className="battle-level-inline" title={`레벨 ${hud.level}`}>
-                  Lv.{hud.level}
-                </span>
-              )}
-              <span className="battle-wall-label">
-                <span aria-hidden="true">♥</span> {hud.assault ? '멘탈' : '멘탈벽'}
-              </span>
-              <div
-                className="battle-health"
-                role="progressbar"
-                aria-label={hud.assault ? '멘탈' : '멘탈벽 내구도'}
-                aria-valuenow={hud.mental}
-                aria-valuemin={0}
-                aria-valuemax={hud.maxMental}
-              >
-                <i style={{ width: `${(hud.mental / hud.maxMental) * 100}%` }} />
-                <strong>
+            {hud.wallTop !== undefined ? (
+              <div className="battle-wall-value" data-testid="battle-wall">
+                <meter
+                  className="sr-only"
+                  aria-label="멘탈벽 내구도"
+                  min={0}
+                  max={hud.maxMental}
+                  value={hud.mental}
+                />
+                <strong aria-hidden="true">
                   {hud.mental} / {hud.maxMental}
                 </strong>
               </div>
-            </div>
+            ) : (
+              <div className="battle-wall" data-testid="battle-wall">
+                {hud.assault && (
+                  <span className="battle-level-inline" title={`레벨 ${hud.level}`}>
+                    Lv.{hud.level}
+                  </span>
+                )}
+                <span className="battle-wall-label">
+                  <span aria-hidden="true">♥</span> {hud.assault ? '멘탈' : '멘탈벽'}
+                </span>
+                <div
+                  className="battle-health"
+                  role="progressbar"
+                  aria-label={hud.assault ? '멘탈' : '멘탈벽 내구도'}
+                  aria-valuenow={hud.mental}
+                  aria-valuemin={0}
+                  aria-valuemax={hud.maxMental}
+                >
+                  <i style={{ width: `${(hud.mental / hud.maxMental) * 100}%` }} />
+                  <strong>
+                    {hud.mental} / {hud.maxMental}
+                  </strong>
+                </div>
+              </div>
+            )}
             {!hud.assault && (
               <div className="battle-cards">
                 {deployedCats.map((cat) => (

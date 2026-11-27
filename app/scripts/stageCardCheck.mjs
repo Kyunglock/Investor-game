@@ -226,6 +226,14 @@ try {
       portrait,
     )
     await page.waitForTimeout(800)
+    const health = page.getByTestId('battle-wall')
+    await expect(health).toHaveText(/\d+ \/ \d+/)
+    await expect(page.locator('.battle-footer .battle-health')).toHaveCount(0)
+    const wallText = await health.boundingBox()
+    const icons = await page.locator('.battle-cards').boundingBox()
+    const catY = await page.evaluate(() => window.__mentalMarket().stand.y)
+    assert.ok(wallText && icons && icons.y >= wallText.y + wallText.height)
+    assert.ok(icons.y + icons.height < catY - 40, 'icons clear the cats')
     await page.screenshot({ path: `/tmp/stage-four-${width}.png` })
     // 고른 불장이 1분 동안 켜진다(전투 초).
     await expect
