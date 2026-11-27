@@ -45,12 +45,13 @@ export function App() {
   const [minElapsed, setMinElapsed] = useState(false)
   const [boot, setBoot] = useState<'loading' | 'leaving' | 'entered'>('loading')
   useEffect(() => {
-    armAudio()
+    const stopAudio = armAudio()
     void load()
     const stop = preloadImages(BOOT_IMAGES, () => setLoadedImages((n) => n + 1))
     const min = setTimeout(() => setMinElapsed(true), BOOT_MIN_MS)
     const max = setTimeout(() => setAssetsGaveUp(true), BOOT_MAX_ASSET_MS)
     return () => {
+      stopAudio()
       stop()
       clearTimeout(min)
       clearTimeout(max)
