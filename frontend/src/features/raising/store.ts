@@ -118,7 +118,13 @@ interface RaisingState {
   skipSandboxSeason: () => Promise<void>
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   /** slot: 세울 출전 칸의 번호(0부터, 599번). */
-  fieldCat: (code: CatCode, fielded: boolean, replaceCode?: CatCode, slot?: number) => Promise<void>
+  /** code·replaceCode가 'boss'면 사장냥이다 (704번): 사장냥도 출전 칸 하나를 차지한다. */
+  fieldCat: (
+    code: CatCode | 'boss',
+    fielded: boolean,
+    replaceCode?: CatCode | 'boss',
+    slot?: number,
+  ) => Promise<void>
   /** 사장냥을 쉬게 하거나 다시 내보낸다 (672번). 출전한 고양이가 있을 때만 쉴 수 있다. */
   fieldBoss: (fielded: boolean) => Promise<void>
   /** 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 571번). */

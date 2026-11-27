@@ -1734,15 +1734,12 @@
   box-shadow: 0 2px 0 #9dbb78;
   color: #4b6a2f;
 }
-/* 사장냥 칸 (530번): 늘 출전해 있고, 누르면 사장냥의 장비를 고른다. */
-.idle-cat-boss {
-  border-color: #d9a85a;
-  background: #fff3c9;
-}
-/* 사장냥이 쉰다 (672번): 칸은 남고 흐려진다. */
-.idle-cat-boss.is-resting > * {
-  opacity: 0.4;
-  filter: grayscale(0.7);
+/* 사장냥 칸 (704번): 다른 출전 칸과 같은 모양이다. 쉬는 사장냥은 목록 맨 앞 칸에 서고, 고양이 칸처럼 끌어 출전 칸에 놓는다. */
+.idle-cat-cell.idle-cat-boss {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 /* 스킬 설명 (530번): 고양이를 누르면 그 고양이의 고유 스킬이 하는 일과 다음 레벨이 나온다. */
 .idle-cat-skill {

@@ -439,6 +439,9 @@ class IdleEngine {
   // Cats used to join at these walls. Saves from then keep them.
   private static final long[] CAT_LEGACY_WALLS = {15, 50};
   private static final int FIELD_SLOTS = 4;
+  // 출전 칸 (704번): 사장냥도 고양이와 같은 칸 하나를 차지한다. 사장냥이 쉬면 그 칸에 고양이가 하나 더 선다.
+  private static final int SEATS = FIELD_SLOTS + 1;
+  static final String BOSS = "boss";
   // A cat's gun hits for this share of the weapon's damage times its level to CAT_LEVEL_EXPONENT
   // (646): level 10 is 1.26 times level 1, level 100 1.58 times, level 1000 twice. It was the
   // level to the 0.3 (644), half the weapon times the square root (636, level 1000 about 32 times)
@@ -503,6 +506,11 @@ class IdleEngine {
       c.idle.damage = Math.min(c.idle.damage, maxHp(c.idle.wall) - 1);
       c.idle.hitVersion = 2;
     }
+    if (c.idle.bossSeat == null) {
+      // 사장냥 칸이 따로 있던 저장 (704번): 사장냥은 맨 앞 칸에 서고 고양이들은 한 칸씩 뒤로 간다.
+      if (c.idle.seats != null) c.idle.seats.replaceAll((code, at) -> at == null ? null : at + 1);
+      c.idle.bossSeat = 0;
+    }
     // Saves from before 520 could hold a queued wall already at zero health.
     c.idle.nextDamage = Math.min(c.idle.nextDamage, maxHp(c.idle.wall + 1) - 1);
     c.idle.afterNextDamage = Math.min(c.idle.afterNextDamage, maxHp(c.idle.wall + 2) - 1);
@@ -523,7 +531,7 @@ class IdleEngine {
         boolean has = c.idle.cats.containsKey(OLD_SKILL_CATS[i]);
         if (c.idle.wall > OLD_UNLOCKS[i] && !has) {
           c.idle.cats.put(OLD_SKILL_CATS[i], 1);
-          if (c.idle.fielded.size() < FIELD_SLOTS) c.idle.fielded.add(OLD_SKILL_CATS[i]);
+          if (hasRoom(c.idle)) c.idle.fielded.add(OLD_SKILL_CATS[i]);
         }
       }
       c.idle.catSkills = true;
@@ -1352,8 +1360,9 @@ class IdleEngine {
     // 같은 등급은 뽑힌 차례를 지킨다. 이미 출전해 있던 고양이는 밀어내지 않는다.
     fresh.sort(java.util.Comparator.comparing(IdleEngine::gradeIndex).reversed());
     for (String code : fresh) {
-      if (s.fielded.size() < FIELD_SLOTS) s.fielded.add(code);
+      if (hasRoom(s)) s.fielded.add(code);
     }
+    seat(s);
     s.lastDraws = drawn;
   }
 
@@ -1364,8 +1373,9 @@ class IdleEngine {
   CompanyState.Pulled grantCat(CompanyState c, SeededRandom random) {
     CompanyState.Idle s = state(c);
     CompanyState.Pulled pulled = pull(c, random);
-    if (pulled.isNew && s.fielded.size() < FIELD_SLOTS) {
+    if (pulled.isNew && hasRoom(s)) {
       s.fielded.add(pulled.kind);
+      seat(s);
     }
     return pulled;
   }
@@ -1412,8 +1422,9 @@ class IdleEngine {
     CompanyState.Idle s = state(c);
     for (String code : CATS) {
       s.cats.put(code, Math.max(1, Math.min(MAX_CAT_LEVEL, level)));
-      if (s.fielded.size() < FIELD_SLOTS && !s.fielded.contains(code)) s.fielded.add(code);
+      if (hasRoom(s) && !s.fielded.contains(code)) s.fielded.add(code);
     }
+    seat(s);
     s.hitCredits = new double[KINDS];
   }
 
@@ -1527,11 +1538,14 @@ class IdleEngine {
    */
   private static void seat(CompanyState.Idle s) {
     if (s.seats == null) s.seats = new LinkedHashMap<>();
+    if (s.bossSeat == null || s.bossSeat < 0 || s.bossSeat >= SEATS) s.bossSeat = 0;
     s.seats.keySet().retainAll(s.fielded);
     java.util.Set<Integer> taken = new java.util.HashSet<>();
+    // 사장냥이 선 칸 (704번)은 고양이가 차지하지 못한다.
+    if (!s.bossBenched) taken.add(s.bossSeat);
     for (String code : s.fielded) {
       Integer at = s.seats.get(code);
-      if (at == null || at < 0 || at >= FIELD_SLOTS || !taken.add(at)) s.seats.remove(code);
+      if (at == null || at < 0 || at >= SEATS || !taken.add(at)) s.seats.remove(code);
     }
     for (String code : s.fielded) {
       if (s.seats.containsKey(code)) continue;
@@ -1543,6 +1557,66 @@ class IdleEngine {
     s.fielded.sort(java.util.Comparator.comparing(s.seats::get));
   }
 
+  /** 빈 출전 칸이 있다 (704번): 사장냥이 서 있으면 칸 하나를 차지한다. */
+  private static boolean hasRoom(CompanyState.Idle s) {
+    return s.fielded.size() + (s.bossBenched ? 0 : 1) < SEATS;
+  }
+
+  /** 그 칸에 선 고양이, 사장냥이면 BOSS, 비었으면 null (704번). */
+  private static String seatedAt(CompanyState.Idle s, int slot) {
+    if (!s.bossBenched && s.bossSeat != null && s.bossSeat == slot) return BOSS;
+    return s.fielded.stream()
+        .filter(k -> Integer.valueOf(slot).equals(s.seats.get(k)))
+        .findFirst()
+        .orElse(null);
+  }
+
+  /** 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번). */
+  private static void bench(CompanyState.Idle s, String code) {
+    s.fielded.remove(code);
+    s.seats.remove(code);
+    s.catWeapons.remove(code);
+  }
+
+  /**
+   * 사장냥을 칸에 세운다 (704번): 고양이와 같다. slot을 주면 그 칸에(고양이가 있으면 쉬던 사장냥은 그 고양이와 교체하고, 서 있던 사장냥은 자리를 맞바꾼다),
+   * replaceCode를 주면 그 고양이와 교체하고, 둘 다 없으면 전에 서던 칸(차 있으면 빈 칸 가운데 가장 앞)에 선다.
+   */
+  private void placeBoss(CompanyState.Idle s, String replaceCode, Integer slot) {
+    seat(s);
+    if (slot != null) {
+      if (slot < 0 || slot >= SEATS) throw new InvalidRequestException("없는 출전 칸이다: " + slot);
+      String there = seatedAt(s, slot);
+      if (BOSS.equals(there)) return;
+      if (there != null) {
+        if (s.bossBenched) bench(s, there);
+        else s.seats.put(there, s.bossSeat);
+      }
+      s.bossSeat = slot;
+      s.bossBenched = false;
+    } else if (replaceCode != null) {
+      if (!s.bossBenched || !s.fielded.contains(replaceCode)) {
+        throw new InvalidRequestException("출전 구성이 바뀌었어요. 다시 골라 주세요");
+      }
+      s.bossSeat = s.seats.get(replaceCode);
+      bench(s, replaceCode);
+      s.bossBenched = false;
+    } else {
+      if (!s.bossBenched) return;
+      if (s.fielded.size() >= SEATS) {
+        throw new InvalidRequestException("출전 칸이 꽉 찼어요. 뺄 고양이를 골라 주세요");
+      }
+      if (seatedAt(s, s.bossSeat) != null) {
+        int free = 0;
+        while (seatedAt(s, free) != null) free++;
+        s.bossSeat = free;
+      }
+      s.bossBenched = false;
+    }
+    seat(s);
+    s.hitCredits = new double[KINDS];
+  }
+
   /**
    * 사장냥을 쉬게 하거나 다시 내보낸다 (672번). 출전한 고양이가 한 마리도 없으면 쉴 수 없다: 누군가는 싸워야 한다. 쉬는 동안 사장냥의 총은 쏘지 않고, 고양이의
    * 스킬은 전처럼 사장냥의 무기를 바탕으로 한다.
@@ -1552,8 +1626,13 @@ class IdleEngine {
     if (!fielded && s.fielded.isEmpty()) {
       throw new InvalidRequestException("출전한 고양이가 있어야 사장냥이 쉴 수 있어요");
     }
-    if (s.bossBenched == !fielded) return;
-    s.bossBenched = !fielded;
+    if (fielded) {
+      placeBoss(s, null, null);
+      return;
+    }
+    if (s.bossBenched) return;
+    s.bossBenched = true;
+    seat(s);
     s.hitCredits = new double[KINDS];
   }
 
@@ -1564,23 +1643,27 @@ class IdleEngine {
    */
   void fieldCat(CompanyState c, String code, boolean fielded, String replaceCode, Integer slot) {
     CompanyState.Idle s = state(c);
+    // 사장냥도 출전 칸 하나를 차지한다 (704번): 고양이와 같은 요청으로 세우고 옮기고 교체한다.
+    if (BOSS.equals(code)) {
+      if (fielded) placeBoss(s, replaceCode, slot);
+      else fieldBoss(c, false);
+      return;
+    }
     if (!s.cats.containsKey(code)) throw new InvalidRequestException("가지지 않은 고양이다: " + code);
+    seat(s);
     if (slot != null && replaceCode == null && fielded) {
-      if (slot < 0 || slot >= FIELD_SLOTS) throw new InvalidRequestException("없는 출전 칸이다: " + slot);
-      String there =
-          s.fielded.stream().filter(k -> s.seats.get(k).equals(slot)).findFirst().orElse(null);
+      if (slot < 0 || slot >= SEATS) throw new InvalidRequestException("없는 출전 칸이다: " + slot);
+      String there = seatedAt(s, slot);
       if (code.equals(there)) return;
       if (s.fielded.contains(code)) {
-        // 출전 중인 고양이를 옮긴다: 그 칸에 있던 고양이는 비운 자리로 간다.
-        if (there != null) s.seats.put(there, s.seats.get(code));
+        // 출전 중인 고양이를 옮긴다: 그 칸에 있던 고양이(사장냥 포함)는 비운 자리로 간다.
+        if (BOSS.equals(there)) s.bossSeat = s.seats.get(code);
+        else if (there != null) s.seats.put(there, s.seats.get(code));
         s.seats.put(code, slot);
       } else {
-        if (there != null) {
-          s.fielded.remove(there);
-          s.seats.remove(there);
-          // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번).
-          s.catWeapons.remove(there);
-        }
+        // 쉬던 고양이를 찬 칸에 놓으면 그 칸의 고양이(사장냥 포함, 704번)와 교체한다.
+        if (BOSS.equals(there)) s.bossBenched = true;
+        else if (there != null) bench(s, there);
         s.fielded.add(code);
         s.seats.put(code, slot);
       }
@@ -1588,22 +1671,30 @@ class IdleEngine {
       s.hitCredits = new double[KINDS];
       return;
     }
-    if (replaceCode != null) {
+    if (BOSS.equals(replaceCode)) {
+      // 사장냥과 교체한다 (704번): 고양이가 사장냥의 칸을 물려받고 사장냥은 쉰다.
+      if (!fielded || s.fielded.contains(code) || s.bossBenched) {
+        throw new InvalidRequestException("출전 구성이 바뀌었어요. 다시 골라 주세요");
+      }
+      s.bossBenched = true;
+      s.fielded.add(code);
+      s.seats.put(code, s.bossSeat);
+    } else if (replaceCode != null) {
       if (!fielded
           || code.equals(replaceCode)
           || s.fielded.contains(code)
           || !s.fielded.contains(replaceCode)) {
         throw new InvalidRequestException("출전 구성이 바뀌었어요. 다시 골라 주세요");
       }
-      s.fielded.set(s.fielded.indexOf(replaceCode), code);
+      Integer at = s.seats.get(replaceCode);
+      bench(s, replaceCode);
       // 교체한 고양이는 그 칸을 물려받는다 (599번).
-      s.seats.put(code, s.seats.remove(replaceCode));
-      // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번).
-      s.catWeapons.remove(replaceCode);
+      s.fielded.add(code);
+      s.seats.put(code, at);
     } else if (fielded) {
       if (s.fielded.contains(code)) return;
-      if (s.fielded.size() >= FIELD_SLOTS) {
-        throw new InvalidRequestException("출전 칸이 꽉 찼다: " + FIELD_SLOTS + "마리까지 출전한다");
+      if (!hasRoom(s)) {
+        throw new InvalidRequestException("출전 칸이 꽉 찼어요. 뺄 고양이를 골라 주세요");
       }
       s.fielded.add(code);
     } else if (s.fielded.contains(code)) {
@@ -1611,9 +1702,8 @@ class IdleEngine {
       if (s.bossBenched && s.fielded.size() == 1) {
         throw new InvalidRequestException("사장냥이 쉬는 동안 마지막 고양이는 뺄 수 없어요");
       }
-      s.fielded.remove(code);
       // 출전에서 빠진 고양이는 들던 무기를 내려놓는다 (598번): 그 무기는 다른 고양이가 바로 들 수 있다.
-      s.catWeapons.remove(code);
+      bench(s, code);
     }
     seat(s);
     s.hitCredits = new double[KINDS];
@@ -1833,6 +1923,7 @@ class IdleEngine {
             c.skillGuideSeen),
         // 최고 기록 (654번): 통과한 가장 높은 벽. 환생해도 남는다(best와 같은 셈).
         Math.max(s.best, Math.max(s.wall - 1, s.bossCleared)),
-        !bossOut(s));
+        !bossOut(s),
+        bossOut(s) ? null : s.bossSeat);
   }
 }

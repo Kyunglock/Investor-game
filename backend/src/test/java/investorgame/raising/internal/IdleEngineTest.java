@@ -872,8 +872,9 @@ class IdleEngineTest {
     assertThat(bare).isLessThan(armed);
     company.mental.equip(state, "pistol", "F");
     assertThat(engine.view(state).dps()).isEqualTo(bare);
-    // Its field slot is not a slot: nothing can take the boss cat off the field.
+    // 사장냥도 출전 칸 하나를 차지한다 (704번): 고양이 넷과 사장냥, 다섯 칸이다.
     assertThat(engine.view(state).fieldSlots()).isEqualTo(4);
+    assertThat(engine.view(state).bossSlot()).isZero();
   }
 
   @Test
@@ -1572,40 +1573,94 @@ class IdleEngineTest {
     for (String code : List.of("sky", "mint", "lilac", "night")) state.idle.cats.put(code, 1);
     state.idle.fielded = new java.util.ArrayList<>();
     state.idle.seats.clear();
-    // 빈 칸 어디에든 놓은 자리에 선다 (599번): 사이에 빈 칸이 남아도 된다.
-    engine.fieldCat(state, "night", true, null, 3);
-    engine.fieldCat(state, "sky", true, null, 1);
+    // 빈 칸 어디에든 놓은 자리에 선다 (599번): 사이에 빈 칸이 남아도 된다. 0번 칸에는 사장냥이 서 있다 (704번).
+    assertThat(engine.view(state).bossSlot()).isZero();
+    engine.fieldCat(state, "night", true, null, 4);
+    engine.fieldCat(state, "sky", true, null, 2);
     assertThat(state.idle.fielded).as("칸 번호순으로 줄을 선다").containsExactly("sky", "night");
-    assertThat(slot("night")).isEqualTo(3);
-    assertThat(slot("sky")).isEqualTo(1);
+    assertThat(slot("night")).isEqualTo(4);
+    assertThat(slot("sky")).isEqualTo(2);
     assertThat(slot("mint")).as("쉬는 고양이는 칸이 없다").isNull();
     // 칸을 정하지 않으면 빈 칸 가운데 가장 앞에 선다.
     engine.fieldCat(state, "mint", true);
-    assertThat(slot("mint")).isZero();
+    assertThat(slot("mint")).isEqualTo(1);
     assertThat(state.idle.fielded).containsExactly("mint", "sky", "night");
     // 출전 중인 고양이를 다른 고양이의 칸에 놓으면 자리를 맞바꾼다. 무기는 그대로 든다.
     state.idle.catWeapons.put("mint", new CompanyState.Weapon("rifle", "S"));
-    engine.fieldCat(state, "mint", true, null, 3);
-    assertThat(slot("mint")).isEqualTo(3);
-    assertThat(slot("night")).isZero();
+    engine.fieldCat(state, "mint", true, null, 4);
+    assertThat(slot("mint")).isEqualTo(4);
+    assertThat(slot("night")).isEqualTo(1);
     assertThat(state.idle.catWeapons).containsKey("mint");
     // 빈 칸으로 옮긴다.
-    engine.fieldCat(state, "night", true, null, 2);
+    engine.fieldCat(state, "night", true, null, 3);
     assertThat(state.idle.fielded).containsExactly("sky", "night", "mint");
     // 쉬던 고양이를 찬 칸에 놓으면 그 고양이와 교체한다: 빠진 고양이는 무기를 내려놓는다.
-    engine.fieldCat(state, "lilac", true, null, 3);
-    assertThat(slot("lilac")).isEqualTo(3);
+    engine.fieldCat(state, "lilac", true, null, 4);
+    assertThat(slot("lilac")).isEqualTo(4);
     assertThat(slot("mint")).isNull();
     assertThat(state.idle.catWeapons).doesNotContainKey("mint");
     // 교체(replaceCode)는 그 칸을 물려받는다.
     engine.fieldCat(state, "mint", true, "sky");
-    assertThat(slot("mint")).isEqualTo(1);
+    assertThat(slot("mint")).isEqualTo(2);
     // 빼면 그 칸만 비고 나머지는 제자리다.
     engine.fieldCat(state, "night", false);
-    assertThat(slot("lilac")).isEqualTo(3);
-    assertThat(slot("mint")).isEqualTo(1);
-    assertThatThrownBy(() -> engine.fieldCat(state, "sky", true, null, 4))
+    assertThat(slot("lilac")).isEqualTo(4);
+    assertThat(slot("mint")).isEqualTo(2);
+    assertThatThrownBy(() -> engine.fieldCat(state, "sky", true, null, 5))
         .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
+  void 사장냥의_칸도_다른_출전_칸과_같다() {
+    // 704번: 사장냥도 칸 하나를 차지하고, 고양이와 교체하고 자리를 옮긴다.
+    start(16);
+    for (String code : List.of("sky", "mint", "lilac", "night", "sunset")) {
+      state.idle.cats.put(code, 1);
+    }
+    state.idle.fielded = new java.util.ArrayList<>();
+    state.idle.seats.clear();
+    for (String code : List.of("sky", "mint", "lilac", "night")) engine.fieldCat(state, code, true);
+    assertThat(List.of(slot("sky"), slot("mint"), slot("lilac"), slot("night")))
+        .containsExactly(1, 2, 3, 4);
+    // 다섯 칸이 다 찼다: 사장냥이 서 있으면 고양이는 넷까지다.
+    assertThatThrownBy(() -> engine.fieldCat(state, "sunset", true))
+        .isInstanceOf(InvalidRequestException.class);
+    // 쉬던 고양이를 사장냥 칸에 놓으면 사장냥과 교체한다: 사장냥은 쉬고 고양이가 다섯이 된다.
+    engine.fieldCat(state, "sunset", true, null, 0);
+    assertThat(slot("sunset")).isZero();
+    assertThat(engine.view(state).bossFielded()).isFalse();
+    assertThat(engine.view(state).bossSlot()).isNull();
+    assertThat(state.idle.fielded).hasSize(5);
+    // 칸이 다 찼으면 사장냥은 뺄 고양이를 골라야 선다.
+    assertThatThrownBy(() -> engine.fieldBoss(state, true))
+        .isInstanceOf(InvalidRequestException.class);
+    engine.fieldCat(state, IdleEngine.BOSS, true, "lilac", null);
+    assertThat(engine.view(state).bossSlot()).isEqualTo(3);
+    assertThat(slot("lilac")).isNull();
+    // 서 있는 사장냥은 다른 칸으로 옮기면 그 칸의 고양이와 자리를 맞바꾼다.
+    engine.fieldCat(state, IdleEngine.BOSS, true, null, 0);
+    assertThat(engine.view(state).bossSlot()).isZero();
+    assertThat(slot("sunset")).isEqualTo(3);
+    // 고양이를 사장냥 칸으로 옮겨도 맞바꾼다.
+    engine.fieldCat(state, "sky", true, null, 0);
+    assertThat(slot("sky")).isZero();
+    assertThat(engine.view(state).bossSlot()).isEqualTo(1);
+    // 쉬던 고양이가 사장냥과 교체(replaceCode)하면 사장냥의 칸을 물려받는다.
+    engine.fieldCat(state, "lilac", true, IdleEngine.BOSS, null);
+    assertThat(slot("lilac")).isEqualTo(1);
+    assertThat(engine.view(state).bossFielded()).isFalse();
+  }
+
+  @Test
+  void 사장냥_칸이_따로_있던_저장은_사장냥이_맨_앞에_서고_고양이가_한_칸씩_뒤로_간다() {
+    start(16);
+    for (String code : List.of("sky", "mint")) state.idle.cats.put(code, 1);
+    state.idle.fielded = new java.util.ArrayList<>(List.of("sky", "mint"));
+    state.idle.seats = new java.util.LinkedHashMap<>(java.util.Map.of("sky", 0, "mint", 3));
+    state.idle.bossSeat = null;
+    assertThat(engine.view(state).bossSlot()).isZero();
+    assertThat(slot("sky")).isEqualTo(1);
+    assertThat(slot("mint")).isEqualTo(4);
   }
 
   private Integer slot(String code) {

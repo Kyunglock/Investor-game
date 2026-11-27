@@ -8,8 +8,8 @@ const browser = await chromium.launch({
   args: ['--no-sandbox'],
 })
 try {
-  // 도감 순서와 다르게 세운다: 3번 칸의 하늘냥이 도감에서는 가장 앞이다.
-  const seats = { sky: 3, mint: 0, lilac: 2, sunset: 1 }
+  // 도감 순서와 다르게 세운다: 4번 칸의 하늘냥이 도감에서는 가장 앞이다. 0번 칸에는 사장냥이 선다 (704번).
+  const seats = { sky: 4, mint: 1, lilac: 3, sunset: 2 }
   const names = ['하늘냥', '민트냥', '라일락냥', '노을냥', '밤냥']
   const codes = ['sky', 'mint', 'lilac', 'sunset', 'night']
   const grades = { sky: 'S', mint: 'A', lilac: 'B' }
@@ -50,6 +50,8 @@ try {
       skills: [],
       cats,
       fieldSlots: 4,
+      bossFielded: true,
+      bossSlot: 0,
       wallDps: 0,
       power: 1,
       income: { perSecond: 0, staffPerSecond: 0, bonusPercent: 0 },
@@ -138,7 +140,10 @@ try {
         .evaluateAll((slots) => slots.map((slot) => slot.dataset.code ?? null)),
     )
     .toEqual(
-      Array.from({ length: 4 }, (_, at) => fielded.find((cat) => cat.slot === at)?.code ?? null),
+      Array.from(
+        { length: 4 },
+        (_, at) => fielded.find((cat) => cat.slot === at + 1)?.code ?? null,
+      ),
     )
   assert.deepEqual(errors, [])
   console.log(`seat order ok: ${expected.join(' ')}`)

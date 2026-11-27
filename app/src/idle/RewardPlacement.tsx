@@ -5,7 +5,7 @@ import { haptic } from '../fx/haptics'
 import { GunSprite } from '../mental/GunSprite'
 import type { Weapon } from '../mental/hero'
 import { CatPortrait } from './CatPortrait'
-import { fieldSeats } from './seats'
+import { bossSeat, fieldSeats, seatCount } from './seats'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
 export type Reward = { cat: CatCode } | { weapon: Pick<Weapon, 'kind' | 'grade'> }
@@ -35,13 +35,15 @@ export function RewardPlacement({
   const targets = [
     ...('weapon' in reward ? [{ id: 'boss', code: null as CatCode | null, name: '사장냥' }] : []),
     // 출전 칸 그대로 (599번): 빈 칸에 놓으면 그 칸에 선다.
-    ...fieldSeats(cats, company.idle?.fieldSlots ?? 0)
+    // 사장냥이 선 칸 (704번)은 고양이 칸이 아니라 빼고 보인다. 칸 번호는 그대로다.
+    ...fieldSeats(cats, seatCount(company.idle), bossSeat(company.idle))
       .map((seat, i) => ({
         id: seat?.code ?? `empty${i}`,
         code: seat?.code ?? null,
         name: seat?.name ?? '빈 칸',
         slot: i,
       }))
+      .filter((t) => t.slot !== bossSeat(company.idle))
       .filter((t) => 'cat' in reward || t.code !== null),
   ]
   const place = async (target: string) => {
