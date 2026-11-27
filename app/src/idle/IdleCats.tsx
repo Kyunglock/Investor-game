@@ -15,7 +15,7 @@ import { CompanionSkills } from './CompanionSkills'
 import { sortCats } from './catGrade'
 import { fieldSteps, recommendParty } from './party'
 import { SkillBadge } from './SkillBadge'
-import { fieldSeats } from './seats'
+import { bossSeat, fieldSeats, seatCount } from './seats'
 import { skillNames } from './skills'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
@@ -55,18 +55,22 @@ export function IdleCats({
   const bossBare = !(company.weapons ?? []).some((w) => w.equipped)
   const same = (w: Weapon, held: Cat['weapon']) => w.kind === held?.kind && w.grade === held.grade
   const fielded = (idle?.cats ?? []).filter((cat) => cat.fielded)
+  // 사장냥이 쉰다 (672번): 고양이들만 싸운다. 그동안 마지막 고양이는 뺄 수 없다.
+  const bossResting = idle?.bossFielded === false
   // 출전 칸 (599번): 고양이는 놓은 칸에 그대로 선다. 사이에 빈 칸이 있을 수 있다.
-  const seats = fieldSeats(idle?.cats ?? [], idle?.fieldSlots ?? 0)
+  // 사장냥도 그 가운데 한 칸을 차지한다 (704번): 전용 칸이 아니라 고양이와 같이 옮기고 교체한다. 쉬면 그 칸에 고양이가 선다.
+  const slots = seatCount(idle)
+  const bossAt = bossSeat(idle)
+  const seats = fieldSeats(idle?.cats ?? [], slots, bossAt)
   // 인벤토리: 가진 고양이를 등급순으로 먼저, 없는 고양이를 등급순으로 뒤에.
   const sorted = sortCats(idle?.cats ?? [])
   const cat = (idle?.cats ?? []).find((c) => c.code === picked && c.level > 0) ?? null
-  const full = fielded.length >= (idle?.fieldSlots ?? 0)
-  // 사장냥이 쉰다 (672번): 고양이들만 싸운다. 그동안 마지막 고양이는 뺄 수 없다.
-  const bossResting = idle?.bossFielded === false
+  const occupied = fielded.length + (bossResting ? 0 : 1)
+  const full = occupied >= slots
   const lastFighter = bossResting && (idle?.cats ?? []).filter((c) => c.fielded).length <= 1
-  // 교체 (#910): 출전 칸이 다 찼을 때 쉬는 고양이를 세우려면 뺄 고양이를 출전 칸에서 고른다. 사장냥은 출전 칸이 아니라 고를 수 없다.
+  // 교체 (#910): 출전 칸이 다 찼을 때 쉬는 고양이를 세우려면 뺄 고양이를 출전 칸에서 고른다. 사장냥 칸도 고를 수 있고, 쉬는 사장냥도 이렇게 세운다 (704번).
   // 누구를 세우려는지 적어 둔다: 밖에서 다른 고양이를 골라 주거나 교체가 끝나 그 고양이가 출전하면 저절로 풀린다.
-  const [swapFor, setSwapFor] = useState<CatCode | null>(null)
+  const [swapFor, setSwapFor] = useState<CatCode | 'boss' | null>(null)
   // 고른 고양이의 설명은 목록을 내려도 출전 칸 바로 아래에 붙는다 (654번): 출전 칸 높이를 재어 그 아래에 세운다.
   // 시트가 고양이 칸을 스크롤해 보일 때 고정된 두 칸 아래로 오도록 스크롤 여백도 그 높이로 맞춘다(끌어 놓기가 설명창에 막히지 않게).
   const team = useRef<HTMLDivElement>(null)
@@ -119,7 +123,10 @@ export function IdleCats({
       setArranging(false)
     }
   }
-  const swapping = cat !== null && !cat.fielded && full && swapFor === cat.code
+  // 고른 쪽: 고양이가 아니면 사장냥이다. 쉬는 중이면 출전 칸에 세울 수 있다.
+  const sel: CatCode | 'boss' = cat?.code ?? 'boss'
+  const selBenched = cat ? !cat.fielded : bossResting
+  const swapping = selBenched && full && swapFor === sel
   const gun = cat
     ? (company.weapons?.find((w) => same(w, cat.weapon)) ?? DEFAULT_WEAPON)
     : hero.weapon
@@ -128,30 +135,39 @@ export function IdleCats({
     setSwapFor(null)
     setPicked(code)
   }
-  const place = async (code: CatCode, target: string) => {
+  const place = async (code: CatCode | 'boss', target: string) => {
     const store = useRaisingStore.getState()
     if (store.busy) return
-    const cats = store.company?.idle?.cats ?? []
+    const now = store.company?.idle
+    const cats = now?.cats ?? []
     const c = cats.find((c) => c.code === code)
-    if (!c || target === `slot:${code}`) return
-    const now = fieldSeats(cats, store.company?.idle?.fieldSlots ?? 0)
-    // 놓은 칸의 번호 (599번): 빈 칸은 이름에 번호가 있고, 찬 칸은 그 고양이가 선 칸이다.
+    if ((code !== 'boss' && !c) || target === `slot:${code}`) return
+    const benched = code === 'boss' ? now?.bossFielded === false : !c?.fielded
+    const boss = bossSeat(now)
+    const seated = fieldSeats(cats, seatCount(now), boss)
+    // 그 칸에 선 쪽: 사장냥이면 'boss' (704번).
+    const occupant = (i: number) => (i === boss ? 'boss' : (seated[i]?.code ?? null))
+    // 놓은 칸의 번호 (599번): 빈 칸은 이름에 번호가 있고, 찬 칸은 그 고양이(또는 사장냥)가 선 칸이다.
     const at = target.startsWith('slot:empty')
       ? Number(target.slice(10))
-      : now.findIndex((seat) => seat?.code === target.slice(5))
+      : target === 'slot:boss'
+        ? (boss ?? -1)
+        : seated.findIndex((seat) => seat?.code === target.slice(5))
     if (at < 0) return
-    // 쉬던 고양이를 찬 칸에 놓으면 그 고양이와 교체하고, 그 밖에는(빈 칸, 출전 중인 고양이 옮기기·맞바꾸기) 칸 번호로 세운다.
-    if (!c.fielded && now[at]) await store.fieldCat(code, true, now[at].code as CatCode)
+    const there = occupant(at)
+    if (there === code) return
+    // 쉬던 쪽을 찬 칸에 놓으면 그 칸의 고양이·사장냥과 교체하고, 그 밖에는(빈 칸, 출전 중인 쪽 옮기기·맞바꾸기) 칸 번호로 세운다.
+    if (benched && there) await store.fieldCat(code, true, there as CatCode | 'boss')
     else await store.fieldCat(code, true, undefined, at)
     if (!useRaisingStore.getState().error) {
-      onPick(code)
+      onPick(code === 'boss' ? null : code)
       haptic.light()
       sfx.tap()
     }
   }
-  const accepts = (code: CatCode, target: string) =>
+  const accepts = (code: CatCode | 'boss', target: string) =>
     !busy && target.startsWith('slot:') && target !== `slot:${code}`
-  const { drag, down, consumeClick } = useLoadoutDrag<CatCode>(accepts, (code, target) => {
+  const { drag, down, consumeClick } = useLoadoutDrag<CatCode | 'boss'>(accepts, (code, target) => {
     void place(code, target)
   })
   /**
@@ -233,12 +249,11 @@ export function IdleCats({
         <p className="idle-subtitle idle-team-line">
           {swapping ? (
             <span className="idle-swap-hint" role="status" data-testid="swap-hint">
-              {cat.name} 대신 뺄 고양이를 누르세요
+              {cat?.name ?? BOSS_NAME} 대신 뺄 고양이를 누르세요
             </span>
           ) : (
             <span>
-              출전 {fielded.length} / {idle?.fieldSlots ?? 0} · 윗줄은 고양이, 아랫줄은 그 고양이의
-              무기
+              출전 {occupied} / {slots} · 윗줄은 고양이, 아랫줄은 그 고양이의 무기
               {recommended.length > 0 && !gearLocked && (idle?.onboarding?.step ?? 8) >= 8 && (
                 <button
                   type="button"
@@ -256,24 +271,31 @@ export function IdleCats({
         </p>
         {/* 출전 칸 (569번): 다섯 칸 두 줄. 윗줄은 고양이 칸, 아랫줄은 바로 위 고양이가 드는 무기 칸이다. 이름은 적지 않는다. */}
         <ul className="idle-cat-field-row" aria-label="출전 칸">
-          <li>
-            <button
-              type="button"
-              className={`idle-cat-boss ${cat ? '' : 'is-picked'} ${bossResting ? 'is-resting' : ''}`}
-              data-testid="cat-boss"
-              data-fielded={!bossResting}
-              aria-label={`${BOSS_NAME} · ${bossResting ? '쉬는 중' : '출전 중'}`}
-              aria-pressed={!cat}
-              onClick={() => pick(null)}
-            >
-              <Portrait />
-            </button>
-            {gunSlot(null, BOSS_NAME, hero.weapon, bossBare)}
-          </li>
           {seats.map((c, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: 출전 칸은 자리 번호가 곧 열쇠다.
             <li key={i}>
-              {c ? (
+              {i === bossAt ? (
+                // 사장냥 칸 (704번): 다른 출전 칸과 같다. 끌어 옮기고, 쉬던 고양이를 놓으면 사장냥과 교체한다.
+                <button
+                  type="button"
+                  className={`idle-cat-slot idle-cat-boss ${cat ? '' : 'is-picked'} ${drag?.item === 'boss' ? 'is-lifted' : ''} ${drag || swapping ? 'is-drop-ready' : ''} ${drag?.over === 'slot:boss' ? 'is-drop-over' : ''}`}
+                  data-testid="cat-boss"
+                  data-fielded
+                  data-loadout-target="slot:boss"
+                  aria-label={`출전 ${i + 1}번 ${BOSS_NAME} · 출전 중 · ${swapping ? '눌러서 교체' : '꾹 눌러 끌어서 자리 옮기기'}`}
+                  aria-pressed={!cat}
+                  onPointerDown={busy ? undefined : down('boss')}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onClick={(event) => {
+                    if (consumeClick(event.detail)) return
+                    if ((swapping || !gearOpen) && cat && !cat.fielded)
+                      void place(cat.code, 'slot:boss')
+                    else pick(null)
+                  }}
+                >
+                  <Portrait />
+                </button>
+              ) : c ? (
                 <button
                   type="button"
                   className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''} ${drag?.item === c.code ? 'is-lifted' : ''} ${drag || swapping ? 'is-drop-ready' : ''} ${drag?.over === `slot:${c.code}` ? 'is-drop-over' : ''}`}
@@ -286,8 +308,8 @@ export function IdleCats({
                   onContextMenu={(e) => e.preventDefault()}
                   onClick={(event) => {
                     if (consumeClick(event.detail)) return
-                    if ((swapping || !gearOpen) && cat && !cat.fielded)
-                      void place(cat.code, `slot:${c.code}`)
+                    if (swapping || (!gearOpen && cat && !cat.fielded))
+                      void place(sel, `slot:${c.code}`)
                     else pick(c.code)
                   }}
                 >
@@ -316,7 +338,9 @@ export function IdleCats({
                   data-loadout-target={`slot:empty${i}`}
                   disabled={busy}
                   onClick={() => {
+                    // 쉬는 사장냥을 고른 채 누르면 사장냥이 선다 (704번). 서 있는 사장냥은 끌어서 옮긴다.
                     if (cat) void place(cat.code, `slot:empty${i}`)
+                    else if (bossResting) void place('boss', `slot:empty${i}`)
                   }}
                   data-testid="cat-slot"
                   aria-label="빈 출전 칸에 선택한 고양이 세우기"
@@ -324,7 +348,9 @@ export function IdleCats({
                   ＋
                 </button>
               )}
-              {c ? (
+              {i === bossAt ? (
+                gunSlot(null, BOSS_NAME, hero.weapon, bossBare)
+              ) : c ? (
                 gunSlot(c.code, c.name, weaponOf(c), !c.weapon)
               ) : (
                 <span className="idle-gun-slot is-empty" aria-hidden="true" />
@@ -367,14 +393,16 @@ export function IdleCats({
                 {cat
                   ? `무기 공격력의 ${cat.damagePercent}%로 쏴요 · ${catTrait(cat)}`
                   : bossResting
-                    ? "쉬는 중이에요 · 고양이들만 싸워요 · '사장냥 출전'을 누르면 다시 싸워요"
+                    ? full
+                      ? "쉬는 중이에요 · 고양이들만 싸워요 · '교체'를 누르고 뺄 고양이를 고르면 다시 싸워요"
+                      : "쉬는 중이에요 · 고양이들만 싸워요 · '사장냥 출전'을 누르면 다시 싸워요"
                     : fielded.length > 0
                       ? "출전 중이에요 · '사장냥 빼기'를 누르면 고양이들만 싸워요 · 무기는 바꾸거나 뺄 수 있어요"
                       : '출전 중이에요 · 고양이를 한 마리라도 출전시키면 사장냥을 뺄 수 있어요'}
               </small>
             )}
           </div>
-          {cat && !cat.fielded && full ? (
+          {selBenched && full ? (
             <button
               type="button"
               className="idle-cat-field"
@@ -382,7 +410,7 @@ export function IdleCats({
               disabled={busy}
               onClick={() => {
                 sfx.tap()
-                setSwapFor(swapping ? null : cat.code)
+                setSwapFor(swapping ? null : sel)
               }}
             >
               {swapping ? '취소' : '교체'}
@@ -481,6 +509,26 @@ export function IdleCats({
                 : '집어서 끌어 출전 칸에 놓기 · 출전 칸의 고양이는 꾹 눌러 끌어 자리 바꾸기'}
             </p>
             <CatRosterGrid
+              lead={
+                // 쉬는 사장냥 (704번): 출전 칸에서 빠져 목록 맨 앞에 선다. 끌어 출전 칸에 놓으면 그 칸에 서거나 그 칸의 고양이와 교체한다.
+                bossResting ? (
+                  <button
+                    type="button"
+                    className={`idle-cat-cell owned idle-cat-boss is-resting ${cat ? '' : 'is-picked'}`}
+                    data-testid="cat-boss"
+                    data-fielded={false}
+                    aria-label={`${BOSS_NAME} · 쉬는 중 · 끌어서 출전 칸에 놓기`}
+                    aria-pressed={!cat}
+                    onPointerDown={busy ? undefined : down('boss')}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onClick={(event) => {
+                      if (!consumeClick(event.detail)) pick(null)
+                    }}
+                  >
+                    <Portrait />
+                  </button>
+                ) : undefined
+              }
               cats={sorted}
               picked={picked}
               onPick={pick}
@@ -509,7 +557,10 @@ export function IdleCats({
             style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}
             aria-hidden="true"
           >
-            <Portrait code={drag.item} grade={sorted.find((c) => c.code === drag.item)?.grade} />
+            <Portrait
+              code={drag.item === 'boss' ? undefined : drag.item}
+              grade={sorted.find((c) => c.code === drag.item)?.grade}
+            />
           </div>,
           document.body,
         )}

@@ -39,6 +39,8 @@ try {
       skills: [],
       fieldSlots: 4,
       bossFielded: true,
+      // 사장냥은 0번 출전 칸에 선다 (704번). 쉬면 칸이 비어 목록 맨 앞으로 간다.
+      bossSlot: 0,
       wallDps: 0,
       power: 1,
       income: { perSecond: 0, staffPerSecond: 0, bonusPercent: 0 },
@@ -60,10 +62,11 @@ try {
       if (path.endsWith('/boss/field')) {
         calls.push(body)
         company.idle.bossFielded = body.fielded
+        company.idle.bossSlot = body.fielded ? 0 : null
       }
       if (path.endsWith('/cat/field')) {
         const me = company.idle.cats.find((c) => c.code === body.code)
-        Object.assign(me, { fielded: body.fielded, slot: body.fielded ? 0 : null })
+        Object.assign(me, { fielded: body.fielded, slot: body.fielded ? 1 : null })
       }
       return route.fulfill({ json: company })
     })

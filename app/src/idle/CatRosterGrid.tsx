@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import type { CatCode } from '@web/features/raising/store'
-import type { PointerEventHandler } from 'react'
+import type { PointerEventHandler, ReactNode } from 'react'
 import { CatPortrait as Portrait } from './CatPortrait'
 import { SkillBadge } from './SkillBadge'
 import { skillNames } from './skills'
@@ -23,7 +23,10 @@ export function CatRosterGrid({
   preview = false,
   readable = false,
   disabledCat,
+  lead,
 }: {
+  /** 목록 맨 앞에 세울 칸: 쉬는 사장냥 (704번). */
+  lead?: ReactNode
   cats: Cat[]
   picked: CatCode | null
   onPick: (code: CatCode) => void
@@ -38,6 +41,7 @@ export function CatRosterGrid({
       className={`idle-cat-grid ${readable ? 'is-readable' : ''}`}
       aria-label={`고양이 인벤토리 · 동료 ${cats.length}종`}
     >
+      {lead && <li key="lead">{lead}</li>}
       {Array.from(
         {
           length: readable ? cats.length : Math.max(18, Math.ceil(cats.length / COLUMNS) * COLUMNS),

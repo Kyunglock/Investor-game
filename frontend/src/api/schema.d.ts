@@ -1796,6 +1796,8 @@ export interface components {
                 fieldSlots: number;
                 /** @description 사장냥이 출전 중인가 (672번). false면 쉬고 있어 고양이들만 싸운다. 출전한 고양이가 없으면 늘 true */
                 bossFielded?: boolean;
+                /** @description 사장냥이 선 출전 칸 (704번). 출전 칸은 idle.fieldSlots + 1칸이고 사장냥도 그 가운데 하나를 차지한다. 쉬면 null */
+                bossSlot?: number | null;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
                 /**
@@ -2905,10 +2907,13 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat" | "ruby" | "abyss" | "dune" | "veil" | "flora" | "aurora";
+                    /**
+                     * @description boss는 사장냥이다 (704번): 사장냥도 출전 칸 하나를 차지해 고양이처럼 세우고 옮기고 교체한다
+                     * @enum {string}
+                     */
+                    code: "boss" | "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat" | "ruby" | "abyss" | "dune" | "veil" | "flora" | "aurora";
                     fielded: boolean;
-                    /** @description 출전 중인 이 고양이를 한 번에 교체. 그 칸을 물려받는다 */
+                    /** @description 출전 중인 이 고양이(boss면 사장냥)를 한 번에 교체. 그 칸을 물려받는다 */
                     replaceCode?: string;
                     /** @description 세울 출전 칸의 번호(0부터 */
                     slot?: number;

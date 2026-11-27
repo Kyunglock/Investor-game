@@ -361,7 +361,9 @@ public record CompanyView(
       Rebirth rebirth,
       Onboarding onboarding,
       long bestWall,
-      boolean bossFielded) {}
+      boolean bossFielded,
+      /** 사장냥이 선 출전 칸 (704번). 쉬면 null이다. */
+      Integer bossSlot) {}
 
   public record Onboarding(
       int step,

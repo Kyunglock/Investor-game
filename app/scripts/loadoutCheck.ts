@@ -61,6 +61,9 @@ try {
         sequence: 0,
         upcoming: [],
         fieldSlots: 4,
+        // 사장냥도 출전 칸 하나를 차지한다 (704번): 0번 칸에 서 있다.
+        bossFielded: true,
+        bossSlot: 0 as number | null,
         wallDps: 0,
         power: 1038,
         offline: null,
@@ -74,8 +77,8 @@ try {
           firePercent: 100,
           criticalPercent: 100,
           fielded: i < 4,
-          // 출전 칸의 번호 (599번).
-          slot: (i < 4 ? i : null) as number | null,
+          // 출전 칸의 번호 (599번). 0번은 사장냥의 칸이다 (704번).
+          slot: (i < 4 ? i + 1 : null) as number | null,
           skills: [{ code: 'meteor', name: '메테오' }],
           skillLevel: 1,
           skillNextLevel: 20,
@@ -101,21 +104,34 @@ try {
         }
       }
       if (path.endsWith('/cat/field')) {
-        // 서버 IdleEngine.fieldCat처럼 칸을 지킨다 (599번).
-        const me = required(company.idle.cats.find((c) => c.code === body.code))
-        if (body.replaceCode) {
-          const out = required(company.idle.cats.find((c) => c.code === body.replaceCode))
-          Object.assign(me, { fielded: true, slot: out.slot })
+        // 서버 IdleEngine.fieldCat처럼 칸을 지킨다 (599번). 사장냥(boss)도 칸 하나를 차지한다 (704번).
+        const idle = company.idle
+        const benchBoss = () => Object.assign(idle, { bossFielded: false, bossSlot: null })
+        if (body.code === 'boss') {
+          const out = required(idle.cats.find((c) => c.code === body.replaceCode))
+          Object.assign(idle, { bossFielded: true, bossSlot: out.slot })
           Object.assign(out, { fielded: false, slot: null })
-        } else if (body.slot != null) {
-          const there = company.idle.cats.find((c) => c.fielded && c.slot === body.slot)
-          if (there && me.fielded) there.slot = me.slot
-          else if (there) Object.assign(there, { fielded: false, slot: null })
-          Object.assign(me, { fielded: true, slot: body.slot })
         } else {
-          const taken = company.idle.cats.filter((c) => c.fielded).map((c) => c.slot)
-          me.fielded = body.fielded
-          me.slot = body.fielded ? ([0, 1, 2, 3].find((at) => !taken.includes(at)) ?? null) : null
+          const me = required(idle.cats.find((c) => c.code === body.code))
+          if (body.replaceCode === 'boss') {
+            Object.assign(me, { fielded: true, slot: idle.bossSlot })
+            benchBoss()
+          } else if (body.replaceCode) {
+            const out = required(idle.cats.find((c) => c.code === body.replaceCode))
+            Object.assign(me, { fielded: true, slot: out.slot })
+            Object.assign(out, { fielded: false, slot: null })
+          } else if (body.slot != null) {
+            const there = idle.cats.find((c) => c.fielded && c.slot === body.slot)
+            if (there && me.fielded) there.slot = me.slot
+            else if (there) Object.assign(there, { fielded: false, slot: null })
+            Object.assign(me, { fielded: true, slot: body.slot })
+          } else {
+            const taken = [...idle.cats.filter((c) => c.fielded).map((c) => c.slot), idle.bossSlot]
+            me.fielded = body.fielded
+            me.slot = body.fielded
+              ? ([0, 1, 2, 3, 4].find((at) => !taken.includes(at)) ?? null)
+              : null
+          }
         }
       }
       if (path.endsWith('/cat/weapon'))
@@ -277,11 +293,11 @@ try {
     assert.deepEqual(await slotOrder(), ['night', 'mint', 'lilac', 'sunset'])
     await drag(target('slot:mint'), target('slot:lilac'))
     await expect.poll(slotOrder).toEqual(['night', 'lilac', 'mint', 'sunset'])
-    assert.deepEqual(mutations[1].body, { code: 'mint', fielded: true, slot: 2 })
+    assert.deepEqual(mutations[1].body, { code: 'mint', fielded: true, slot: 3 })
     // 터치로는 꾹 눌러 집은 뒤 끌어 놓는다 (604번): 누르고만 있어도 집힌다.
     await drag(target('slot:mint'), target('slot:lilac'), true)
     await expect.poll(slotOrder).toEqual(['night', 'mint', 'lilac', 'sunset'])
-    assert.deepEqual(mutations[2].body, { code: 'mint', fielded: true, slot: 1 })
+    assert.deepEqual(mutations[2].body, { code: 'mint', fielded: true, slot: 2 })
     mutations.splice(1)
     // A full team (#910): the benched cat's button is "교체", not a disabled "칸 없음". It asks which
     // fielded cat leaves, and the swap is one request.
@@ -295,13 +311,6 @@ try {
     await expect(swap).toHaveText('취소')
     await swap.click()
     await expect(page.getByTestId('swap-hint')).toHaveCount(0)
-    // The boss cat cannot leave: picking it ends the swap with no request, and it does not resume.
-    await swap.click()
-    await page.getByTestId('cat-boss').click()
-    await expect(page.getByTestId('swap-hint')).toHaveCount(0)
-    await cat('sky').click()
-    await expect(page.getByTestId('swap-hint')).toHaveCount(0)
-    assert.equal(mutations.length, 1)
     await swap.click()
     await target('slot:sunset').click()
     await expect(page.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
@@ -309,6 +318,32 @@ try {
     assert.deepEqual(mutations[1].body, { code: 'sky', fielded: true, replaceCode: 'sunset' })
     assert.equal(mutations.length, 2)
     await expect.poll(slotOrder).toEqual(['night', 'mint', 'lilac', 'sky'])
+    // 사장냥 칸도 다른 출전 칸과 같다 (704번): 교체할 때 사장냥 칸을 고르면 사장냥이 쉬고 그 칸에 고양이가 선다.
+    await cat('sunset').click()
+    await swap.click()
+    await expect(page.locator('[data-testid=cat-boss].is-drop-ready')).toHaveCount(1)
+    await page.getByTestId('cat-boss').click()
+    await expect
+      .poll(() => mutations[2]?.body)
+      .toEqual({
+        code: 'sunset',
+        fielded: true,
+        replaceCode: 'boss',
+      })
+    await expect.poll(slotOrder).toEqual(['sunset', 'night', 'mint', 'lilac', 'sky'])
+    // 쉬는 사장냥은 목록 맨 앞에 서고, 끌어 출전 칸에 놓으면 그 칸의 고양이와 교체한다.
+    await expect(page.getByTestId('cat-boss')).toHaveAttribute('data-fielded', 'false')
+    await drag(page.getByTestId('cat-boss'), target('slot:sunset'), true)
+    await expect
+      .poll(() => mutations[3]?.body)
+      .toEqual({
+        code: 'boss',
+        fielded: true,
+        replaceCode: 'sunset',
+      })
+    await expect.poll(slotOrder).toEqual(['night', 'mint', 'lilac', 'sky'])
+    await expect(page.locator('[data-testid=cat-boss][data-fielded=true]')).toHaveCount(1)
+    mutations.splice(1)
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
       false,

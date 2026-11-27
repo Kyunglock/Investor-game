@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fieldedInOrder, fieldSeats } from './seats'
+import { bossSeat, fieldedInOrder, fieldSeats, seatCount } from './seats'
 
 const cat = (code: string, slot?: number | null, fielded = true) => ({ code, slot, fielded })
 
@@ -20,5 +20,14 @@ describe('출전 칸 (599번)', () => {
       cat('lilac', 2),
     ])
     expect(order.map((c) => c.code)).toEqual(['mint', 'lilac', 'sky'])
+  })
+
+  it('사장냥이 선 칸은 비워 두고, 칸 번호가 없는 고양이는 그 다음 빈 칸에 선다 (704번)', () => {
+    const seats = fieldSeats([cat('sky', 0), cat('mint')], 5, 0)
+    expect(seats.map((c) => c?.code ?? null)).toEqual([null, 'sky', 'mint', null, null])
+    expect(seatCount({ fieldSlots: 4 })).toBe(5)
+    expect(bossSeat({ bossFielded: true, bossSlot: 3 })).toBe(3)
+    expect(bossSeat({ bossFielded: false, bossSlot: null })).toBeNull()
+    expect(bossSeat({ bossFielded: true })).toBe(0)
   })
 })

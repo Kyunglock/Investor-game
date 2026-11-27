@@ -23,6 +23,9 @@ try {
       upcoming: [],
       skills: [],
       fieldSlots: 4,
+      // 사장냥은 0번 출전 칸에 선다 (704번).
+      bossFielded: true,
+      bossSlot: 0,
       wallDps: 0,
       power: 1,
       income: { perSecond: 0, staffPerSecond: 0, bonusPercent: 0 },
@@ -272,12 +275,12 @@ try {
     await expect(guide).toHaveAttribute('data-drop-target', '[data-loadout-target^="slot:empty"]')
     await expect(windows).toHaveCount(2)
     await checkWindow(windows.first(), page.locator('[data-testid=cat][data-code=night]'))
-    await checkWindow(windows.last(), page.locator('[data-loadout-target="slot:empty0"]'))
+    await checkWindow(windows.last(), page.locator('[data-loadout-target="slot:empty1"]'))
     await locked(3)
     await page.screenshot({ path: `/tmp/tutorial-drag-cat-${width}.png` })
     await drag(
       page.locator('[data-testid=cat][data-code=night]'),
-      page.locator('[data-loadout-target="slot:empty0"]'),
+      page.locator('[data-loadout-target="slot:empty1"]'),
     )
     await expect(guide).toHaveAttribute('data-step', '4')
     await nav('shop').click()

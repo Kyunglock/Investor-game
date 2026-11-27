@@ -702,10 +702,10 @@ paths:
               type: object
               required: [code, fielded]
               properties:
-                code: { type: string, enum: [sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat, ruby, abyss, dune, veil, flora, aurora] }
+                code: { type: string, description: "boss는 사장냥이다 (704번): 사장냥도 출전 칸 하나를 차지해 고양이처럼 세우고 옮기고 교체한다", enum: [boss, sky, mint, lilac, sunset, night, snow, caramel, mocha, peach, silver, panda, biscuit, ocean, lemon, cocoa, rose, tiger, cloud, star, siam, tilt, russet, sage, apricot, plum, patch, drowsy, coral, truffle, frost, butter, terra, wisteria, odd, pistachio, sand, blush, petrol, oat, ruby, abyss, dune, veil, flora, aurora] }
                 fielded: { type: boolean }
-                replaceCode: { type: string, description: 출전 중인 이 고양이를 한 번에 교체. 그 칸을 물려받는다 }
-                slot: { type: integer, description: 세울 출전 칸의 번호(0부터, 599번). 빈 칸이면 거기에 서고, 다른 고양이가 있으면 쉬던 고양이는 교체하고 출전 중인 고양이는 자리를 맞바꾼다. 없으면 빈 칸 가운데 가장 앞 }
+                replaceCode: { type: string, description: 출전 중인 이 고양이(boss면 사장냥)를 한 번에 교체. 그 칸을 물려받는다 }
+                slot: { type: integer, description: 세울 출전 칸의 번호(0부터, 599번. 사장냥 칸을 더해 idle.fieldSlots + 1칸, 704번). 빈 칸이면 거기에 서고, 다른 고양이가 있으면 쉬던 고양이는 교체하고 출전 중인 고양이는 자리를 맞바꾼다. 없으면 빈 칸 가운데 가장 앞 }
       responses:
         '200':
           description: 바꾼 뒤의 회사
@@ -1749,6 +1749,7 @@ components:
                   level: { type: integer, description: 출전한 고양이 가운데 이 스킬의 가장 높은 레벨 (515번). 발동 중이 아니면 0 }
             fieldSlots: { type: integer, description: 한 번에 출전하는 고양이 수 (492·493번, 넷) }
             bossFielded: { type: boolean, description: 사장냥이 출전 중인가 (672번). false면 쉬고 있어 고양이들만 싸운다. 출전한 고양이가 없으면 늘 true }
+            bossSlot: { type: [integer, "null"], description: "사장냥이 선 출전 칸 (704번). 출전 칸은 idle.fieldSlots + 1칸이고 사장냥도 그 가운데 하나를 차지한다. 쉬면 null" }
             wallDps: { type: number, description: 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 }
             bestWall: { type: integer, format: int64, minimum: 0, description: 최고 기록 (654번). 통과한 가장 높은 매도벽이고 환생해도 남는다. 지금 선 벽이 이보다 높으면 최고 기록을 갱신하고 있다 }
             rebirth:

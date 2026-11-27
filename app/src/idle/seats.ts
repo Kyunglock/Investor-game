@@ -5,22 +5,34 @@
 export function fieldSeats<T extends { fielded: boolean; slot?: number | null }>(
   cats: readonly T[],
   slots: number,
+  /** 사장냥이 선 칸 (704번): 고양이를 세우지 않고 비워 둔다. */
+  reserved?: number | null,
 ): (T | null)[] {
   const seats: (T | null)[] = Array.from({ length: Math.max(0, slots) }, () => null)
+  const taken = (at: number) => seats[at] !== null || at === reserved
   const loose: T[] = []
   for (const cat of cats) {
     if (!cat.fielded) continue
     const at = cat.slot
-    if (at != null && at >= 0 && at < seats.length && !seats[at]) seats[at] = cat
+    if (at != null && at >= 0 && at < seats.length && !taken(at)) seats[at] = cat
     else loose.push(cat)
   }
   for (const cat of loose) {
-    const free = seats.indexOf(null)
+    const free = seats.findIndex((_, at) => !taken(at))
     if (free < 0) break
     seats[free] = cat
   }
   return seats
 }
+
+/** 출전 칸 수 (704번): 고양이 칸(fieldSlots)에 사장냥 칸 하나를 더한다. 사장냥이 쉬면 그 칸에 고양이가 선다. */
+export const seatCount = (idle: { fieldSlots?: number } | null | undefined) =>
+  (idle?.fieldSlots ?? 0) + 1
+
+/** 사장냥이 선 칸 (704번). 쉬면 null이다. 칸 번호를 주지 않던 서버면 맨 앞이다. */
+export const bossSeat = (
+  idle: { bossFielded?: boolean; bossSlot?: number | null } | null | undefined,
+) => (idle?.bossFielded === false ? null : (idle?.bossSlot ?? 0))
 
 /** 출전한 고양이를 칸 번호순으로: 전투에서 사장냥 옆에 이 차례로 선다. */
 export function fieldedInOrder<T extends { fielded: boolean; slot?: number | null }>(
