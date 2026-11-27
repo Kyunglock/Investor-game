@@ -257,7 +257,53 @@ const browser = await chromium.launch({
   args: ['--no-sandbox'],
 })
 try {
-  if (process.env.VAULT_TUNE) {
+  if (process.env.VAULT_PARTY_ONLY) {
+    for (const width of [320, 390, 768]) {
+      const company = companyOf(TEAMS.team)
+      company.idle.cats.unshift(cat('mint', '민트냥', 'C'))
+      company.vault.dungeon.offers = []
+      const { page, errors } = await openVault(browser, company, [])
+      await page.setViewportSize({ width, height: 844 })
+      for (const mode of ['boss', 'dungeon']) {
+        await page
+          .getByRole('button', { name: mode === 'boss' ? '보스전' : '주간 던전', exact: true })
+          .click()
+        const party = page.getByTestId(`vault-party-${mode}`)
+        await party.getByTestId('vault-party-edit').click()
+        const pick = party.getByTestId('vault-party-pick')
+        await expect(pick.locator('li')).toHaveCount(5)
+        const columns = await pick.evaluate(
+          (el) => getComputedStyle(el).gridTemplateColumns.split(' ').length,
+        )
+        assert(columns >= 3, 'cards use a grid')
+        await party.getByRole('searchbox').fill('민트')
+        await expect(pick.locator('li')).toHaveCount(1)
+        await pick.locator('[data-code="mint"]').click()
+        await expect(party.getByRole('status').last()).toBeVisible()
+        await expect(party.locator('.is-replaceable')).toHaveCount(4)
+        await party.locator('.party-slot').first().click()
+        await expect(party.locator('.party-slot').first()).toContainText('민트냥')
+        await party.getByRole('button', { name: '이전 편성으로 되돌리기' }).click()
+        await expect(party.locator('.party-slot').first()).not.toContainText('민트냥')
+        await party.getByRole('searchbox').fill('찾을수없는이름')
+        await expect(party.locator('.party-empty')).toBeVisible()
+        await party.getByRole('searchbox').fill('')
+        await party.getByRole('combobox').selectOption('level')
+        await party.getByRole('button', { name: '대기', exact: true }).click()
+        await expect(pick.locator('li')).toHaveCount(1)
+        await party.getByRole('button', { name: '전체', exact: true }).click()
+        const overflow = await party.evaluate((el) => el.scrollWidth - el.clientWidth)
+        assert(overflow <= 1, `party overflow ${width}: ${overflow}`)
+        await party.scrollIntoViewIfNeeded()
+        await page.screenshot({ path: `/tmp/party-${mode}-${width}.png` })
+      }
+      assert.deepEqual(errors, [])
+      await page.close()
+    }
+    console.log(
+      'party UX ok: boss/dungeon, grids, search, filters, sort, full-party replacement, undo, 320/390/768px',
+    )
+  } else if (process.env.VAULT_TUNE) {
     // 팀마다: 보스전의 피해량, 카드 없이 층마다 걸린 시간(실제 초, 240초가 끝).
     for (const [name, team] of Object.entries(TEAMS)) {
       const company = companyOf(team)
@@ -313,13 +359,13 @@ try {
     await expect(party.locator('.vault-mark.is-weak')).toHaveCount(0)
     await expect(party.locator('.vault-mark.is-resist')).toHaveCount(0)
     await expect(page.getByTestId('vault-party-estimate')).toContainText('예상 피해량')
-    // 보스전에는 추천 편성 단추가 없다 (694번).
-    await expect(party.getByTestId('vault-party-recommend')).toHaveCount(0)
+    // 보스전도 화력 기준으로 자동 편성한다.
+    await expect(party.getByTestId('vault-party-recommend')).toHaveCount(1)
     // 편성을 펴서 한 마리를 빼면 그 파티가 저장되고, 추천 편성으로 되돌릴 수 있다.
     await page.getByTestId('vault-party-edit').click()
     const reserve = page.getByTestId('vault-party-pick').locator('[data-code="mint"]')
-    await expect(reserve).toBeDisabled()
-    await page.getByTestId('vault-party-pick').locator('[data-code="night"]').click()
+    await expect(reserve).toBeEnabled()
+    await party.getByRole('button', { name: '밤냥 출전 해제', exact: true }).click()
     await expect(reserve).toBeEnabled()
     await expect(party.locator('.vault-party-row li.is-empty')).toHaveCount(1)
     await page.reload()

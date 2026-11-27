@@ -21,6 +21,7 @@ export function CatRosterGrid({
   down,
   consumeClick,
   preview = false,
+  readable = false,
 }: {
   cats: Cat[]
   picked: CatCode | null
@@ -28,11 +29,17 @@ export function CatRosterGrid({
   down?: (code: CatCode) => PointerEventHandler<HTMLButtonElement>
   consumeClick?: (detail: number) => boolean
   preview?: boolean
+  readable?: boolean
 }) {
   return (
-    <ul className="idle-cat-grid" aria-label={`고양이 인벤토리 · 동료 ${cats.length}종`}>
+    <ul
+      className={`idle-cat-grid ${readable ? 'is-readable' : ''}`}
+      aria-label={`고양이 인벤토리 · 동료 ${cats.length}종`}
+    >
       {Array.from(
-        { length: Math.max(18, Math.ceil(cats.length / COLUMNS) * COLUMNS) },
+        {
+          length: readable ? cats.length : Math.max(18, Math.ceil(cats.length / COLUMNS) * COLUMNS),
+        },
         (_, i) => cats[i] ?? null,
       ).map((c, i) =>
         c ? (
@@ -77,6 +84,7 @@ export function CatRosterGrid({
                 {c.grade}
               </em>
               {c.level > 0 && <i>Lv.{c.level}</i>}
+              {readable && <b className="roster-cat-name">{c.name}</b>}
             </button>
           </li>
         ) : (

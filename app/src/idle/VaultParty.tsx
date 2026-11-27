@@ -3,15 +3,12 @@ import type { CatCode } from '@web/features/raising/store'
 import { useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { CatFilters, DEFAULT_CAT_FILTER, filterCats } from './CatFilters'
 import { CatPortrait } from './CatPortrait'
 import { catDps, type Matchup, type PartyMode, partyDps, recommendParty } from './party'
 import { scoreText, VAULT_SIM, type Vault } from './vaultBattle'
+import './party-editor.css'
 
-type Cat = NonNullable<Company['idle']>['cats'][number]
-
-/**
- * 금고 도전의 파티 칸 (decisions.md 654번): 입장하기 전에 데려갈 고양이를 고르고 저장한다. 영구 강화를 적용한 예상 피해량을 보여 준다. 추천 편성은 던전에만 있다 (694번).
- */
 export function VaultParty({
   company,
   vault,
@@ -26,50 +23,146 @@ export function VaultParty({
   onChange: (codes: string[]) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const [filter, setFilter] = useState(DEFAULT_CAT_FILTER)
+  const [pending, setPending] = useState<string | null>(null)
+  const [target, setTarget] = useState<number | null>(null)
+  const [previous, setPrevious] = useState<string[] | null>(null)
+  const [notice, setNotice] = useState('')
   const slots = company.idle?.fieldSlots ?? 0
   const boss = mode === 'boss'
   const vs: Matchup = { vault, boss }
   const owned = (company.idle?.cats ?? []).filter((c) => c.level > 0)
-  const byCode = new Map<string, Cat>(owned.map((c) => [c.code, c]))
-  const members = party.flatMap((code) => byCode.get(code) ?? [])
-  // 보스전은 정해진 시간 동안의 피해량을, 던전은 팀의 초당 화력을 적는다. 전투 시계는 실제 초보다 빠르다(VAULT_SIM).
-  const total = (dps: number) => (boss ? dps * vault.boss.seconds * VAULT_SIM : dps)
-  const estimate = total(partyDps(company, party, vs))
+  const byCode = new Map(owned.map((c) => [c.code as string, c]))
+  const total = (codes: string[]) =>
+    partyDps(company, codes, vs) * (boss ? vault.boss.seconds * VAULT_SIM : 1)
+  const estimate = total(party)
   const recommended = recommendParty(company, vs)
   const same = recommended.length === party.length && recommended.every((c) => party.includes(c))
-  const shares = new Map(owned.map((c) => [c.code, total(catDps(company, c.code, vs))]))
-  const ranked = [...owned].sort((a, b) => (shares.get(b.code) ?? 0) - (shares.get(a.code) ?? 0))
-  const full = party.length >= slots
-  const toggle = (code: string) => {
+  const shares = new Map(owned.map((c) => [c.code as string, catDps(company, c.code, vs)]))
+  const visible = filterCats(owned, filter, party, (code) => shares.get(code) ?? 0)
+  const candidate = pending ? byCode.get(pending) : undefined
+  const commit = (next: string[], message: string) => {
+    setPrevious([...party])
+    onChange(next)
+    setPending(null)
+    setTarget(null)
+    setNotice(message)
     sfx.tap()
-    if (party.includes(code)) onChange(party.filter((c) => c !== code))
-    else if (!full) onChange([...party, code])
+    haptic.light()
+  }
+  const replace = (index: number, code: string) => {
+    const next = [...party]
+    const old = byCode.get(next[index])
+    next[index] = code
+    commit(next, `${old?.name ?? '빈 칸'} → ${byCode.get(code)?.name} 교체했어요`)
+  }
+  const pick = (code: string) => {
+    if (party.includes(code)) {
+      setTarget(party.indexOf(code))
+      setPending(null)
+      return
+    }
+    if (target !== null && target < party.length) {
+      replace(target, code)
+      return
+    }
+    if (party.length < slots) {
+      commit([...party, code], `${byCode.get(code)?.name} 출전!`)
+      return
+    }
+    setPending(code)
+    setTarget(null)
+    setNotice('')
   }
   return (
     <section className="vault-party" data-testid={`vault-party-${mode}`} aria-label="데려갈 파티">
-      <header>
-        <b>
-          파티 {members.length} / {slots}
-        </b>
+      <header className="party-overview">
+        <div>
+          <small>{boss ? '보스전' : '주간던전'} 출전 팀</small>
+          <b>
+            파티 {party.length}
+            <em> / {slots}</em>
+          </b>
+        </div>
         <span data-testid="vault-party-estimate">
-          {boss ? '예상 피해량' : '팀 화력'} {scoreText(estimate)}
-          {!boss && '/초'}
+          <small>{boss ? '예상 피해량' : '팀 화력'}</small>
+          <strong>
+            {scoreText(estimate)}
+            {!boss && <small>/초</small>}
+          </strong>
         </span>
       </header>
       <ul className="vault-party-row">
-        {Array.from({ length: slots }, (_, i) => members[i] ?? null).map((cat, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: 파티 칸은 자리 번호가 곧 열쇠다.
-          <li key={i} className={cat ? '' : 'is-empty'}>
-            {cat ? (
-              <>
-                <CatPortrait code={cat.code as CatCode} grade={cat.grade} />
-                <small>Lv.{cat.level}</small>
-              </>
-            ) : (
-              <small>빈 칸</small>
-            )}
-          </li>
-        ))}
+        {Array.from({ length: slots }, (_, index) => {
+          const cat = byCode.get(party[index])
+          const next = candidate
+            ? party.map((code, i) => (i === index ? candidate.code : code))
+            : party
+          const delta = total(next) - estimate
+          return (
+            <li
+              // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 출전 자리 번호가 슬롯의 식별자다.
+              key={`slot-${index}`}
+              className={`${cat ? '' : 'is-empty'} ${target === index ? 'is-target' : ''} ${candidate ? 'is-replaceable' : ''}`}
+            >
+              <button
+                type="button"
+                className="party-slot"
+                aria-pressed={target === index}
+                aria-label={
+                  cat
+                    ? `${cat.name} ${candidate ? '대신 교체' : '자리 선택'}`
+                    : `${index + 1}번 빈 칸 채우기`
+                }
+                onClick={() => {
+                  setEditing(true)
+                  if (candidate && cat) replace(index, candidate.code)
+                  else {
+                    setTarget(target === index ? null : index)
+                    setPending(null)
+                  }
+                }}
+              >
+                <span className="party-slot-number">{index + 1}</span>
+                {cat ? (
+                  <>
+                    <CatPortrait code={cat.code as CatCode} grade={cat.grade} />
+                    <b>{cat.name}</b>
+                    <small>
+                      {cat.grade} · Lv.{cat.level}
+                    </small>
+                  </>
+                ) : (
+                  <>
+                    <strong>＋</strong>
+                    <small>고양이 추가</small>
+                  </>
+                )}
+                {candidate && cat && (
+                  <em className={delta >= 0 ? 'party-gain' : 'party-loss'}>
+                    {delta >= 0 ? '+' : '−'}
+                    {scoreText(Math.abs(delta))}
+                  </em>
+                )}
+              </button>
+              {editing && cat && (
+                <button
+                  type="button"
+                  className="party-remove"
+                  aria-label={`${cat.name} 출전 해제`}
+                  onClick={() =>
+                    commit(
+                      party.filter((code) => code !== cat.code),
+                      `${cat.name} 출전을 해제했어요`,
+                    )
+                  }
+                >
+                  빼기
+                </button>
+              )}
+            </li>
+          )
+        })}
       </ul>
       <div className="vault-party-actions">
         <button
@@ -77,63 +170,96 @@ export function VaultParty({
           data-testid="vault-party-edit"
           aria-expanded={editing}
           onClick={() => {
-            sfx.tap()
             setEditing(!editing)
+            setPending(null)
+            setTarget(null)
           }}
         >
-          {editing ? '편성 닫기' : '파티 편성'}
+          {editing ? '편성 완료' : '파티 편성'}
         </button>
-        {!boss && (
+        <button
+          type="button"
+          data-testid="vault-party-recommend"
+          disabled={same || !slots || !owned.length}
+          onClick={() => commit(recommended, '화력이 높은 고양이로 편성했어요')}
+        >
+          {same ? '추천 편성 중' : '추천 자동 편성'}
+        </button>
+        {previous && (
           <button
             type="button"
-            data-testid="vault-party-recommend"
-            disabled={same}
+            className="party-undo"
+            aria-label="이전 편성으로 되돌리기"
             onClick={() => {
-              sfx.tap()
-              haptic.light()
-              onChange(recommended)
+              onChange(previous)
+              setPrevious(null)
+              setPending(null)
+              setTarget(null)
+              setNotice('이전 편성으로 되돌렸어요')
             }}
           >
-            {same ? '추천 편성 사용 중' : '추천 편성'}
+            ↶ 되돌리기
           </button>
         )}
       </div>
-      <p className="vault-party-note">
-        {editing && full && owned.length > party.length
-          ? '파티가 가득 찼어요. 데려가는 고양이를 눌러 빼면 다른 고양이를 추가할 수 있어요.'
-          : boss
-            ? '영구 강화가 적용된 예상 피해량이에요(치명타·범위 피해 제외).'
-            : '일반 강화는 적용되지 않아요. 영구 강화 기준으로 팀 화력을 계산해요.'}
+      <p className="vault-party-note" role="status">
+        {candidate
+          ? `${candidate.name}와 바꿀 출전 칸을 누르세요. 화력 변화를 확인할 수 있어요.`
+          : target !== null
+            ? '아래에서 이 자리에 넣을 고양이를 고르세요.'
+            : notice || '영구 강화 적용 · 일반 강화 제외 · 치명타·범위 피해는 예상에서 제외'}
       </p>
       {editing && (
-        <ul className="vault-party-pick" data-testid="vault-party-pick">
-          {ranked.map((cat) => {
-            const on = party.includes(cat.code)
-            return (
-              <li key={cat.code}>
-                <button
-                  type="button"
-                  disabled={!on && full}
-                  aria-pressed={on}
-                  data-code={cat.code}
-                  onClick={() => toggle(cat.code)}
-                >
-                  <CatPortrait code={cat.code as CatCode} grade={cat.grade} />
-                  <span>
-                    <b>
-                      {cat.grade} {cat.name} <small>Lv.{cat.level}</small>
-                    </b>
-                    <small>
-                      {boss ? '피해량' : '화력'} +{scoreText(shares.get(cat.code) ?? 0)}
-                      {!boss && '/초'}
+        <div className="party-editor">
+          <CatFilters value={filter} onChange={setFilter} count={visible.length} />
+          <ul className="vault-party-pick" data-testid="vault-party-pick">
+            {visible.map((cat) => {
+              const on = party.includes(cat.code)
+              return (
+                <li key={cat.code}>
+                  <button
+                    type="button"
+                    data-code={cat.code}
+                    data-grade={cat.grade}
+                    aria-pressed={on}
+                    className={pending === cat.code ? 'is-candidate' : ''}
+                    onClick={() => pick(cat.code)}
+                  >
+                    <span className="party-card-top">
+                      <em>{cat.grade}</em>
+                      <small>Lv.{cat.level}</small>
+                    </span>
+                    <CatPortrait code={cat.code as CatCode} grade={cat.grade} />
+                    <b>{cat.name}</b>
+                    <small className="party-card-skills">
+                      {cat.skills.map((s) => s.name).join(' · ') || '기본 사격'}
                     </small>
-                  </span>
-                  <i>{on ? '데려감' : full ? '칸 가득' : '추가'}</i>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+                    <strong className="party-card-power">
+                      {scoreText(shares.get(cat.code) ?? 0)}
+                      <small>/초</small>
+                    </strong>
+                    <i>
+                      {on
+                        ? `출전 ${party.indexOf(cat.code) + 1}`
+                        : pending === cat.code
+                          ? '교체할 자리 선택'
+                          : party.length >= slots
+                            ? '교체'
+                            : '출전시키기'}
+                    </i>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          {!visible.length && (
+            <p className="party-empty">
+              {owned.length
+                ? '조건에 맞는 고양이가 없어요.'
+                : '고양이를 획득하면 여기서 팀을 꾸릴 수 있어요.'}
+            </p>
+          )}
+        </div>
       )}
     </section>
   )
