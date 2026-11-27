@@ -315,7 +315,7 @@ export interface BattleOptions {
     mapWall: number
     guardianArt: string
     scale?: (kind: DamageKind) => number
-    /** tier를 주면 수호냥 발밑의 막대가 체력 대신 다음 등급까지 찬 만큼을 보이고, 등급이 오를 때마다 그 이름을 띄운다 (692번). */
+    /** 등급이 오를 때 수호룡 위에 새 등급을 띄운다. */
     score?: {
       seconds: number
       tier?: (damage: number) => { tier: number; name: string; fill: number }
@@ -727,6 +727,7 @@ class BattleScene extends Phaser.Scene {
   /** 금고 보스전 (641번)에서 수호냥에게 넣은 피해량. */
   private vaultDamage = 0
   /** 보스전에서 이번 판에 닿은 등급 (692번). -1은 아직 재지 않음. */
+  private guardianHits = 0
   private vaultTier = -1
   private sinceBreak = 0
   private stuck = 0
@@ -761,7 +762,7 @@ class BattleScene extends Phaser.Scene {
   private climbed = 0
   private book: Phaser.GameObjects.Graphics | null = null
   /** 공격 판의 큰손 체력 막대 (457번): 위 HUD가 아니라 보스 바로 아래에 붙어 따라다닌다. */
-  private bossBar: Phaser.GameObjects.Graphics | null = null
+  private bossOverlay: Phaser.GameObjects.Graphics | null = null
   private ladder: Phaser.GameObjects.Graphics | null = null
   private speedLines: Phaser.GameObjects.Image[] = []
   private chips: Phaser.GameObjects.Particles.ParticleEmitter | null = null
@@ -1661,7 +1662,7 @@ class BattleScene extends Phaser.Scene {
     // 장난감 보드의 크림색을 유지하면서 전장에 아주 옅은 따뜻한 톤만 더한다.
     this.add.rectangle(0, 0, 4000, 4000, 0xe8b877, 0.04).setOrigin(0).setDepth(0.5)
     this.book = this.add.graphics().setDepth(1)
-    this.bossBar = this.add.graphics().setDepth(8.6)
+    this.bossOverlay = this.add.graphics().setDepth(8.6)
     this.ladder = this.add.graphics().setDepth(8)
     if (!this.reducedMotion) {
       for (let i = 0; i < 9; i++) {
@@ -2135,6 +2136,51 @@ class BattleScene extends Phaser.Scene {
     const top = 76
     const scale = Math.min((w * 1.24) / boss.width, Math.max(1, h * 0.58 - top) / boss.height)
     boss.setScale(scale).setPosition(w / 2, top + boss.displayHeight / 2)
+  }
+
+  /** 전투 시계에 맞춰 몸을 웅크렸다가 좌우 앞발로 번갈아 매수벽을 내리친다. */
+  private guardianStrike(boss: Enemy) {
+    const interval = 4.5
+    const strike = Math.floor(this.elapsed / interval)
+    const phase = this.elapsed - strike * interval
+    const windup = Phaser.Math.Clamp((phase - interval + 0.8) / 0.55, 0, 1)
+    const swing = Phaser.Math.Clamp((phase - interval + 0.25) / 0.25, 0, 1)
+    const recovery = strike > 0 ? Math.max(0, 1 - phase / 0.4) : 0
+    const side = (strike + (recovery > 0 ? 0 : 1)) % 2 ? -1 : 1
+    this.placeGuardian(boss)
+    if (!this.reducedMotion) {
+      const crouch = windup * (1 - swing)
+      const thrust = swing + recovery
+      boss.setScale(boss.scaleX * (1 + 0.04 * crouch), boss.scaleY * (1 - 0.13 * crouch))
+      boss.y += boss.displayHeight * (0.06 * crouch + 0.13 * thrust)
+      boss.angle = side * (4 * crouch - 3 * thrust)
+    }
+
+    const targetX = this.view().w * (0.5 + side * 0.16)
+    const targetY = this.buyWallY()
+    if ((swing > 0 || recovery > 0) && this.bossOverlay) {
+      const pawX = boss.x + side * boss.displayWidth * 0.3
+      const pawY = boss.y + boss.displayHeight * 0.32
+      const progress = recovery > 0 || this.reducedMotion ? 1 : swing
+      this.bossOverlay.fillStyle(0xd89845, recovery > 0 ? recovery * 0.8 : 0.8)
+      for (const offset of [-9, 0, 9]) {
+        const x = pawX + offset
+        this.bossOverlay.fillTriangle(
+          x - 2,
+          pawY,
+          x + 2,
+          pawY + 3,
+          Phaser.Math.Linear(x, targetX + offset, progress),
+          Phaser.Math.Linear(pawY, targetY, progress),
+        )
+      }
+    }
+    if (strike > this.guardianHits) {
+      this.guardianHits = strike
+      const damage = this.sellAttack(boss)
+      if (this.buyWall?.active) this.hitBuyWall(damage, targetX)
+      else this.hurt(damage)
+    }
   }
 
   /**
@@ -2671,10 +2717,11 @@ class BattleScene extends Phaser.Scene {
       }
     }
     const boss = this.bossEnemy
-    if (
+    if (boss?.active && !boss.dying && this.opts.vault?.score) {
+      this.guardianStrike(boss)
+    } else if (
       boss?.active &&
       !boss.dying &&
-      !this.opts.vault?.score &&
       this.elapsed - this.lastSummon > whaleSummonSeconds(boss.hp, this.bossMax)
     ) {
       this.lastSummon = this.elapsed
@@ -3500,11 +3547,13 @@ class BattleScene extends Phaser.Scene {
       e.hp -= dmg
     }
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
-    if (e.cell) e.clearTint()
-    else e.setTintFill(0xffffff)
-    this.time.delayedCall(55, () => e.active && this.paint(e))
-    // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
-    this.hitSpark.explode(3, e.x - Math.cos(angle) * 10, e.y - Math.sin(angle) * 10)
+    if (!(vault?.score && e.boss)) {
+      if (e.cell) e.clearTint()
+      else e.setTintFill(0xffffff)
+      this.time.delayedCall(55, () => e.active && this.paint(e))
+      // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
+      this.hitSpark.explode(3, e.x - Math.cos(angle) * 10, e.y - Math.sin(angle) * 10)
+    }
     sfx.hit()
     if (this.assault && (e.cell || e.boss)) {
       // 공격 판의 벽 칸·큰손은 1초에 여러 번 맞아 들썩임 트윈이 겹치면 크기가 조금씩 불었다: 번쩍임과 금·파편만.
@@ -5640,16 +5689,11 @@ class BattleScene extends Phaser.Scene {
 
   /** 큰손 체력 막대를 보스 발밑에 그린다 (457번). 보스가 없거나 공격 판이 아니면 지운다. */
   private drawBossBar() {
-    const g = this.bossBar
+    const g = this.bossOverlay
     if (!g) return
     g.clear()
     const boss = this.bossEnemy
     if (!this.assault || !boss?.active || boss.dying) return
-    const w = Phaser.Math.Clamp(boss.displayWidth * 0.9, 70, 150)
-    const h = 8
-    const x = boss.x - w / 2
-    const y = boss.y + boss.displayHeight / 2 + 4
-    // 피해량을 겨루는 보스전 (692번): 수호냥은 체력이 줄지 않으니 다음 등급까지 찬 만큼을 금빛으로 보인다. 등급을 모르면 막대를 그리지 않는다.
     const score = this.opts.vault?.score
     if (score) {
       const at = score.tier?.(this.vaultDamage)
@@ -5659,12 +5703,12 @@ class BattleScene extends Phaser.Scene {
           this.pop(boss.x, boss.y + boss.displayHeight * 0.3, `${at.name}!`, '#ffd866', 20)
         this.vaultTier = at.tier
       }
-      const fill = Phaser.Math.Clamp(at.fill, 0, 1)
-      g.fillStyle(0x2b2340, 0.85).fillRoundedRect(x - 2, y - 2, w + 4, h + 4, 5)
-      g.fillStyle(0xffffff, 0.25).fillRoundedRect(x, y, w, h, 4)
-      if (fill > 0) g.fillStyle(0xffc93c, 1).fillRoundedRect(x, y, Math.max(h, w * fill), h, 4)
       return
     }
+    const w = Phaser.Math.Clamp(boss.displayWidth * 0.9, 70, 150)
+    const h = 8
+    const x = boss.x - w / 2
+    const y = boss.y + boss.displayHeight / 2 + 4
     const ratio = Phaser.Math.Clamp(boss.hp / this.bossMax, 0, 1)
     g.fillStyle(0x2b2340, 0.85).fillRoundedRect(x - 2, y - 2, w + 4, h + 4, 5)
     g.fillStyle(0xffffff, 0.25).fillRoundedRect(x, y, w, h, 4)
