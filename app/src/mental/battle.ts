@@ -198,6 +198,7 @@ import {
   SPELLBOOK,
 } from './spellbook'
 import { wallOffset } from './stageArt'
+import { WallFlight } from './wallFlight'
 import {
   IDLE_RAID,
   IDLE_RAID_BANNERS,
@@ -717,6 +718,8 @@ class BattleScene extends Phaser.Scene {
   /** 자동 전투에서 다음 벽으로 넘어가는 빠르기 (606번): 앞의 벽을 빨리 부술수록 작다(idleBreakPace). 그리고 지금 벽이 벽 앞에 선 전투 초. */
   private idlePace = 1
   /** 질주의 기세 (608번, 0~1): 벽을 빨리 부술수록 차고 금세 빠진다. 그리고 달리는 그림의 시계. */
+  private readonly wallFlight = new WallFlight()
+  private rollingMap: (typeof ARENA_MAPS)[number] | null = null
   private momentum = 0
   /** 지금 배경이 흐르는 빠르기(px/초): 확인 스크립트가 본다. */
   private groundV = 0
@@ -1375,7 +1378,8 @@ class BattleScene extends Phaser.Scene {
   /** 플레이어의 세로 자리(붙박이, 332·340번): 디펜스는 멘탈벽 뒤(아래)에 숨어 벽 너머로 쏜다. 전진 모드는 처음 자리(아래쪽)다. */
   private playerY() {
     // 방치 화면은 메뉴·편의 단추를 캔버스 밖에 배치하므로 예전 하단 메뉴 여백을 다시 빼지 않는다.
-    if (this.opts.idle) return this.view().h - 70
+    if (this.opts.idle)
+      return this.view().h - 70 - this.wallFlight.strength * (24 + 3 * Math.sin(this.elapsed * 4))
     return this.mode === 'defense' && this.genre.target === 'wall'
       ? this.wallY() + 78
       : this.view().h - (this.assault ? 175 : 140)
@@ -1648,7 +1652,7 @@ class BattleScene extends Phaser.Scene {
   // ── 공격 판: 매도벽을 부수고 올라간다 (413번, #573)
 
   private setArenaMap(map: (typeof ARENA_MAPS)[number]) {
-    if (this.bg?.frame.name === map.key) return
+    if (this.bg?.frame.name === map.key && (!this.bg2 || this.bg2.frame.name === map.key)) return
     const { w, h } = this.view()
     for (const bg of [this.bg, this.bg2]) {
       bg?.setTexture(`art-${map.sheet}`, map.key).setDisplaySize(w, h)
@@ -2019,10 +2023,11 @@ class BattleScene extends Phaser.Scene {
     const burstY = wall.y - 12
     const centerX = this.view().w / 2
     this.ring(centerX, burstY, 0xffe5a3, lane.width * 0.75, 380)
-    for (let i = 0; i < 7; i++) {
-      const x = lane.left + ((i + 0.5) * lane.width) / 7
+    const bursts = this.wallFlight.strength > 0.35 ? 1 : 7
+    for (let i = 0; i < bursts; i++) {
+      const x = lane.left + ((i + 0.5) * lane.width) / bursts
       // 중앙부터 바깥으로 짧게 연쇄 폭발. 벽이 교체되어도 좌표는 고정한다.
-      this.time.delayedCall(this.reducedMotion ? 0 : Math.abs(i - 3) * 35, () => {
+      this.time.delayedCall(this.reducedMotion ? 0 : Math.abs(i - (bursts - 1) / 2) * 35, () => {
         this.chips?.explode(this.fx(18), x, burstY)
         this.boom.cell.explode(this.fx(10), x, burstY)
         this.glow(x, burstY, 0xffd58a, 34, 180, 0.55)
@@ -2059,7 +2064,12 @@ class BattleScene extends Phaser.Scene {
         const snapshot = this.opts.idle?.()
         this.idleWall = snapshot?.wall ?? this.idleWall
         this.idleSerial = snapshot?.serial
-        this.setArenaMap(arenaMap(this.idleWall))
+        const map = arenaMap(this.idleWall)
+        if (this.wallFlight.strength > 0.05) this.rollingMap = map
+        else {
+          this.rollingMap = null
+          this.setArenaMap(map)
+        }
         // 벽이 깊어질수록 미션처럼 물량이 잦고 무거워진다 (493번).
         Object.assign(spec, idleAssaultSpec(this.idleWall, snapshot?.maxHp))
         this.countScale = spec.enemyCount
@@ -2237,8 +2247,14 @@ class BattleScene extends Phaser.Scene {
 
   /** Reconcile the existing renderer with saved progress, without client rewards or stage resets. */
   private syncIdleWall() {
-    if (!this.opts.idle || this.idleTransition) return
+    if (!this.opts.idle) return
     const snapshot = this.opts.idle()
+    this.wallFlight.update(
+      snapshot.wall,
+      performance.now(),
+      !this.reducedMotion && !snapshot.circuitSeconds && !this.circuit,
+    )
+    if (this.idleTransition) return
     if (!this.idleWall) {
       this.idleWall = snapshot.wall
       this.idleSerial = snapshot.serial
@@ -2623,12 +2639,15 @@ class BattleScene extends Phaser.Scene {
     this.momentum = Math.max(0, this.momentum - dt / IDLE_MOMENTUM_FADE)
     const dash = this.reducedMotion ? 0 : this.momentum
     this.runClock += dt * (1 + dash * (IDLE_MOMENTUM_RUN - 1))
-    const scroll = Math.max(
+    const walkScroll = Math.max(
       this.idleAdvancing && !this.reducedMotion
         ? Math.max(move, dt * (this.runRush > 0 ? 620 : 95))
         : move,
       dt * dash * IDLE_MOMENTUM_SCROLL,
     )
+    // 고속 구간에서는 벽 칸의 순간이동 거리를 배경에 그대로 더하지 않는다.
+    const flight = this.wallFlight.strength
+    const scroll = walkScroll * (1 - flight) + dt * IDLE_MOMENTUM_SCROLL * 1.2 * flight
     this.climbV = dt > 0 ? scroll / dt : 0
     this.groundV = this.climbV
     this.climbed += scroll
@@ -2636,9 +2655,18 @@ class BattleScene extends Phaser.Scene {
       for (const bg of [this.bg, this.bg2]) {
         if (!bg) continue
         bg.y += scroll * 0.5
-        if (bg.y >= h) bg.y -= 2 * h
+        if (bg.y >= h) {
+          bg.y -= 2 * h
+          const map = this.rollingMap
+          if (map && bg.frame.name !== map.key)
+            bg.setTexture(`art-${map.sheet}`, map.key).setDisplaySize(this.view().w, h)
+        }
         if (bg.y < -h) bg.y += 2 * h
       }
+    }
+    if (this.rollingMap && !flight) {
+      this.setArenaMap(this.rollingMap)
+      this.rollingMap = null
     }
     for (const wl of this.walls) {
       wl.y += move
@@ -2877,6 +2905,7 @@ class BattleScene extends Phaser.Scene {
       /** 다음 벽으로 넘어가는 빠르기 (606번): 1이면 보통, 작을수록 빠르다. */
       idlePace: this.idlePace,
       /** 질주의 기세 (608번)와 지금 배경이 흐르는 빠르기(px/초). */
+      flight: this.wallFlight.strength,
       momentum: this.momentum,
       groundV: this.groundV,
       climbed: this.climbed,
@@ -4020,9 +4049,10 @@ class BattleScene extends Phaser.Scene {
     // 기세가 남아 있으면 벽 앞에서도 달리며 쏜다 (608번). 달리는 그림은 기세만큼 빨라진다.
     const dashing = this.momentum > 0.15
     const running = this.opts.idle && (this.idleAdvancing || dashing) && !this.reducedMotion
-    const runFrame = running
-      ? catRunFrame(this.runClock, index + 1, this.runRush > 0 || dashing)
-      : undefined
+    const runFrame =
+      running && this.wallFlight.strength < 0.5
+        ? catRunFrame(this.runClock, index + 1, this.runRush > 0 || dashing)
+        : undefined
     body.setTexture(
       bakeCatBody(this, pose.index, look, runFrame, !mate && this.time.now < this.hurtUntil),
     )

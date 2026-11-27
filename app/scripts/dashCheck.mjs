@@ -82,12 +82,62 @@ async function run(browser, hp, seconds) {
   }
 }
 
+// 한 번의 진행 동기화에 열두 벽이 넘어가도 이륙하고, 다음 벽에 막히면 제자리로 돌아온다.
+async function checkFlight(browser) {
+  let wall = 43
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    reducedMotion: 'no-preference',
+  })
+  await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (route) =>
+    route.fulfill({
+      json: {
+        ...company,
+        idle: {
+          ...idle,
+          wall,
+          hp: 1e9,
+          maxHp: 1e9,
+          sequence: route.request().postDataJSON()?.sequence ?? 0,
+          boss: false,
+          upcoming: [],
+        },
+      },
+    }),
+  )
+  await page.goto(process.env.APP_URL ?? 'http://localhost:5182/app/')
+  await page.waitForFunction(() => window.__mentalWalls?.().length > 0)
+  await page.waitForFunction(() => window.__mentalMarket?.().arena.front === 'toy-city')
+  const groundY = await page.evaluate(() => window.__mentalMarket().stand.y)
+  wall += 12
+  await page.waitForFunction(
+    (y) => {
+      const m = window.__mentalMarket()
+      return m.flight > 0.6 && m.stand.y < y - 10 && m.groundV > 900
+    },
+    groundY,
+    { timeout: 15000 },
+  )
+  await page.screenshot({ path: '/tmp/wall-flight-390.png' })
+  await page.waitForFunction((y) => {
+    const m = window.__mentalMarket()
+    return (
+      !m.flight &&
+      Math.abs(m.stand.y - y) < 1 &&
+      m.arena.front === 'neon-street' &&
+      m.arena.back === 'neon-street'
+    )
+  }, groundY)
+  await page.close()
+}
+
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
   args: ['--no-sandbox'],
 })
 try {
   // 한 방에 부서지는 벽: 다음 벽이 가장 빠르게 넘어오고, 기세가 가득 차며, 배경이 달리기(620px/초)보다 빠르게 흐른다.
+  await checkFlight(browser)
   const strong = await run(browser, 0.5, 8)
   assert.ok(strong.quickest <= 0.25, `walls follow at once: pace ${strong.quickest}`)
   assert.ok(strong.topMomentum > 0.8, `the dash fills: momentum ${strong.topMomentum}`)
