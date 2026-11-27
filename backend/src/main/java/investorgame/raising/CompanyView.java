@@ -82,8 +82,8 @@ public record CompanyView(
   /**
    * 금고 보스전: seconds초 동안 수호냥에게 넣은 피해량을 겨룬다.
    *
-   * @param weakSkills 이번 주의 약점 스킬: 피해가 weakPercent%
-   * @param resistSkills 이번 주의 내성 스킬: 피해가 resistPercent%
+   * @param weakSkills 제거된 약점 스킬: 호환용 빈 목록, weakPercent는 100
+   * @param resistSkills 제거된 내성 스킬: 호환용 빈 목록, resistPercent는 100
    * @param rivals 천적 고양이. 없앴다 (decisions.md 694번): 늘 비어 있고 rivalPercent는 100이다
    * @param best 이번 주의 최고 피해량
    * @param record 역대 최고 피해량
@@ -345,11 +345,6 @@ public record CompanyView(
       List<IdleSkill> skills,
       List<IdleCat> cats,
       int fieldSlots,
-      long bread,
-      java.math.BigDecimal bundlePrice,
-      long bundleDiamonds,
-      long nextDiamondSeconds,
-      int bakingPercent,
       double wallDps,
       double circuitSeconds,
       List<IdleWall> upcoming,

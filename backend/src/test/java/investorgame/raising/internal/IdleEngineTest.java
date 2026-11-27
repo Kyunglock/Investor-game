@@ -31,6 +31,22 @@ class IdleEngineTest {
   private long sequence;
 
   @Test
+  void removedBakeryFieldsDoNotBreakExistingSaves() {
+    JsonMapper json = JsonMapper.builder().build();
+    CompanyState saved =
+        json.readValue(
+            """
+        {"capital":12345,"diamonds":80,"idle":{"wall":25,"bread":120,"bakingMillis":1234,"bundleMillis":1800000}}
+        """,
+            CompanyState.class);
+    assertThat(engine.view(saved).wall()).isEqualTo(25);
+    assertThat(saved.capital).isEqualTo(12345);
+    assertThat(saved.diamonds).isEqualTo(80);
+    assertThat(json.writeValueAsString(saved))
+        .doesNotContain("bread", "bakingMillis", "bundleMillis");
+  }
+
+  @Test
   void bulkMergeUsesOnlySparesAndChainsAcrossGrades() {
     company.mental.initWeapons(state);
     engine.view(state);
@@ -201,48 +217,6 @@ class IdleEngineTest {
   private void tick(long millis, IdleHit... hits) {
     clock.now += millis;
     engine.beat(state, "one", ++sequence, "tick", List.of(hits));
-  }
-
-  @Test
-  void bundleSaleUsesCurrentWallAndCountsBakeryTimeOnceForAllCats() {
-    start(1);
-    state.idle.cats.put("sky", 1);
-    state.idle.cats.put("mint", 1);
-    // 굽는 시간 30분마다 다이아 하나 (644번, 전에는 10분): 10초 틱 179번이면 10초가 남는다.
-    for (int i = 0; i < 179; i++) tick(10_000);
-    assertThat(engine.view(state).bundleDiamonds()).isZero();
-    assertThat(engine.view(state).nextDiamondSeconds()).isEqualTo(10);
-    state.idle.wall = 7;
-    double capital = state.capital;
-    long diamonds = state.diamonds;
-    long bread = state.idle.bread;
-    engine.sellBread(state);
-    assertThat(state.capital).isEqualTo(capital + bread * 700);
-    assertThat(state.diamonds).isEqualTo(diamonds);
-    assertThatThrownBy(() -> engine.sellBread(state)).isInstanceOf(InvalidRequestException.class);
-    tick(10_000);
-    // 굽던 30분마다 다이아 넷 (659번, 전에는 하나).
-    assertThat(engine.view(state).bundleDiamonds()).isEqualTo(4);
-    engine.sellBread(state);
-    assertThat(state.diamonds).isEqualTo(diamonds + 4);
-    assertThat(engine.view(state).bread()).isZero();
-    assertThat(engine.view(state).nextDiamondSeconds()).isEqualTo(1_800);
-  }
-
-  @Test
-  void restingCatsBakeTogether() {
-    start(1);
-    state.idle.cats.put("sky", 1);
-    state.idle.cats.put("mint", 1);
-    state.idle.cats.put("lilac", 1);
-    engine.fieldCat(state, "sky", true);
-    // 쉬는 고양이 한 마리가 5분에 식빵 하나 (644번, 전에는 1분): 둘이 150초면 하나다.
-    for (int i = 0; i < 15; i++) tick(10_000);
-    assertThat(engine.view(state).bread()).isEqualTo(1);
-    engine.fieldCat(state, "mint", true);
-    // 이제 lilac 혼자 굽는다: 30초는 5분의 10%.
-    for (int i = 0; i < 3; i++) tick(10_000);
-    assertThat(engine.view(state).bakingPercent()).isEqualTo(10);
   }
 
   @Test

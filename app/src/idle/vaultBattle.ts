@@ -1,7 +1,6 @@
 import type { Company } from '@web/api/client'
 import { type AssaultSpec, assaultSpec, IDLE_GAME_SPEED } from '../mental/assault'
 import { BASE_LOADOUT, bulletStats, type Loadout, type Spell } from '../mental/cards'
-import type { DamageKind } from '../mental/damageNumbers'
 import { simScale } from '../mental/gameSpeed'
 import {
   auroraNightStats,
@@ -15,10 +14,10 @@ import {
 import { isArrowSpell } from '../mental/spellbook'
 
 /**
- * 금고 도전의 화면 규칙 (decisions.md 641번). 보상과 주마다 바뀌는 것(약점·내성·천적·카드)은 서버가 정해 company.vault로 주고,
+ * 금고 도전의 화면 규칙 (decisions.md 641번). 보상과 주마다 바뀌는 카드는 서버가 정해 company.vault로 주고,
  * 이 파일은 그 값으로 전투 한 판을 차린다.
  *
- * - 보스전은 정해진 시간 동안 넣은 피해량을 겨룬다. 약점 스킬은 세게, 내성 스킬은 약하게 들어가고 천적 고양이는 총이 세다.
+ * - 보스전은 정해진 시간 동안 넣은 피해량을 겨룬다.
  * - 주간 던전의 벽과 수호냥은 지금 출전한 팀의 화력을 따라 단단해진다. 강해지는 것만으로는 쉬워지지 않고, 고른 카드와 금고 훈련이 판을 가른다.
  */
 export type Vault = NonNullable<Company['vault']>
@@ -53,19 +52,17 @@ function spellRate(spell: Spell, level: number): number {
 }
 
 /**
- * 팀이 전투 1초에 내는 피해의 어림: 사장냥과 고양이들의 총, 고양이 스킬. 치명타와 범위 피해는 세지 않는다. scale을 주면 스킬 피해에
- * 그 종류의 배율(보스의 약점·내성)을 곱한다.
+ * 팀이 전투 1초에 내는 피해의 어림: 사장냥과 고양이들의 총, 고양이 스킬. 치명타와 범위 피해는 세지 않는다.
  */
-export function teamDps(loadout: Loadout, scale?: (kind: DamageKind) => number): number {
+export function teamDps(loadout: Loadout): number {
   const gun = (g: Pick<Loadout, 'damage' | 'bulletPower' | 'fireMs'>) =>
     (bulletStats(g).damage * 1000) / g.fireMs
-  let total = gun(loadout)
+  let total = loadout.heroBenched ? 0 : gun(loadout)
   for (let i = 0; i < loadout.mates; i++) total += gun(loadout.mateGuns[i] ?? loadout)
   const base = loadout.skillDamage ?? loadout.damage
   loadout.mateMagic?.forEach((spells, i) => {
     const level = loadout.mateMagicLevels?.[i] ?? 1
-    for (const spell of spells)
-      total += base * spellRate(spell, level) * (scale?.(spell as DamageKind) ?? 1)
+    for (const spell of spells) total += base * spellRate(spell, level)
   })
   return total
 }
@@ -147,27 +144,6 @@ export function vaultLoadout(
       fireMs: Math.max(60, gun.fireMs / fire),
     })),
   }
-}
-
-/** 서버의 스킬 코드 → 전투의 피해 종류. 번개는 튄 피해, 충차는 들이받기도 같은 스킬이다. */
-const SKILL_KINDS: Record<string, DamageKind[]> = {
-  bolt: ['lightning', 'chain'],
-  ram: ['earth', 'siege'],
-}
-
-/** 이번 주 수호냥의 약점·내성: 피해 종류 → 배율. 총알과 나머지 스킬은 1이다. */
-export function bossScale(boss: Vault['boss']): (kind: DamageKind) => number {
-  const table = new Map<DamageKind, number>()
-  const put = (skills: Vault['boss']['weakSkills'], percent: number) => {
-    for (const skill of skills) {
-      for (const kind of SKILL_KINDS[skill.code] ?? [skill.code as DamageKind]) {
-        table.set(kind, percent / 100)
-      }
-    }
-  }
-  put(boss.weakSkills, boss.weakPercent)
-  put(boss.resistSkills, boss.resistPercent)
-  return (kind) => table.get(kind) ?? 1
 }
 
 /** 보스전은 수호냥 하나를 상대로 제한 시간 동안 피해량을 겨룬다. */

@@ -23,8 +23,6 @@ const TABS: readonly [Tab, string][] = [
 ]
 const OFFLINE = '연결이 끊겼어요. 다시 시도해 주세요.'
 
-const times = (percent: number) => `×${percent / 100}`
-
 /**
  * 금고 도전 (decisions.md 641번): 보스전·주간 던전·금고 상점. 규칙과 보상은 서버(company.vault)가 정하고, 전투가 끝나면 결과를 알려
  * 금괴를 받는다.
@@ -162,21 +160,7 @@ export function VaultChallenges({
   }
 
   const store = useRaisingStore.getState()
-  const cats = company.idle?.cats ?? []
   const { boss, dungeon } = vault
-  // 약점·내성 칸의 "출전 중"은 돌파의 출전 칸이 아니라 보스전에 데려갈 파티를 따른다 (655번).
-  const bossParty = partyOf(company, saved.boss)
-  const status = (cat?: { code: string; level: number }) =>
-    !cat || cat.level <= 0 ? '없음' : bossParty.includes(cat.code) ? '출전 중' : '대기'
-  /** 그 스킬을 가진 고양이와 그 고양이의 상태. */
-  const owner = (code: string) => {
-    const owners = cats.filter((cat) => cat.skills.some((skill) => skill.code === code))
-    const cat =
-      owners.find((cat) => bossParty.includes(cat.code)) ??
-      owners.find((cat) => cat.level > 0) ??
-      owners[0]
-    return cat && { name: cat.name, state: status(cat) }
-  }
   const floor = dungeon.cleared + 1
   const conquered = dungeon.cleared >= dungeon.floors
   const fill = boss.nextScore > 0 ? Math.min(1, boss.best / boss.nextScore) : 0
@@ -266,20 +250,6 @@ export function VaultChallenges({
                     <progress value={fill} max={1} />
                     {boss.record > 0 && <small>역대 최고 {scoreText(boss.record)}</small>}
                   </div>
-                  <dl className="vault-traits" data-testid="vault-traits">
-                    <dt className="weak">약점 스킬 {times(boss.weakPercent)}</dt>
-                    <dd>
-                      {boss.weakSkills.map((skill) => (
-                        <Trait key={skill.code} name={skill.name} cat={owner(skill.code)} />
-                      ))}
-                    </dd>
-                    <dt className="resist">내성 스킬 {times(boss.resistPercent)}</dt>
-                    <dd>
-                      {boss.resistSkills.map((skill) => (
-                        <Trait key={skill.code} name={skill.name} cat={owner(skill.code)} />
-                      ))}
-                    </dd>
-                  </dl>
                   <VaultParty
                     company={company}
                     vault={vault}
@@ -428,20 +398,5 @@ export function VaultChallenges({
         )
       )}
     </>
-  )
-}
-
-/** 약점·내성·천적 한 칸: 이름과, 그것을 가진 고양이가 출전 중인지. */
-function Trait({ name, cat }: { name: string; cat?: { name: string; state: string } }) {
-  return (
-    <span className="vault-trait" data-state={cat?.state ?? '없음'}>
-      <b>{name}</b>
-      {cat && (
-        <small>
-          {cat.name && `${cat.name} · `}
-          {cat.state}
-        </small>
-      )}
-    </span>
   )
 }

@@ -6,10 +6,9 @@ import type { BattleHandle, Hud, Outcome } from '../mental/battle'
 import { heroOf } from '../mental/hero'
 import bossScene from './assets/vault-guardian.webp'
 import dungeonScene from './assets/weekly-vault.webp'
-import { idleLoadout } from './loadout'
+import { permanentLoadout } from './loadout'
 import {
   bossEncounter,
-  bossScale,
   bossTier,
   cardMods,
   dungeonEncounter,
@@ -24,7 +23,7 @@ import {
 const INTRO_MS = 1800
 
 /**
- * 금고 전투 한 판 (decisions.md 641번). 들어올 때의 팀과 금고(vault)로 판을 차린다: 보스전은 약점·내성·천적을 붙여 피해량을 겨루고,
+ * 금고 전투 한 판 (decisions.md 641번). 들어올 때의 팀과 금고(vault)로 판을 차린다: 보스전은 팀의 피해량을 겨루고,
  * 던전은 팀 화력만큼 단단한 벽에 고른 카드를 붙여 싸운다. 금고 훈련은 두 곳 모두에 붙는다.
  *
  * 들어설 때 금고 도전 창의 그림(수호냥·금고)을 화면 가득 보이는 입장 장면이 뜬다. 그동안 전투는 멈춰 있어 보스전의 시간이 줄지 않는다.
@@ -49,7 +48,7 @@ export function VaultField({
 }) {
   const [setup] = useState(() => {
     const hero = heroOf(company)
-    const team = idleLoadout(company, party)
+    const team = permanentLoadout(company, party)
     const scale = teamScale(team)
     const training = 1 + vault.trainingPercent / 100
     if (boss) {
@@ -60,7 +59,6 @@ export function VaultField({
         vault: {
           mapWall: 151,
           guardianArt: bossScene,
-          scale: bossScale(vault.boss),
           score: { seconds: vault.boss.seconds * VAULT_SIM, tier: bossTier },
         },
       }

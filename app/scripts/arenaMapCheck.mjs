@@ -55,12 +55,10 @@ try {
     [200, 'space-station'],
     [201, 'glasshouse'],
     [251, 'moonlit-harbor'],
-    [301, 'honey-bakery'],
-    [351, 'pearl-aquarium'],
-    [401, 'star-observatory'],
-    [451, 'blossom-garden'],
-    [501, 'snow-rink'],
-    [551, 'toy-city'],
+    [301, 'pearl-aquarium'],
+    [351, 'star-observatory'],
+    [401, 'snow-rink'],
+    [451, 'toy-city'],
     [51, 'neon-street'],
   ]) {
     company.idle.wall = wall

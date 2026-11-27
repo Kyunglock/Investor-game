@@ -3,7 +3,6 @@ import { assaultSpec } from '../mental/assault'
 import { BASE_LOADOUT, type Loadout } from '../mental/cards'
 import {
   bossEncounter,
-  bossScale,
   bossTier,
   cardMods,
   DUNGEON_FLOW,
@@ -15,7 +14,6 @@ import {
   scoreText,
   teamDps,
   teamScale,
-  type Vault,
   type VaultCard,
   vaultLoadout,
 } from './vaultBattle'
@@ -111,30 +109,6 @@ describe('금고 도전', () => {
     // 연사 간격의 바닥(60ms)은 그대로다.
     expect(vaultLoadout(team, { fire: 100 }).fireMs).toBe(60)
     expect(team.damage).toBe(4)
-  })
-
-  it('약점과 내성은 그 스킬의 피해에만 붙고 번개의 튄 피해와 충차의 들이받기도 따른다', () => {
-    const scale = bossScale({
-      weakSkills: [
-        { code: 'bolt', name: '번개' },
-        { code: 'fire', name: '불' },
-      ],
-      resistSkills: [
-        { code: 'ram', name: '충차' },
-        { code: 'ice', name: '얼음' },
-      ],
-      weakPercent: 200,
-      resistPercent: 50,
-    } as Vault['boss'])
-    expect(scale('lightning')).toBe(2)
-    expect(scale('chain')).toBe(2)
-    expect(scale('fire')).toBe(2)
-    expect(scale('earth')).toBe(0.5)
-    expect(scale('siege')).toBe(0.5)
-    expect(scale('ice')).toBe(0.5)
-    expect(scale('bullet')).toBe(1)
-    expect(scale('crit')).toBe(1)
-    expect(scale('water')).toBe(1)
   })
 
   it('피해량은 10배로 적고 만 단위로 끊는다', () => {

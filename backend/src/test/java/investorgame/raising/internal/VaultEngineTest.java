@@ -9,7 +9,6 @@ import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
 import investorgame.raising.CompanyView;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -106,6 +105,28 @@ class VaultEngineTest {
   }
 
   @Test
+  void 금고_화력과_피해량_상한에는_영구_강화만_적용한다() {
+    CompanyState c = opened();
+    idle.view(c);
+    c.idle.cats.put("mint", 10);
+    List<String> party = List.of("mint");
+    double base = idle.vaultDps(c, party);
+    double field = idle.vaultDps(c, null);
+    c.battleLevels.put("damage", 100);
+    c.battleLevels.put("hp", 100);
+    c.battleLevels.put("buy", 100);
+    assertThat(idle.vaultDps(c, party)).isEqualTo(base);
+    assertThat(idle.vaultDps(c, null)).isEqualTo(field);
+    assertThat(idle.partyDps(c, party)).isGreaterThan(base);
+    c.fishLevels.put("damage", 100);
+    assertThat(idle.vaultDps(c, party)).isEqualTo(base * 2);
+    vault.reportBoss(c, 1e30, party);
+    assertThat(vault.view(c).boss().best())
+        .isEqualTo(base * 2 * VaultEngine.BOSS_SECONDS * VaultEngine.SCORE_SLACK);
+    assertThat(c.battleLevels.get("damage")).isEqualTo(100);
+  }
+
+  @Test
   void 저장한_파티로_싸운_보스전은_그_파티가_낼_수_있는_상한까지_받는다() {
     // 654번: 출전 칸과 따로 저장한 파티로 싸우면 상한을 그 파티로 잰다. 출전 칸은 바뀌지 않는다.
     CompanyState c = opened();
@@ -126,19 +147,15 @@ class VaultEngineTest {
   }
 
   @Test
-  void 약점과_내성은_겹치지_않고_천적은_없다() {
-    for (long week = 2960; week < 3000; week++) {
-      List<Integer> order = VaultEngine.skillOrder(week);
-      assertThat(new HashSet<>(order)).hasSize(VaultEngine.WEAK_SKILLS * 2);
-    }
-    assertThat(VaultEngine.skillOrder(2970)).isNotEqualTo(VaultEngine.skillOrder(2971));
+  void 약점과_내성과_천적은_없다() {
     CompanyView.VaultBoss boss = vault.view(opened()).boss();
-    assertThat(boss.weakSkills()).hasSize(4);
-    assertThat(boss.resistSkills()).hasSize(4);
+    assertThat(boss.weakSkills()).isEmpty();
+    assertThat(boss.resistSkills()).isEmpty();
     // 천적 고양이는 없앴다 (694번): 빈 목록과 100%다.
     assertThat(boss.rivals()).isEmpty();
     assertThat(boss.rivalPercent()).isEqualTo(100);
-    assertThat(boss.weakSkills()).noneMatch(skill -> skill.name().contains("스킬"));
+    assertThat(boss.weakPercent()).isEqualTo(100);
+    assertThat(boss.resistPercent()).isEqualTo(100);
   }
 
   @Test
