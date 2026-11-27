@@ -737,8 +737,11 @@ class CompanyApiTest {
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
     assertThat(opened.read("$.vault.gold", Long.class)).isZero();
     assertThat(opened.read("$.vault.boss.seconds", Integer.class)).isEqualTo(60);
-    assertThat(opened.<List<String>>read("$.vault.boss.weakSkills[*].code")).hasSize(4);
-    assertThat(opened.<List<String>>read("$.vault.boss.resistSkills[*].code")).hasSize(4);
+    // 약점·내성 스킬은 없앴다: 호환용 빈 목록과 배율 100%.
+    assertThat(opened.<List<String>>read("$.vault.boss.weakSkills[*].code")).isEmpty();
+    assertThat(opened.<List<String>>read("$.vault.boss.resistSkills[*].code")).isEmpty();
+    assertThat(opened.read("$.vault.boss.weakPercent", Integer.class)).isEqualTo(100);
+    assertThat(opened.read("$.vault.boss.resistPercent", Integer.class)).isEqualTo(100);
     assertThat(opened.<List<String>>read("$.vault.boss.rivals[*].code")).isEmpty();
     assertThat(opened.read("$.vault.dungeon.cleared", Integer.class)).isZero();
     List<String> offers = opened.read("$.vault.dungeon.offers[*].code");
