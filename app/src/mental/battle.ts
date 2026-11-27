@@ -542,7 +542,7 @@ const CHUNK_HP = 0.65
 const LANE_LEFT = 33
 const LANE_RIGHT = 33
 /** 같은 소리를 이 간격(ms) 안에 또 내지 않는다(체결·금 가는 소리, 마법 소리). */
-type SoundKey = 'splash' | 'whoosh' | 'boom' | 'zap' | 'rumble' | 'ram' | 'coin' | 'thud' | 'squish'
+type SoundKey = 'cast' | 'boom' | 'zap' | 'rumble' | 'ram' | 'coin' | 'thud' | 'squish'
 
 /** 여러 시전자가 같은 마법을 한꺼번에 겹쳐 쏘지 않게 시전자마다 늦추는 초. */
 const CAST_STAGGER = 0.18
@@ -4783,7 +4783,7 @@ class BattleScene extends Phaser.Scene {
     this.trailColor = s.color
     this.moveWater(s, 0)
     this.waterFx.explode(this.fx(3 * tier), from.x, from.y)
-    if (!isArrowSpell(spell)) this.playSound('splash')
+    if (!isArrowSpell(spell)) this.playSound('cast')
     return true
   }
 
@@ -4798,7 +4798,7 @@ class BattleScene extends Phaser.Scene {
       if (s.drawRemaining > 0) return
       s.x = s.img.x
       s.y = s.img.y
-      this.playSound('whoosh')
+      this.playSound('cast')
       dt -= elapsed * this.simSpeed
     }
     this.trailColor = s.color
@@ -4935,7 +4935,7 @@ class BattleScene extends Phaser.Scene {
         .setAlpha(0.6)
         .setVisible(false)
     }
-    this.playSound('whoosh')
+    this.playSound('cast')
     return true
   }
 

@@ -3,14 +3,16 @@ import bookCloseUrl from './sounds/bookClose.ogg'
 import bookFlip1Url from './sounds/bookFlip1.ogg'
 import bookFlip2Url from './sounds/bookFlip2.ogg'
 import bookPlace1Url from './sounds/bookPlace1.ogg'
-import musicUrl from './sounds/chill-jazz.mp3'
-import chopUrl from './sounds/chop.ogg'
 import cloth1Url from './sounds/cloth1.ogg'
 import drawKnife1Url from './sounds/drawKnife1.ogg'
 import dropLeatherUrl from './sounds/dropLeather.ogg'
+import gunshotUrl from './sounds/gunshot.ogg'
 import handleCoins2Url from './sounds/handleCoins2.ogg'
+import lightningUrl from './sounds/lightning.ogg'
 import metalClickUrl from './sounds/metalClick.ogg'
 import metalLatchUrl from './sounds/metalLatch.ogg'
+import spellCastUrl from './sounds/spell-cast.ogg'
+import spellImpactUrl from './sounds/spell-impact.ogg'
 
 const KEY = 'investor-app.sound'
 const samples = {
@@ -21,7 +23,10 @@ const samples = {
   cloth: cloth1Url,
   coins: handleCoins2Url,
   leather: dropLeatherUrl,
-  strike: chopUrl,
+  gunshot: gunshotUrl,
+  magic: spellCastUrl,
+  lightning: lightningUrl,
+  impact: spellImpactUrl,
   buckle: beltHandle1Url,
   blade: drawKnife1Url,
   latch: metalLatchUrl,
@@ -32,7 +37,6 @@ const buffers = new Map<Sample, AudioBuffer>()
 const lastPlayed = new Map<Sample, number>()
 let context: AudioContext | null = null
 let effects: GainNode | null = null
-let music: HTMLAudioElement | null = null
 let armed = false
 let nativeActive = true
 let hushed = false
@@ -51,15 +55,7 @@ function audible() {
 function syncAudio() {
   const on = audible()
   if (context && effects) effects.gain.value = on ? 1 : 0
-  if (!on) {
-    music?.pause()
-    return
-  }
-  if (!music) {
-    music = new Audio(musicUrl)
-    music.loop = true
-  }
-  if (music.paused) void music.play().catch(() => {})
+  if (!on) return
   if (!context && typeof AudioContext !== 'undefined') {
     context = new AudioContext()
     effects = context.createGain()
@@ -104,7 +100,7 @@ function loadSamples(c: AudioContext) {
 export function armAudio() {
   function wake() {
     armed = true
-    if (!music || music.paused || context?.state !== 'running') syncAudio()
+    if (context?.state !== 'running') syncAudio()
   }
   function activity(event: Event) {
     nativeActive = (event as CustomEvent<boolean>).detail
@@ -128,8 +124,6 @@ export function soundStatus() {
   return {
     loaded: buffers.size,
     total: Object.keys(samples).length,
-    musicPlaying: Boolean(music && !music.paused && music.currentTime > 0),
-    musicTime: music?.currentTime ?? 0,
   }
 }
 
@@ -159,14 +153,14 @@ export const sfx = {
   levelUp: () => play('latch', 0.36, 300),
   shot: (kind: 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle' = 'pistol') => {
     const rate = { pistol: 1.1, revolver: 0.85, smg: 1.22, shotgun: 0.74, rifle: 0.94 }[kind]
-    play('strike', 0.16, 140, rate)
+    play('gunshot', 0.38, 140, rate)
   },
   hit: () => play('place', 0.13, 180, 1.08),
-  splash: () => play('cloth', 0.23, 200),
-  boom: () => play('close', 0.38, 240, 0.8),
-  zap: () => play('blade', 0.22, 250, 1.15),
+  cast: () => play('magic', 0.29, 180),
+  boom: () => play('impact', 0.38, 240),
+  zap: () => play('lightning', 0.34, 250),
   rumble: () => play('leather', 0.28, 280, 0.75),
-  ram: () => play('close', 0.42, 250, 0.84),
+  ram: () => play('impact', 0.42, 250, 0.84),
   mateJoin: () => play('leather', 0.34, 160),
   cardDeal: () => play('page', 0.36),
   cardTease: (ms = 200) => play('cloth', 0.16, 160, ms > 600 ? 0.85 : 1),
@@ -183,7 +177,7 @@ export const sfx = {
   cardPick: () => play('place', 0.36),
   squish: () => play('leather', 0.19, 210),
   ouch: () => play('close', 0.32, 250),
-  auroraRelease: () => play('blade', 0.26, 240, 0.86),
+  auroraRelease: () => play('magic', 0.34, 240, 0.8),
   charge: () => play('cloth', 0.27, 220, 0.8),
   crash: () => play('close', 0.48, 260, 0.7),
   crumble: () => play('leather', 0.38, 220, 0.8),
