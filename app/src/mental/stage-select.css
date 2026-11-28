@@ -159,3 +159,14 @@
   bottom: 8px;
   width: clamp(76px, 24vw, 112px);
 }
+
+@media (max-height: 730px) {
+  .stage-lobby.is-crowd .stage-heading {
+    min-height: 68px;
+    padding: 6px 14px;
+  }
+  .stage-lobby.is-crowd .stage-scenery-monster {
+    width: 54px;
+    bottom: 2px;
+  }
+}

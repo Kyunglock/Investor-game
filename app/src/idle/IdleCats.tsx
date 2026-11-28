@@ -35,8 +35,14 @@ export function IdleCats({
   tab,
   onTab,
   onSkills,
+  formation,
 }: {
   company: Company
+  formation?: {
+    setFielded: (code: CatCode | 'boss', fielded: boolean, at?: number) => void
+    recommended: string[]
+    recommend: (codes: string[]) => void
+  }
   /** 메뉴를 오가도 선택한 고양이를 유지한다. null은 사장냥이다. */
   picked: CatCode | null
   onPick: (code: CatCode | null) => void
@@ -97,12 +103,18 @@ export function IdleCats({
     }
   }, [])
   // 추천 편성 (654번): 팀 화력의 어림이 가장 큰 고양이들로 출전 칸을 바꾼다.
-  const recommended = recommendParty(company)
+  const recommended = formation?.recommended ?? recommendParty(company)
   const alreadyBest =
     recommended.length === fielded.length &&
     recommended.every((code) => fielded.some((c) => c.code === code))
   const [arranging, setArranging] = useState(false)
   const applyRecommended = async () => {
+    if (formation) {
+      formation.recommend(recommended)
+      sfx.tap()
+      haptic.light()
+      return
+    }
     if (arranging) return
     setArranging(true)
     sfx.tap()
@@ -138,7 +150,7 @@ export function IdleCats({
   const place = async (code: CatCode | 'boss', target: string) => {
     const store = useRaisingStore.getState()
     if (store.busy) return
-    const now = store.company?.idle
+    const now = formation ? idle : store.company?.idle
     const cats = now?.cats ?? []
     const c = cats.find((c) => c.code === code)
     if ((code !== 'boss' && !c) || target === `slot:${code}`) return
@@ -157,9 +169,10 @@ export function IdleCats({
     const there = occupant(at)
     if (there === code) return
     // 쉬던 쪽을 찬 칸에 놓으면 그 칸의 고양이·사장냥과 교체하고, 그 밖에는(빈 칸, 출전 중인 쪽 옮기기·맞바꾸기) 칸 번호로 세운다.
-    if (benched && there) await store.fieldCat(code, true, there as CatCode | 'boss')
+    if (formation) formation.setFielded(code, true, at)
+    else if (benched && there) await store.fieldCat(code, true, there as CatCode | 'boss')
     else await store.fieldCat(code, true, undefined, at)
-    if (!useRaisingStore.getState().error) {
+    if (formation || !useRaisingStore.getState().error) {
       onPick(code === 'boss' ? null : code)
       haptic.light()
       sfx.tap()
@@ -319,6 +332,7 @@ export function IdleCats({
                       {c.skills.map((skill) => (
                         <SkillBadge
                           key={skill.code}
+                          label={skill.name}
                           skill={skill.code}
                           level={c.skillLevel}
                           size={c.skills.length > 1 ? 18 : 22}
@@ -431,7 +445,8 @@ export function IdleCats({
               onClick={() => {
                 sfx.tap()
                 haptic.light()
-                void useRaisingStore.getState().fieldCat(cat.code, !cat.fielded)
+                if (formation) formation.setFielded(cat.code, !cat.fielded)
+                else void useRaisingStore.getState().fieldCat(cat.code, !cat.fielded)
               }}
             >
               {cat.fielded ? '출전 중' : '출전'}
@@ -452,7 +467,8 @@ export function IdleCats({
               onClick={() => {
                 sfx.tap()
                 haptic.light()
-                void useRaisingStore.getState().fieldBoss(bossResting)
+                if (formation) formation.setFielded('boss', bossResting)
+                else void useRaisingStore.getState().fieldBoss(bossResting)
               }}
             >
               {/* 누르면 무엇이 되는지 적는다 (685번): "출전 중"만으로는 빼는 단추로 보이지 않았다. */}

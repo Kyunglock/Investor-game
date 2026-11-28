@@ -139,131 +139,30 @@
   border-radius: 50%;
   margin-right: 4px;
 }
-/* 출전 화면의 출전 고양이 줄 (decisions.md 681번). */
-/* 메인 스테이지의 출전 화면은 사장냥 뒷모습·무기 칸이 없어 짧다: 가운데로 모으고, 멘탈벽은 뒷모습 밑으로 파고들지 않는다. */
 .stage-lobby.is-crowd {
-  justify-content: safe center;
-}
-.stage-lobby.is-crowd .stage-mini-wall {
-  margin-top: 12px;
+  gap: 8px;
 }
 .stage-lobby-team {
   width: 100%;
   max-width: 440px;
-  flex-shrink: 0;
-  padding: 9px 12px 10px;
-  border: 1px solid #e2c99a;
+  min-height: 180px;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 6px 10px 10px;
+  background: #fff5d9;
+  border: 1px solid #d8ba7c;
   border-radius: 14px;
-  background: #fffaeee6;
-  color: #5a3f22;
-}
-.stage-lobby-team header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 7px;
-  font-size: 12px;
-}
-.stage-lobby-team header span {
-  font-size: 10.5px;
-  color: #8b6847;
-}
-.stage-lobby-team ol {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.stage-lobby-team > :where(ol) li {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
-  text-align: center;
-}
-.stage-lobby-team > :where(ol) .idle-cat-portrait {
-  width: 44px;
-  height: 46px;
-}
-.stage-lobby-team > :where(ol) li b,
-.stage-lobby-team > :where(ol) li small {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.stage-lobby-team > :where(ol) li b {
-  font-size: 11px;
-}
-.stage-lobby-team > :where(ol) li small {
-  font-size: 9.5px;
-  color: #8b6847;
-}
-.stage-lobby-team-skills {
-  display: flex;
-  justify-content: center;
-  gap: 3px;
-  min-height: 20px;
-}
-.stage-lobby-team-order {
-  position: absolute;
-  top: -4px;
-  left: calc(50% - 28px);
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  background: #ff7a45;
-  color: #fff;
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 800;
-}
-.stage-edit-team {
-  display: block;
-  margin: 8px auto 0;
-  min-height: 40px;
-  padding: 0 16px;
-  border: 1px solid #cfb58f;
-  border-radius: 10px;
-  background: #fff8e9;
-  color: inherit;
-  font: inherit;
-}
-.stage-team-editor {
-  margin-top: 12px;
-}
-.stage-team-editor > p {
-  font-size: 12px;
 }
 .stage-starter {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
-}
-.stage-starter .idle-cat-portrait {
-  width: 44px;
-  height: 44px;
-}
-.stage-starter label {
-  display: grid;
-  gap: 2px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .stage-starter select {
-  min-height: 40px;
-  padding: 0 8px;
+  min-height: 36px;
   color: inherit;
   font: inherit;
-  font-size: 14px;
 }
 .stage-primary {
   width: 100%;
@@ -1407,22 +1306,9 @@
   .stage-summary > .stage-primary {
     margin-bottom: auto;
   }
-  /* 짧은 화면에서는 출전 고양이 줄을 줄여 출발 단추가 덜 밀려나게 한다 (681번). */
-  .stage-lobby-team {
-    padding: 7px 10px;
-  }
-  .stage-lobby-team header {
-    margin-bottom: 4px;
-  }
-  .stage-lobby-team header span {
-    display: none;
-  }
-  .stage-lobby-team > :where(ol) .idle-cat-portrait {
-    width: 34px;
-    height: 36px;
-  }
-  .stage-lobby-team-order {
-    left: calc(50% - 23px);
+  .stage-lobby-team .loadout-team,
+  .stage-lobby-team .idle-cat.owned {
+    position: static;
   }
 }
 /* 자동 선택 (#566): 저절로 골라질 카드에 점선 테두리가 맥박치고, 아래 막대가 5초 동안 줄어든다. */
