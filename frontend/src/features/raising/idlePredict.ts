@@ -24,8 +24,11 @@ export function idleMaxHp(wall: number) {
 export const IDLE_HIT_MS = 12000
 /** The server keeps pierce damage for the two shown walls and four more (IdleEngine.FAR). */
 const QUEUED = 6
-/** Game seconds per real second (IdleEngine.SPEED). */
-const SPEED = 2
+/**
+ * Game seconds per real second (IdleEngine.SPEED, 580번에서 1.5배속). 서버와 다르면 화면이 거래 정지를
+ * 서버보다 일찍 풀고, 아직 정지 중이라는 다음 접속 신호에 서킷브레이커가 한 번 더 걸린다.
+ */
+const SPEED = 1.5
 /** Game seconds a circuit breaker lasts (IdleEngine.CIRCUIT_SECONDS). */
 const CIRCUIT_SECONDS = 4
 /** Game seconds of the server's halt that no longer stop a screen that already went on. */
