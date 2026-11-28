@@ -195,7 +195,7 @@ import {
   sweepHits,
   type WaterStats,
 } from './magic'
-import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
+import { inSight, MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
 import {
@@ -4056,8 +4056,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 이번에 쏠 곳(0번 사장냥, 1번부터 고양이): 디펜스에서 누르고 있으면 모두 누른 자리, 전진 모드는 자동 조준의 과녁, 디펜스에서 안 누르면 사장냥 총에서
-   * 520px 안의 가까운 적을 고양이마다 나눠 맡는다(409번, mates.ts spreadTargets. 393번에서는 모두 한 적을 쏴 몰렸다).
+   * 이번에 쏠 곳(0번 사장냥, 1번부터 고양이): 디펜스에서 누르고 있으면 모두 누른 자리, 전진 모드는 자동 조준의 과녁, 디펜스에서 안 누르면
+   * 화면에 보이는 가까운 적을 고양이마다 나눠 맡는다(409·715번, mates.ts spreadTargets. 393번에서는 모두 한 적을 쏴 몰렸다).
    */
   private shotTargets(): ({ x: number; y: number } | null)[] {
     const ptr = this.input.activePointer
@@ -4110,13 +4110,15 @@ class BattleScene extends Phaser.Scene {
       }
       return targets
     }
-    // 안 누르면 고양이마다 다른 적을 노린다 (409번): 사장냥 총에서 520px 안의 가까운 적을 나눠 맡는다.
+    // 안 누르면 고양이마다 다른 적을 노린다 (409번). 화면에 보이는 적이면 거리와 상관없이 가까운 것부터 나눠 맡는다 (715번):
+    // 전에는 사장냥 총에서 520px 안의 적만 노려, 화면 위쪽에 보이는 몬스터를 두고도 쏘지 않았다.
+    const { w, h } = this.view()
     const live: Enemy[] = []
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
-      if (e.active && !e.dying) live.push(e)
+      if (e.active && !e.dying && inSight(e, w, h)) live.push(e)
     }
-    const targets = spreadTargets(shooters, live, 520)
+    const targets = spreadTargets(shooters, live, Number.POSITIVE_INFINITY)
     // 웨이브 판 (690번)은 제한 시간이 없다: 가까운 몬스터가 없는 손은 멀리 있는 보스를 쏜다. 아니면 손을 대지 않는 판에서 보스 웨이브가 끝나지 않는다.
     const boss = this.bossEnemy?.active && !this.bossEnemy.dying ? this.bossEnemy : null
     return this.waveTotal && boss ? targets.map((t) => t ?? boss) : targets
