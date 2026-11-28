@@ -1180,7 +1180,7 @@ class BattleScene extends Phaser.Scene {
       const [vx, vy] = [bullet.body.velocity.x, bullet.body.velocity.y]
       const angle = Math.atan2(vy, vx)
       const [bx, by] = [bullet.x, bullet.y]
-      this.impact(bx, by, bullet.power, bullet.grade)
+      if (!this.isVaultGuardian(enemy)) this.impact(bx, by, bullet.power, bullet.grade)
       // 무기마다 다른 효과 (376번): 소총은 뚫고 지나가고, 리볼버는 치명타, 기관단총은 맞은 적을 느리게 한다.
       bullet.hitList.push(enemy)
       // 매도벽은 뚫고 지나가지 못한다 (457번): 소총도 벽 칸에서 멈춘다.
@@ -3603,6 +3603,10 @@ class BattleScene extends Phaser.Scene {
     stats.peak = Math.max(stats.peak, this.damage.live() + this.crits.live())
   }
 
+  private isVaultGuardian(e: Enemy) {
+    return e.boss && Boolean(this.opts.vault?.score)
+  }
+
   private hit(e: Enemy, dmg: number, angle: number, kind: DamageKind = 'bullet', area = false) {
     if (e.dying || !e.active) return
     if (kind !== 'auroraNight' && this.beyondWall(e) && !(area && e.cell)) return
@@ -3621,12 +3625,16 @@ class BattleScene extends Phaser.Scene {
     // 금고 도전 (641번): 이번 주의 약점·내성 스킬은 수호냥에게 적용한다.
     const vault = this.opts.vault
     if (vault?.scale && e.boss) dmg *= vault.scale(kind)
+    if (this.isVaultGuardian(e)) {
+      // 수호룡은 연속 피격 중에도 원래 모습으로 공격한다. 피해량만 점수와 숫자로 표시한다.
+      this.vaultDamage += dmg
+      this.damageNumber(e, dmg, kind)
+      sfx.hit()
+      return
+    }
     if (this.opts.idle && e.cell) {
       // 벽의 체력은 여기서 깎지 않는다: 알린 명중이 예측(idlePredict.ts)에 얹혀 다음 프레임의 스냅샷으로 돌아온다 (532번).
       if (!this.idleTransition) this.reportIdleHit(this.idleWall, kind, dmg, 0)
-    } else if (vault?.score && e.boss) {
-      // 피해량을 겨루는 보스전: 수호냥은 쓰러지지 않고 맞은 만큼 점수가 된다.
-      this.vaultDamage += dmg
     } else {
       if (this.opts.idle && !this.idleTransition) {
         this.reportStatsHit(kind, Math.min(dmg, Math.max(0, e.hp)))
@@ -3635,7 +3643,6 @@ class BattleScene extends Phaser.Scene {
     }
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
     if (e.cell) e.clearTint()
-    else if (vault?.score && e.boss) e.setTint(0xffcc87)
     else e.setTintFill(0xffffff)
     this.time.delayedCall(55, () => e.active && this.paint(e))
     // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
@@ -6170,7 +6177,7 @@ class BattleScene extends Phaser.Scene {
       const tintKind = stunned ? 2 : slowed ? 1 : 0
       if (tintKind !== e.tintKind) {
         e.tintKind = tintKind
-        this.paint(e)
+        if (!this.isVaultGuardian(e)) this.paint(e)
       }
       // 매도벽 칸은 움직이지 않는다: 벽과 함께 assaultStep이 옮긴다.
       if (e.cell || (e.boss && this.opts.vault?.score)) continue
