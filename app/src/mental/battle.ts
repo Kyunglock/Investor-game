@@ -165,12 +165,12 @@ import { IDLE_PIERCE, IDLE_PIERCE_FLOOR, idlePierceHits, idlePierceReach } from 
 import { IDLE_WALL_TOP, IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
   auroraNightStats,
-  densest,
   type EarthStats,
   earthStats,
   type Fall,
   type Flow,
   fallStats,
+  fallTargets,
   flowStats,
   isFall,
   isFlow,
@@ -841,6 +841,8 @@ class BattleScene extends Phaser.Scene {
   private lastSound: Partial<Record<SoundKey, number>> = {}
   private waters: WaterShot[] = []
   private meteors: MeteorShot[] = []
+  /** 최근에 떨어질 자리 (709번): 다음 운석은 이 자리를 피해 다른 곳을 친다. 떨어진 뒤 잠시 지나면 지운다. */
+  private recentFalls: { x: number; y: number; until: number }[] = []
   private bolts: Phaser.GameObjects.Graphics[] = []
   private boltIndex = 0
   private rings: Phaser.GameObjects.Image[] = []
@@ -4922,11 +4924,16 @@ class BattleScene extends Phaser.Scene {
     const candidates = [...this.magicTargets()].sort(
       (a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y),
     )
-    const target = densest(candidates, st.radius)
+    // 여러 자리를 친다 (709번): 운석마다 다른 과녁이고, 다른 고양이가 막 던진 자리도 피한다.
+    this.recentFalls = this.recentFalls.filter((f) => f.until > this.elapsed)
+    const targets = fallTargets(candidates, st.count, st.radius, this.recentFalls)
     const free = this.meteors.filter((s) => !s.active)
-    if (!target || free.length < st.count) return false
-    const v = target.body?.velocity
+    if (targets.length === 0 || free.length < st.count) return false
     for (let i = 0; i < st.count; i++) {
+      const target = targets[i]
+      const v = target.body?.velocity
+      // 과녁이 모자라 같은 자리를 다시 쓰면 반지름의 절반쯤 비껴 떨어뜨린다.
+      const again = targets.indexOf(target) < i
       const s = free[i]
       s.active = true
       s.level = level
@@ -4936,7 +4943,7 @@ class BattleScene extends Phaser.Scene {
       s.tx = Phaser.Math.Clamp(
         target.x +
           (v?.x ?? 0) * (st.warning + s.delay) +
-          (i ? (i % 2 ? -1 : 1) * st.radius * 0.25 : 0),
+          (again ? (i % 2 ? -1 : 1) * st.radius * 0.5 : 0),
         12,
         this.view().w - 12,
       )
@@ -4960,6 +4967,7 @@ class BattleScene extends Phaser.Scene {
         .setDisplaySize(st.radius * 2, st.radius)
         .setAlpha(0.6)
         .setVisible(false)
+      this.recentFalls.push({ x: s.tx, y: s.ty, until: this.elapsed + st.warning + s.delay + 0.6 })
     }
     this.playSound('whoosh')
     return true
