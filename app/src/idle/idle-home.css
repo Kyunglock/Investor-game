@@ -527,6 +527,13 @@
 .idle-stat-icon .idle-icon {
   font-size: 26px;
 }
+/* 골드 획득량 (706번): 성장 그림에 동전이 없어 위쪽 돈 표시와 같은 동전을 크게 쓴다. */
+.idle-stat-icon .idle-fish-coin {
+  width: 28px;
+  height: 28px;
+  font-size: 17px;
+  font-weight: 900;
+}
 .idle-stat-icon .idle-growth-icon {
   display: block;
   width: 100%;

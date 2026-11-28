@@ -678,7 +678,7 @@ paths:
               type: object
               required: [kind]
               properties:
-                kind: { type: string, enum: [damage, hp, buy] }
+                kind: { type: string, enum: [damage, hp, buy, gold], description: "gold는 골드 획득량이다 (706번): 한 단계에 2%, 벽·보스 보상과 시간 수입에 곱한다" }
                 levels: { type: integer, minimum: 1, maximum: 100, description: 묶어 올릴 단계 수. 없으면 한 단계 }
       responses:
         '200':
@@ -1769,7 +1769,7 @@ components:
                     type: object
                     required: [kind, level, cost, bonus, nextBonus]
                     properties:
-                      kind: { type: string, enum: [damage, hp, buy] }
+                      kind: { type: string, enum: [damage, hp, buy, gold], description: "gold는 골드 획득량이다 (706번): 한 단계에 2%, 벽·보스 보상과 시간 수입에 곱한다" }
                       level: { type: integer }
                       cost: { type: integer, format: int64, description: 다음 단계의 값(생선) }
                       bonus: { type: integer, description: 지금 더해 주는 양. buy는 주, 나머지는 % }
