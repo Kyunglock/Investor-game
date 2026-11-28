@@ -108,11 +108,11 @@ class IdleEngine {
   private static final int BARRAGE_SHOTS = 40;
   // One barrage order is a plain buy order (601): it was three times one before.
   private static final double BARRAGE_POWER = 1;
-  // A buy order's damage is its own number (514): this base times the wall's order scale (the
-  // same scale the sell orders and the buy wall's health use, 498) times the buy upgrade. It does
-  // not follow the weapon. Matches the app's mental/buyWall.ts BUY_WALL.orderDamage.
-  // Doubled from 0.75 in 594, then 1.0 in 688 (too strong all game long).
-  private static final double BUY_ORDER_DAMAGE = 1.0;
+  // 매수 주문 한 장 (710번) = 그 벽의 매도 주문 한 장과 같은 수량이다: 매도 주문 SELL_ORDER_SHARES주 × 매도 물량 세기 SELL_POWER ×
+  // 그 벽의 물량 배율(threat). 강화도 팀의 덤도 없다. 앱 mental/enemies.ts ORDERS.order.shares, assault.ts
+  // IDLE_SELL_POWER와 같다.
+  private static final double SELL_ORDER_SHARES = 20;
+  private static final double SELL_POWER = 6;
   // The buy wall answers every sell order with two buy orders, a pair every 0.15 game seconds at
   // the fastest (buyWall.ts shotSeconds - shotJitter).
   private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;
@@ -506,6 +506,9 @@ class IdleEngine {
       c.idle.damage = Math.min(c.idle.damage, maxHp(c.idle.wall) - 1);
       c.idle.hitVersion = 2;
     }
+    // 매수벽 공격 영구 강화를 없앴다 (710번): 쓴 생선(1 + 2 + … + 단계)을 돌려주고 지운다.
+    Integer buyFish = c.fishLevels == null ? null : c.fishLevels.remove("buy");
+    if (buyFish != null && buyFish > 0) c.fish += (long) buyFish * (buyFish + 1) / 2;
     if (c.idle.bossSeat == null) {
       // 사장냥 칸이 따로 있던 저장 (704번): 사장냥은 맨 앞 칸에 서고 고양이들은 한 칸씩 뒤로 간다.
       if (c.idle.seats != null) c.idle.seats.replaceAll((code, at) -> at == null ? null : at + 1);
@@ -860,6 +863,7 @@ class IdleEngine {
   // 전투력 (538): the weights of the parts that are not bullet or skill damage.
   private static final double POWER_SCALE = 100;
   private static final double POWER_BUY_ORDERS = 2;
+  private static final double POWER_BUY_ORDER = 1.0;
   private static final double POWER_HP_WEIGHT = 0.25;
 
   /**
@@ -895,7 +899,8 @@ class IdleEngine {
                 / COOLDOWNS[skill][level];
       }
     }
-    total += buyOrder(c) * POWER_BUY_ORDERS;
+    // 매수 주문은 이제 벽의 매도 주문을 따르지만 (710번) 전투력은 벽 번호를 보지 않는 숫자라, 전의 바탕 피해(1.0)로 그대로 센다.
+    total += POWER_BUY_ORDER * POWER_BUY_ORDERS;
     double hpUp = 0;
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
       if ("hp".equals(u.kind())) hpUp = u.bonusPercent() / 100.0;
@@ -930,73 +935,16 @@ class IdleEngine {
   static final double SHARES_PER_HP = 30;
 
   /**
-   * One buy order's damage (514, 573, 579, 638). The wall's depth is not in it. The buy wall attack
-   * upgrade raises it by a fixed number of shares a level, and the team's guns add their share on
-   * top (teamShares; taken out in 688, back at half the size in 689).
+   * 매수 주문 한 장의 피해 (710번): wall번째 벽 앞의 매도 주문 한 장과 같은 수량이다(앱 orderHp('order', 물량 배율 × 매도 물량 세기)). 벽이
+   * 깊어지면 매도 주문과 함께 커진다. 매수벽 공격 강화와 팀 화력의 덤(514·573·638·689번)은 없앴다.
    */
-  private double buyOrder(CompanyState c) {
-    return BUY_ORDER_DAMAGE + buyUp(c);
+  static double buyOrder(long wall) {
+    return Math.max(1, Math.round(SELL_ORDER_SHARES * threat(wall) * SELL_POWER)) / SHARES_PER_HP;
   }
 
-  /** The damage added to one buy order: the buy wall attack upgrade's and the team's shares. */
-  private double buyUp(CompanyState c) {
-    for (CompanyView.BattleUpgrade u : upgradeViews(c)) {
-      if ("buy".equals(u.kind())) return u.bonusShares() / SHARES_PER_HP;
-    }
-    return 0;
-  }
-
-  /**
-   * 매수 주문의 팀 덤 (decisions.md 638·689번): 벽 체력이 지수로 크면서(636번) 고정 수량뿐인 매수 주문은 깊은 벽에서 의미가 없었다. 팀 화력
-   * 배율(강화를 뺀 총들의 화력 ÷ 처음 권총)에서 1을 뺀 만큼, 바탕 수량(30주 + 단계당 BUY_TEAM_STEP_SHARES주)의 BUY_TEAM_SHARE배를
-   * 얹는다. 처음 권총뿐이면 덤이 없다. 벽의 깊이는 여전히 보지 않는다 (573번): 무기와 동료가 세질수록 커진다. 688번에 뺐다가 689번에 0.5의 절반인 0.25로
-   * 되살렸다.
-   */
-  static final double BUY_TEAM_SHARE = 0.25;
-
-  // 648번: 강화 단계가 다섯 배로 많아져 2주에서 0.4주로 낮췄다(매수 4주와 같은 비율). 653번에 주의 크기가 5분의 1이 되어 피해로는 646번과 같다.
-  static final double BUY_TEAM_STEP_SHARES = 0.4;
-
-  /** 팀 화력 배율 (638번): 강화를 뺀 모든 총의 (한 발 × 초당 발수 × 탄 강화)를 처음 권총의 그것으로 나눈 값. 처음 권총뿐이면 1. */
-  double teamScale(CompanyState c) {
-    double total = 0;
-    for (Shooter shooter : firing(c, shooters(c, 1, 1))) {
-      total += shooter.damage() * shooter.perSecond() * shooter.power();
-    }
-    return total / (1000.0 / PISTOL_FIRE_MS);
-  }
-
-  /** 매수벽 공격 level단계에서 팀이 매수 주문 한 장에 얹는 수량(주, 638번). 영구 강화(fish단계)는 한 단계에 3%를 곱한다. */
-  private long teamShares(CompanyState c, int level) {
-    int fish = c.fishLevels.getOrDefault("buy", 0);
-    double shares =
-        Math.max(0, teamScale(c) - 1)
-            * BUY_TEAM_SHARE
-            * (BUY_ORDER_DAMAGE * SHARES_PER_HP + BUY_TEAM_STEP_SHARES * level)
-            * (1 + MentalEngine.FISH_STEP_PERCENT / 100.0 * fish);
-    return (long) Math.min(Long.MAX_VALUE / 4, Math.floor(shares));
-  }
-
-  /** 전투 강화의 화면 값: 매수벽 공격에는 팀의 덤(638번)이 더해져 있다. 화면과 서버가 이 수량으로 매수 주문 한 장을 센다. */
+  /** 전투 강화의 화면 값. */
   List<CompanyView.BattleUpgrade> upgradeViews(CompanyState c) {
-    return engine.mental.upgradeViews(c).stream()
-        .map(
-            u ->
-                "buy".equals(u.kind())
-                    ? new CompanyView.BattleUpgrade(
-                        u.kind(),
-                        u.level(),
-                        u.price(),
-                        u.priceGrowthPercent(),
-                        u.bonusPercent(),
-                        u.nextBonusPercent(),
-                        u.stepBonusPercent(),
-                        u.nextStepBonusPercent(),
-                        u.bonusShares() + teamShares(c, u.level()),
-                        u.nextBonusShares() + teamShares(c, u.level() + 1),
-                        u.maxLevel())
-                    : u)
-        .toList();
+    return engine.mental.upgradeViews(c);
   }
 
   /**
@@ -1257,10 +1205,11 @@ class IdleEngine {
       }
     }
     // 매수세례 (503): its buy orders that reach the front wall. Credits come from the press, not time.
-    double barrageMax = averaging * buyBoost * buyOrder(c) * BARRAGE_POWER;
     for (IdleHit hit : hits) {
       if (active <= 0 || hit == null || !"barrage".equals(hit.kind()) || hit.count() <= 0) continue;
       if (Math.abs(hit.wall() - front) > AHEAD) continue;
+      // 매수 주문은 맞은 벽의 매도 주문과 같은 수량이다 (710번).
+      double barrageMax = averaging * buyBoost * buyOrder(hit.wall()) * BARRAGE_POWER;
       double reported = hit.damage() == null ? barrageMax * hit.count() : hit.damage();
       if (!Double.isFinite(reported) || reported <= 0) continue;
       double accepted = Math.min(hit.count(), s.hitCredits[BARRAGE]);
@@ -1271,11 +1220,11 @@ class IdleEngine {
     }
     // 손절 (591): the one big hit the press paid for. It is a buy-side hit, so 매수공격 2배 counts;
     // 물타기 does not.
-    double stopLossMax = buyBoost * buyOrder(c) * STOP_LOSS_ORDERS;
     for (IdleHit hit : hits) {
       if (active <= 0 || hit == null || !"stoploss".equals(hit.kind()) || hit.count() <= 0)
         continue;
       if (Math.abs(hit.wall() - front) > AHEAD || s.hitCredits[STOP_LOSS] < 1) continue;
+      double stopLossMax = buyBoost * buyOrder(hit.wall()) * STOP_LOSS_ORDERS;
       double reported = hit.damage() == null ? stopLossMax : hit.damage();
       if (!Double.isFinite(reported) || reported <= 0) continue;
       s.hitCredits[STOP_LOSS] = 0;
@@ -1290,10 +1239,10 @@ class IdleEngine {
           Math.min(
               SPEED * GRACE_MS / 1000 * BUY_ORDERS_PER_SECOND,
               s.hitCredits[BUY] + active * BUY_ORDERS_PER_SECOND);
-      double buyMax = averaging * buyBoost * buyOrder(c);
       for (IdleHit hit : hits) {
         if (hit == null || !"buy".equals(hit.kind()) || hit.count() <= 0) continue;
         if (Math.abs(hit.wall() - front) > AHEAD) continue;
+        double buyMax = averaging * buyBoost * buyOrder(hit.wall());
         double reported = hit.damage() == null ? buyMax * hit.count() : hit.damage();
         if (!Double.isFinite(reported) || reported <= 0) continue;
         double accepted = Math.min(hit.count(), s.hitCredits[BUY]);

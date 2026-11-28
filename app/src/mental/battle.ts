@@ -2743,13 +2743,13 @@ class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 매수 주문 한 장의 피해. 자동 전투는 벽이 깊어져도 커지지 않는다 (514·573번): 매수벽 공격 강화와 팀 화력의 덤(638·689번, 서버가 강화의 수량에 더해 준다)을 따른다. 스테이지는
-   * 공격력 × (바탕 피해 + 강화)다.
+   * 매수 주문 한 장의 피해. 자동 전투는 그 벽의 매도 주문 한 장과 같은 수량이다 (710번): 강화도 팀의 덤도 없다. 스테이지는
+   * 공격력 × 바탕 피해다.
    */
   private buyOrderDamage() {
     return this.opts.idle
-      ? idleBuyOrderDamage(this.loadout.buyBonus) * this.boost('boostBuy') * this.averaging
-      : this.loadout.damage * (BUY_WALL.orderDamage + this.loadout.buyBonus)
+      ? idleBuyOrderDamage(this.sellScale()) * this.boost('boostBuy') * this.averaging
+      : this.loadout.damage * BUY_WALL.orderDamage
   }
 
   /** 물타기 (591번): 도는 동안 매수 주문이 매수벽이 깎인 만큼 세진다. */
@@ -2770,7 +2770,7 @@ class BattleScene extends Phaser.Scene {
     if (!this.magicTargets().some(this.isSiege)) return
     this.stopLossPending = false
     const lost = wall.sacrifice(ACTIVES.stopLoss.ratio)
-    const order = idleBuyOrderDamage(this.loadout.buyBonus) * this.boost('boostBuy')
+    const order = idleBuyOrderDamage(this.sellScale()) * this.boost('boostBuy')
     const damage = stopLossDamage(order, lost, wall.maxHp)
     const x = this.view().w / 2
     this.buyWallFx?.impact(x, false)

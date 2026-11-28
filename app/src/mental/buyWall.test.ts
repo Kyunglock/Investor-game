@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { IDLE_SELL_POWER } from './assault'
 import {
   assaultBonusPercent,
   BUY_LOSS_MERGE_MS,
@@ -10,6 +11,7 @@ import {
   noteX,
   pushedByCollapse,
 } from './buyWall'
+import { orderShares } from './enemies'
 import { SHARES_PER_HP, sharesOf } from './shares'
 
 describe('매수 티켓의 좌우 분포', () => {
@@ -147,13 +149,16 @@ describe('매수벽 붕괴 밀어내기 (#699)', () => {
   })
 })
 
-describe('자동 전투의 매수 주문 피해 (514·573번)', () => {
-  it('무기와도 벽의 깊이와도 따로 센다: 바탕 1.0(688번) + 매수벽 공격 강화가 더한 수량', () => {
-    expect(idleBuyOrderDamage(0)).toBe(1)
-    // 매수벽 공격 강화는 %가 아니라 더하는 값이다 (579번): 10단계 +100주.
-    expect(idleBuyOrderDamage(100 / SHARES_PER_HP)).toBeCloseTo(1 + 100 / 30)
-    // 653번: 체력 1이 30주라 바탕 한 장은 30주다(688번, 전에는 45주).
-    expect(sharesOf(idleBuyOrderDamage(1000 / SHARES_PER_HP))).toBe(1030)
+describe('자동 전투의 매수 주문 피해 (710번)', () => {
+  it('그 벽의 매도 주문 한 장과 같은 수량이다: 20주 × 매도 물량 세기 × 물량 배율', () => {
+    // 첫 벽(물량 배율 1): 매도 주문 120주, 매수 주문도 120주.
+    expect(sharesOf(idleBuyOrderDamage(IDLE_SELL_POWER))).toBe(
+      orderShares('order', IDLE_SELL_POWER),
+    )
+    expect(sharesOf(idleBuyOrderDamage(IDLE_SELL_POWER))).toBe(120)
+    // 벽 100(물량 배율 1.8): 216주. 서버 IdleEngine.buyOrder(100)과 같다.
+    expect(sharesOf(idleBuyOrderDamage(1.8 * IDLE_SELL_POWER))).toBe(216)
+    expect(idleBuyOrderDamage(1.8 * IDLE_SELL_POWER)).toBeCloseTo(216 / SHARES_PER_HP)
   })
 
   it('손절은 지금 체력의 절반을 버리고, 벽은 무너지지 않는다 (591번)', () => {

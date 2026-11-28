@@ -255,16 +255,11 @@ class EconomySimTest {
   }
 
   void spendFish(CompanyState c) {
-    // Damage first: two damage levels for each buy level, hp left out.
+    // 공격력만 올린다: 매수벽 공격 영구 강화는 없앴고 (710번) 체력은 뺀다.
     while (true) {
       int d = c.fishLevels.getOrDefault("damage", 0);
-      int b = c.fishLevels.getOrDefault("buy", 0);
-      String k = d < 3 * (b + 1) ? "damage" : "buy";
-      if (c.fish < MentalEngine.fishUpgradeCost(c.fishLevels.getOrDefault(k, 0))) {
-        if (k.equals("buy") && c.fish >= MentalEngine.fishUpgradeCost(d)) k = "damage";
-        else break;
-      }
-      idle.buyFishUpgrade(c, k);
+      if (c.fish < MentalEngine.fishUpgradeCost(d)) break;
+      idle.buyFishUpgrade(c, "damage");
     }
   }
 

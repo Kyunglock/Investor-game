@@ -11,7 +11,6 @@ const TEXT: Record<UpgradeKind, { name: string; effect: string }> = {
   damage: { name: '공격력', effect: '탄 공격력' },
   fire: { name: '연사', effect: '쏘는 빠르기' },
   hp: { name: '매수벽 체력', effect: '최대 멘탈·매수벽' },
-  buy: { name: '매수벽 공격', effect: '매수 주문 공격력' },
 }
 
 /**

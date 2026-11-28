@@ -32,10 +32,10 @@ class MentalEngine {
   static final List<String> DRAW_GRADES = List.of("F", "E", "D", "C", "B", "A");
 
   /** 자본으로 사는 전투 강화 (367·394·410번): 공격력·연사·체력(최대 멘탈). 고양이 속도는 394번에서 뺐다. */
-  static final List<String> UPGRADES = List.of("damage", "fire", "hp", "buy");
+  static final List<String> UPGRADES = List.of("damage", "fire", "hp");
 
-  /** 없앤 강화 (556번): 치명타 피해. 저장에 남은 단계는 쓴 돈을 돌려주고 지운다. */
-  static final List<String> REMOVED_UPGRADES = List.of("crit");
+  /** 없앤 강화: 치명타 피해(556번)와 매수벽 공격(710번). 저장에 남은 단계는 쓴 돈을 돌려주고 지운다. */
+  static final List<String> REMOVED_UPGRADES = List.of("crit", "buy");
 
   /** 처음 드는 무기: 일반 권총. */
   static final String PISTOL = "pistol";
@@ -342,21 +342,18 @@ class MentalEngine {
    * 영구 강화 (decisions.md 600번): 환생해서 얻은 생선으로 올리고 환생해도 남는다. 전투 강화의 효과에 그대로 더한다: 공격력·매수벽 체력은 한 단계에
    * FISH_STEP_PERCENT%, 매수벽 공격은 한 단계에 FISH_STEP_SHARES주.
    */
-  static final List<String> FISH_UPGRADES = List.of("damage", "hp", "buy", "gold");
+  static final List<String> FISH_UPGRADES = List.of("damage", "hp", "gold");
 
   // 처음의 10분의 1로 낮췄다가 (602번: 10%·100주는 너무 셌다) 세 배로 올렸다 (625번: 1%·10주는 환생의 보람이 없었다).
   // 644번에 1%로 낮췄다: 환생을 되풀이해 수백 단계가 쌓이면 화력이 수십 배가 되었다. 돈으로 사는 공격력 한 단계와 같다.
   static final int FISH_STEP_PERCENT = 1;
-  // 653번: 주의 크기가 5분의 1이 되어(체력 1 = 30주) 30주에서 6주로. 피해로는 같다.
-  static final int FISH_STEP_SHARES = 6;
   // 골드 획득량 (706번): 한 단계에 2%. 골드는 강화 값을 사는 데 쓰이고 강화 값은 단계마다 30%씩 올라(646번) 골드 1%가 공격력 1%보다 훨씬
   // 약하므로 두 배로 둔다.
   static final int FISH_GOLD_STEP_PERCENT = 2;
 
-  /** 영구 강화 한 단계의 효과: buy는 주, gold는 골드 획득량 %, 나머지는 %. */
+  /** 영구 강화 한 단계의 효과(%): gold는 골드 획득량, 나머지는 그 능력치. */
   static int fishStep(String kind) {
     return switch (kind) {
-      case "buy" -> FISH_STEP_SHARES;
       case "gold" -> FISH_GOLD_STEP_PERCENT;
       default -> FISH_STEP_PERCENT;
     };
@@ -367,7 +364,7 @@ class MentalEngine {
     return level + 1L;
   }
 
-  /** 영구 강화가 전투 강화에 더하는 양: buy는 주, 나머지는 %. 영구 강화가 없는 종류는 0. */
+  /** 영구 강화가 전투 강화에 곱하는 양(%). 영구 강화가 없는 종류는 0. */
   static int fishBonus(CompanyState c, String kind) {
     if (!FISH_UPGRADES.contains(kind)) return 0;
     return c.fishLevels.getOrDefault(kind, 0) * fishStep(kind);
@@ -411,10 +408,7 @@ class MentalEngine {
               int level = upgradeLevel(c, kind);
               double step = rule.stepPercent().getOrDefault(kind, 0.0);
               int max = maxLevel(kind);
-              // 매수벽 공격은 %가 아니라 수량(주)으로 오른다 (579번).
-              int shares = "buy".equals(kind) ? rule.buyStepShares() : 0;
-              int fishPercent = "buy".equals(kind) ? 0 : fishBonus(c, kind);
-              int fishShares = "buy".equals(kind) ? fishBonus(c, kind) : 0;
+              int fishPercent = fishBonus(c, kind);
               return new CompanyView.BattleUpgrade(
                   kind,
                   level,
@@ -424,8 +418,9 @@ class MentalEngine {
                   withFish(Math.min(level + 1, max) * step, fishPercent),
                   withFish(level * step, 0),
                   withFish(Math.min(level + 1, max) * step, 0),
-                  level * shares + fishShares,
-                  (level + 1) * shares + fishShares,
+                  // 매수벽 공격 강화를 없앴다 (710번): 수량으로 오르는 강화는 이제 없다.
+                  0,
+                  0,
                   max == Integer.MAX_VALUE ? 0 : max);
             })
         .toList();

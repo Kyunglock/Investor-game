@@ -19,8 +19,6 @@ import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { stageLabel } from '../mental/advance'
 import { mergeable } from '../mental/armory'
-import { idleBuyOrderDamage } from '../mental/buyWall'
-import { SHARES_PER_HP, sharesOf } from '../mental/shares'
 import { useAutoUpgrade, useAutoUpgradeLoop } from './autoUpgrade'
 import { BossReward } from './BossReward'
 import { CatInfoCard } from './CatInfoCard'
@@ -88,11 +86,9 @@ const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
   damage: { name: '공격력', note: '탄 공격력' },
   fire: { name: '공격 속도', note: '쏘는 빠르기' },
   hp: { name: '매수벽 체력', note: '매수벽이 무너지면 다시 설 때까지 공격이 멈춰요' },
-  buy: { name: '매수벽 공격', note: '매수 주문의 피해 · 무기와 동료가 셀수록 덤이 붙어요' },
 }
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
 
-/** 매수 주문 한 장의 수량 (514·573·638·689번): 벽의 깊이는 보지 않는다. 이 강화의 고정 수량에 팀 화력을 따르는 덤이 붙는다(서버가 더해 준다). */
 /** 이 강화만의 효과(%) (661번): 영구 강화를 곱하지 않은 값. 옛 서버 응답에는 없어 전투 값으로 대신한다. */
 function ownPercent(u: Upgrade) {
   return u.stepBonusPercent ?? u.bonusPercent
@@ -100,12 +96,6 @@ function ownPercent(u: Upgrade) {
 function nextOwnPercent(u: Upgrade, levels: number) {
   const now = ownPercent(u)
   return now + ((u.nextStepBonusPercent ?? u.nextBonusPercent) - now) * levels
-}
-
-function buyNote(company: Company, u: Upgrade) {
-  if (!company.idle) return STATS.buy.note
-  const damage = idleBuyOrderDamage((u.bonusShares ?? 0) / SHARES_PER_HP)
-  return `매수 주문 한 장 ${sharesOf(damage).toLocaleString()}주 · 무기와 동료가 셀수록 덤이 붙어요`
 }
 
 /** 스테이지에서 돌아온 뒤 이만큼 안에 온 "자리를 비운 동안" 알림은 그 판 때문이라 띄우지 않는다 (682번). */
@@ -610,7 +600,6 @@ type FishUpgrade = NonNullable<
 const FOREVER: Record<FishUpgrade['kind'], { name: string; unit: string }> = {
   damage: { name: '공격력', unit: '%' },
   hp: { name: '매수벽 체력', unit: '%' },
-  buy: { name: '매수벽 공격', unit: '주' },
   // 골드 획득량 (706번): 벽·보스 보상과 시간 수입에 곱한다.
   gold: { name: '골드 획득량', unit: '%' },
 }
@@ -763,16 +752,12 @@ function IdleStats({ company }: { company: Company }) {
               <b>
                 {STATS[u.kind].name} <small>Lv.{u.level}</small>
               </b>
-              <small>{u.kind === 'buy' ? buyNote(company, u) : STATS[u.kind].note}</small>
+              <small>{STATS[u.kind].note}</small>
               <p aria-live="polite" aria-atomic="true">
                 {receipt?.kind === u.kind ? (
                   <span key={receipt.id} className="idle-upgrade-gain" data-testid="upgrade-gain">
-                    강화 완료! Lv.+{receipt.levels} · +{Number(receipt.bonus.toFixed(2))}
-                    {receipt.kind === 'buy' ? '주' : '%'}
+                    강화 완료! Lv.+{receipt.levels} · +{Number(receipt.bonus.toFixed(2))}%
                   </span>
-                ) : u.kind === 'buy' ? (
-                  // 매수벽 공격은 %가 아니라 수량으로 오른다 (579번).
-                  `+${(u.bonusShares ?? 0).toLocaleString()}주 → +${((u.bonusShares ?? 0) + ((u.nextBonusShares ?? 0) - (u.bonusShares ?? 0)) * levels).toLocaleString()}주`
                 ) : full ? (
                   `+${percentText(ownPercent(u))}% · 최대`
                 ) : (
@@ -802,10 +787,7 @@ function IdleStats({ company }: { company: Company }) {
                       kind: u.kind,
                       id: ++sequence.current,
                       levels: after.level - u.level,
-                      bonus:
-                        u.kind === 'buy'
-                          ? (after.bonusShares ?? 0) - (u.bonusShares ?? 0)
-                          : ownPercent(after) - ownPercent(u),
+                      bonus: ownPercent(after) - ownPercent(u),
                     })
                     sfx.levelUp()
                   } else {
