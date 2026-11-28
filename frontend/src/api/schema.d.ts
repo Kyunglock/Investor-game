@@ -1831,8 +1831,11 @@ export interface components {
                     adGain: number;
                     /** @description 생선으로 올리는 영구 강화 (600번). 환생해도 남는다. 효과는 같은 종류의 battleUpgrades 효과에 이미 더해져 있다 */
                     upgrades: {
-                        /** @enum {string} */
-                        kind: "damage" | "hp" | "buy";
+                        /**
+                         * @description gold는 골드 획득량이다 (706번): 한 단계에 2%, 벽·보스 보상과 시간 수입에 곱한다
+                         * @enum {string}
+                         */
+                        kind: "damage" | "hp" | "buy" | "gold";
                         level: number;
                         /**
                          * Format: int64
@@ -2875,8 +2878,11 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    kind: "damage" | "hp" | "buy";
+                    /**
+                     * @description gold는 골드 획득량이다 (706번): 한 단계에 2%, 벽·보스 보상과 시간 수입에 곱한다
+                     * @enum {string}
+                     */
+                    kind: "damage" | "hp" | "buy" | "gold";
                     /** @description 묶어 올릴 단계 수. 없으면 한 단계 */
                     levels?: number;
                 };

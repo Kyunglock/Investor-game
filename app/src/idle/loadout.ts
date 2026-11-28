@@ -90,10 +90,17 @@ export function idleLoadout(
 
 /** 금고도전·주간던전: 성장 탭은 영구 강화만 적용한다. */
 export function permanentLoadout(company: Company, party?: readonly string[]) {
-  const upgrades = (company.idle?.rebirth?.upgrades ?? []).map((upgrade) => ({
-    kind: upgrade.kind,
-    bonusPercent: upgrade.kind === 'buy' ? 0 : upgrade.bonus,
-    bonusShares: upgrade.kind === 'buy' ? upgrade.bonus : 0,
-  }))
+  // 골드 획득량 (706번)은 전투 능력치가 아니라 뺀다.
+  const upgrades = (company.idle?.rebirth?.upgrades ?? []).flatMap((upgrade) =>
+    upgrade.kind === 'gold'
+      ? []
+      : [
+          {
+            kind: upgrade.kind,
+            bonusPercent: upgrade.kind === 'buy' ? 0 : upgrade.bonus,
+            bonusShares: upgrade.kind === 'buy' ? upgrade.bonus : 0,
+          },
+        ],
+  )
   return idleLoadout(company, party, upgrades)
 }

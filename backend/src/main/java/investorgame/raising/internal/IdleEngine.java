@@ -706,7 +706,13 @@ class IdleEngine {
         engine.mental.upgradePrice(0)
             * REWARD_UPGRADES
             * (bossWall(c.idle.wall) ? BOSS_REWARD : 1)
-            * CompanyEngine.inflation(c));
+            * CompanyEngine.inflation(c)
+            * goldScale(c));
+  }
+
+  /** 영구 강화 골드 획득량 (706번): 벽·보스 보상과 시간 수입(방치 수입·직원 수입 포함)에 곱한다. */
+  static double goldScale(CompanyState c) {
+    return 1 + MentalEngine.fishBonus(c, "gold") / 100.0;
   }
 
   /** The company's income per game second: the wall's and the employees', at the price level. */
@@ -714,7 +720,8 @@ class IdleEngine {
     state(c); // Makes sure the idle state exists before the price level reads it.
     return (INCOME + engine.staffIncome(c))
         * CompanyEngine.inflation(c)
-        * (1 + engine.mental.bonusPercent(c) / 100.0);
+        * (1 + engine.mental.bonusPercent(c) / 100.0)
+        * goldScale(c);
   }
 
   /** The company's income per real second on screen (the fight runs at SPEED). */
@@ -727,7 +734,8 @@ class IdleEngine {
     return INCOME_SPEED
         * engine.incomeOf(e)
         * CompanyEngine.inflation(c)
-        * (1 + engine.mental.bonusPercent(c) / 100.0);
+        * (1 + engine.mental.bonusPercent(c) / 100.0)
+        * goldScale(c);
   }
 
   long now() {
@@ -1898,7 +1906,8 @@ class IdleEngine {
                 INCOME_SPEED
                     * engine.staffIncome(c)
                     * CompanyEngine.inflation(c)
-                    * (1 + engine.mental.bonusPercent(c) / 100.0)),
+                    * (1 + engine.mental.bonusPercent(c) / 100.0)
+                    * goldScale(c)),
             engine.mental.bonusPercent(c)),
         s.offlineAt <= 0
             ? null

@@ -887,6 +887,7 @@ class CompanyApiTest {
     // 영구 강화 (600번): 셋이 0단계로 보이고, 생선이 없으면 올리지 못한다.
     assertThat(opened.read("$.idle.rebirth.upgrades[0].kind", String.class)).isEqualTo("damage");
     assertThat(opened.read("$.idle.rebirth.upgrades[2].kind", String.class)).isEqualTo("buy");
+    assertThat(opened.read("$.idle.rebirth.upgrades[3].kind", String.class)).isEqualTo("gold");
     assertThat(opened.read("$.idle.rebirth.upgrades[0].cost", Long.class)).isEqualTo(1);
     postJson("/api/company/rebirth/upgrade", "{\"kind\":\"damage\"}")
         .andExpect(status().isBadRequest());
