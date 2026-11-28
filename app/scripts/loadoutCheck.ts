@@ -400,10 +400,25 @@ try {
       const again = mutations.length
       await page.mouse.move(x, y)
       await page.mouse.down()
-      await page.mouse.move(x + 40, y, { steps: 4 })
+      await page.mouse.move(x + 12, y, { steps: 4 })
       await page.mouse.up()
       assert.equal(mutations.length, again)
       await expect(page.getByTestId('unequip-hint')).toHaveCount(0)
+      // 무기 옮겨 끼우기 (716번): 옆의 무기 칸에 놓으면 그 고양이가 든다. 빼기 → 끼우기 두 요청이다.
+      const other = page.locator('[data-testid=gun-slot][data-code=snow]')
+      await expect(other).toHaveClass(/is-bare/)
+      await drag(slot, other, true)
+      await expect(other).toHaveAttribute('data-kind', 'rifle')
+      await expect(slot).toHaveClass(/is-bare/)
+      assert.deepEqual(mutations.slice(again), [
+        { path: '/api/company/cat/weapon', body: { code: 'night' } },
+        { path: '/api/company/cat/weapon', body: { code: 'snow', kind: 'rifle', grade: 'E' } },
+      ])
+      assert.equal(required(company.idle.cats.find((c) => c.code === 'night')).weapon, null)
+      // 다시 밤냥에게 돌려 둔다: 아래 검사들은 밤냥이 소총을 든 것을 전제한다.
+      await drag(other, slot)
+      await expect(slot).toHaveAttribute('data-kind', 'rifle')
+      await expect(other).toHaveClass(/is-bare/)
       // The click a drop itself makes is swallowed; a later tap is not.
       await page.waitForTimeout(150)
     }
