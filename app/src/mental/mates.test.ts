@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_MATES } from './cards'
-import { MATE_GAP, MATE_LOOKS, MATE_MARGIN, mateFormation, spreadTargets } from './mates'
+import { inSight, MATE_GAP, MATE_LOOKS, MATE_MARGIN, mateFormation, spreadTargets } from './mates'
 
 describe('함께 싸우는 고양이 (decisions.md 393번)', () => {
   it('고양이마다 색과 이름이 있고 최대 수만큼 있다', () => {
@@ -72,5 +72,21 @@ describe('고양이마다 다른 적을 노린다 (409번)', () => {
   it('사거리 밖이거나 적이 없으면 아무도 안 노린다', () => {
     expect(spreadTargets(shooters, [{ x: 0, y: -900 }], 520)).toEqual([null, null, null])
     expect(spreadTargets(shooters, [], 520)).toEqual([null, null, null])
+  })
+})
+
+describe('디펜스 스테이지의 총 감지 거리 (715번)', () => {
+  it('화면에 보이는 적이면 멀어도 노리고, 화면 밖의 적은 노리지 않는다', () => {
+    expect(inSight({ x: 200, y: 10 }, 390, 844)).toBe(true)
+    expect(inSight({ x: 200, y: -30 }, 390, 844)).toBe(false)
+    expect(inSight({ x: 400, y: 300 }, 390, 844)).toBe(false)
+    // 사장냥에서 700px 떨어진 화면 위쪽의 적: 전의 520px로는 못 노렸다.
+    const shooters = [{ x: 195, y: 720 }]
+    const far = { x: 195, y: 20 }
+    expect(spreadTargets(shooters, [far], 520)).toEqual([null])
+    expect(spreadTargets(shooters, [far], Number.POSITIVE_INFINITY)).toEqual([far])
+    // 가까운 적이 있으면 여전히 가까운 쪽부터 맡는다.
+    const near = { x: 180, y: 600 }
+    expect(spreadTargets(shooters, [far, near], Number.POSITIVE_INFINITY)).toEqual([near])
   })
 })

@@ -42,6 +42,11 @@ export function mateFormation(count: number, width: number, ordered = false): nu
   return [slot(hero), ...order.map(slot)]
 }
 
+/** 화면(폭 w · 높이 h)에 보이는 자리인가 (715번): 디펜스 스테이지의 총은 보이는 적이면 거리와 상관없이 노린다. */
+export function inSight(p: { x: number; y: number }, w: number, h: number): boolean {
+  return p.x >= 0 && p.x <= w && p.y >= 0 && p.y <= h
+}
+
 /**
  * 고양이마다 다른 적을 노린다 (409번): 393번에서는 모두 사장냥이 노리는 한 적을 쏴 한 마리에 탄이 몰렸다. 사장냥 총에서 range 안의 가까운 적을
  * 쏘는 수(shooters.length)만큼 고르고, 사장냥(0번)부터 차례로 저에게 가장 가까운 아직 안 맡은 적을 맡는다. 적이 쏘는 수보다 적으면 남는 고양이는
