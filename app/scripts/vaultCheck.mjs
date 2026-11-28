@@ -394,8 +394,11 @@ try {
     const impactHp = maxHp - Math.ceil(maxHp / 3)
     for (let tick = 1; tick <= 5; tick++) {
       await page.waitForFunction(
-        (hp) => window.__mentalMarket().buyWall.hp === hp,
-        impactHp - tick * Math.ceil(maxHp * 0.01),
+        ({ hp, firing }) => {
+          const state = window.__mentalMarket()
+          return state.buyWall.hp === hp && state.guardianJetVisible === firing
+        },
+        { hp: impactHp - tick * Math.ceil(maxHp * 0.01), firing: tick < 5 },
         { timeout: 15000 },
       )
     }

@@ -166,7 +166,7 @@ import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import { drawGuardianBreath } from './guardianBreath'
-import { GuardianFlames } from './guardianFlames'
+import { BREATH_SECONDS, GuardianFlames } from './guardianFlames'
 import { createGuardianJaw, poseGuardianJaw } from './guardianJaw'
 import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
 import { BULLET_W, bulletHitbox } from './hitbox'
@@ -700,10 +700,10 @@ class BattleScene extends Phaser.Scene {
   /** 마지막 보스와 마지막으로 졸개를 부른 때(초). */
   private bossEnemy: Enemy | null = null
   private guardianFlames?: GuardianFlames
-  private wallBurn?: { started: number; ticks: number; breaks: number; impact: number }
+  private wallBurn?: { ticks: number; breaks: number; impact: number }
   private guardianJaw?: Phaser.GameObjects.Image
   private guardianFire?: Phaser.GameObjects.Graphics
-  private breathTarget = { x: 0, y: 0 }
+  private breathTarget?: { x: number; y: number }
   private lastSummon = 0
   /** 디펜스 번호 스테이지(509번): 적 체력 배율과, 보스를 이미 불렀나. EX(스테이지 없음)는 배율 1이고 보스가 없다. */
   private hpScale: number
@@ -2195,22 +2195,21 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 매수벽이 불붙은 뒤 금고 시계로 1초마다 다섯 번 피해를 준다. 재건된 벽으로 불이 옮겨 붙지는 않는다. */
-  private updateWallBurn() {
+  private updateWallBurn(seconds: number) {
     const burn = this.wallBurn
     if (!burn) return
     const wall = this.buyWall
-    const seconds = (this.elapsed - burn.started) / simScale(IDLE_GAME_SPEED)
     const lane = this.lane()
     const x = lane.left + burn.impact * lane.width
     while (
       wall?.active &&
       wall.breaks === burn.breaks &&
-      burn.ticks < Math.min(5, Math.floor(seconds))
+      burn.ticks < Math.min(BREATH_SECONDS, Math.floor(seconds))
     ) {
       burn.ticks++
       this.hitBuyWall(Math.ceil(wall.maxHp * 0.01), x, true)
     }
-    if (!wall?.active || wall.breaks !== burn.breaks || seconds >= 5) {
+    if (!wall?.active || wall.breaks !== burn.breaks || seconds >= BREATH_SECONDS) {
       this.wallBurn = undefined
       this.guardianFlames?.clearWall()
       return
@@ -2245,7 +2244,6 @@ class BattleScene extends Phaser.Scene {
         this.hitBuyWall(Math.ceil(wall.maxHp / 3), x)
         if (wall.active)
           this.wallBurn = {
-            started: this.elapsed,
             ticks: 0,
             breaks: wall.breaks,
             impact: (x - lane.left) / lane.width,
@@ -2254,8 +2252,12 @@ class BattleScene extends Phaser.Scene {
     }
 
     const charge = Phaser.Math.Clamp((age - interval + 0.52) / 0.52, 0, 1)
-    const firing = this.guardianFire && age < 0.63
-    if (!charge && !firing) {
+    const seconds = age / simScale(IDLE_GAME_SPEED)
+    this.updateWallBurn(seconds)
+    const firing = this.breathTarget !== undefined && seconds < BREATH_SECONDS
+    const recovery = this.breathTarget !== undefined && !firing && seconds < BREATH_SECONDS + 0.2
+    if (!charge && !firing && !recovery) {
+      this.breathTarget = undefined
       if (this.guardianFire) {
         this.guardianFlames?.hideJet()
         this.guardianJaw?.setVisible(false)
@@ -2266,16 +2268,23 @@ class BattleScene extends Phaser.Scene {
       return
     }
     this.guardianFire ??= this.add.graphics().setDepth(8.35)
-    const jet = firing ? age / 0.63 : 0
+    const jet = firing ? seconds : 0
     const reach = firing ? 1 : Phaser.Math.Clamp((charge - 0.83) / 0.17, 0, 1)
-    const strength = firing ? Math.min(1, (1 - jet) * 3) : charge
+    const strength = firing ? 1 : charge
     this.placeGuardian(boss)
-    const thrust = firing ? (1 - jet) ** 2 : -charge * charge + 2 * reach
+    const settle = Phaser.Math.Clamp((seconds - BREATH_SECONDS) / 0.2, 0, 1)
+    const thrust = firing
+      ? 0.35 + 0.65 * Math.exp(-seconds * 6)
+      : recovery
+        ? 0.35 * (1 - settle)
+        : -charge * charge + 2 * reach
     boss.y += boss.displayHeight * 0.085 * thrust
-    const target = firing ? this.breathTarget : { x, y }
+    const target = this.breathTarget ?? { x, y }
     const open = firing
-      ? 1 - Phaser.Math.SmoothStep(jet, 0.62, 1)
-      : Phaser.Math.SmoothStep(charge, 0, 0.72)
+      ? 1
+      : recovery
+        ? 1 - Phaser.Math.SmoothStep(settle, 0, 1)
+        : Phaser.Math.SmoothStep(charge, 0, 0.72)
     const mouthY = this.guardianJaw
       ? poseGuardianJaw(this.guardianJaw, boss, open)
       : boss.y + boss.displayHeight * 0.39
@@ -2848,7 +2857,6 @@ class BattleScene extends Phaser.Scene {
     if (boss?.active && !boss.dying && this.opts.vault?.score) {
       // 금고 기본 배속에서 6초에 한 번. 전투 시계를 따라 일시정지 중에는 쏘지 않는다.
       this.guardianBreath(boss)
-      this.updateWallBurn()
     } else if (
       boss?.active &&
       !boss.dying &&
@@ -3064,6 +3072,7 @@ class BattleScene extends Phaser.Scene {
             name: this.bossEnemy.wallBoss?.name,
           }
         : null,
+      guardianJetVisible: this.guardianFlames?.jetVisible ?? false,
       simSpeed: this.simSpeed,
       /** 절전 모드 (607번): 전장을 그리고 있는가, 그리고 도는 빈도의 제한(0이면 없다). */
       drawing: this.cameras.main.visible,

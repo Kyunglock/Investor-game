@@ -1,5 +1,7 @@
 import type Phaser from 'phaser'
 
+export const BREATH_SECONDS = 5
+
 const KEY = 'vault-breath-flame'
 
 // 한 장의 불혀를 겹쳐 쓴다. 바깥쪽은 붉고 투명하며 불씨가 붙은 밑동이 가장 밝다.
@@ -73,6 +75,10 @@ export class GuardianFlames {
     }
   }
 
+  get jetVisible() {
+    return this.jet.some((flame) => flame.visible)
+  }
+
   hideJet() {
     for (const flame of this.jet) flame.setVisible(false)
   }
@@ -86,7 +92,7 @@ export class GuardianFlames {
     seconds: number,
   ) {
     const g = this.embers.clear()
-    const fade = Math.min(1, (5 - seconds) * 3)
+    const fade = Math.min(1, (BREATH_SECONDS - seconds) * 3)
     const spread = width * (0.06 + seconds * 2.2)
     for (const [i, flame] of this.rim.entries()) {
       const lower = i >= 22 && i < 36
