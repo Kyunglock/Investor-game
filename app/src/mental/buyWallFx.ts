@@ -39,6 +39,8 @@ export class BuyWallFx {
     sway: number
     phase: number
     age: number
+    /** 늦게 뜨는 주문 (713번): 남은 대기 시간(전투 초). 그동안 매수벽에 숨어 있고 아무것도 맞히지 않는다. */
+    wait: number
     body: Phaser.GameObjects.Image
   }[]
   private scene: Phaser.Scene
@@ -122,7 +124,7 @@ export class BuyWallFx {
       breakLeft: this.breakLeft,
       fragments: this.debris.filter((piece) => piece.visible).length,
       orders: this.shots
-        .filter((shot) => shot.active)
+        .filter((shot) => shot.active && shot.wait <= 0)
         .map((shot) => ({
           x: shot.x,
           y: shot.y,
@@ -132,7 +134,9 @@ export class BuyWallFx {
         })),
     }
   }
-  launch(x: number, y: number, damage: number, barrage = false, sway = 0, phase = 0) {
+  /** behind(px)만큼 처져 날아가도록, 그 거리를 날아갈 시간만큼 늦게 뜬다 (713번). */
+  launch(x: number, y: number, damage: number, barrage = false, sway = 0, phase = 0, behind = 0) {
+    const wait = Math.max(0, behind) / (BUY_ORDER_SPEED * this.speedScale)
     const texture = buyOrderTexture(this.scene, damage)
     let shot = this.shots.find((s) => !s.active)
     if (!shot) {
@@ -146,12 +150,17 @@ export class BuyWallFx {
         sway,
         phase,
         age: 0,
+        wait,
         body: this.scene.add.image(x, y, texture).setDepth(6),
       }
       this.shots.push(shot)
     }
-    Object.assign(shot, { x, y, damage, active: true, barrage, x0: x, sway, phase, age: 0 })
-    shot.body.setTexture(texture).setScale(this.orderScale).setPosition(x, y).setVisible(true)
+    Object.assign(shot, { x, y, damage, active: true, barrage, x0: x, sway, phase, age: 0, wait })
+    shot.body
+      .setTexture(texture)
+      .setScale(this.orderScale)
+      .setPosition(x, y)
+      .setVisible(wait <= 0)
   }
 
   /** hit는 이번에 쓰고 남은 매수 수량(전투 단위)을 돌려준다: 0이면 주문이 사라지고, 줄었으면 남은 수량으로 계속 날아간다. */
@@ -164,6 +173,11 @@ export class BuyWallFx {
     if (this.tossAt < 0) this.gapLeft = Math.max(0, this.gapLeft - dt)
     for (const shot of this.shots) {
       if (!shot.active) continue
+      if (shot.wait > 0) {
+        shot.wait -= dt
+        shot.body.setVisible(false)
+        continue
+      }
       const next = shot.y - dt * BUY_ORDER_SPEED * this.speedScale
       if (shot.sway > 0) {
         shot.age += dt
@@ -203,6 +217,7 @@ export class BuyWallFx {
       // 줄에 선 주문은 더 흔들리지 않는다 (712번): 풀리면 선 자리에서 곧게 날아간다.
       shot.x0 = shot.x
       shot.sway = 0
+      shot.wait = 0
       shot.body.setPosition(shot.x, shot.y)
     }
   }
