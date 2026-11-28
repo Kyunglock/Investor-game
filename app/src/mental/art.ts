@@ -875,6 +875,30 @@ export function buyOrderTexture(scene: Phaser.Scene, damage: number): string {
   return key
 }
 
+export const wallBossKey = (tile: number, frame: number) => `wall-boss-${tile}-${frame}`
+
+/** 현재 보스의 들썩이는 프레임만 기존 64px 적과 같은 해상도로 굽는다. */
+export function bakeWallBoss(scene: Phaser.Scene, tile: number) {
+  const sheet = scene.textures.get('wall-boss-sheet').getSourceImage() as HTMLImageElement
+  const size = sheet.width / 5
+  for (let frame = 0; frame < WALK_FRAMES; frame++) {
+    bake(scene, wallBossKey(tile, frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
+      const bob = Math.sin((frame / WALK_FRAMES) * Math.PI * 2) * 1.2
+      c.drawImage(
+        sheet,
+        (tile % 5) * size,
+        Math.floor(tile / 5) * size,
+        size,
+        size,
+        0,
+        bob,
+        ENEMY_SIZE,
+        ENEMY_SIZE,
+      )
+    })
+  }
+}
+
 /** 작은 크기에서도 얼굴과 넓은 팻말이 구분되는 큰손 고래. 모든 윤곽은 64×64 안에 둔다. */
 export function drawWhale(c: CanvasRenderingContext2D) {
   c.save()
