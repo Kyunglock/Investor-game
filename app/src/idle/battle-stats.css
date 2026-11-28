@@ -157,3 +157,42 @@
   font-size: 12px;
   color: #947247;
 }
+/* 업적 (708번): 전투 통계 단추 바로 위, 같은 크기의 금빛 단추. 받을 업적이 있으면 빨간 숫자를 단다. */
+.idle-achieve-shortcut {
+  position: absolute;
+  z-index: 2;
+  grid-row: 1 / 2;
+  top: calc(var(--idle-actives-top) - 2 * (var(--idle-active-size) + var(--idle-active-gap)));
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: var(--idle-active-size);
+  height: var(--idle-active-size);
+  padding: 0;
+  border: 2px solid #ffe9a3;
+  border-radius: 50%;
+  background: linear-gradient(#ffd35a, #f0a321 60%, #c47a10);
+  box-shadow:
+    inset 0 2px 0 #ffffff88,
+    0 2px 0 #9c5f0a;
+  color: #fffbe8;
+  cursor: pointer;
+}
+.idle-achieve-shortcut .idle-icon {
+  width: 60%;
+  height: 60%;
+}
+.idle-achieve-shortcut::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+}
+.idle-achieve-shortcut .idle-quick-count {
+  top: -4px;
+  right: -4px;
+}
+.idle-achievement-tier {
+  color: #a3835a;
+  font-size: 11px;
+  font-weight: 500;
+}

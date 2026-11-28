@@ -356,6 +356,30 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/achievements/claim:
+    post:
+      operationId: claimAchievement
+      summary: 업적 보상을 받는다 (decisions.md 708번)
+      description: |
+        업적의 지금 단계 목표에 닿으면(achievements.list[].ready) 이 요청으로 그 단계의 다이아를 받고 다음 단계로 간다. 여러 단계에 닿았으면 모두 받는다.
+        code를 실으면 그 업적의 것을, 본문이 없거나 code가 없으면 받을 수 있는 것을 모두 받는다. 없는 업적이거나 받을 것이 없으면 400.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, description: 받을 업적의 코드. 없으면 받을 수 있는 것을 모두 받는다 }
+      responses:
+        '200':
+          description: 받은 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/attendance:
     post:
       operationId: claimAttendance
@@ -1561,6 +1585,28 @@ components:
                 - type: 'null'
         sandbox: { type: boolean, description: 테스트판의 회사다 (decisions.md 499번) }
         sandboxInfinite: { type: boolean, description: '테스트판의 무한 다이아가 켜져 있다: 다이아가 떨어지지 않는다. 자본은 무한이 아니다 (650번)' }
+        achievements:
+          type: object
+          description: 업적 (decisions.md 708번). 한 번뿐인 목표를 단계별로 깨면 다이아를 준다. 환생해도 남는다
+          required: [list, ready, lastDiamonds]
+          properties:
+            list:
+              type: array
+              items:
+                type: object
+                required: [code, title, tier, tiers, count, target, diamonds, ready, done]
+                properties:
+                  code: { type: string, enum: [wall, boss, cats, rebirth, draw, merge, upgrade, attend, stage] }
+                  title: { type: string, description: 지금 단계의 목표 글 }
+                  tier: { type: integer, description: 받은 단계 수(0부터) }
+                  tiers: { type: integer, description: 단계 수 }
+                  count: { type: integer, format: int64, description: 지금 기록(목표에서 자른다) }
+                  target: { type: integer, format: int64, description: 지금 단계의 목표 }
+                  diamonds: { type: integer, description: 지금 단계를 깨면 받는 다이아 }
+                  ready: { type: boolean, description: 목표에 닿았고 아직 받지 않았다 }
+                  done: { type: boolean, description: 모든 단계를 받았다 }
+            ready: { type: integer, description: 지금 받을 수 있는 업적의 수 }
+            lastDiamonds: { type: integer, format: int64, description: 마지막으로 받은 다이아. 없으면 0 }
         vault:
           type: object
           description: 금고 도전 (decisions.md 641번). 보스전과 주간 던전에서 금괴를 얻어 금고 상점에서 쓴다. 한 주의 경계는 한국 시간 월요일 0시다

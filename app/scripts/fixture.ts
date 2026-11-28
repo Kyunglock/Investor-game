@@ -396,6 +396,35 @@ export const company = {
     ],
   },
   invest: null,
+  // 업적 (708번): 최고 기록 10 돌파는 받을 수 있고, 다른 업적은 아직이다.
+  achievements: {
+    ready: 1,
+    lastDiamonds: 0,
+    list: [
+      {
+        code: 'wall',
+        title: '매도벽 최고 기록 10 돌파',
+        tier: 0,
+        tiers: 10,
+        count: 10,
+        target: 10,
+        diamonds: 10,
+        ready: true,
+        done: false,
+      },
+      {
+        code: 'draw',
+        title: '뽑기 10번',
+        tier: 0,
+        tiers: 5,
+        count: 3,
+        target: 10,
+        diamonds: 10,
+        ready: false,
+        done: false,
+      },
+    ],
+  },
   // 멘탈 보호 스테이지 (527번): 별 30·30·40, 10의 배수는 두 배. 아직 얻지 않은 별의 몫이 남은 다이아다.
   stages: {
     best: STAGE_STARS.length,

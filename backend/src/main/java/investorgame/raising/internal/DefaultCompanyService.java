@@ -423,7 +423,8 @@ class DefaultCompanyService implements CompanyService {
         idle.view(c),
         c.sandbox,
         c.sandbox && !c.sandboxFinite,
-        vault.view(c));
+        vault.view(c),
+        Achievements.view(c));
   }
 
   @Override
@@ -532,6 +533,15 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView claimPass(UUID sessionId, Integer step) {
     CompanyRepository.Row row = lockActive(sessionId);
     rewards.claimPass(row.state(), step, new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView claimAchievement(UUID sessionId, String code) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    Achievements.claim(row.state(), code);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
