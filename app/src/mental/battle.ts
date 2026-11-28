@@ -3635,6 +3635,7 @@ class BattleScene extends Phaser.Scene {
     }
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
     if (e.cell) e.clearTint()
+    else if (vault?.score && e.boss) e.setTint(0xffcc87)
     else e.setTintFill(0xffffff)
     this.time.delayedCall(55, () => e.active && this.paint(e))
     // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
