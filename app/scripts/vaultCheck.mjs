@@ -385,6 +385,9 @@ try {
     const market = await page.evaluate(() => window.__mentalMarket())
     assert.ok(market.boss)
     assert.equal(market.flows, 0)
+    await expect
+      .poll(() => page.evaluate(() => window.__mentalMarket().buyWall.hp), { timeout: 15000 })
+      .toBeLessThan(market.buyWall.maxHp)
     await page.screenshot({ path: '/tmp/vault-solo-guardian.png' })
     const score = page.getByTestId('vault-score')
     await expect(score).toContainText('피해량')
