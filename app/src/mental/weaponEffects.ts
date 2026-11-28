@@ -15,7 +15,7 @@ export const WEAPON_EFFECTS: Record<WeaponKind, WeaponEffect> = {
   shotgun: { name: '폭발', desc: '맞은 자리에서 크게 터지고 적을 밀어낸다 · 가까이만 닿는다' },
   rifle: {
     name: '관통',
-    desc: '탄이 적을 뚫고 지나가 넷까지 맞힌다 · 성운 탄두의 폭발이 주변까지 번진다',
+    desc: '탄이 적을 뚫고 지나가 넷까지 맞힌다 · 탄두의 폭발이 주변까지 번진다',
   },
 }
 
@@ -206,4 +206,17 @@ export const FIRE_STYLE_NAMES: Record<WeaponKind, string> = {
   smg: '흩뿌리는 연사',
   shotgun: '굵은 산탄 한 덩이',
   rifle: '길고 곧은 탄',
+}
+
+export function fireStyleName(weapon: Pick<Weapon, 'kind' | 'grade'>) {
+  switch (weapon.grade) {
+    case 'SR':
+      return '회전 칼날 · 초승달 참격'
+    case 'UR':
+      return '이중 나선탄 · 플라스마 고리'
+    case 'LR':
+      return '일식핵 · 황금 코로나'
+    default:
+      return FIRE_STYLE_NAMES[weapon.kind]
+  }
 }

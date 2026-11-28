@@ -270,7 +270,8 @@ class VaultEngine {
       default -> {
         engine.mental.initWeapons(c);
         CompanyState.Pulled weapon = engine.mental.drawOne(c, random);
-        v.lastNote = weapon.grade + "등급 " + engine.mental.weaponName(weapon.kind) + " 획득";
+        v.lastNote =
+            weapon.grade + "등급 " + engine.mental.weaponName(weapon.kind, weapon.grade) + " 획득";
       }
     }
   }

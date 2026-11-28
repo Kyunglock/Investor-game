@@ -1,4 +1,5 @@
 import type { GunGrade } from '@web/features/game/cat/draw'
+import { drawApexWeapon } from './apexWeaponArt'
 import { CAT_GUN } from './catGun'
 import { spriteBounds } from './stageArt'
 import { weaponCell } from './weaponArt'
@@ -17,6 +18,7 @@ export function drawBattleGun(
   c.beginPath()
   c.rect(CAT_GUN.pivotX + 5, 0, CAT_GUN.w, CAT_GUN.h)
   c.clip()
-  c.drawImage(source, crop.x, crop.y, crop.w, crop.h, 8, CAT_GUN.pivotY - 9, tipX - 8, 18)
+  if (!drawApexWeapon(c, grade, 8, CAT_GUN.pivotY - 9, tipX - 8, 18))
+    c.drawImage(source, crop.x, crop.y, crop.w, crop.h, 8, CAT_GUN.pivotY - 9, tipX - 8, 18)
   c.restore()
 }

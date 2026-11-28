@@ -7,7 +7,7 @@ import { sfx } from '../fx/sound'
 import { DrawAgain, type RepeatDraw } from '../idle/DrawAgain'
 import { GunSprite } from './GunSprite'
 import { attackOf, type Weapon } from './hero'
-import { FIRE_STYLE_NAMES, SHOT_WEIGHT, WEAPON_EFFECTS } from './weaponEffects'
+import { fireStyleName, SHOT_WEIGHT, WEAPON_EFFECTS } from './weaponEffects'
 import { shinyWeapon, weaponRevealPlan } from './weaponRevealPlan'
 import './weapon-reveal.css'
 
@@ -154,7 +154,7 @@ export function WeaponReveal({
                 공격력 {attackOf(result.weapon).toLocaleString('ko-KR')} · 연사{' '}
                 {(1000 / result.weapon.fireMs / SHOT_WEIGHT).toFixed(1)}발/초
               </p>
-              <p>{FIRE_STYLE_NAMES[result.draw.kind]}</p>
+              <p>{fireStyleName(result.draw)}</p>
               <p className="weapon-reveal-effect">
                 <b>{WEAPON_EFFECTS[result.draw.kind].name}</b>
                 <br />
