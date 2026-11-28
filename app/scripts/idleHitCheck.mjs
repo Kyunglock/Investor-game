@@ -172,6 +172,9 @@ async function realRun(browser, { delay, wall = 1, until, credit = 1, legacy = f
     ahead = Math.max(ahead, (await hudWall()) - server.state.wall)
     await page.waitForTimeout(50)
   }
+  // 고리를 빠져나온 순간도 잰다: 마지막 벽은 화면이 방금 넘겼고 서버의 답은 아직 오지 않았다. 매수 주문이 세지면서(711·712·714번)
+  // 첫 벽들이 50ms 사이에 연달아 깨져, 고리 안에서는 화면이 앞선 순간을 한 번도 못 잡는 판이 있었다(느린 CI에서 실패).
+  ahead = Math.max(ahead, (await hudWall()) - server.state.wall)
   const frames = await page.evaluate(() => window.idleFrames)
   await page.close()
   assert.deepEqual(errors, [])
