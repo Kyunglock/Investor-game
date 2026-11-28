@@ -2841,12 +2841,13 @@ class BattleScene extends Phaser.Scene {
       const shot = buyLaunch(pattern, lane.left, lane.width, this.buyLaunched++)
       this.buyWallFx?.launch(
         shot.x,
-        // 계단·쐐기는 앞선 주문이 그만큼 먼저 나가 있다.
-        this.buyWallY() - shot.ahead,
+        this.buyWallY(),
         this.buyOrderDamage(),
         false,
         shot.sway,
         shot.phase,
+        // 계단·쐐기: 처지는 주문은 그 거리만큼 늦게 뜬다 (713번). 모두 매수벽에서 출발한다.
+        shot.behind,
       )
     }
   }

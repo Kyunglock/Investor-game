@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BUY_PATTERNS, buyLaunch, buyPatternPreview, STEP_AHEAD } from './buyPattern'
+import { BUY_PATTERNS, buyLaunch, buyPatternPreview, STEP_BEHIND } from './buyPattern'
 
 describe('매수 주문이 날아가는 패턴 (712번)', () => {
   const seq = (n: number) => Array.from({ length: n }, (_, i) => (i + 0.5) / n)
@@ -35,22 +35,27 @@ describe('매수 주문이 날아가는 패턴 (712번)', () => {
   })
   it('일자는 세 장이 한 줄에 고르게 서고, 다음 세 장이 그 사이를 채운다', () => {
     const xs = Array.from({ length: 6 }, (_, i) => buyLaunch('line', 0, 100, i))
-    expect(xs.every((shot) => shot.ahead === 0)).toBe(true)
+    expect(xs.every((shot) => shot.behind === 0)).toBe(true)
     expect(xs.slice(0, 3).map((s) => Math.round(s.x))).toEqual([15, 43, 71])
     expect(xs.slice(3).map((s) => Math.round(s.x))).toEqual([29, 57, 85])
   })
-  it('계단은 오른쪽으로 갈수록 한 칸씩 앞서고, 쐐기는 가운데가 가장 앞선다', () => {
+  it('계단은 왼쪽으로 갈수록 한 칸씩 늦게 뜨고, 쐐기는 가운데가 가장 먼저 뜬다 (713번)', () => {
     const stairs = Array.from({ length: 6 }, (_, i) => buyLaunch('stairs', 0, 100, i))
     for (let i = 1; i < 6; i++) {
       expect(stairs[i].x).toBeGreaterThan(stairs[i - 1].x)
-      expect(stairs[i].ahead - stairs[i - 1].ahead).toBeCloseTo(STEP_AHEAD)
+      expect(stairs[i - 1].behind - stairs[i].behind).toBeCloseTo(STEP_BEHIND)
     }
-    expect(buyLaunch('stairs', 0, 100, 6).ahead).toBe(0)
+    expect(stairs[5].behind).toBe(0)
     const wedge = Array.from({ length: 5 }, (_, i) => buyLaunch('wedge', 0, 100, i))
     expect(wedge[0].x).toBeCloseTo(50)
-    expect(wedge[0].ahead).toBeGreaterThan(wedge[1].ahead)
-    expect(wedge[1].ahead).toBe(wedge[2].ahead)
-    expect(wedge[3].ahead).toBe(0)
+    expect(wedge[0].behind).toBe(0)
+    expect(wedge[1].behind).toBe(wedge[2].behind)
+    expect(wedge[3].behind).toBeGreaterThan(wedge[1].behind)
+  })
+  it('어느 패턴도 앞에서 출발하지 않는다: 처지는 거리는 0 이상이다 (713번)', () => {
+    for (const { code } of BUY_PATTERNS)
+      for (let i = 0; i < 40; i++)
+        expect(buyLaunch(code, 0, 100, i).behind).toBeGreaterThanOrEqual(0)
   })
   it('양쪽 기둥은 양 끝 두 줄에서 번갈아 뜬다', () => {
     const xs = Array.from({ length: 4 }, (_, i) => Math.round(buyLaunch('pillars', 0, 100, i).x))

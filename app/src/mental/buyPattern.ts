@@ -44,8 +44,8 @@ const SWEEP_SHOTS = 16
 export const WAVE_SWAY = 0.09
 export const WAVE_SPEED = 7
 
-/** 계단·쐐기에서 한 칸 앞선 주문이 먼저 나가 있는 거리(px). */
-export const STEP_AHEAD = 14
+/** 계단·쐐기에서 한 칸 뒤의 주문이 처지는 거리(px): 그 거리를 날아갈 시간만큼 늦게 출발한다 (713번). */
+export const STEP_BEHIND = 14
 
 /** 일자·계단의 칸 수, 일자가 칸을 채우는 차례(세 장이 한 줄에 고르게 서고 다음 세 장이 그 사이를 채운다), 쐐기의 자리. */
 const COLUMNS = 6
@@ -63,8 +63,8 @@ export interface BuyLaunch {
   /** 물결: 날아가는 동안 이 폭(px)으로 좌우로 흔들린다. 0이면 곧게 간다. */
   sway: number
   phase: number
-  /** 계단·쐐기: 뜨는 순간 이만큼(px) 앞서 나가 있다. */
-  ahead: number
+  /** 계단·쐐기: 맨 앞 주문보다 이만큼(px) 처진다. 앞에서 출발하지 않고 그 거리만큼 늦게 뜬다 (713번). */
+  behind: number
 }
 
 /**
@@ -78,20 +78,22 @@ export function buyLaunch(
   random: () => number = Math.random,
 ): BuyLaunch {
   const at = (ratio: number) => left + width * (0.08 + 0.84 * Math.min(1, Math.max(0, ratio)))
-  const straight = (x: number, ahead = 0): BuyLaunch => ({ x, sway: 0, phase: 0, ahead })
+  const straight = (x: number, behind = 0): BuyLaunch => ({ x, sway: 0, phase: 0, behind })
   const turn = (n: number) => ((index % n) + n) % n
   switch (pattern) {
     case 'line':
       return straight(at((LINE_ORDER[turn(COLUMNS)] + 0.5) / COLUMNS))
     case 'stairs': {
       const col = turn(COLUMNS)
-      return straight(at((col + 0.5) / COLUMNS), col * STEP_AHEAD)
+      // 오른쪽 끝이 맨 앞이다: 왼쪽으로 갈수록 한 칸씩 늦게 뜬다.
+      return straight(at((col + 0.5) / COLUMNS), (COLUMNS - 1 - col) * STEP_BEHIND)
     }
     case 'pillars':
       return straight(at(turn(2) === 0 ? 0.12 : 0.88))
     case 'wedge': {
       const spot = WEDGE[turn(WEDGE.length)]
-      return straight(at(spot.at), spot.rank * STEP_AHEAD * 1.5)
+      // 가운데(rank 2)가 맨 앞이고 바깥으로 갈수록 늦게 뜬다.
+      return straight(at(spot.at), (2 - spot.rank) * STEP_BEHIND * 1.5)
     }
     case 'even':
       return straight(at(random()))
@@ -109,7 +111,7 @@ export function buyLaunch(
         x: at(0.14 + 0.72 * random()),
         sway: width * WAVE_SWAY,
         phase: turn(2) === 0 ? 0 : Math.PI,
-        ahead: 0,
+        behind: 0,
       }
     default:
       return straight(buyOrderX(left, width, random))
@@ -138,11 +140,13 @@ export function buyPatternPreview(pattern: BuyPattern): { x: number; y: number }
           : 3
   const last = Math.floor((shots - 1) / group)
   const gap = (13 * group) / 3
-  return Array.from({ length: shots }, (_, i) => {
-    const shot = buyLaunch(pattern, 0, 100, i, random)
+  const list = Array.from({ length: shots }, (_, i) => buyLaunch(pattern, 0, 100, i, random))
+  // 가장 처진 주문을 바닥에 두고, 덜 처진 주문일수록 위에 그린다(그림의 비율로 줄여서).
+  const most = Math.max(...list.map((shot) => shot.behind))
+  return list.map((shot, i) => {
     const round = Math.floor(i / group)
-    // 먼저 뜬 묶음일수록 위로 올라가 있다. 앞선 거리(ahead)는 그림의 비율로 줄여 얹는다.
-    const y = 52 - (last - round) * gap - shot.ahead * 0.28
+    // 먼저 뜬 묶음일수록 위로 올라가 있다.
+    const y = 52 - (last - round) * gap - (most - shot.behind) * 0.28
     const x = shot.x + (shot.sway > 0 ? Math.sin((last - round) * 1.6 + shot.phase) * shot.sway : 0)
     return { x, y: Math.max(4, y) }
   })
