@@ -1427,7 +1427,8 @@ class IdleEngineTest {
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "buy", 1000, 1000 * 1000.0));
-    assertThat(state.idle.damage).isLessThan(30 * order);
+    // 712번: 매도 물량 하나에 세 장이라 예산은 초당 3 ÷ 0.15 = 20장, 1.5배속의 1초에 30장이다.
+    assertThat(state.idle.damage).isLessThanOrEqualTo(30 * order + 1e-9);
   }
 
   @Test

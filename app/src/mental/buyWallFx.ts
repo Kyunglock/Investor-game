@@ -1,5 +1,6 @@
 import type Phaser from 'phaser'
 import { buyOrderTexture, CELL_TEX, WALL_LABEL_STYLE } from './art'
+import { WAVE_SPEED } from './buyPattern'
 import { BUY_ORDER_SPEED, type BuyWall } from './buyWall'
 import { type BarrierLane, OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
@@ -33,6 +34,11 @@ export class BuyWallFx {
     active: boolean
     /** 매수세례의 주문 (503번): 벽에 닿은 피해를 따로 센다. */
     barrage: boolean
+    /** 물결 패턴 (712번): 뜬 자리(x0)를 가운데로 sway(px)만큼 좌우로 흔들린다. age는 날아간 전투 초. */
+    x0: number
+    sway: number
+    phase: number
+    age: number
     body: Phaser.GameObjects.Image
   }[]
   private scene: Phaser.Scene
@@ -126,7 +132,7 @@ export class BuyWallFx {
         })),
     }
   }
-  launch(x: number, y: number, damage: number, barrage = false) {
+  launch(x: number, y: number, damage: number, barrage = false, sway = 0, phase = 0) {
     const texture = buyOrderTexture(this.scene, damage)
     let shot = this.shots.find((s) => !s.active)
     if (!shot) {
@@ -136,11 +142,15 @@ export class BuyWallFx {
         damage,
         active: false,
         barrage,
+        x0: x,
+        sway,
+        phase,
+        age: 0,
         body: this.scene.add.image(x, y, texture).setDepth(6),
       }
       this.shots.push(shot)
     }
-    Object.assign(shot, { x, y, damage, active: true, barrage })
+    Object.assign(shot, { x, y, damage, active: true, barrage, x0: x, sway, phase, age: 0 })
     shot.body.setTexture(texture).setScale(this.orderScale).setPosition(x, y).setVisible(true)
   }
 
@@ -155,6 +165,10 @@ export class BuyWallFx {
     for (const shot of this.shots) {
       if (!shot.active) continue
       const next = shot.y - dt * BUY_ORDER_SPEED * this.speedScale
+      if (shot.sway > 0) {
+        shot.age += dt
+        shot.x = shot.x0 + Math.sin(shot.age * WAVE_SPEED + shot.phase) * shot.sway
+      }
       const left = hit(shot.x, shot.y, next, shot.damage, shot.barrage)
       if (left <= 1e-6 || next < -30) shot.active = false
       else if (left < shot.damage) {
@@ -186,6 +200,9 @@ export class BuyWallFx {
     const active = this.shots.filter((shot) => shot.active).sort((a, b) => a.y - b.y)
     for (const shot of active) {
       this.circuitQueue.move(shot, dt, lane, 'buy')
+      // 줄에 선 주문은 더 흔들리지 않는다 (712번): 풀리면 선 자리에서 곧게 날아간다.
+      shot.x0 = shot.x
+      shot.sway = 0
       shot.body.setPosition(shot.x, shot.y)
     }
   }

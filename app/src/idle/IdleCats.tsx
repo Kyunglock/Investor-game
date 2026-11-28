@@ -5,6 +5,13 @@ import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
+import {
+  BUY_PATTERNS,
+  type BuyPattern,
+  buyPatternPreview,
+  loadBuyPattern,
+  saveBuyPattern,
+} from '../mental/buyPattern'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
@@ -19,7 +26,7 @@ import { bossSeat, fieldSeats, seatCount } from './seats'
 import { skillNames } from './skills'
 import { useLoadoutDrag } from './useLoadoutDrag'
 
-export type LoadoutTab = '고양이' | '무기'
+export type LoadoutTab = '고양이' | '무기' | '매수 티켓'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
@@ -45,6 +52,10 @@ export function IdleCats({
   onTab: (tab: LoadoutTab) => void
 }) {
   const gearOpen = tab === '무기'
+  // 매수 티켓 탭 (712번): 매수 주문이 날아가는 패턴을 그림으로 보고 고른다.
+  const ticketsOpen = tab === '매수 티켓'
+  // 매수 주문이 날아가는 패턴 (712번): 이 기기에 저장하고, 전투는 다음 주문부터 따른다.
+  const [buyPattern, setBuyPattern] = useState<BuyPattern>(loadBuyPattern)
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   // 고른 고양이. null이면 사장냥이다.
@@ -224,7 +235,7 @@ export function IdleCats({
   )
   const tabs = (
     <div className="idle-gacha-kinds loadout-tabs" role="tablist" aria-label="편성 목록">
-      {(['고양이', '무기'] as const).map((label) => (
+      {(['고양이', '무기', '매수 티켓'] as const).map((label) => (
         <button
           key={label}
           type="button"
@@ -246,7 +257,8 @@ export function IdleCats({
     <>
       <div className="loadout-team" ref={team}>
         {tabs}
-        <p className="idle-subtitle idle-team-line">
+        {/* 매수 티켓 탭 (712번)에는 출전 칸이 필요 없다: 탭만 남긴다. */}
+        <p className="idle-subtitle idle-team-line" hidden={ticketsOpen}>
           {swapping ? (
             <span className="idle-swap-hint" role="status" data-testid="swap-hint">
               {cat?.name ?? BOSS_NAME} 대신 뺄 고양이를 누르세요
@@ -270,7 +282,7 @@ export function IdleCats({
           )}
         </p>
         {/* 출전 칸 (569번): 다섯 칸 두 줄. 윗줄은 고양이 칸, 아랫줄은 바로 위 고양이가 드는 무기 칸이다. 이름은 적지 않는다. */}
-        <ul className="idle-cat-field-row" aria-label="출전 칸">
+        <ul className="idle-cat-field-row" aria-label="출전 칸" hidden={ticketsOpen}>
           {seats.map((c, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: 출전 칸은 자리 번호가 곧 열쇠다.
             <li key={i}>
@@ -375,7 +387,10 @@ export function IdleCats({
           data-testid="cat-detail"
           data-code={cat?.code ?? 'boss'}
           ref={detail}
-          style={teamHeight ? { top: teamHeight - 6 } : undefined}
+          // 매수 티켓 탭에서는 고양이 설명을 숨긴다 (712번): 고양이와 상관없는 설정이다.
+          style={
+            ticketsOpen ? { display: 'none' } : teamHeight ? { top: teamHeight - 6 } : undefined
+          }
         >
           <Portrait code={cat?.code} grade={cat?.grade} />
           {/* 고양이 정보(등급·레벨·공격 특성)는 스킬 탭에서 본다 (658번): 여기는 이름과 편성 단추만 남긴다. 스킬 탭이 열리기 전에는 여기서 본다. */}
@@ -497,7 +512,60 @@ export function IdleCats({
             </em>
           </button>
         </article>
-        {gearOpen ? (
+        {ticketsOpen ? (
+          <section className="buy-pattern" data-testid="buy-pattern" aria-label="매수 티켓 패턴">
+            <p className="idle-subtitle">
+              매수벽이 쏘는 매수 티켓이 날아가는 모양을 골라요. 수량과 장수는 같아요
+            </p>
+            <ul className="buy-pattern-list">
+              {BUY_PATTERNS.map((p) => (
+                <li key={p.code}>
+                  <button
+                    type="button"
+                    className="buy-pattern-card"
+                    aria-pressed={buyPattern === p.code}
+                    aria-label={`${p.name} · ${p.note}${buyPattern === p.code ? ' · 사용 중' : ''}`}
+                    data-testid="buy-pattern-option"
+                    data-code={p.code}
+                    onClick={() => {
+                      sfx.tap()
+                      haptic.light()
+                      saveBuyPattern(p.code)
+                      setBuyPattern(p.code)
+                    }}
+                  >
+                    {/* 미리 보기: 아래의 매수벽에서 뜬 주문 열두 장의 자리. 먼저 뜬 것이 위에 있다. */}
+                    <svg viewBox="0 0 100 66" className="buy-pattern-preview" aria-hidden="true">
+                      <rect
+                        x="2"
+                        y="58"
+                        width="96"
+                        height="6"
+                        rx="2"
+                        className="buy-pattern-wall"
+                      />
+                      {buyPatternPreview(p.code).map((dot, i) => (
+                        <rect
+                          // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 열두 자리다.
+                          key={i}
+                          x={dot.x - 4.5}
+                          y={dot.y - 3}
+                          width="9"
+                          height="6"
+                          rx="1.6"
+                          className="buy-pattern-ticket"
+                        />
+                      ))}
+                    </svg>
+                    <b className="buy-pattern-name">{p.name}</b>
+                    <small className="buy-pattern-note">{p.note}</small>
+                    {buyPattern === p.code && <i className="buy-pattern-on">사용 중</i>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : gearOpen ? (
           <CatGear company={company} wearer={cat} onSelect={onPick} />
         ) : (
           <>

@@ -98,6 +98,7 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
+import { buyLaunch, loadBuyPattern } from './buyPattern'
 import {
   BUY_WALL,
   BuyLossNote,
@@ -2799,13 +2800,23 @@ class BattleScene extends Phaser.Scene {
     haptic.medium()
   }
 
+  /** 지금까지 띄운 매수 주문의 수: 훑기·물결 패턴의 차례다 (712번). */
+  private buyLaunched = 0
+
   private launchBuyOrders(count: number) {
     const lane = this.lane()
+    // 날아가는 패턴 (712번): 출전 탭에서 고른 것. 자동 전투만 따르고 스테이지는 전의 양옆이다.
+    const pattern = this.opts.idle ? loadBuyPattern() : 'sides'
     for (let i = 0; i < count; i++) {
+      const shot = buyLaunch(pattern, lane.left, lane.width, this.buyLaunched++)
       this.buyWallFx?.launch(
-        buyOrderX(lane.left, lane.width),
-        this.buyWallY(),
+        shot.x,
+        // 계단·쐐기는 앞선 주문이 그만큼 먼저 나가 있다.
+        this.buyWallY() - shot.ahead,
         this.buyOrderDamage(),
+        false,
+        shot.sway,
+        shot.phase,
       )
     }
   }
