@@ -50,7 +50,7 @@ interface RaisingState {
    * 회사(실패면 null)를 돌려준다.
    */
   buyBattleUpgrade: (
-    kind: 'damage' | 'fire' | 'hp' | 'buy',
+    kind: 'damage' | 'fire' | 'hp',
     levels?: number,
   ) => Promise<Company | null>
   /** 무기를 뽑는다. ad는 보상형 광고를 끝까지 본 경우다. count(1~10)가 2 이상이면 연속 뽑기(639·640번)로 company.armory.lastDraws에 담긴다. */
@@ -131,7 +131,7 @@ interface RaisingState {
   fieldBoss: (fielded: boolean) => Promise<void>
   /** 생선으로 가진 고양이의 레벨을 하나 올린다 (decisions.md 571번). */
   /** 생선으로 영구 강화를 levels단계까지(없으면 한 단계) 올린다 (600·663번). */
-  buyFishUpgrade: (kind: 'damage' | 'hp' | 'buy' | 'gold', levels?: number) => Promise<void>
+  buyFishUpgrade: (kind: 'damage' | 'hp' | 'gold', levels?: number) => Promise<void>
   /** 고양이에게 가진 무기 하나를 들린다. weapon이 null이면 뺀다 (488번). */
   equipCat: (
     code: CatCode,

@@ -593,7 +593,7 @@ class IdleEngineTest {
     state.idle.wall = 500;
     assertThat(engine.view(state).power()).as("the wall is not in it").isEqualTo(base);
     double last = base;
-    for (String kind : List.of("damage", "fire", "hp", "buy")) {
+    for (String kind : List.of("damage", "fire", "hp")) {
       state.battleLevels.put(kind, 10);
       double now = engine.view(state).power();
       assertThat(now).as(kind).isGreaterThan(last);
@@ -1382,36 +1382,38 @@ class IdleEngineTest {
   }
 
   @Test
-  void buyOrdersHaveTheirOwnDamageAndBudget() {
+  void buyOrdersMatchTheSellOrdersOfTheirWall() {
+    // 710번: 매수 주문 한 장 = 그 벽의 매도 주문 한 장(20주 × 매도 물량 세기 6 × 물량 배율).
     start(1);
+    assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
+    assertThat(IdleEngine.buyOrder(1)).as("첫 벽: 120주").isCloseTo(120 / 30.0, offset(1e-9));
+    // The order scale follows the wall's health (653): d = 99, health 208.0097 × (1 + 396 ÷ 724) =
+    // 321.78, 1 + 321.78 / 380 = 1.847, two digits 1.8.
+    assertThat(IdleEngine.threat(100)).isEqualTo(1.8);
+    double order = 216 / 30.0;
+    assertThat(IdleEngine.buyOrder(100))
+        .as("벽 100: 120주 × 1.8 = 216주")
+        .isCloseTo(order, offset(1e-9));
+    assertThat(IdleEngine.buyOrder(5001)).as("깊은 벽일수록 매도 주문과 함께 커진다").isGreaterThan(order);
     state.idle.wall = 100;
     tick(1000);
-    // A deep wall does not make a buy order stronger (573): the order scale is not in it.
-    double order = 1.0;
-    assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
-    // The order scale follows the wall's health (653; 1.5 in 646, 3.2 in 644, 4.0 with × 1.003^d
-    // before): d = 99, health 208.0097 × (1 + 396 ÷ 724) = 321.78, 1 + 321.78 / 380 = 1.847, two
-    // digits 1.8.
-    assertThat(IdleEngine.threat(100)).isEqualTo(1.8);
-    // A buy order is capped at its own damage, whatever the screen reports.
+    // A buy order is capped at its wall's sell order, whatever the screen reports.
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
-    // A stronger weapon and the damage upgrade change nothing: buy damage is its own number (514).
+    // 무기·동료·공격력 강화는 매수 주문을 바꾸지 않는다: 팀의 덤(638·689번)도 없앴다.
     state.capital = 1e18;
     company.mental.buyUpgrade(state, "damage", 20);
+    state.idle.cats.put("sky", 4);
+    engine.fieldCat(state, "sky", true);
     state.idle.damage = 0;
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
-    // Only the buy upgrade raises it, by a fixed four shares a level and not by a percentage
-    // (579, 590, 594, 632, a fifth in 648): fifty levels add two hundred shares to the 225 of one
-    // order.
-    assertThat(buyBonus()).isZero();
-    company.mental.buyUpgrade(state, "buy", 50);
-    assertThat(buyBonus()).isEqualTo(200);
-    double up = (order + 200 / 30.0) / order;
-    state.idle.damage = 0;
-    tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
-    assertThat(state.idle.damage).isCloseTo(2 * order * up, offset(1e-9));
+    // 매수벽 공격 강화는 없다: 살 수 없고 화면 값에도 없다.
+    assertThat(engine.upgradeViews(state)).extracting(u -> u.kind()).doesNotContain("buy");
+    assertThatThrownBy(() -> company.mental.buyUpgrade(state, "buy", 1))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.buyFishUpgrade(state, "buy"))
+        .isInstanceOf(InvalidRequestException.class);
     // Buy orders do not spend the bullets' budget, and the reverse.
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
@@ -1420,55 +1422,37 @@ class IdleEngineTest {
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0), new IdleHit(100, "buy", 1, 1000.0));
-    assertThat(state.idle.damage).isCloseTo(bullets + order * up, offset(1e-9));
+    assertThat(state.idle.damage).isCloseTo(bullets + order, offset(1e-9));
     // The budget is the buy wall's fastest fire: far more than that is not accepted.
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "buy", 1000, 1000 * 1000.0));
-    assertThat(state.idle.damage).isLessThan(30 * order * up);
+    assertThat(state.idle.damage).isLessThan(30 * order);
   }
 
   @Test
-  void theTeamsGunsAddTheirShareToABuyOrder() {
-    // 638: a starting pistol alone adds nothing, so the order is its 30 shares (688).
+  void 없앤_매수벽_공격_강화는_쓴_돈과_생선을_돌려준다() {
+    // 710번: 전투 강화 buy는 쓴 돈을(556번의 치명타 피해와 같은 길), 영구 강화 buy는 쓴 생선을 돌려주고 지운다.
     start(1);
-    assertThat(engine.teamScale(state)).isCloseTo(1, offset(1e-9));
-    assertThat(buyBonus()).isZero();
-    // 680·705번: a level 4 C cat's gun is the whole pistol plus 25% + 3 x 10% = 55% of the boss
-    // cat's, 25% faster (sky): the team is 2.9375 pistols. 689: the team's share is back at a
-    // quarter (half before 688 took it out), so 1.9375 x 0.25 x 30 = 14.5, 14 shares come on top.
-    double cat = 1.25 * (1 + 0.25 + 0.1 * 3);
-    state.idle.cats.put("sky", 4);
-    engine.fieldCat(state, "sky", true);
-    assertThat(engine.teamScale(state)).isCloseTo(1 + cat, offset(1e-9));
-    assertThat(buyBonus()).isEqualTo(14);
-    // The attack and fire upgrades are not in it: the team's share follows gear, not upgrades.
-    state.capital = 1e18;
-    company.mental.buyUpgrade(state, "damage", 20);
-    company.mental.buyUpgrade(state, "fire", 20);
-    assertThat(buyBonus()).isEqualTo(14);
-    // Fifty buy levels: 200 fixed shares, and the team's part grows by 0.4 shares a level (648):
-    // 1.9375 x 0.25 x (30 + 0.4 x 50) = 24.2.
-    company.mental.buyUpgrade(state, "buy", 50);
-    assertThat(buyBonus()).isEqualTo(200 + (long) Math.floor(cat * 0.25 * 50));
-    assertThat(buyBonus()).isEqualTo(224);
-    // The wall's depth changes nothing (573), and the server accepts an order of that size.
-    state.idle.wall = 100;
-    assertThat(buyBonus()).isEqualTo(224);
-    state.idle.damage = 0;
-    tick(1000, new IdleHit(100, "buy", 1, 1e9));
-    assertThat(state.idle.damage).isCloseTo(1.0 + 224 / 30.0, offset(1e-9));
-    // 영구 강화(생선)는 고정 수량에 6주를 더하고 팀의 몫에는 한 단계에 1%를 곱한다 (644번).
-    state.fishLevels.put("buy", 10);
-    assertThat(buyBonus()).isEqualTo(200 + 60 + (long) Math.floor(cat * 0.25 * 50 * 1.1));
-  }
-
-  private long buyBonus() {
-    return engine.upgradeViews(state).stream()
-        .filter(u -> "buy".equals(u.kind()))
-        .findFirst()
-        .orElseThrow()
-        .bonusShares();
+    state.battleLevels.put("buy", 3);
+    double capital = state.capital;
+    assertThat(company.mental.hasRemovedUpgrades(state)).isTrue();
+    assertThat(company.mental.refundRemovedUpgrades(state)).isTrue();
+    assertThat(state.battleLevels).doesNotContainKey("buy");
+    assertThat(state.capital)
+        .isEqualTo(
+            capital
+                + company.mental.upgradePrice(0)
+                + company.mental.upgradePrice(1)
+                + company.mental.upgradePrice(2));
+    state.fish = 5;
+    state.fishLevels.put("buy", 4);
+    engine.view(state);
+    assertThat(state.fishLevels).doesNotContainKey("buy");
+    assertThat(state.fish).as("1 + 2 + 3 + 4마리를 돌려받는다").isEqualTo(15);
+    assertThat(engine.view(state).rebirth().upgrades())
+        .extracting(u -> u.kind())
+        .containsExactly("damage", "hp", "gold");
   }
 
   @Test
@@ -1803,11 +1787,9 @@ class IdleEngineTest {
     assertThat(upgrade(c, "damage").bonusPercent()).as("전투 강화가 없으면 영구 강화만큼").isEqualTo(2);
     assertThat(upgrade(c, "damage").level()).as("전투 강화의 단계는 그대로다").isZero();
     engine.buyFishUpgrade(c, "hp");
-    engine.buyFishUpgrade(c, "buy");
     assertThat(upgrade(c, "hp").bonusPercent()).isEqualTo(1);
-    assertThat(upgrade(c, "buy").bonusShares()).isEqualTo(6);
     assertThat(upgrade(c, "fire").bonusPercent()).as("공격 속도는 영구 강화가 없다").isZero();
-    assertThat(c.fish).isEqualTo(25);
+    assertThat(c.fish).isEqualTo(26);
     assertThat(c.idle.cats.get("sky")).isEqualTo(3);
     // 환생해도 남는다.
     c.idle.wall = 51;
@@ -1902,13 +1884,11 @@ class IdleEngineTest {
     state.battleLevels.put("damage", 150);
     state.battleLevels.put("fire", 100);
     state.battleLevels.put("hp", 2_000);
-    state.battleLevels.put("buy", 0);
     assertThat(company.mental.adoptUpgradeCurve(state)).isTrue();
     assertThat(state.battleLevels)
         .containsEntry("damage", 750)
         .containsEntry("fire", 100)
-        .containsEntry("hp", fair)
-        .containsEntry("buy", 0);
+        .containsEntry("hp", fair);
     // 653번: 한 단계가 다시 1%라 750단계는 +750%다. 벽 체력도 그만큼 커졌다(벽 1,000에서 3.5배).
     assertThat(upgrade(state, "damage").bonusPercent()).isEqualTo(750);
     assertThat(upgrade(state, "fire").bonusPercent()).isEqualTo(100);

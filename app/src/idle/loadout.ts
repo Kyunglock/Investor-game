@@ -97,8 +97,7 @@ export function permanentLoadout(company: Company, party?: readonly string[]) {
       : [
           {
             kind: upgrade.kind,
-            bonusPercent: upgrade.kind === 'buy' ? 0 : upgrade.bonus,
-            bonusShares: upgrade.kind === 'buy' ? upgrade.bonus : 0,
+            bonusPercent: upgrade.bonus,
           },
         ],
   )

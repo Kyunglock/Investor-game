@@ -114,7 +114,6 @@ class VaultEngineTest {
     double field = idle.vaultDps(c, null);
     c.battleLevels.put("damage", 100);
     c.battleLevels.put("hp", 100);
-    c.battleLevels.put("buy", 100);
     assertThat(idle.vaultDps(c, party)).isEqualTo(base);
     assertThat(idle.vaultDps(c, null)).isEqualTo(field);
     assertThat(idle.partyDps(c, party)).isGreaterThan(base);

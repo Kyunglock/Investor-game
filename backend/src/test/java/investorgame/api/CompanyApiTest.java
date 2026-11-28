@@ -572,7 +572,7 @@ class CompanyApiTest {
             .read("$.companyId", String.class);
     DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
     List<String> kinds = opened.read("$.battleUpgrades[*].kind");
-    assertThat(kinds).containsExactly("damage", "fire", "hp", "buy");
+    assertThat(kinds).containsExactly("damage", "fire", "hp");
     assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
     assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
     assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Double.class))
@@ -886,8 +886,8 @@ class CompanyApiTest {
     postJson("/api/company/rebirth", "{\"ad\":true}").andExpect(status().isBadRequest());
     // 영구 강화 (600번): 셋이 0단계로 보이고, 생선이 없으면 올리지 못한다.
     assertThat(opened.read("$.idle.rebirth.upgrades[0].kind", String.class)).isEqualTo("damage");
-    assertThat(opened.read("$.idle.rebirth.upgrades[2].kind", String.class)).isEqualTo("buy");
-    assertThat(opened.read("$.idle.rebirth.upgrades[3].kind", String.class)).isEqualTo("gold");
+    assertThat(opened.read("$.idle.rebirth.upgrades[1].kind", String.class)).isEqualTo("hp");
+    assertThat(opened.read("$.idle.rebirth.upgrades[2].kind", String.class)).isEqualTo("gold");
     assertThat(opened.read("$.idle.rebirth.upgrades[0].cost", Long.class)).isEqualTo(1);
     postJson("/api/company/rebirth/upgrade", "{\"kind\":\"damage\"}")
         .andExpect(status().isBadRequest());

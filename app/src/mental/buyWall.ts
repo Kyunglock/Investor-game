@@ -1,3 +1,5 @@
+import { orderHp } from './enemies'
+
 /** 매수 주문이 위로 날아가는 빠르기(px/초). */
 export const BUY_ORDER_SPEED = 360
 
@@ -13,16 +15,16 @@ export const BUY_WALL = {
   retreatDistance: 80,
   /** 자동 전투의 재건 시간(초, 492번): 그동안 공격이 멈춘다. 무너져도 벽 번호는 그대로다 (584번). */
   idleRebuildSeconds: 2,
-  /** 매수 주문 한 장의 바탕 피해 (514번, 서버 IdleEngine.BUY_ORDER_DAMAGE). 0.75에서 두 배로 올렸다가 (594번) 너무 세서 1.0으로 낮췄다 (688번). */
+  /** 스테이지의 매수 주문 한 장의 바탕 피해 (514·688번): 공격력에 곱한다. 자동 전투는 그 벽의 매도 주문과 같은 수량이다 (710번, idleBuyOrderDamage). */
   orderDamage: 1.0,
 } as const
 
 /**
- * 자동 전투의 매수 주문 한 장의 피해 (514·573·579번): 벽의 깊이(물량 배율)는 따르지 않는다. 바탕 피해에 매수벽 공격
- * 강화가 더한 피해(buyBonus, %가 아니라 더하는 값)를 얹는다. buyBonus에는 팀 화력을 따르는 덤(638·689번)이 서버에서 더해져 온다. 서버 IdleEngine.buyOrder와 같다.
+ * 자동 전투의 매수 주문 한 장의 피해 (710번): 그 벽의 매도 주문 한 장과 같은 수량이다. sellScale은 매도 물량의 수량 배율(물량 배율 × 매도 물량
+ * 세기)이다. 매수벽 공격 강화와 팀 화력의 덤(514·573·638·689번)은 없앴다. 서버 IdleEngine.buyOrder와 같다.
  */
-export function idleBuyOrderDamage(buyBonus: number) {
-  return BUY_WALL.orderDamage + buyBonus
+export function idleBuyOrderDamage(sellScale: number) {
+  return orderHp('order', sellScale)
 }
 
 /** 매수 티켓은 양쪽에 40%씩, 가운데에 20%. 각 영역 안에서도 위치를 무작위로 정한다. */

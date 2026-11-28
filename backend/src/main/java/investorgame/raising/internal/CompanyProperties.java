@@ -262,7 +262,6 @@ public record CompanyProperties(
    * @param priceGrowthPercent 단계마다 값이 오르는 비율(%)
    * @param maxBatch 한 요청에 올릴 수 있는 단계 수(꾹 눌러 모은 단계를 묶어 보낸다)
    * @param stepPercent 강화(damage·fire)마다 한 단계에 오르는 비율(%). fire는 쏘는 빠르기가 오른다(간격 ÷ (1 + 비율))
-   * @param buyStepShares 매수벽 공격(buy) 한 단계에 매수 주문 한 장이 느는 수량(주, 579번). %로 오르지 않는다
    * @param maxPercent 강화마다 효과의 상한(%, 487번). 상한에 닿은 단계부터는 못 산다. 없는 강화는 끝없이 오른다
    */
   public record Upgrades(
@@ -270,7 +269,6 @@ public record CompanyProperties(
       int priceGrowthPercent,
       int maxBatch,
       Map<String, Double> stepPercent,
-      int buyStepShares,
       Map<String, Integer> maxPercent) {}
 
   /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */

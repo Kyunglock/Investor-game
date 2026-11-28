@@ -55,18 +55,6 @@ try {
           nextBonusPercent: 10,
           maxLevel: 0,
         },
-        {
-          // 매수벽 공격은 %가 아니라 수량으로 오른다 (579번): 한 단계에 10주.
-          kind: 'buy',
-          level: 12,
-          price: 1000000,
-          priceGrowthPercent: 10,
-          bonusPercent: 0,
-          nextBonusPercent: 0,
-          bonusShares: 120,
-          nextBonusShares: 130,
-          maxLevel: 0,
-        },
       ],
       idle: {
         wall: 1,
@@ -92,12 +80,12 @@ try {
           fromWall: 51,
           adGain: 0,
           // 영구 강화 (600번).
-          upgrades: ['damage', 'hp', 'buy', 'gold'].map((kind) => ({
+          upgrades: ['damage', 'hp', 'gold'].map((kind) => ({
             kind,
             level: 0,
             cost: 1,
             bonus: 0,
-            nextBonus: kind === 'buy' ? 10 : kind === 'gold' ? 2 : 1,
+            nextBonus: kind === 'gold' ? 2 : 1,
           })),
         },
         // 광고 스킬 셋(588번). 사장냥의 고유 스킬은 자동 전투에서 없앴다 (667번). 시간은 실제 초다.
@@ -221,7 +209,7 @@ try {
           u.level++
           u.cost = u.level + 1
           u.bonus = u.nextBonus
-          u.nextBonus += u.kind === 'buy' ? 10 : u.kind === 'gold' ? 2 : 1
+          u.nextBonus += u.kind === 'gold' ? 2 : 1
         }
       }
       const cat = company.idle.cats.find((c) => c.code === sent?.code)
@@ -421,18 +409,15 @@ try {
     await expect(page.getByTestId('idle-power')).toContainText('1,038')
     await expect(page.getByText('실제 벽 피해')).toHaveCount(0)
     // Four stats (decisions.md 487): fire speed stops at its cap, the others can be bought.
-    await expect(page.getByTestId('idle-stat')).toHaveCount(4)
+    // 매수벽 공격 강화는 없앴다 (710번): 강화는 공격력·공격 속도·매수벽 체력 셋이다.
+    await expect(page.getByTestId('idle-stat')).toHaveCount(3)
     const stat = (kind: string) => page.locator(`[data-testid=idle-stat][data-kind=${kind}]`)
     await expect(stat('fire')).toContainText('공격 속도')
     await expect(stat('fire')).toContainText('+100% · 최대')
     await expect(stat('fire').getByRole('button')).toBeDisabled()
     await expect(stat('fire').getByRole('button')).toHaveText('MAX')
     await expect(stat('hp')).toContainText('매수벽 체력')
-    await expect(stat('buy')).toContainText('매수벽 공격')
-    // %가 아니라 수량으로 적는다 (579번): 바탕 한 장 30주(688번, 653번에는 45주)에 120주를 얹었다.
-    await expect(stat('buy')).toContainText('+120주 → +130주')
-    await expect(stat('buy')).toContainText('매수 주문 한 장 150주')
-    await expect(stat('buy')).not.toContainText('%')
+    await expect(stat('buy')).toHaveCount(0)
     await expect(stat('crit')).toHaveCount(0)
     // 성장 탭은 강화와 영구 강화로 나뉜다 (600번). 환생 (571번)은 영구 강화 아래에 있고, 첫 보스를 깨기 전에는 언제부터 되는지만 알린다.
     await expect(page.getByRole('tab')).toHaveText(['강화', /^영구 강화/])
@@ -440,7 +425,7 @@ try {
     await page.getByTestId('growth-tab-forever').click()
     await expect(page.locator('[data-testid=idle-stat]')).toHaveCount(0)
     const forever = (kind: string) => page.locator(`[data-testid=fish-upgrade][data-kind=${kind}]`)
-    await expect(page.getByTestId('fish-upgrade')).toHaveCount(4)
+    await expect(page.getByTestId('fish-upgrade')).toHaveCount(3)
     // 골드 획득량 (706번): 한 단계에 2%.
     await expect(forever('gold')).toContainText('골드 획득량 Lv.0')
     await expect(forever('gold')).toContainText('+0% → +2%')
@@ -448,7 +433,7 @@ try {
     await expect(page.getByTestId('fish-count').getByRole('button')).toHaveCount(3)
     await expect(forever('damage')).toContainText('공격력 Lv.0')
     await expect(forever('damage')).toContainText('+0% → +1%')
-    await expect(forever('buy')).toContainText('+0주 → +10주')
+    await expect(forever('buy')).toHaveCount(0)
     await expect(forever('damage').getByRole('button')).toBeDisabled()
     await expect(page.getByTestId('rebirth')).toBeVisible()
     await expect(page.getByTestId('rebirth-open')).toBeDisabled()

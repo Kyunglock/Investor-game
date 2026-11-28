@@ -526,7 +526,7 @@ export interface paths {
         put?: never;
         /**
          * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번)
-         * @description 공격력(+1%, 637번)·연사(쏘는 빠르기 +1%, 100%까지)·매수벽 체력(+1%, 640번)·매수벽 공격(+20주, 팀의 덤은 638번)을 단계마다 올린다. 치명타 피해 강화는 없앴다(556번). 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
+         * @description 공격력(+1%, 637번)·연사(쏘는 빠르기 +1%, 100%까지)·매수벽 체력(+1%, 640번)을 단계마다 올린다. 치명타 피해(556번)와 매수벽 공격(710번) 강화는 없앴다. 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
          *     상한에 닿은 강화를 사면 400 (487번).
          *     꾹 눌러 연속으로 올릴 때 화면이 모은 단계를 levels로 묶어 보낸다: 자본이 닿는 데까지 한 단계씩 사고, 한 단계도 못 사면 400.
          *     고양이 속도 강화는 394번에서 뺐다.
@@ -1892,7 +1892,7 @@ export interface components {
                          * @description gold는 골드 획득량이다 (706번): 한 단계에 2%, 벽·보스 보상과 시간 수입에 곱한다
                          * @enum {string}
                          */
-                        kind: "damage" | "hp" | "buy" | "gold";
+                        kind: "damage" | "hp" | "gold";
                         level: number;
                         /**
                          * Format: int64
@@ -1980,10 +1980,10 @@ export interface components {
             /** @description 자본으로 사는 전투 강화 (decisions.md 367·394번). 공격력·연사, 최대 단계 없이 멘탈 전투의 바탕 수치에 영구로 붙는다 */
             battleUpgrades?: {
                 /**
-                 * @description damage: 공격력, fire: 연사(쏘는 빠르기가 오른다, 100%까지), hp: 매수벽 체력(최대 멘탈과 매수벽이 오른다), buy: 매수벽 공격(매수 주문의 공격력이 오른다)
+                 * @description damage: 공격력, fire: 연사(쏘는 빠르기가 오른다, 100%까지), hp: 매수벽 체력(최대 멘탈과 매수벽이 오른다). 매수벽 공격(buy)은 없앴다 (710번)
                  * @enum {string}
                  */
-                kind: "damage" | "fire" | "hp" | "buy";
+                kind: "damage" | "fire" | "hp";
                 /** @description 지금 단계(0부터) */
                 level: number;
                 /** @description 다음 단계 값. 단계로만 정하고 벽의 물가는 곱하지 않는다 (519번). 수백 단계 뒤에는 int64를 넘게 커진다 */
@@ -1998,7 +1998,7 @@ export interface components {
                 stepBonusPercent?: number;
                 /** @description 다음 단계의 그 값(%) */
                 nextStepBonusPercent?: number;
-                /** @description buy(매수벽 공격)만: 지금 단계에 매수 주문 한 장이 는 수량(주, 579번). buy는 %로 오르지 않아 bonusPercent가 0이다. 다른 강화는 0. 자동 전투에서는 팀 화력을 따르는 덤(638번)이 더해져 있어 아주 커질 수 있다 */
+                /** @description 늘 0이다. 수량으로 오르던 매수벽 공격 강화를 없앴다 (710번) */
                 bonusShares?: number;
                 /** @description 다음 단계의 그 수량(주) */
                 nextBonusShares?: number;
@@ -2774,7 +2774,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    kind: "damage" | "fire" | "hp" | "buy";
+                    kind: "damage" | "fire" | "hp";
                     /** @description 올릴 단계 수. 없으면 1 */
                     levels?: number;
                 };
@@ -2969,7 +2969,7 @@ export interface operations {
                      * @description gold는 골드 획득량이다 (706번): 한 단계에 2%, 벽·보스 보상과 시간 수입에 곱한다
                      * @enum {string}
                      */
-                    kind: "damage" | "hp" | "buy" | "gold";
+                    kind: "damage" | "hp" | "gold";
                     /** @description 묶어 올릴 단계 수. 없으면 한 단계 */
                     levels?: number;
                 };

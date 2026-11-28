@@ -294,7 +294,7 @@ class MentalEngineTest {
     assertThat(c.capital).as("쓴 돈도 돌려주지 않는다").isEqualTo(5_000_000_000L);
     assertThat(ENGINE.mental.upgradeViews(c))
         .extracting(CompanyView.BattleUpgrade::level)
-        .containsExactly(0, 0, 0, 0);
+        .containsExactly(0, 0, 0);
   }
 
   private static CompanyView.BattleUpgrade view(CompanyState c, String kind) {
@@ -447,8 +447,8 @@ class MentalEngineTest {
     CompanyState c = company(5);
     CompanyProperties.Upgrades rule = PROPERTIES.mental().upgrades();
     assertThat(MentalEngine.UPGRADES)
-        .as("고양이 속도 강화는 뺐고(394번) 체력(410번)을 넣었다. 치명타 피해는 없앴다(556번)")
-        .containsExactly("damage", "fire", "hp", "buy");
+        .as("고양이 속도 강화는 뺐고(394번) 체력(410번)을 넣었다. 치명타 피해(556번)와 매수벽 공격(710번)은 없앴다")
+        .containsExactly("damage", "fire", "hp");
     assertThat(rule.stepPercent())
         .as("공격력·연사·체력 모두 1% (653번, 648번에는 0.2%). 치명타 피해는 없앴다 (556번)")
         .containsEntry("damage", 1.0)
@@ -456,9 +456,6 @@ class MentalEngineTest {
         .containsEntry("hp", 1.0)
         .doesNotContainKey("buy")
         .doesNotContainKey("crit");
-    assertThat(rule.buyStepShares())
-        .as("매수벽 공격은 %가 아니라 한 단계에 4주 (579·590·594·632·648번)")
-        .isEqualTo(4);
     assertThat(rule.maxPercent()).as("연사만 100%에서 멈춘다 (487번)").containsOnly(Map.entry("fire", 100));
     long before = (long) c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "damage", 1)).isEqualTo(1);
