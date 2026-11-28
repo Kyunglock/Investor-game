@@ -67,7 +67,7 @@ try {
     seen.every((x) => x > width * 0.3 && x < width * 0.7),
     `center orders stay in the middle: ${seen.map((x) => Math.round(x)).join(' ')}`,
   )
-  // 손을 댄 자리로 쏘기 (718번): 화면 왼쪽을 누르고 있으면 가운데 패턴이어도 주문이 그 자리에서 뜬다. 떼면 패턴으로 돌아간다.
+  // 손을 댄 자리로 쏘기 (718·719번): 화면 왼쪽을 누르고 있으면 가운데 패턴이어도 주문이 그 자리의 세로 한 줄로 뜬다. 떼면 패턴으로 돌아간다.
   await page.mouse.move(70, 330)
   await page.mouse.down()
   await expect
@@ -75,6 +75,11 @@ try {
       timeout: 40000,
     })
     .toBeGreaterThan(2)
+  const aimed = ((await orders()) ?? []).filter((x) => x < width * 0.3)
+  assert(
+    aimed.every((x) => Math.abs(x - aimed[0]) < 1),
+    `aimed orders fly in one file: ${aimed.map((x) => Math.round(x)).join(' ')}`,
+  )
   await page.mouse.up()
   await expect
     .poll(async () => ((await orders()) ?? []).filter((x) => x < width * 0.3).length, {

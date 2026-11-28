@@ -41,6 +41,8 @@ export class BuyWallFx {
     age: number
     /** 늦게 뜨는 주문 (713번): 남은 대기 시간(전투 초). 그동안 매수벽에 숨어 있고 아무것도 맞히지 않는다. */
     wait: number
+    /** 날아가는 빠르기의 배율 (719번): 손을 댄 자리로 쏘는 주문은 빠르다. */
+    fast: number
     body: Phaser.GameObjects.Image
   }[]
   private scene: Phaser.Scene
@@ -135,8 +137,17 @@ export class BuyWallFx {
     }
   }
   /** behind(px)만큼 처져 날아가도록, 그 거리를 날아갈 시간만큼 늦게 뜬다 (713번). */
-  launch(x: number, y: number, damage: number, barrage = false, sway = 0, phase = 0, behind = 0) {
-    const wait = Math.max(0, behind) / (BUY_ORDER_SPEED * this.speedScale)
+  launch(
+    x: number,
+    y: number,
+    damage: number,
+    barrage = false,
+    sway = 0,
+    phase = 0,
+    behind = 0,
+    fast = 1,
+  ) {
+    const wait = Math.max(0, behind) / (BUY_ORDER_SPEED * this.speedScale * fast)
     const texture = buyOrderTexture(this.scene, damage)
     let shot = this.shots.find((s) => !s.active)
     if (!shot) {
@@ -151,11 +162,24 @@ export class BuyWallFx {
         phase,
         age: 0,
         wait,
+        fast,
         body: this.scene.add.image(x, y, texture).setDepth(6),
       }
       this.shots.push(shot)
     }
-    Object.assign(shot, { x, y, damage, active: true, barrage, x0: x, sway, phase, age: 0, wait })
+    Object.assign(shot, {
+      x,
+      y,
+      damage,
+      active: true,
+      barrage,
+      x0: x,
+      sway,
+      phase,
+      age: 0,
+      wait,
+      fast,
+    })
     shot.body
       .setTexture(texture)
       .setScale(this.orderScale)
@@ -178,7 +202,7 @@ export class BuyWallFx {
         shot.body.setVisible(false)
         continue
       }
-      const next = shot.y - dt * BUY_ORDER_SPEED * this.speedScale
+      const next = shot.y - dt * BUY_ORDER_SPEED * this.speedScale * shot.fast
       if (shot.sway > 0) {
         shot.age += dt
         shot.x = shot.x0 + Math.sin(shot.age * WAVE_SPEED + shot.phase) * shot.sway

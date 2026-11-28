@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  AIM_GAP,
+  AIM_BEHIND,
   BUY_PATTERNS,
-  buyAimX,
+  buyAim,
   buyLaunch,
   buyPatternPreview,
   STEP_BEHIND,
@@ -84,15 +84,12 @@ describe('매수 주문이 날아가는 패턴 (712번)', () => {
     expect(a.sway).toBeGreaterThan(0)
     expect(Math.abs(a.phase - b.phase)).toBeCloseTo(Math.PI)
   })
-  it('손을 댄 자리로 쏘면 누른 자리를 가운데로 나란히 뜨고 레인 밖으로 나가지 않는다 (718번)', () => {
-    const xs = Array.from({ length: 5 }, (_, i) => buyAimX(200, 0, 400, i, 5))
-    expect(xs[2]).toBe(200)
-    expect(xs[4] - xs[3]).toBe(AIM_GAP)
-    expect(xs[0]).toBe(200 - 2 * AIM_GAP)
+  it('손을 댄 자리로 쏘면 누른 자리의 세로 한 줄로 차례로 뜨고 레인 밖으로 나가지 않는다 (718·719번)', () => {
+    const shots = Array.from({ length: 5 }, (_, i) => buyAim(200, 0, 400, i))
+    expect(shots.every((shot) => shot.x === 200 && shot.sway === 0)).toBe(true)
+    expect(shots.map((shot) => shot.behind)).toEqual([0, 1, 2, 3, 4].map((i) => i * AIM_BEHIND))
     // 벽 끝을 눌러도 양 끝 8% 안쪽에 머문다.
-    expect(
-      Array.from({ length: 5 }, (_, i) => buyAimX(0, 0, 400, i, 5)).every((x) => x >= 32),
-    ).toBe(true)
-    expect(buyAimX(9999, 0, 400, 4, 5)).toBe(368)
+    expect(buyAim(0, 0, 400, 0).x).toBe(32)
+    expect(buyAim(9999, 0, 400, 4).x).toBe(368)
   })
 })

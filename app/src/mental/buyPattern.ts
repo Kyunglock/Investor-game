@@ -118,22 +118,18 @@ export function buyLaunch(
   }
 }
 
-/** 손을 댄 자리로 쏠 때 한 번에 뜨는 주문 사이의 간격(px): 한 자리에 겹쳐 보이지 않게 조금 벌린다. */
-export const AIM_GAP = 14
+/** 손을 댄 자리로 쏠 때 앞뒤 주문 사이의 거리(px): 한 줄로 줄지어 나가도록 그 거리만큼 차례로 늦게 뜬다 (719번). */
+export const AIM_BEHIND = 26
+/** 손을 댄 자리로 쏘는 주문이 날아가는 빠르기의 배율 (719번). */
+export const AIM_SPEED = 1.6
 
 /**
- * 손을 댄 자리로 쏘기 (718번): 화면을 누르고 있는 동안에는 고른 패턴 대신 누른 자리(touchX)로 주문이 나간다. 한 번에 뜨는 count장을
- * 누른 자리를 가운데로 나란히 벌리고, 레인(양 끝 8% 안쪽) 밖으로는 나가지 않는다.
+ * 손을 댄 자리로 쏘기 (718·719번): 화면을 누르고 있는 동안에는 고른 패턴 대신 누른 자리(touchX)의 세로 한 줄로 주문이 빠르게 줄지어
+ * 나간다. index번째 주문은 그만큼 뒤에 선다. 레인(양 끝 8% 안쪽) 밖으로는 나가지 않는다.
  */
-export function buyAimX(
-  touchX: number,
-  left: number,
-  width: number,
-  index: number,
-  count: number,
-): number {
-  const x = touchX + (index - (count - 1) / 2) * AIM_GAP
-  return Math.min(left + width * 0.92, Math.max(left + width * 0.08, x))
+export function buyAim(touchX: number, left: number, width: number, index: number): BuyLaunch {
+  const x = Math.min(left + width * 0.92, Math.max(left + width * 0.08, touchX))
+  return { x, sway: 0, phase: 0, behind: Math.max(0, index) * AIM_BEHIND }
 }
 
 /**
