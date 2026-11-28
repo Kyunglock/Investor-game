@@ -30,11 +30,11 @@ try {
   await expect(page.getByTestId('cat-boss')).toBeHidden()
   const options = page.getByTestId('buy-pattern-option')
   await expect(options).toHaveCount(9)
-  // 패턴마다 날아가는 모양의 그림이 있다: 주문 열두 장.
+  // 패턴마다 날아가는 모양의 그림이 있다: 주문 열다섯 장.
   for (const code of ['line', 'stairs', 'pillars', 'wedge'])
     await expect(
       page.locator(`[data-testid=buy-pattern-option][data-code=${code}] .buy-pattern-ticket`),
-    ).toHaveCount(12)
+    ).toHaveCount(15)
   const option = (code) => page.locator(`[data-testid=buy-pattern-option][data-code=${code}]`)
   // 처음에는 전부터 쓰던 양옆이다.
   await expect(option('sides')).toHaveAttribute('aria-pressed', 'true')

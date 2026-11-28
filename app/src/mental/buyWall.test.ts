@@ -57,29 +57,29 @@ describe('매수벽', () => {
     expect(wall.hit(100)).toBe(true)
     expect(wall.breaks).toBe(2)
   })
-  it('매수 주문은 불규칙한 간격으로 세 장씩 발사하고 매도 물량의 세 배를 보낸다 (712번)', () => {
+  it('매수 주문은 불규칙한 간격으로 다섯 장씩 발사하고 매도 물량의 다섯 배를 보낸다 (714번)', () => {
     let roll = 0
     const wall = new BuyWall(100, () => (roll++ % 2 === 0 ? 0 : 1))
     expect(wall.step(10).fireCount).toBe(0)
     wall.sells = 3
     expect(wall.step(0).fireCount).toBe(0)
-    expect(wall.step(0.16).fireCount).toBe(3)
+    expect(wall.step(0.16).fireCount).toBe(5)
     expect(wall.step(0.3).fireCount).toBe(0)
-    expect(wall.step(0.26).fireCount).toBe(3)
-    expect(wall.step(0.16).fireCount).toBe(3)
-    expect(wall.shots).toBe(wall.sells * 3)
+    expect(wall.step(0.26).fireCount).toBe(5)
+    expect(wall.step(0.16).fireCount).toBe(5)
+    expect(wall.shots).toBe(wall.sells * 5)
     expect(wall.step(10).fireCount).toBe(0)
   })
-  it('재건 후 밀린 주문도 한 번에 세 장씩 보내고 총량을 보존한다', () => {
+  it('재건 후 밀린 주문도 한 번에 다섯 장씩 보내고 총량을 보존한다', () => {
     const wall = new BuyWall(100, () => 0.5)
     wall.sells = 8
     wall.hit(100)
     expect(wall.step(1).fireCount).toBe(0)
     expect(wall.step(0.5).fireCount).toBe(0)
     expect(wall.step(0.34).fireCount).toBe(0)
-    expect(wall.step(0.02).fireCount).toBe(3)
-    for (let i = 0; i < 7; i++) expect(wall.step(0.36).fireCount).toBe(3)
-    expect(wall.shots).toBe(wall.sells * 3)
+    expect(wall.step(0.02).fireCount).toBe(5)
+    for (let i = 0; i < 7; i++) expect(wall.step(0.36).fireCount).toBe(5)
+    expect(wall.shots).toBe(wall.sells * 5)
   })
   it('추가 수익은 별 0·1·2·3개 → 0·25·50·100%다', () => {
     expect(assaultBonusPercent(0)).toBe(0)
@@ -99,10 +99,10 @@ it('서킷브레이커는 발사 시계만 20%로 줄이고 총량과 재건 시
   }
   expect(halted.shots).toBeGreaterThan(0)
   expect(halted.shots).toBeLessThan(normal.shots)
-  expect(halted.shots).toBeLessThanOrEqual(halted.sells * 3)
-  // 거래 정지 중에도 최종 발사량은 매도 물량의 정확히 세 배다.
+  expect(halted.shots).toBeLessThanOrEqual(halted.sells * 5)
+  // 거래 정지 중에도 최종 발사량은 매도 물량의 정확히 다섯 배다.
   for (let i = 0; i < 100; i++) halted.stepOrders(1)
-  expect(halted.shots).toBe(halted.sells * 3)
+  expect(halted.shots).toBe(halted.sells * 5)
   expect(halted.stepOrders(10)).toBe(0)
   halted.hit(100)
   const rebuild = halted.rebuildLeft

@@ -1206,7 +1206,9 @@ class IdleEngineTest {
   private double accepted(String kind) {
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
-    tick(1000, new IdleHit(100, kind, 1000, 1e9));
+    // 매수 주문은 다섯 장만 센다 (714번): 예산껏(50장) 받으면 벽 100이 깨져 받은 피해를 잴 수 없다.
+    int count = "buy".equals(kind) ? 5 : 1000;
+    tick(1000, new IdleHit(100, kind, count, 1e9));
     return state.idle.damage;
   }
 
@@ -1427,8 +1429,8 @@ class IdleEngineTest {
     state.idle.damage = 0;
     state.idle.hitCredits = new double[18];
     tick(1000, new IdleHit(100, "buy", 1000, 1000 * 1000.0));
-    // 712번: 매도 물량 하나에 세 장이라 예산은 초당 3 ÷ 0.15 = 20장, 1.5배속의 1초에 30장이다.
-    assertThat(state.idle.damage).isLessThanOrEqualTo(30 * order + 1e-9);
+    // 714번: 매도 물량 하나에 다섯 장이라 예산은 초당 5 ÷ 0.15 = 33.3장, 1.5배속의 1초에 50장이다.
+    assertThat(state.idle.damage).isLessThanOrEqualTo(50 * order + 1e-6);
   }
 
   @Test
