@@ -429,7 +429,7 @@ class MentalEngine {
             ? null
             : new CompanyView.WeaponDraw(
                 d.kind,
-                text().weapons().get(d.kind),
+                weaponName(d.kind, d.grade),
                 d.grade,
                 text().weaponGrades().get(d.grade),
                 c.lastWeaponDrawNew),
@@ -440,7 +440,7 @@ class MentalEngine {
                     x ->
                         new CompanyView.WeaponDraw(
                             x.kind,
-                            text().weapons().get(x.kind),
+                            weaponName(x.kind, x.grade),
                             x.grade,
                             text().weaponGrades().get(x.grade),
                             x.isNew))
@@ -498,7 +498,7 @@ class MentalEngine {
               CompanyProperties.Weapon s = stats(w.kind, w.grade);
               return new CompanyView.Weapon(
                   w.kind,
-                  text().weapons().get(w.kind),
+                  weaponName(w.kind, w.grade),
                   w.grade,
                   text().weaponGrades().get(w.grade),
                   s.damagePercent(),
@@ -512,8 +512,9 @@ class MentalEngine {
   }
 
   /** 무기 종류의 이름. */
-  String weaponName(String kind) {
-    return text().weapons().get(kind);
+  String weaponName(String kind, String grade) {
+    var names = text().weapons();
+    return names.getOrDefault(kind + "." + grade, names.get(kind));
   }
 
   /** 등급을 더한 최종 수치. */

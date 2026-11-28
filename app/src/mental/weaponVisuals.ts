@@ -206,8 +206,20 @@ export function drawWeaponBullet(c: CanvasRenderingContext2D, grade: GunGrade, f
       // 도는 표창: 네 날이 프레임마다 돌아간다.
       bar(2, y - 1.6, 18, 3.2, fade(2, 20))
       c.fillStyle = color
-      star(24, 4, 7.4, 2.4, frame ? Math.PI / 4 : 0)
-      outline(0.8)
+      c.save()
+      c.translate(23, y)
+      c.rotate(frame ? Math.PI / 4 : 0)
+      for (let i = 0; i < 4; i++) {
+        c.rotate(Math.PI / 2)
+        c.beginPath()
+        c.moveTo(1, -2)
+        c.quadraticCurveTo(4, -7, 7, -4)
+        c.lineTo(5, 1)
+        c.lineTo(1, 3)
+        c.fill()
+        outline(0.7)
+      }
+      c.restore()
       c.fillStyle = '#ffffff'
       star(24, 4, 3.2, 1.1, frame ? 0 : Math.PI / 4)
       break
@@ -225,6 +237,9 @@ export function drawWeaponBullet(c: CanvasRenderingContext2D, grade: GunGrade, f
         c.stroke()
       }
       orb(25, 5, '#166534')
+      c.beginPath()
+      c.ellipse(17 + frame * 2, y, 2, 6, 0.25, 0, Math.PI * 2)
+      outline(1.2, '#bbffed')
       c.beginPath()
       c.arc(25, y, 5, 0, Math.PI * 2)
       outline(1, '#eafff1')
@@ -248,7 +263,11 @@ export function drawWeaponBullet(c: CanvasRenderingContext2D, grade: GunGrade, f
       star(24, 8, 7.6, 3.4, frame ? Math.PI / 8 : 0)
       outline(0.8, '#fffbe8')
       c.fillStyle = '#fffbe8'
-      star(24, 4, 4.4, 1.3, 0)
+      c.beginPath()
+      c.arc(24, y, 3.5, 0, Math.PI * 2)
+      c.fillStyle = '#211430'
+      c.fill()
+      outline(1.2, '#fff7bc')
       c.fillStyle = '#fff7c2'
       for (const [x, dy] of frame
         ? [
@@ -271,6 +290,40 @@ export function drawWeaponImpact(c: CanvasRenderingContext2D, grade: GunGrade) {
   c.translate(40, 40)
   c.strokeStyle = color
   c.lineWidth = grade === 'A' ? 5 : 2
+  if (grade === 'SR' || grade === 'UR' || grade === 'LR') {
+    if (grade === 'SR') {
+      // 회전 날이 긁은 세 개의 초승달 자국.
+      for (let i = 0; i < 3; i++) {
+        c.rotate((Math.PI * 2) / 3)
+        c.fillStyle = color
+        c.fill(new Path2D('M4 -4 Q18 -36 36 -14 Q22 -23 4 4 Z'))
+      }
+    } else if (grade === 'UR') {
+      // 충돌 지점에서 서로 교차하는 세 개의 플라스마 고리.
+      for (let i = 0; i < 3; i++) {
+        c.rotate(Math.PI / 3)
+        c.beginPath()
+        c.ellipse(0, 0, 35, 10, 0, 0, Math.PI * 2)
+        c.lineWidth = 3
+        c.stroke()
+      }
+    } else {
+      // 검은 원반 너머로 백금색 코로나와 긴 광선이 퍼진다.
+      for (let i = 0; i < 12; i++) {
+        c.rotate(Math.PI / 6)
+        c.fillStyle = i % 2 ? '#fff4b3' : color
+        c.fill(new Path2D(i % 2 ? 'M13 -3 L29 0 L13 3 Z' : 'M13 -4 L39 0 L13 4 Z'))
+      }
+      c.beginPath()
+      c.arc(0, 0, 15, 0, Math.PI * 2)
+      c.fillStyle = '#211430'
+      c.fill()
+      c.lineWidth = 4
+      c.strokeStyle = '#fff6bc'
+      c.stroke()
+    }
+    return
+  }
   if (rank > 0) {
     c.beginPath()
     c.arc(0, 0, Math.min(30, 18 + rank * 2), 0, Math.PI * 2)

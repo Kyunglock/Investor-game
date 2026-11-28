@@ -1,4 +1,5 @@
 import { GUN_GRADES, type GunGrade } from '@web/features/game/cat/draw'
+import { drawApexWeapon } from './apexWeaponArt'
 import { drawSprite, spriteBounds } from './stageArt'
 
 /** C안 원본 아틀라스: 왼쪽부터 F~LR, 4열 × 3행. 아이콘과 장착 모습이 같은 원본을 쓴다. */
@@ -15,6 +16,18 @@ export function drawInventoryGun(
   grade: GunGrade,
   target = { x: 0, y: 0, w: 96, h: 72 },
 ) {
+  const scale = Math.min(target.w / 96, target.h / 48)
+  if (
+    drawApexWeapon(
+      c,
+      grade,
+      target.x + (target.w - 96 * scale) / 2,
+      target.y + (target.h - 48 * scale) / 2,
+      96 * scale,
+      48 * scale,
+    )
+  )
+    return
   drawSprite(c, source, weaponCell(source, grade), target)
 }
 
@@ -39,7 +52,8 @@ export function drawEquippedHero(
   c.save()
   c.translate(EQUIPPED_MUZZLE.x, EQUIPPED_MUZZLE.y)
   c.rotate(-Math.PI / 2)
-  c.drawImage(weapons, crop.x, crop.y, crop.w, crop.h, -57, -12, 57, 34)
+  if (!drawApexWeapon(c, grade, -57, -12, 57, 34))
+    c.drawImage(weapons, crop.x, crop.y, crop.w, crop.h, -57, -12, 57, 34)
   c.restore()
   // 원본 앞발을 총 위에 다시 얹어 손잡이와 앞 총몸을 잡게 한다.
   c.save()
@@ -136,7 +150,8 @@ export function drawEquippedMate(
   c.translate(hold.muzzle.x, hold.muzzle.y)
   c.rotate(-Math.PI / 2)
   c.scale(MATE_GUN_SCALE, MATE_GUN_SCALE)
-  c.drawImage(weapons, gun.x, gun.y, gun.w, gun.h, -57, -12, 57, 34)
+  if (!drawApexWeapon(c, grade, -57, -12, 57, 34))
+    c.drawImage(weapons, gun.x, gun.y, gun.w, gun.h, -57, -12, 57, 34)
   c.restore()
   // 원본 앞발을 총 위에 다시 얹어 손잡이를 잡게 한다.
   c.save()

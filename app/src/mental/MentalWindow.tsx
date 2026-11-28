@@ -63,7 +63,7 @@ import { StageLobbyTeam } from './StageLobbyPlan'
 import { StagePortrait } from './StagePortrait'
 import { StageScenery } from './StageScenery'
 import { StageSkillIcon } from './StageSkillIcon'
-import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
+import { fireStyleName, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './stage.css'
 import { type Hero, heroOf, type Weapon } from './hero'
 import { WallGainFlight } from './WallGainFlight'
@@ -682,7 +682,7 @@ function EquippedWeapon({ weapon, onChange }: { weapon: Weapon; onChange: () => 
           </span>
         </b>
         <span className="block text-[11px] text-muted">
-          {FIRE_STYLE_NAMES[weapon.kind]} · {WEAPON_EFFECTS[weapon.kind].name} · 강점{' '}
+          {fireStyleName(weapon)} · {WEAPON_EFFECTS[weapon.kind].name} · 강점{' '}
           {WEAPON_TRAITS[weapon.kind].strength}
         </span>
       </span>

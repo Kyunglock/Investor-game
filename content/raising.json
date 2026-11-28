@@ -918,7 +918,10 @@
         "revolver": "리볼버",
         "smg": "기관단총",
         "shotgun": "폭발포",
-        "rifle": "성운포"
+        "rifle": "성운포",
+        "rifle.SR": "홍련 차크람",
+        "rifle.UR": "나선 플라스마포",
+        "rifle.LR": "일식 왕관포"
       },
       "weaponGrades": {
         "F": "F", "E": "E", "D": "D", "C": "C", "B": "B", "A": "A", "S": "S",

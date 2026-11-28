@@ -7,7 +7,7 @@ import { sfx } from '../fx/sound'
 import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
-import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
+import { fireStyleName, WEAPON_EFFECTS } from '../mental/weaponEffects'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { CatRosterGrid } from './CatRosterGrid'
@@ -486,7 +486,7 @@ export function IdleCats({
               {(cat ? !cat.weapon : bossBare) ? '기본 권총' : gun.name}{' '}
               <i className={`idle-grade ${GRADE_BADGE[gun.grade]}`}>{gun.gradeName}</i>
               <small className="idle-gun-note">
-                {FIRE_STYLE_NAMES[gun.kind]} · {WEAPON_EFFECTS[gun.kind].name}
+                {fireStyleName(gun)} · {WEAPON_EFFECTS[gun.kind].name}
               </small>
             </span>
             <em className="idle-gun-open">

@@ -265,6 +265,7 @@ class MentalEngineTest {
 
   @Test
   void 새_상위_무기는_불러와도_보존되고_장착할_수_있다() {
+    var names = Map.of("SR", "홍련 차크람", "UR", "나선 플라스마포", "LR", "일식 왕관포");
     for (String grade : List.of("S", "SS", "SSS", "SR", "UR", "LR")) {
       CompanyState c = company(4);
       CompanyState.Weapon weapon = new CompanyState.Weapon("rifle", grade);
@@ -278,6 +279,7 @@ class MentalEngineTest {
               view -> {
                 assertThat(view.grade()).isEqualTo(grade);
                 assertThat(view.gradeName()).isEqualTo(grade);
+                assertThat(view.name()).isEqualTo(names.getOrDefault(grade, "성운포"));
                 assertThat(view.equipped()).isTrue();
               });
     }

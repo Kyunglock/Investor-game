@@ -39,9 +39,9 @@ const names = [
   '성운포',
   '성운포',
   '성운포',
-  '성운포',
-  '성운포',
-  '성운포',
+  '홍련 차크람',
+  '나선 플라스마포',
+  '일식 왕관포',
 ]
 const weapons = grades.map((grade, i) => ({
   kind: kinds[i],
