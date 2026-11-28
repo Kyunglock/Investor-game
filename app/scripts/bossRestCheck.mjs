@@ -126,7 +126,10 @@ try {
     const starter = page.getByRole('combobox', { name: '선발 고양이' })
     await expect(starter).toHaveValue('')
     await starter.selectOption('sky')
-    await expect(page.getByTestId('stage-lobby-cat')).toHaveCount(0)
+    await expect(
+      page.getByTestId('stage-lobby-team').locator('[data-testid=cat-slot][data-code]'),
+    ).toHaveCount(1)
+    await expect(starter).toHaveValue('sky')
     await page.getByTestId('mental-start').click()
     await expect(page.getByRole('img', { name: '하늘냥 출전' })).toBeVisible()
     await expect.poll(async () => (await stand())?.heroVisible).toBe(false)

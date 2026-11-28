@@ -101,7 +101,9 @@ try {
     // 출전 화면: 무기를 보고 들어간다.
     await expect(page.getByTestId('stage-mode')).toContainText('디펜스 · 몬스터 10웨이브')
     // 출전 화면의 출전 고양이 줄 (682번): 출전 칸의 차례대로, 쉬는 노을냥은 없다.
-    const lobbyCats = page.getByTestId('stage-lobby-cat')
+    const lobbyCats = page
+      .getByTestId('stage-lobby-team')
+      .locator('[data-testid=cat-slot][data-code]')
     assert.deepEqual(await lobbyCats.evaluateAll((els) => els.map((el) => el.dataset.code)), [
       first.code,
       'sky',
@@ -115,7 +117,7 @@ try {
     const faceAttr = width === 320 ? 'viewBox' : 'src'
     const portrait = await face.getAttribute(faceAttr)
     assert.ok(portrait)
-    await expect(lobbyCats.nth(1).locator('.stage-lobby-team-skills > *')).toHaveCount(0)
+    await expect(lobbyCats.nth(1).locator('.idle-cat-badge > *')).toHaveCount(0)
     await expect(page.getByTestId('stage-lobby-team')).not.toContainText('총만 쏜다')
     // 메인 스테이지의 출전 화면에는 사장냥 뒷모습과 무기 칸이 없다.
     await expect(page.locator('.stage-portrait')).toHaveCount(0)
@@ -123,18 +125,13 @@ try {
     // 미니맵(타임라인)과 적 범례는 두지 않는다.
     await expect(page.getByTestId('stage-timeline')).toHaveCount(0)
     await expect(page.locator('.stage-enemies')).toHaveCount(0)
-    await page.getByRole('button', { name: '스테이지 출전 편성' }).click()
-    const grid = page.locator('.stage-team-editor .idle-cat-grid')
-    assert.equal(
-      await grid.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length),
-      4,
-    )
-    await expect(grid.locator('[data-code="sunset"]')).toBeDisabled()
-    await grid.locator('[data-code="lilac"]').click()
-    await page.getByRole('searchbox').fill('노을')
-    await expect(grid.getByRole('button')).toHaveCount(1)
-    await grid.getByRole('button').click()
-    await page.getByRole('button', { name: '편성 완료' }).click()
+    const editor = page.getByTestId('stage-lobby-team')
+    await editor.getByRole('tab', { name: '무기' }).click()
+    await expect(editor.getByRole('tab', { name: '무기' })).toHaveAttribute('aria-selected', 'true')
+    await editor.getByRole('tab', { name: '고양이' }).click()
+    await editor.locator('.idle-cat-grid [data-code="sunset"]').click()
+    await editor.getByTestId('cat-swap').click()
+    await lobbyCats.last().click()
     await expect(lobbyCats.last()).toHaveAttribute('data-code', 'sunset')
     const lobby = page.getByTestId('mental-lobby')
     const overflow = await lobby.evaluate((el) => el.scrollWidth - el.clientWidth)
