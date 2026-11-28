@@ -51,7 +51,39 @@ public record CompanyView(
     Idle idle,
     boolean sandbox,
     boolean sandboxInfinite,
-    Vault vault) {
+    Vault vault,
+    AchievementBoard achievements) {
+
+  /**
+   * 업적 (decisions.md 708번): 한 번뿐인 목표를 단계별로 깨면 다이아를 준다.
+   *
+   * @param list 업적마다 지금 단계
+   * @param ready 지금 받을 수 있는 업적의 수
+   * @param lastDiamonds 마지막으로 받은 다이아. 없으면 0
+   */
+  public record AchievementBoard(List<AchievementGoal> list, int ready, long lastDiamonds) {}
+
+  /**
+   * 업적 하나의 지금 단계.
+   *
+   * @param tier 받은 단계 수(0부터)
+   * @param tiers 단계 수
+   * @param count 지금 기록(목표에서 자른다)
+   * @param target 지금 단계의 목표
+   * @param diamonds 지금 단계를 깨면 받는 다이아
+   * @param ready 목표에 닿았고 아직 받지 않았다
+   * @param done 모든 단계를 받았다
+   */
+  public record AchievementGoal(
+      String code,
+      String title,
+      int tier,
+      int tiers,
+      long count,
+      long target,
+      int diamonds,
+      boolean ready,
+      boolean done) {}
 
   /**
    * 금고 도전 (decisions.md 641번): 보스전과 주간 던전, 금괴로 사는 금고 상점. 한 주의 경계는 한국 시간 월요일 0시다.

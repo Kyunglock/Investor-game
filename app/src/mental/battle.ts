@@ -2151,6 +2151,27 @@ class BattleScene extends Phaser.Scene {
     boss.setScale(scale).setPosition(w / 2, top + boss.displayHeight / 2)
   }
 
+  /** 금고 용이 입에서 매수벽까지 불길을 뿜는다. 벽이 재건 중이면 사장냥이 맞는다. */
+  private guardianBreath(boss: Enemy) {
+    const wall = this.buyWall
+    const x = this.player.x
+    const y = wall?.active ? this.buyWallY() : this.player.y
+    const mouthY = boss.y + boss.displayHeight * 0.32
+    const flame = this.add.graphics().setDepth(6)
+    flame.fillStyle(0xff732e, 0.78).fillTriangle(boss.x, mouthY, x - 20, y, x + 20, y)
+    flame.fillStyle(0xffdc77, 0.95).fillTriangle(boss.x, mouthY, x - 8, y, x + 8, y)
+    this.glow(boss.x, mouthY, 0xffa136, 25, 260)
+    this.ring(x, y, 0xffa136, 24, 260)
+    this.tweens.add({
+      targets: flame,
+      alpha: 0,
+      duration: 320,
+      onComplete: () => flame.destroy(),
+    })
+    if (wall?.active) this.hitBuyWall(Math.ceil(wall.maxHp / 3), x)
+    else this.hurt(Math.max(1, Math.round(this.loadout.maxMental * 0.04)))
+  }
+
   /**
    * 큰손이 시장가 매도를 쏟아 낸다: 양옆으로 퍼지지 않고 큰손 바로 앞(발밑)에서 한 줄로 이어 나와 곧게 내려온다. 화가 나면(체력 반 아래) 대량 매도도 하나.
    */
@@ -2703,10 +2724,15 @@ class BattleScene extends Phaser.Scene {
       }
     }
     const boss = this.bossEnemy
-    if (
+    if (boss?.active && !boss.dying && this.opts.vault?.score) {
+      // 금고 기본 배속에서 6초에 한 번. 전투 시계를 따라 일시정지 중에는 쏘지 않는다.
+      if (this.elapsed - this.lastSummon >= 4.5) {
+        this.lastSummon = this.elapsed
+        this.guardianBreath(boss)
+      }
+    } else if (
       boss?.active &&
       !boss.dying &&
-      !this.opts.vault?.score &&
       this.elapsed - this.lastSummon > whaleSummonSeconds(boss.hp, this.bossMax)
     ) {
       this.lastSummon = this.elapsed

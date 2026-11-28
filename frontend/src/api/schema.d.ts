@@ -344,6 +344,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/achievements/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 업적 보상을 받는다 (decisions.md 708번)
+         * @description 업적의 지금 단계 목표에 닿으면(achievements.list[].ready) 이 요청으로 그 단계의 다이아를 받고 다음 단계로 간다. 여러 단계에 닿았으면 모두 받는다.
+         *     code를 실으면 그 업적의 것을, 본문이 없거나 code가 없으면 받을 수 있는 것을 모두 받는다. 없는 업적이거나 받을 것이 없으면 400.
+         */
+        post: operations["claimAchievement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/attendance": {
         parameters: {
             query?: never;
@@ -1580,6 +1601,42 @@ export interface components {
             sandbox?: boolean;
             /** @description 테스트판의 무한 다이아가 켜져 있다: 다이아가 떨어지지 않는다. 자본은 무한이 아니다 (650번) */
             sandboxInfinite?: boolean;
+            /** @description 업적 (decisions.md 708번). 한 번뿐인 목표를 단계별로 깨면 다이아를 준다. 환생해도 남는다 */
+            achievements?: {
+                list: {
+                    /** @enum {string} */
+                    code: "wall" | "boss" | "cats" | "rebirth" | "draw" | "merge" | "upgrade" | "attend" | "stage";
+                    /** @description 지금 단계의 목표 글 */
+                    title: string;
+                    /** @description 받은 단계 수(0부터) */
+                    tier: number;
+                    /** @description 단계 수 */
+                    tiers: number;
+                    /**
+                     * Format: int64
+                     * @description 지금 기록(목표에서 자른다)
+                     */
+                    count: number;
+                    /**
+                     * Format: int64
+                     * @description 지금 단계의 목표
+                     */
+                    target: number;
+                    /** @description 지금 단계를 깨면 받는 다이아 */
+                    diamonds: number;
+                    /** @description 목표에 닿았고 아직 받지 않았다 */
+                    ready: boolean;
+                    /** @description 모든 단계를 받았다 */
+                    done: boolean;
+                }[];
+                /** @description 지금 받을 수 있는 업적의 수 */
+                ready: number;
+                /**
+                 * Format: int64
+                 * @description 마지막으로 받은 다이아. 없으면 0
+                 */
+                lastDiamonds: number;
+            };
             /** @description 금고 도전 (decisions.md 641번). 보스전과 주간 던전에서 금괴를 얻어 금고 상점에서 쓴다. 한 주의 경계는 한국 시간 월요일 0시다 */
             vault?: {
                 /**
@@ -2468,6 +2525,36 @@ export interface operations {
         };
         responses: {
             /** @description 포인트를 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    claimAchievement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description 받을 업적의 코드. 없으면 받을 수 있는 것을 모두 받는다 */
+                    code?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 받은 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

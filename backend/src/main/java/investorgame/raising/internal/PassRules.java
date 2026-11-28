@@ -139,6 +139,11 @@ class PassRules {
    * (572번, take). 없는 미션이면 아무 일도 없다.
    */
   void progress(CompanyState c, String code, long amount, LocalDate today) {
+    // 업적의 누적 기록 (708번): 주기마다 지우는 퀘스트와 달리 계속 쌓는다.
+    if (amount > 0) {
+      if (c.lifetime == null) c.lifetime = new java.util.LinkedHashMap<>();
+      c.lifetime.merge(code, amount, Long::sum);
+    }
     roll(c, today);
     CompanyProperties.PassMission m = mission(code);
     if (m == null || amount <= 0) {
