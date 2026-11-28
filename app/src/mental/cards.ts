@@ -239,7 +239,7 @@ export function stageCatCard(state: MateMagicState): Card | null {
     name: `${next.name} 출전`,
     cat: next,
     effect: next.skills.length
-      ? `제 무기로 함께 싸워요 · 고유 스킬 ${next.skills.map((skill) => skill.name).join('·')} Lv.1`
+      ? `제 무기로 함께 싸워요 · 고유 스킬 ${next.skills.map((skill) => skill.name).join('·')} ${starText(1)}`
       : '제 무기로 함께 싸워요 · 고유 스킬 없음',
     icon: '🐱',
     color: '#ff9db8',
@@ -247,19 +247,32 @@ export function stageCatCard(state: MateMagicState): Card | null {
   }
 }
 
-/** 고양이 스킬 강화 (669번): 나와 있는 고양이 가운데 고유 스킬이 있고 최고 레벨이 아닌 고양이. */
+/** 고양이 강화 한 번에 그 고양이의 총이 세지는 비율 (717번). */
+export const CAT_STAR_DAMAGE = 1.2
+
+/** 별 표시 (717번): 고양이의 강화 단계를 레벨 숫자 대신 별로 적는다. ★★☆☆☆ */
+export function starText(stars: number): string {
+  const n = Math.max(0, Math.min(MAGIC_MAX_LEVEL, Math.floor(stars)))
+  return '★'.repeat(n) + '☆'.repeat(MAGIC_MAX_LEVEL - n)
+}
+
+/**
+ * 고양이 강화 (717번, 669번의 스킬 강화를 바꿈): 나와 있는 고양이 가운데 별이 다 차지 않은 고양이. 고유 스킬이 없는 고양이도 강화한다(총이 세진다).
+ */
 export function stageSkillTargets(state: MateMagicState): number[] {
   const team = state.stageCats ?? []
   const have = Math.min(state.mates ?? 0, team.length)
   const targets: number[] = []
   for (let i = 0; i < have; i++) {
-    if (team[i].skills.length > 0 && (state.mateMagicLevels?.[i] ?? 1) < MAGIC_MAX_LEVEL)
-      targets.push(i)
+    if ((state.mateMagicLevels?.[i] ?? 1) < MAGIC_MAX_LEVEL) targets.push(i)
   }
   return targets
 }
 
-/** 고양이 한 마리의 고유 스킬을 한 레벨 올리는 카드 (669번). 스킬이 둘인 고양이는 둘 다 오른다. */
+/**
+ * 고양이 한 마리를 강화하는 카드 (717번): 별이 하나 늘고, 그 고양이의 총이 CAT_STAR_DAMAGE배가 되며 고유 스킬이 한 레벨 오른다(스킬이 둘이면
+ * 둘 다). 전에는 스킬만 올리는 "스킬 강화"였다 (669번).
+ */
 export function stageSkillCard(state: MateMagicState, target: number): Card {
   const cat = (state.stageCats ?? [])[target]
   const from = state.mateMagicLevels?.[target] ?? 1
@@ -267,9 +280,11 @@ export function stageSkillCard(state: MateMagicState, target: number): Card {
   return {
     code: 'cat-skill',
     grade: magicGrade(to),
-    name: `${cat.name} 스킬 강화`,
+    name: `${cat.name} 강화`,
     cat,
-    effect: `${cat.skills.map((skill) => skill.name).join('·')} 레벨 +1 · 더 세고 더 자주`,
+    effect: cat.skills.length
+      ? `총 공격력 +${Math.round((CAT_STAR_DAMAGE - 1) * 100)}% · ${cat.skills.map((skill) => skill.name).join('·')}도 더 세고 더 자주`
+      : `총 공격력 +${Math.round((CAT_STAR_DAMAGE - 1) * 100)}%`,
     icon: '🐱✨',
     color: '#c7a4ff',
     level: { from, to },
@@ -481,7 +496,11 @@ export function applyCard(loadout: Loadout, card: Card): Loadout {
       if (!stageSkillTargets(loadout).includes(at)) return loadout
       const levels = [...(loadout.mateMagicLevels ?? [])]
       levels[at] = Math.min(MAGIC_MAX_LEVEL, (levels[at] ?? 1) + 1)
-      return { ...loadout, mateMagicLevels: levels }
+      // 그 고양이의 총도 함께 세진다 (717번): 스킬만이 아니라 고양이를 강화한다.
+      const mateGuns = loadout.mateGuns.map((gun, i) =>
+        i === at ? { ...gun, damage: gun.damage * CAT_STAR_DAMAGE } : gun,
+      )
+      return { ...loadout, mateMagicLevels: levels, mateGuns }
     }
     case 'cat-magic':
       return canAwakenMate(loadout)

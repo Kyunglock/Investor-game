@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { BUY_PATTERNS, buyLaunch, buyPatternPreview, STEP_BEHIND } from './buyPattern'
+import {
+  AIM_GAP,
+  BUY_PATTERNS,
+  buyAimX,
+  buyLaunch,
+  buyPatternPreview,
+  STEP_BEHIND,
+} from './buyPattern'
 
 describe('매수 주문이 날아가는 패턴 (712번)', () => {
   const seq = (n: number) => Array.from({ length: n }, (_, i) => (i + 0.5) / n)
@@ -75,5 +82,16 @@ describe('매수 주문이 날아가는 패턴 (712번)', () => {
     const b = buyLaunch('wave', 0, 100, 1)
     expect(a.sway).toBeGreaterThan(0)
     expect(Math.abs(a.phase - b.phase)).toBeCloseTo(Math.PI)
+  })
+  it('손을 댄 자리로 쏘면 누른 자리를 가운데로 나란히 뜨고 레인 밖으로 나가지 않는다 (718번)', () => {
+    const xs = Array.from({ length: 5 }, (_, i) => buyAimX(200, 0, 400, i, 5))
+    expect(xs[2]).toBe(200)
+    expect(xs[4] - xs[3]).toBe(AIM_GAP)
+    expect(xs[0]).toBe(200 - 2 * AIM_GAP)
+    // 벽 끝을 눌러도 양 끝 8% 안쪽에 머문다.
+    expect(
+      Array.from({ length: 5 }, (_, i) => buyAimX(0, 0, 400, i, 5)).every((x) => x >= 32),
+    ).toBe(true)
+    expect(buyAimX(9999, 0, 400, 4, 5)).toBe(368)
   })
 })

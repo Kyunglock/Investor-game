@@ -67,6 +67,20 @@ try {
     seen.every((x) => x > width * 0.3 && x < width * 0.7),
     `center orders stay in the middle: ${seen.map((x) => Math.round(x)).join(' ')}`,
   )
+  // 손을 댄 자리로 쏘기 (718번): 화면 왼쪽을 누르고 있으면 가운데 패턴이어도 주문이 그 자리에서 뜬다. 떼면 패턴으로 돌아간다.
+  await page.mouse.move(70, 330)
+  await page.mouse.down()
+  await expect
+    .poll(async () => ((await orders()) ?? []).filter((x) => Math.abs(x - 70) < 45).length, {
+      timeout: 40000,
+    })
+    .toBeGreaterThan(2)
+  await page.mouse.up()
+  await expect
+    .poll(async () => ((await orders()) ?? []).filter((x) => x < width * 0.3).length, {
+      timeout: 40000,
+    })
+    .toBe(0)
   // 다시 열어도 고른 패턴이 남아 있다.
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('[data-testid=idle-canvas] canvas').waitFor()
