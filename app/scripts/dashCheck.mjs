@@ -144,7 +144,8 @@ try {
   assert.ok(strong.topGround > 900, `the ground rushes by: ${strong.topGround} px/s`)
   assert.ok(strong.perSecond > 1, `walls fall fast: ${strong.perSecond}/s`)
   // 총알 여러 발이 필요한 벽: 기세가 한 번도 차지 않고 벽 앞에서는 배경이 멈춘다.
-  // 시장가 수량으로 커진 매수 주문(711번)도 여러 번 맞아야 깨지는 벽이다.
+  // 매수 주문이 시장가 매도만큼 세지고 세 장씩 나가면서 (711·712번) 체력 40인 벽은 매수 주문 두 묶음에 깨져 기세가 찼다.
+  // 느린 벽은 체력을 넉넉히 줘 매수 주문으로도 몇 초가 걸리게 한다.
   const even = await run(browser, 4000, 8)
   assert.ok(even.topMomentum < 0.05, `no dash on a slow wall: momentum ${even.topMomentum}`)
   assert.ok(even.climbV < 200, `the ground stands still at the wall: ${even.climbV} px/s`)

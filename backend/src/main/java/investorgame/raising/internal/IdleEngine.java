@@ -113,9 +113,9 @@ class IdleEngine {
   // IDLE_SELL_POWER와 같다.
   private static final double SELL_ORDER_SHARES = 40;
   private static final double SELL_POWER = 6;
-  // The buy wall answers every sell order with two buy orders, a pair every 0.15 game seconds at
-  // the fastest (buyWall.ts shotSeconds - shotJitter).
-  private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;
+  // The buy wall answers every sell order with three buy orders (712; two before), a volley every
+  // 0.15 game seconds at the fastest (buyWall.ts shotsPerSell, shotSeconds - shotJitter).
+  private static final double BUY_ORDERS_PER_SECOND = 3 / 0.15;
   // Matches the app's mental/assault.ts idleThreat.
   // Halved with the wall health (562) so the buy side's scale stays what it was.
   private static final double THREAT_HP = 380;

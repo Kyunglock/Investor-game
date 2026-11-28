@@ -10,7 +10,8 @@ export const BUY_WALL = {
   protectionSeconds: 1,
   shotSeconds: 0.35,
   shotJitter: 0.2,
-  shotsPerSell: 2,
+  /** 매도 물량 하나에 맞서는 매수 주문의 장수: 둘에서 셋으로 늘렸다 (712번). 서버 IdleEngine.BUY_ORDERS_PER_SECOND와 같이 바꾼다. */
+  shotsPerSell: 3,
   retreatSeconds: 0.7,
   retreatDistance: 80,
   /** 자동 전투의 재건 시간(초, 492번): 그동안 공격이 멈춘다. 무너져도 벽 번호는 그대로다 (584번). */
@@ -75,7 +76,7 @@ export function noteX(x: number, width: number, viewWidth: number, margin = 8): 
   return Math.max(half, Math.min(viewWidth - half, x))
 }
 
-/** 매도 물량 하나당 매수 주문 두 개로 맞선다. 붕괴하면 후퇴하고 1.5초 뒤 새 벽을 세운다. */
+/** 매도 물량 하나당 매수 주문 세 개(712번, 전에는 두 개)로 맞선다. 붕괴하면 후퇴하고 1.5초 뒤 새 벽을 세운다. */
 export class BuyWall {
   maxHp: number
   hp: number
@@ -170,7 +171,7 @@ export class BuyWall {
   stepOrders(dt: number): number {
     if (!this.active) return 0
     const pending = Math.max(0, Math.floor(this.sells) * BUY_WALL.shotsPerSell - this.shots)
-    // 쉬는 시간을 모아 두거나 밀린 주문을 한 프레임에 모두 쏘지 않는다. 한 번에 두 장씩 보낸다.
+    // 쉬는 시간을 모아 두거나 밀린 주문을 한 프레임에 모두 쏘지 않는다. 한 번에 세 장씩 보낸다.
     this.shotClock = pending > 0 ? this.shotClock + Math.max(0, dt) : 0
     const fireCount =
       pending > 0 && this.shotClock >= this.nextShot ? Math.min(pending, BUY_WALL.shotsPerSell) : 0
