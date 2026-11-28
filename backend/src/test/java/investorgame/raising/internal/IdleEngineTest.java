@@ -1850,6 +1850,34 @@ class IdleEngineTest {
     assertThat(c.fishLevels).containsEntry("damage", 2);
   }
 
+  @Test
+  void 영구_강화_골드_획득량은_벽_보상과_시간_수입을_늘린다() {
+    // 706번: 한 단계에 2%. 벽·보스 보상과 시간 수입(화면의 초당 수입)에 곱한다.
+    start(1);
+    CompanyState c = state;
+    double income = engine.perSecond(c);
+    assertThat(fishUpgrade(c, "gold").bonus()).isZero();
+    assertThat(fishUpgrade(c, "gold").nextBonus()).isEqualTo(2);
+    c.fish = 100;
+    engine.buyFishUpgrade(c, "gold", 5);
+    assertThat(fishUpgrade(c, "gold").bonus()).isEqualTo(10);
+    assertThat(IdleEngine.goldScale(c)).isCloseTo(1.1, offset(1e-9));
+    assertThat(engine.perSecond(c)).isCloseTo(income * 1.1, offset(1e-6));
+    // 벽 하나를 깬 보상도 10% 더 받는다.
+    c.idle.damage = IdleEngine.maxHp(c.idle.wall) - 1e-9;
+    double reward = c.capital;
+    tick(1000);
+    double withGold = c.capital - reward;
+    c.fishLevels.put("gold", 0);
+    reward = c.capital;
+    c.idle.damage = IdleEngine.maxHp(c.idle.wall) - 1e-9;
+    tick(1000);
+    double without = c.capital - reward;
+    assertThat(withGold).isGreaterThan(without);
+    // 공격력에는 더하지 않는다.
+    assertThat(upgrade(c, "damage").bonusPercent()).isZero();
+  }
+
   private investorgame.raising.CompanyView.FishUpgrade fishUpgrade(CompanyState c, String kind) {
     return engine.view(c).rebirth().upgrades().stream()
         .filter(u -> u.kind().equals(kind))

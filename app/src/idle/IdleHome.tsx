@@ -608,6 +608,8 @@ const FOREVER: Record<FishUpgrade['kind'], { name: string; unit: string }> = {
   damage: { name: '공격력', unit: '%' },
   hp: { name: '매수벽 체력', unit: '%' },
   buy: { name: '매수벽 공격', unit: '주' },
+  // 골드 획득량 (706번): 벽·보스 보상과 시간 수입에 곱한다.
+  gold: { name: '골드 획득량', unit: '%' },
 }
 
 /** 영구 강화를 levels단계 묶어 살 때의 생선: 첫 단계가 first개고 단계마다 하나씩 는다 (663번). */
@@ -644,7 +646,11 @@ function IdleForever({ company }: { company: Company }) {
         return (
           <article className="idle-stat" key={u.kind} data-testid="fish-upgrade" data-kind={u.kind}>
             <span className="idle-stat-icon" aria-hidden="true">
-              <GrowthIcon name={u.kind} />
+              {u.kind === 'gold' ? (
+                <span className="idle-coin idle-fish-coin">₩</span>
+              ) : (
+                <GrowthIcon name={u.kind} />
+              )}
             </span>
             <div className="idle-stat-info">
               <b>

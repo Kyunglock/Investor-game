@@ -342,13 +342,25 @@ class MentalEngine {
    * 영구 강화 (decisions.md 600번): 환생해서 얻은 생선으로 올리고 환생해도 남는다. 전투 강화의 효과에 그대로 더한다: 공격력·매수벽 체력은 한 단계에
    * FISH_STEP_PERCENT%, 매수벽 공격은 한 단계에 FISH_STEP_SHARES주.
    */
-  static final List<String> FISH_UPGRADES = List.of("damage", "hp", "buy");
+  static final List<String> FISH_UPGRADES = List.of("damage", "hp", "buy", "gold");
 
   // 처음의 10분의 1로 낮췄다가 (602번: 10%·100주는 너무 셌다) 세 배로 올렸다 (625번: 1%·10주는 환생의 보람이 없었다).
   // 644번에 1%로 낮췄다: 환생을 되풀이해 수백 단계가 쌓이면 화력이 수십 배가 되었다. 돈으로 사는 공격력 한 단계와 같다.
   static final int FISH_STEP_PERCENT = 1;
   // 653번: 주의 크기가 5분의 1이 되어(체력 1 = 30주) 30주에서 6주로. 피해로는 같다.
   static final int FISH_STEP_SHARES = 6;
+  // 골드 획득량 (706번): 한 단계에 2%. 골드는 강화 값을 사는 데 쓰이고 강화 값은 단계마다 30%씩 올라(646번) 골드 1%가 공격력 1%보다 훨씬
+  // 약하므로 두 배로 둔다.
+  static final int FISH_GOLD_STEP_PERCENT = 2;
+
+  /** 영구 강화 한 단계의 효과: buy는 주, gold는 골드 획득량 %, 나머지는 %. */
+  static int fishStep(String kind) {
+    return switch (kind) {
+      case "buy" -> FISH_STEP_SHARES;
+      case "gold" -> FISH_GOLD_STEP_PERCENT;
+      default -> FISH_STEP_PERCENT;
+    };
+  }
 
   /** 영구 강화를 level에서 한 단계 올리는 값: 다음 단계의 번호만큼의 생선(1, 2, 3 …). */
   static long fishUpgradeCost(int level) {
@@ -358,8 +370,7 @@ class MentalEngine {
   /** 영구 강화가 전투 강화에 더하는 양: buy는 주, 나머지는 %. 영구 강화가 없는 종류는 0. */
   static int fishBonus(CompanyState c, String kind) {
     if (!FISH_UPGRADES.contains(kind)) return 0;
-    return c.fishLevels.getOrDefault(kind, 0)
-        * ("buy".equals(kind) ? FISH_STEP_SHARES : FISH_STEP_PERCENT);
+    return c.fishLevels.getOrDefault(kind, 0) * fishStep(kind);
   }
 
   List<CompanyView.FishUpgrade> fishUpgradeViews(CompanyState c) {
@@ -367,7 +378,7 @@ class MentalEngine {
         .map(
             kind -> {
               int level = c.fishLevels.getOrDefault(kind, 0);
-              int step = "buy".equals(kind) ? FISH_STEP_SHARES : FISH_STEP_PERCENT;
+              int step = fishStep(kind);
               return new CompanyView.FishUpgrade(
                   kind, level, fishUpgradeCost(level), level * step, (level + 1) * step);
             })

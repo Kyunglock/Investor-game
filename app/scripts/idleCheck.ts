@@ -92,12 +92,12 @@ try {
           fromWall: 51,
           adGain: 0,
           // 영구 강화 (600번).
-          upgrades: ['damage', 'hp', 'buy'].map((kind) => ({
+          upgrades: ['damage', 'hp', 'buy', 'gold'].map((kind) => ({
             kind,
             level: 0,
             cost: 1,
             bonus: 0,
-            nextBonus: kind === 'buy' ? 10 : 1,
+            nextBonus: kind === 'buy' ? 10 : kind === 'gold' ? 2 : 1,
           })),
         },
         // 광고 스킬 셋(588번). 사장냥의 고유 스킬은 자동 전투에서 없앴다 (667번). 시간은 실제 초다.
@@ -221,7 +221,7 @@ try {
           u.level++
           u.cost = u.level + 1
           u.bonus = u.nextBonus
-          u.nextBonus += u.kind === 'buy' ? 10 : 1
+          u.nextBonus += u.kind === 'buy' ? 10 : u.kind === 'gold' ? 2 : 1
         }
       }
       const cat = company.idle.cats.find((c) => c.code === sent?.code)
@@ -440,7 +440,10 @@ try {
     await page.getByTestId('growth-tab-forever').click()
     await expect(page.locator('[data-testid=idle-stat]')).toHaveCount(0)
     const forever = (kind: string) => page.locator(`[data-testid=fish-upgrade][data-kind=${kind}]`)
-    await expect(page.getByTestId('fish-upgrade')).toHaveCount(3)
+    await expect(page.getByTestId('fish-upgrade')).toHaveCount(4)
+    // 골드 획득량 (706번): 한 단계에 2%.
+    await expect(forever('gold')).toContainText('골드 획득량 Lv.0')
+    await expect(forever('gold')).toContainText('+0% → +2%')
     // 663번: 성장과 같은 강화 횟수(×1·×10·최대 100)로 묶어 올린다.
     await expect(page.getByTestId('fish-count').getByRole('button')).toHaveCount(3)
     await expect(forever('damage')).toContainText('공격력 Lv.0')
