@@ -40,11 +40,12 @@ describe('매수 주문이 날아가는 패턴 (712번)', () => {
     for (let i = 1; i <= 8; i++) expect(xs[i]).toBeGreaterThan(xs[i - 1])
     for (let i = 9; i <= 16; i++) expect(xs[i]).toBeLessThan(xs[i - 1])
   })
-  it('일자는 세 장이 한 줄에 고르게 서고, 다음 세 장이 그 사이를 채운다', () => {
-    const xs = Array.from({ length: 6 }, (_, i) => buyLaunch('line', 0, 100, i))
+  it('일자는 한 번에 뜨는 다섯 장이 가로 한 줄을 고르게 채운다 (714번)', () => {
+    const xs = Array.from({ length: 10 }, (_, i) => buyLaunch('line', 0, 100, i))
     expect(xs.every((shot) => shot.behind === 0)).toBe(true)
-    expect(xs.slice(0, 3).map((s) => Math.round(s.x))).toEqual([15, 43, 71])
-    expect(xs.slice(3).map((s) => Math.round(s.x))).toEqual([29, 57, 85])
+    const row = xs.slice(0, 5).map((s) => Math.round(s.x))
+    expect([...row].sort((a, b) => a - b)).toEqual([16, 33, 50, 67, 84])
+    expect(xs.slice(5).map((s) => Math.round(s.x))).toEqual(row)
   })
   it('계단은 왼쪽으로 갈수록 한 칸씩 늦게 뜨고, 쐐기는 가운데가 가장 먼저 뜬다 (713번)', () => {
     const stairs = Array.from({ length: 6 }, (_, i) => buyLaunch('stairs', 0, 100, i))
@@ -68,10 +69,10 @@ describe('매수 주문이 날아가는 패턴 (712번)', () => {
     const xs = Array.from({ length: 4 }, (_, i) => Math.round(buyLaunch('pillars', 0, 100, i).x))
     expect(xs).toEqual([18, 82, 18, 82])
   })
-  it('미리 보기는 패턴마다 그림 안의 열두 자리이고 볼 때마다 같다', () => {
+  it('미리 보기는 패턴마다 그림 안의 열다섯 자리이고 볼 때마다 같다', () => {
     for (const { code } of BUY_PATTERNS) {
       const dots = buyPatternPreview(code)
-      expect(dots).toHaveLength(12)
+      expect(dots).toHaveLength(15)
       expect(dots.every((d) => d.x >= 0 && d.x <= 100 && d.y >= 0 && d.y <= 60)).toBe(true)
       expect(buyPatternPreview(code)).toEqual(dots)
     }

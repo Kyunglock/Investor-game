@@ -1,4 +1,4 @@
-import { buyOrderX } from './buyWall'
+import { BUY_WALL, buyOrderX } from './buyWall'
 
 /**
  * 매수 주문(매수 티켓)이 날아가는 패턴 (decisions.md 712번): 출전 탭에서 고른다. 어디에서 떠서 어떻게 날아가는지만 다르고 수량·장수는 같다.
@@ -6,7 +6,7 @@ import { buyOrderX } from './buyWall'
  */
 export const BUY_PATTERNS = [
   { code: 'sides', name: '양옆', note: '양쪽 끝에서 많이, 가운데는 조금' },
-  { code: 'line', name: '일자', note: '가로 한 줄로 나란히' },
+  { code: 'line', name: '일자', note: '다섯 장이 가로 한 줄로' },
   { code: 'stairs', name: '계단', note: '왼쪽부터 한 칸씩 올라가는 계단' },
   { code: 'pillars', name: '양쪽 기둥', note: '양쪽 두 줄로 곧게' },
   { code: 'wedge', name: '쐐기', note: '가운데가 앞서는 V자' },
@@ -47,9 +47,9 @@ export const WAVE_SPEED = 7
 /** 계단·쐐기에서 한 칸 뒤의 주문이 처지는 거리(px): 그 거리를 날아갈 시간만큼 늦게 출발한다 (713번). */
 export const STEP_BEHIND = 14
 
-/** 일자·계단의 칸 수, 일자가 칸을 채우는 차례(세 장이 한 줄에 고르게 서고 다음 세 장이 그 사이를 채운다), 쐐기의 자리. */
+/** 계단의 칸 수, 일자의 칸 수와 채우는 차례(한 번에 뜨는 다섯 장이 가로 한 줄을 꽉 채운다, 714번), 쐐기의 자리. */
 const COLUMNS = 6
-const LINE_ORDER = [0, 2, 4, 1, 3, 5]
+const LINE_ORDER = [0, 2, 4, 1, 3]
 const WEDGE = [
   { at: 0.5, rank: 2 },
   { at: 0.3, rank: 1 },
@@ -82,7 +82,7 @@ export function buyLaunch(
   const turn = (n: number) => ((index % n) + n) % n
   switch (pattern) {
     case 'line':
-      return straight(at((LINE_ORDER[turn(COLUMNS)] + 0.5) / COLUMNS))
+      return straight(at((LINE_ORDER[turn(LINE_ORDER.length)] + 0.5) / LINE_ORDER.length))
     case 'stairs': {
       const col = turn(COLUMNS)
       // 오른쪽 끝이 맨 앞이다: 왼쪽으로 갈수록 한 칸씩 늦게 뜬다.
@@ -137,7 +137,7 @@ export function buyAimX(
 }
 
 /**
- * 패턴 미리 보기 (출전 탭): 폭 100 · 높이 60의 그림에 주문 열두 장의 자리를 찍는다. 세 장이 한 번에 뜨고(BUY_WALL.shotsPerSell)
+ * 패턴 미리 보기 (출전 탭): 폭 100 · 높이 60의 그림에 주문 열다섯 장의 자리를 찍는다. 다섯 장이 한 번에 뜨고(BUY_WALL.shotsPerSell)
  * 먼저 뜬 것이 위에 있다. 난수는 고정이라 볼 때마다 같은 그림이다.
  */
 export function buyPatternPreview(pattern: BuyPattern): { x: number; y: number }[] {
@@ -146,8 +146,8 @@ export function buyPatternPreview(pattern: BuyPattern): { x: number; y: number }
     seed = (seed * 16807) % 2147483647
     return seed / 2147483647
   }
-  const shots = 12
-  // 한 묶음의 장수: 계단은 여섯 장, 쐐기는 다섯 장이 한 모양을 이루고, 나머지는 한 번에 뜨는 세 장이다.
+  const shots = 15
+  // 한 묶음의 장수: 계단은 여섯 장, 쐐기는 다섯 장이 한 모양을 이루고, 나머지는 한 번에 뜨는 다섯 장이다.
   const group =
     pattern === 'stairs'
       ? COLUMNS
@@ -155,9 +155,10 @@ export function buyPatternPreview(pattern: BuyPattern): { x: number; y: number }
         ? WEDGE.length
         : pattern === 'pillars'
           ? 2
-          : 3
+          : BUY_WALL.shotsPerSell
   const last = Math.floor((shots - 1) / group)
-  const gap = (13 * group) / 3
+  // 묶음 사이의 세로 간격: 묶음이 많아도 그림 안에 다 들어가게 줄인다.
+  const gap = Math.min((13 * group) / 3, 46 / Math.max(1, last))
   const list = Array.from({ length: shots }, (_, i) => buyLaunch(pattern, 0, 100, i, random))
   // 가장 처진 주문을 바닥에 두고, 덜 처진 주문일수록 위에 그린다(그림의 비율로 줄여서).
   const most = Math.max(...list.map((shot) => shot.behind))

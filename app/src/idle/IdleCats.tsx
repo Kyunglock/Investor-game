@@ -534,7 +534,7 @@ export function IdleCats({
                       setBuyPattern(p.code)
                     }}
                   >
-                    {/* 미리 보기: 아래의 매수벽에서 뜬 주문 열두 장의 자리. 먼저 뜬 것이 위에 있다. */}
+                    {/* 미리 보기: 아래의 매수벽에서 뜬 주문 열다섯 장의 자리. 먼저 뜬 것이 위에 있다. */}
                     <svg viewBox="0 0 100 66" className="buy-pattern-preview" aria-hidden="true">
                       <rect
                         x="2"
@@ -546,7 +546,7 @@ export function IdleCats({
                       />
                       {buyPatternPreview(p.code).map((dot, i) => (
                         <rect
-                          // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 열두 자리다.
+                          // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 열다섯 자리다.
                           key={i}
                           x={dot.x - 4.5}
                           y={dot.y - 3}
