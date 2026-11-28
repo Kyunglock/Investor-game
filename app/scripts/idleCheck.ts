@@ -336,20 +336,28 @@ try {
     await expect(page.getByTestId('sound-toggle')).toHaveCount(0)
     // 시즌패스 (570·643번): 일일·주간 퀘스트와 진행도가 보이고 보상에 돈이 없다.
     await page.getByTestId('idle-pass').click()
-    await expect(page.getByTestId('pass-mission')).toHaveCount(5)
+    // 일일·주간 퀘스트는 탭으로 나뉜다 (707번): 받을 것이 있는 탭에 그 수가 뜨고, 그 탭이 먼저 열린다.
+    await expect(page.getByTestId('pass-tab-day')).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByTestId('pass-tab-day').getByTestId('pass-tab-count')).toHaveText('1')
+    await expect(page.getByTestId('pass-tab-week').getByTestId('pass-tab-count')).toHaveCount(0)
+    await expect(page.getByTestId('pass-mission')).toHaveCount(3)
     await expect(page.getByTestId('pass-quests-day').getByTestId('pass-mission')).toHaveCount(3)
     await expect(page.getByTestId('pass-quests-day')).toContainText('일일 퀘스트')
     await expect(page.getByTestId('pass-quests-day')).toContainText('5시간 20분 뒤 초기화')
+    await expect(page.getByTestId('pass-quests-week')).toHaveCount(0)
+    await expect(page.locator('[data-testid=pass-mission][data-code=upgrade]')).toContainText(
+      '완료',
+    )
+    await page.getByTestId('pass-tab-week').click()
     const weekly = page.getByTestId('pass-quests-week')
+    await expect(page.getByTestId('pass-mission')).toHaveCount(2)
     await expect(weekly).toContainText('주간 퀘스트')
     await expect(weekly).toContainText('3일 5시간 뒤 초기화')
     const wall = weekly.locator('[data-testid=pass-mission][data-code=wall]')
     await expect(wall).toContainText('매도벽 최고 기록 30개 돌파')
     await expect(wall).toContainText('12/30')
     await expect(wall).toContainText('250P')
-    await expect(page.locator('[data-testid=pass-mission][data-code=upgrade]')).toContainText(
-      '완료',
-    )
+    await page.getByTestId('pass-tab-day').click()
     await expect(page.getByTestId('pass-exp')).toHaveText('120 / 300P')
     // 포인트는 눌러서 받는다 (572번): 받을 것이 있는 퀘스트에만 받기 단추가 서고, 받으면 이번 주기에는 완료다.
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(1)
@@ -366,6 +374,7 @@ try {
     await expect(attend).toHaveAttribute('data-state', 'done')
     await expect(page.getByTestId('pass-mission-claim')).toHaveCount(0)
     await expect(page.getByTestId('pass-missions-claim-all')).toHaveCount(0)
+    await expect(page.getByTestId('pass-tab-count')).toHaveCount(0)
     await expect(page.getByTestId('pass-exp')).toHaveText('170 / 300P')
     await expect(page.getByTestId('pass-badge')).toHaveCount(0)
     await expect(page.getByTestId('pass').locator('.idle-coin')).toHaveCount(0)
