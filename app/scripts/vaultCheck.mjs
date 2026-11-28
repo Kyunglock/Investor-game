@@ -389,6 +389,19 @@ try {
       .poll(() => page.evaluate(() => window.__mentalMarket().buyWall.hp), { timeout: 15000 })
       .toBeLessThan(market.buyWall.maxHp)
     await page.screenshot({ path: '/tmp/vault-solo-guardian.png' })
+    // 직격 피해 뒤에는 다음 브레스 전에 한 번씩 구분되는 다섯 번의 화상이 들어온다.
+    const maxHp = market.buyWall.maxHp
+    const impactHp = maxHp - Math.ceil(maxHp / 3)
+    for (let tick = 1; tick <= 5; tick++) {
+      await page.waitForFunction(
+        ({ hp, firing }) => {
+          const state = window.__mentalMarket()
+          return state.buyWall.hp === hp && state.guardianJetVisible === firing
+        },
+        { hp: impactHp - tick * Math.ceil(maxHp * 0.01), firing: tick < 5 },
+        { timeout: 15000 },
+      )
+    }
     const score = page.getByTestId('vault-score')
     await expect(score).toContainText('피해량')
     await fight(page)

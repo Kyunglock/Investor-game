@@ -52,6 +52,7 @@ import {
   bakeStage,
   bakeWallBoss,
   CELL_CRACKS,
+  CELL_TEX,
   cellKey,
   DPR,
   enemyKey,
@@ -81,6 +82,7 @@ import {
   assaultTimeoutText,
   cellShares,
   climbSpeed,
+  IDLE_GAME_SPEED,
   IDLE_MOMENTUM_FADE,
   IDLE_MOMENTUM_RUN,
   IDLE_MOMENTUM_SCROLL,
@@ -163,6 +165,9 @@ import {
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
+import { drawGuardianBreath } from './guardianBreath'
+import { BREATH_SECONDS, GuardianFlames } from './guardianFlames'
+import { createGuardianJaw, poseGuardianJaw } from './guardianJaw'
 import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
 import { BULLET_W, bulletHitbox } from './hitbox'
 import { IDLE_PIERCE, IDLE_PIERCE_FLOOR, idlePierceHits, idlePierceReach } from './idlePierce'
@@ -694,6 +699,11 @@ class BattleScene extends Phaser.Scene {
   private lastTrickle = 0
   /** 마지막 보스와 마지막으로 졸개를 부른 때(초). */
   private bossEnemy: Enemy | null = null
+  private guardianFlames?: GuardianFlames
+  private wallBurn?: { ticks: number; breaks: number; impact: number }
+  private guardianJaw?: Phaser.GameObjects.Image
+  private guardianFire?: Phaser.GameObjects.Graphics
+  private breathTarget?: { x: number; y: number }
   private lastSummon = 0
   /** 디펜스 번호 스테이지(509번): 적 체력 배율과, 보스를 이미 불렀나. EX(스테이지 없음)는 배율 1이고 보스가 없다. */
   private hpScale: number
@@ -1177,7 +1187,7 @@ class BattleScene extends Phaser.Scene {
       const [vx, vy] = [bullet.body.velocity.x, bullet.body.velocity.y]
       const angle = Math.atan2(vy, vx)
       const [bx, by] = [bullet.x, bullet.y]
-      this.impact(bx, by, bullet.power, bullet.grade)
+      if (!this.isVaultGuardian(enemy)) this.impact(bx, by, bullet.power, bullet.grade)
       // 무기마다 다른 효과 (376번): 소총은 뚫고 지나가고, 리볼버는 치명타, 기관단총은 맞은 적을 느리게 한다.
       bullet.hitList.push(enemy)
       // 매도벽은 뚫고 지나가지 못한다 (457번): 소총도 벽 칸에서 멈춘다.
@@ -2156,6 +2166,8 @@ class BattleScene extends Phaser.Scene {
       }
     } else {
       e.setTexture('vault-guard')
+      this.guardianFlames = new GuardianFlames(this)
+      this.guardianJaw = createGuardianJaw(this)
       this.placeGuardian(e)
       e.body?.setSize(e.width * 0.92, e.height * 0.72, true)
     }
@@ -2182,25 +2194,112 @@ class BattleScene extends Phaser.Scene {
     boss.setScale(scale).setPosition(w / 2, top + boss.displayHeight / 2)
   }
 
-  /** 금고 용이 입에서 매수벽까지 불길을 뿜는다. 벽이 재건 중이면 사장냥이 맞는다. */
+  /** 매수벽이 불붙은 뒤 금고 시계로 1초마다 다섯 번 피해를 준다. 재건된 벽으로 불이 옮겨 붙지는 않는다. */
+  private updateWallBurn(seconds: number) {
+    const burn = this.wallBurn
+    if (!burn) return
+    const wall = this.buyWall
+    const lane = this.lane()
+    const x = lane.left + burn.impact * lane.width
+    while (
+      wall?.active &&
+      wall.breaks === burn.breaks &&
+      burn.ticks < Math.min(BREATH_SECONDS, Math.floor(seconds))
+    ) {
+      burn.ticks++
+      this.hitBuyWall(Math.ceil(wall.maxHp * 0.01), x, true)
+    }
+    if (!wall?.active || wall.breaks !== burn.breaks || seconds >= BREATH_SECONDS) {
+      this.wallBurn = undefined
+      this.guardianFlames?.clearWall()
+      return
+    }
+    const bottom = this.buyWallY() + 32
+    this.guardianFlames?.drawWall(
+      lane.left,
+      lane.width,
+      bottom - (lane.width * CELL_TEX.h) / CELL_TEX.w,
+      bottom,
+      x,
+      seconds,
+    )
+  }
+
+  /** 타격 직전 몸을 당겼다가 불길과 함께 내민다. 매수벽에 명중하면 그 자리에서 불이 번진다. */
   private guardianBreath(boss: Enemy) {
+    const interval = 4.5
+    let age = this.elapsed - this.lastSummon
     const wall = this.buyWall
     const x = this.player.x
-    const y = wall?.active ? this.buyWallY() : this.player.y
-    const mouthY = boss.y + boss.displayHeight * 0.32
-    const flame = this.add.graphics().setDepth(6)
-    flame.fillStyle(0xff732e, 0.78).fillTriangle(boss.x, mouthY, x - 20, y, x + 20, y)
-    flame.fillStyle(0xffdc77, 0.95).fillTriangle(boss.x, mouthY, x - 8, y, x + 8, y)
-    this.glow(boss.x, mouthY, 0xffa136, 25, 260)
-    this.ring(x, y, 0xffa136, 24, 260)
-    this.tweens.add({
-      targets: flame,
-      alpha: 0,
-      duration: 320,
-      onComplete: () => flame.destroy(),
-    })
-    if (wall?.active) this.hitBuyWall(Math.ceil(wall.maxHp / 3), x)
-    else this.hurt(Math.max(1, Math.round(this.loadout.maxMental * 0.04)))
+    const lane = this.lane()
+    const y = wall?.active
+      ? this.buyWallY() + 36 - (lane.width * CELL_TEX.h) / CELL_TEX.w
+      : this.player.y
+    if (age >= interval) {
+      this.lastSummon = this.elapsed
+      age = 0
+      this.breathTarget = { x, y }
+      this.ring(x, y, 0xffc354, 38, 420)
+      if (wall?.active) {
+        this.hitBuyWall(Math.ceil(wall.maxHp / 3), x)
+        if (wall.active)
+          this.wallBurn = {
+            ticks: 0,
+            breaks: wall.breaks,
+            impact: (x - lane.left) / lane.width,
+          }
+      } else this.hurt(Math.max(1, Math.round(this.loadout.maxMental * 0.04)))
+    }
+
+    const charge = Phaser.Math.Clamp((age - interval + 0.52) / 0.52, 0, 1)
+    const seconds = age / simScale(IDLE_GAME_SPEED)
+    this.updateWallBurn(seconds)
+    const firing = this.breathTarget !== undefined && seconds < BREATH_SECONDS
+    const recovery = this.breathTarget !== undefined && !firing && seconds < BREATH_SECONDS + 0.2
+    if (!charge && !firing && !recovery) {
+      this.breathTarget = undefined
+      if (this.guardianFire) {
+        this.guardianFlames?.hideJet()
+        this.guardianJaw?.setVisible(false)
+        this.guardianFire.destroy()
+        this.guardianFire = undefined
+        this.placeGuardian(boss)
+      }
+      return
+    }
+    this.guardianFire ??= this.add.graphics().setDepth(8.35)
+    const jet = firing ? seconds : 0
+    const reach = firing ? 1 : Phaser.Math.Clamp((charge - 0.83) / 0.17, 0, 1)
+    const strength = firing ? 1 : charge
+    this.placeGuardian(boss)
+    const settle = Phaser.Math.Clamp((seconds - BREATH_SECONDS) / 0.2, 0, 1)
+    const thrust = firing
+      ? 0.35 + 0.65 * Math.exp(-seconds * 6)
+      : recovery
+        ? 0.35 * (1 - settle)
+        : -charge * charge + 2 * reach
+    boss.y += boss.displayHeight * 0.085 * thrust
+    const target = this.breathTarget ?? { x, y }
+    const open = firing
+      ? 1
+      : recovery
+        ? 1 - Phaser.Math.SmoothStep(settle, 0, 1)
+        : Phaser.Math.SmoothStep(charge, 0, 0.72)
+    const mouthY = this.guardianJaw
+      ? poseGuardianJaw(this.guardianJaw, boss, open)
+      : boss.y + boss.displayHeight * 0.39
+    this.guardianFlames?.drawJet(boss.x, mouthY, target.x, target.y, reach, strength, this.elapsed)
+    drawGuardianBreath(
+      this.guardianFire,
+      boss.x,
+      mouthY,
+      target.x,
+      target.y,
+      charge,
+      jet,
+      reach,
+      strength,
+    )
   }
 
   /**
@@ -2674,7 +2773,7 @@ class BattleScene extends Phaser.Scene {
       )
       const hit = targets.sort((a, b) => b.y - a.y)[0]
       if (!hit) return damage
-      this.glow(x, hit.y, 0xffbb79, 28, 180)
+      if (!this.isVaultGuardian(hit)) this.glow(x, hit.y, 0xffbb79, 28, 180)
       // 매수 주문과 매도 물량은 서로 수량만큼 상쇄한다: 남은 매수는 계속 날아간다. 허매도는 수량 없이 사라지고, 몬스터·벽은 매수를 다 받는다.
       if (hit.kind === 'fake') {
         this.hit(hit, hit.hp, -Math.PI / 2, 'bullet')
@@ -2757,10 +2856,7 @@ class BattleScene extends Phaser.Scene {
     const boss = this.bossEnemy
     if (boss?.active && !boss.dying && this.opts.vault?.score) {
       // 금고 기본 배속에서 6초에 한 번. 전투 시계를 따라 일시정지 중에는 쏘지 않는다.
-      if (this.elapsed - this.lastSummon >= 4.5) {
-        this.lastSummon = this.elapsed
-        this.guardianBreath(boss)
-      }
+      this.guardianBreath(boss)
     } else if (
       boss?.active &&
       !boss.dying &&
@@ -2977,6 +3073,7 @@ class BattleScene extends Phaser.Scene {
             name: this.bossEnemy.wallBoss?.name,
           }
         : null,
+      guardianJetVisible: this.guardianFlames?.jetVisible ?? false,
       simSpeed: this.simSpeed,
       /** 절전 모드 (607번): 전장을 그리고 있는가, 그리고 도는 빈도의 제한(0이면 없다). */
       drawing: this.cameras.main.visible,
@@ -3578,6 +3675,10 @@ class BattleScene extends Phaser.Scene {
     stats.peak = Math.max(stats.peak, this.damage.live() + this.crits.live())
   }
 
+  private isVaultGuardian(e: Enemy) {
+    return e.boss && Boolean(this.opts.vault?.score)
+  }
+
   private hit(e: Enemy, dmg: number, angle: number, kind: DamageKind = 'bullet', area = false) {
     if (e.dying || !e.active) return
     if (kind !== 'auroraNight' && this.beyondWall(e) && !(area && e.cell)) return
@@ -3596,12 +3697,16 @@ class BattleScene extends Phaser.Scene {
     // 금고 도전 (641번): 이번 주의 약점·내성 스킬은 수호냥에게 적용한다.
     const vault = this.opts.vault
     if (vault?.scale && e.boss) dmg *= vault.scale(kind)
+    if (this.isVaultGuardian(e)) {
+      // 수호룡은 연속 피격 중에도 원래 모습으로 공격한다. 피해량만 점수와 숫자로 표시한다.
+      this.vaultDamage += dmg
+      this.damageNumber(e, dmg, kind)
+      sfx.hit()
+      return
+    }
     if (this.opts.idle && e.cell) {
       // 벽의 체력은 여기서 깎지 않는다: 알린 명중이 예측(idlePredict.ts)에 얹혀 다음 프레임의 스냅샷으로 돌아온다 (532번).
       if (!this.idleTransition) this.reportIdleHit(this.idleWall, kind, dmg, 0)
-    } else if (vault?.score && e.boss) {
-      // 피해량을 겨루는 보스전: 수호냥은 쓰러지지 않고 맞은 만큼 점수가 된다.
-      this.vaultDamage += dmg
     } else {
       if (this.opts.idle && !this.idleTransition) {
         this.reportStatsHit(kind, Math.min(dmg, Math.max(0, e.hp)))
@@ -3865,12 +3970,12 @@ class BattleScene extends Phaser.Scene {
     return Math.round(UNITS[e.kind].dmg * this.staged(this.dmgScale))
   }
 
-  hitBuyWall(damage: number, x: number) {
+  hitBuyWall(damage: number, x: number, burning = false) {
     if (!this.buyWall?.active || this.over) return
     const before = this.buyWall.hp
     const broken = this.buyWall.hit(damage)
     if (!broken && this.buyWall.hp === before) return
-    this.buyWallFx?.impact(x, broken)
+    if (!burning || broken) this.buyWallFx?.impact(x, broken)
     const lost = broken ? before : before - this.buyWall.hp
     // 한꺼번에 닿은 물량은 한 글자로 합치고, 화면 끝에서 잘리지 않게 안쪽으로 묶는다 (#915).
     const note = this.buyLossText
@@ -4708,7 +4813,7 @@ class BattleScene extends Phaser.Scene {
         if (wall && !sweep.stamped) {
           sweep.stamped = true
           this.auroraWallContact(wall.y)
-        } else {
+        } else if (!this.isVaultGuardian(target)) {
           this.auroraFlare(enemy.x, enemy.y, 24, 115)
         }
         this.hit(target, sweep.damage, -Math.PI / 2, 'auroraNight', true)
@@ -4920,7 +5025,7 @@ class BattleScene extends Phaser.Scene {
       if (this.opts.idle && !this.reducedMotion && s.hitList.length === 0)
         this.ring(e.x, e.y, s.color, Math.min(30, 16 + s.level * 2), 220)
       s.hitList.push(e)
-      this.waterFx.explode(this.fx(2 + tier), e.x, e.y)
+      if (!this.isVaultGuardian(e)) this.waterFx.explode(this.fx(2 + tier), e.x, e.y)
       this.waterHit(e, st, angle, false, s.spell)
     }
   }
@@ -4928,15 +5033,18 @@ class BattleScene extends Phaser.Scene {
   /** 물방울이 처음 맞은 적에서 터진다: 둘레의 적이 모두 젖는다. */
   private waterSplash(s: WaterShot, st: WaterStats, x: number, y: number) {
     this.endWater(s)
-    // 터지는 빛깔은 마법의 색을 따른다 (563번).
-    const look =
-      s.spell === 'water' || s.spell === 'ice' || s.spell === 'wind' ? null : SPELLBOOK[s.spell]
-    if (s.spell === 'fire') {
-      const bloom = this.rings[this.ringIndex++ % this.rings.length].setTexture('magic-fire-bloom')
-      this.flare(bloom, x, y, 0xffffff, 0.3, st.splash / 32, this.reducedMotion ? 160 : 310)
-    } else this.ring(x, y, look ? hexColor(look.colors.mid) : 0x6cc0ff, st.splash, 260)
-    this.glow(x, y, look ? hexColor(look.colors.light) : 0xbfe8ff, st.splash * 0.8, 200, 0.6)
-    if (!look) this.waterFx.explode(this.fx(10), x, y)
+    if (!this.opts.vault?.score) {
+      // 터지는 빛깔은 마법의 색을 따른다 (563번).
+      const look =
+        s.spell === 'water' || s.spell === 'ice' || s.spell === 'wind' ? null : SPELLBOOK[s.spell]
+      if (s.spell === 'fire') {
+        const bloom =
+          this.rings[this.ringIndex++ % this.rings.length].setTexture('magic-fire-bloom')
+        this.flare(bloom, x, y, 0xffffff, 0.3, st.splash / 32, this.reducedMotion ? 160 : 310)
+      } else this.ring(x, y, look ? hexColor(look.colors.mid) : 0x6cc0ff, st.splash, 260)
+      this.glow(x, y, look ? hexColor(look.colors.light) : 0xbfe8ff, st.splash * 0.8, 200, 0.6)
+      if (!look) this.waterFx.explode(this.fx(10), x, y)
+    }
     const angle = Math.atan2(s.dy, s.dx)
     for (const e of this.magicTargets(true)) {
       if (this.areaDistance(e, x, y) <= st.splash) this.waterHit(e, st, angle, true, s.spell)
@@ -5052,35 +5160,37 @@ class BattleScene extends Phaser.Scene {
   private meteorImpact(s: MeteorShot) {
     const { tx: x, ty: y, level, spell } = s
     const st = fallStats(spell, level)
-    const look = spell === 'meteor' ? null : SPELLBOOK[spell]
-    this.ring(x, y, look ? hexColor(look.colors.mid) : 0xff9a78, st.radius, 380)
-    if (!this.reducedMotion)
-      this.glow(x, y, look ? hexColor(look.colors.light) : 0xffc49a, st.radius, 240, 0.7)
-    // 돌 파편과 먼지는 운석과 폭탄만 낸다.
-    if (spell === 'meteor' || spell === 'bomb') {
-      this.rockFx.explode(this.fx(10 + level * 3), x, y)
-      this.dustFx.explode(this.fx(8 + level * 2), x, y)
+    if (!this.opts.vault?.score) {
+      const look = spell === 'meteor' ? null : SPELLBOOK[spell]
+      this.ring(x, y, look ? hexColor(look.colors.mid) : 0xff9a78, st.radius, 380)
+      if (!this.reducedMotion)
+        this.glow(x, y, look ? hexColor(look.colors.light) : 0xffc49a, st.radius, 240, 0.7)
+      // 돌 파편과 먼지는 운석과 폭탄만 낸다.
+      if (spell === 'meteor' || spell === 'bomb') {
+        this.rockFx.explode(this.fx(10 + level * 3), x, y)
+        this.dustFx.explode(this.fx(8 + level * 2), x, y)
+      }
+      this.tweens.killTweensOf(s.crater)
+      s.crater
+        .setTexture(
+          spell === 'meteor'
+            ? 'magic-paw-print'
+            : spell === 'bomb'
+              ? 'magic-scorch'
+              : spellKey(spell),
+        )
+        .setTint(spell === 'bomb' ? 0x705d72 : 0xffffff)
+        .setPosition(x, y)
+        .setDisplaySize(st.radius * 1.5, st.radius * (spell === 'meteor' ? 1.05 : 0.65))
+        .setAlpha(spell === 'meteor' ? 0.95 : 0.5)
+        .setVisible(true)
+      this.tweens.add({
+        targets: s.crater,
+        alpha: 0,
+        duration: 900,
+        onComplete: () => s.crater.setVisible(false),
+      })
     }
-    this.tweens.killTweensOf(s.crater)
-    s.crater
-      .setTexture(
-        spell === 'meteor'
-          ? 'magic-paw-print'
-          : spell === 'bomb'
-            ? 'magic-scorch'
-            : spellKey(spell),
-      )
-      .setTint(spell === 'bomb' ? 0x705d72 : 0xffffff)
-      .setPosition(x, y)
-      .setDisplaySize(st.radius * 1.5, st.radius * (spell === 'meteor' ? 1.05 : 0.65))
-      .setAlpha(spell === 'meteor' ? 0.95 : 0.5)
-      .setVisible(true)
-    this.tweens.add({
-      targets: s.crater,
-      alpha: 0,
-      duration: 900,
-      onComplete: () => s.crater.setVisible(false),
-    })
     this.playSound('boom')
     // 범위 안의 뒤쪽 매도벽도 맞는다. 묶인 벽은 운석당 한 번만 맞는다.
     for (const e of [...this.magicTargets(true)]) {
@@ -5205,7 +5315,7 @@ class BattleScene extends Phaser.Scene {
           this.damageStats.rams++
         }
         s.hitList.push(e)
-        this.rockFx.explode(this.fx(3 + tier * 2), e.x, e.y)
+        if (!this.isVaultGuardian(e)) this.rockFx.explode(this.fx(3 + tier * 2), e.x, e.y)
         if (!e.boss) e.setX(Phaser.Math.Clamp(e.x + (e.x < s.x ? -1 : 1) * 26, 16, w - 16))
         this.hit(e, dmg, -Math.PI / 2, 'siege')
       }
@@ -5358,32 +5468,34 @@ class BattleScene extends Phaser.Scene {
     st: LightningStats,
     from: { x: number; y: number },
   ) {
-    const width = 4
-    const g = this.bolts[this.boltIndex++ % this.bolts.length]
-    this.tweens.killTweensOf(g)
-    g.clear().setAlpha(1).setVisible(true)
-    // 시전한 고양이에서 첫 대상까지 가는 가는 줄기: 본 낙뢰보다 훨씬 가늘게, 곁가지 없이. 어디서 쏜 번개인지 보이게만 한다.
-    this.drawBolt(g, from.x, from.y, target.x, target.y - 28, 2.4, 0)
-    this.drawBolt(g, target.x, target.y - 28, target.x, target.y, width, 0)
     let prev = target
-    for (const o of chain) {
-      this.drawBolt(g, prev.x, prev.y, o.x, o.y, width * 0.7, 0)
-      this.drawLightningImpact(g, o.x, o.y, 11)
-      prev = o
+    if (!this.isVaultGuardian(target)) {
+      const width = 4
+      const g = this.bolts[this.boltIndex++ % this.bolts.length]
+      this.tweens.killTweensOf(g)
+      g.clear().setAlpha(1).setVisible(true)
+      // 시전한 고양이에서 첫 대상까지 가는 가는 줄기: 본 낙뢰보다 훨씬 가늘게, 곁가지 없이. 어디서 쏜 번개인지 보이게만 한다.
+      this.drawBolt(g, from.x, from.y, target.x, target.y - 28, 2.4, 0)
+      this.drawBolt(g, target.x, target.y - 28, target.x, target.y, width, 0)
+      for (const o of chain) {
+        this.drawBolt(g, prev.x, prev.y, o.x, o.y, width * 0.7, 0)
+        this.drawLightningImpact(g, o.x, o.y, 11)
+        prev = o
+      }
+      this.drawLightningImpact(g, target.x, target.y, 19)
+      this.glow(target.x, target.y, 0xfff27a, 42, 360)
+      this.ring(target.x, target.y, 0xffe94d, 34, 360)
+      this.boltFx.explode(this.fx(10), target.x, target.y)
+      // 배속이 트윈 시계를 바꾸므로 시전 순간의 배율로 보정한다. 줄기를 0.7초 보여 준 뒤 한 번만 흐려진다.
+      this.tweens.add({
+        targets: g,
+        alpha: 0,
+        delay: 700 * this.simSpeed,
+        duration: (this.reducedMotion ? 300 : 550) * this.simSpeed,
+        ease: 'Quad.easeIn',
+        onComplete: () => g.setVisible(false),
+      })
     }
-    this.drawLightningImpact(g, target.x, target.y, 19)
-    this.glow(target.x, target.y, 0xfff27a, 42, 360)
-    this.ring(target.x, target.y, 0xffe94d, 34, 360)
-    this.boltFx.explode(this.fx(10), target.x, target.y)
-    // 배속이 트윈 시계를 바꾸므로 시전 순간의 배율로 보정한다. 줄기를 0.7초 보여 준 뒤 한 번만 흐려진다.
-    this.tweens.add({
-      targets: g,
-      alpha: 0,
-      delay: 700 * this.simSpeed,
-      duration: (this.reducedMotion ? 300 : 550) * this.simSpeed,
-      ease: 'Quad.easeIn',
-      onComplete: () => g.setVisible(false),
-    })
     const dmg = st.damage * this.attackDamage
     this.hit(target, dmg, Math.PI / 2, 'lightning')
     prev = target
@@ -5768,7 +5880,11 @@ class BattleScene extends Phaser.Scene {
     const w = Phaser.Math.Clamp(boss.displayWidth * 0.9, 70, 150)
     const h = 8
     const x = boss.x - w / 2
-    const y = boss.y + boss.displayHeight / 2 + 4
+    const foot = boss.y + boss.displayHeight / 2
+    const y =
+      (this.guardianJaw?.visible
+        ? Math.max(foot, this.guardianJaw.y + this.guardianJaw.displayHeight)
+        : foot) + 4
     if (boss.wallBoss)
       this.wallBossLabel?.setText(boss.wallBoss.name).setPosition(boss.x, y + h + 2)
     // 피해량을 겨루는 보스전 (692번): 수호냥은 체력이 줄지 않으니 다음 등급까지 찬 만큼을 금빛으로 보인다. 등급을 모르면 막대를 그리지 않는다.
@@ -6144,7 +6260,7 @@ class BattleScene extends Phaser.Scene {
       const tintKind = stunned ? 2 : slowed ? 1 : 0
       if (tintKind !== e.tintKind) {
         e.tintKind = tintKind
-        this.paint(e)
+        if (!this.isVaultGuardian(e)) this.paint(e)
       }
       // 매도벽 칸은 움직이지 않는다: 벽과 함께 assaultStep이 옮긴다.
       if (e.cell || (e.boss && this.opts.vault?.score)) continue
