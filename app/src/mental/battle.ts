@@ -103,7 +103,7 @@ import {
 } from './assault'
 import { STAGE_ASSETS } from './assets'
 import wallBossSheet from './assets/wall-bosses.webp'
-import { buyLaunch, loadBuyPattern } from './buyPattern'
+import { buyAimX, buyLaunch, loadBuyPattern } from './buyPattern'
 import {
   BUY_WALL,
   BuyLossNote,
@@ -2933,8 +2933,18 @@ class BattleScene extends Phaser.Scene {
     const lane = this.lane()
     // 날아가는 패턴 (712번): 출전 탭에서 고른 것. 자동 전투만 따르고 스테이지는 전의 양옆이다.
     const pattern = this.opts.idle ? loadBuyPattern() : 'sides'
+    // 손을 댄 자리로 쏘기 (718번): 자동 전투에서 화면을 누르고 있으면 패턴 대신 누른 자리로 나간다. 떼면 고른 패턴으로 돌아간다.
+    const ptr = this.input.activePointer
+    const aimed = Boolean(this.opts.idle) && ptr.isDown
     for (let i = 0; i < count; i++) {
-      const shot = buyLaunch(pattern, lane.left, lane.width, this.buyLaunched++)
+      const shot = aimed
+        ? {
+            x: buyAimX(ptr.worldX, lane.left, lane.width, i, count),
+            sway: 0,
+            phase: 0,
+            behind: 0,
+          }
+        : buyLaunch(pattern, lane.left, lane.width, this.buyLaunched++)
       this.buyWallFx?.launch(
         shot.x,
         this.buyWallY(),

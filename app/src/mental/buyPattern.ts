@@ -118,6 +118,24 @@ export function buyLaunch(
   }
 }
 
+/** 손을 댄 자리로 쏠 때 한 번에 뜨는 주문 사이의 간격(px): 한 자리에 겹쳐 보이지 않게 조금 벌린다. */
+export const AIM_GAP = 14
+
+/**
+ * 손을 댄 자리로 쏘기 (718번): 화면을 누르고 있는 동안에는 고른 패턴 대신 누른 자리(touchX)로 주문이 나간다. 한 번에 뜨는 count장을
+ * 누른 자리를 가운데로 나란히 벌리고, 레인(양 끝 8% 안쪽) 밖으로는 나가지 않는다.
+ */
+export function buyAimX(
+  touchX: number,
+  left: number,
+  width: number,
+  index: number,
+  count: number,
+): number {
+  const x = touchX + (index - (count - 1) / 2) * AIM_GAP
+  return Math.min(left + width * 0.92, Math.max(left + width * 0.08, x))
+}
+
 /**
  * 패턴 미리 보기 (출전 탭): 폭 100 · 높이 60의 그림에 주문 열다섯 장의 자리를 찍는다. 다섯 장이 한 번에 뜨고(BUY_WALL.shotsPerSell)
  * 먼저 뜬 것이 위에 있다. 난수는 고정이라 볼 때마다 같은 그림이다.
