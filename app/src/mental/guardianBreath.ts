@@ -29,16 +29,19 @@ export function drawGuardianBreath(
     }
   }
   if (reach <= 0) return
-  const width = Math.min(40, Math.abs(targetY - mouthY) * 0.19) * strength
+  const width = Math.min(21, Math.abs(targetY - mouthY) * 0.19) * strength
   const phase = jet * 24
   // 가장자리의 불혀는 서로 다른 위상으로 흐르고, 중심으로 갈수록 밝아진다.
   for (const [spread, color] of [
-    [1, 0xb33b1e],
+    [1, 0xff7430],
     [0.77, 0xff8024],
     [0.47, 0xffcf4c],
     [0.18, 0xfff8ce],
   ]) {
-    fire.fillStyle(color, strength).beginPath().moveTo(mouthX, mouthY)
+    fire
+      .fillStyle(color, strength * (1 - spread * 0.5))
+      .beginPath()
+      .moveTo(mouthX, mouthY)
     for (const side of [1, -1]) {
       for (let i = 0; i <= 14; i++) {
         const t = ((side === 1 ? i : 14 - i) / 14) * reach
