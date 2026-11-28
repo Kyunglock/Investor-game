@@ -194,11 +194,58 @@ export function IdleCats({
       sfx.tap()
     }
   }
+  /**
+   * 무기 옮겨 끼우기 (716번): 무기 칸에서 집은 무기를 옆의 다른 무기 칸에 놓으면 그쪽이 든다. 그쪽도 무기를 들고 있었으면 서로 맞바꾼다.
+   * 서버에는 빼기 → 끼우기(→ 맞바꾼 무기 끼우기)를 차례로 보낸다: 남이 든 무기는 바로 못 가져가서다. 도중에 거절되면 거기서 멈춘다.
+   */
+  const moveGun = async (from: CatCode | 'boss', to: CatCode | 'boss') => {
+    const store = useRaisingStore.getState()
+    if (store.busy || from === to) return
+    const now = store.company
+    const held = (who: CatCode | 'boss') => {
+      if (who === 'boss') {
+        const w = (now?.weapons ?? []).find((x) => x.equipped)
+        return w ? { kind: w.kind, grade: w.grade } : null
+      }
+      const w = now?.idle?.cats.find((c) => c.code === who)?.weapon
+      return w ? { kind: w.kind as Weapon['kind'], grade: w.grade as Weapon['grade'] } : null
+    }
+    const mine = held(from)
+    const theirs = held(to)
+    if (!mine || (theirs && theirs.kind === mine.kind && theirs.grade === mine.grade)) return
+    const wear = (who: CatCode | 'boss', w: NonNullable<ReturnType<typeof held>> | null) => {
+      const s = useRaisingStore.getState()
+      if (who === 'boss') return w ? s.equipWeapon(w.kind, w.grade) : s.unequipWeapon()
+      return s.equipCat(who, w)
+    }
+    const failed = () => Boolean(useRaisingStore.getState().error)
+    await wear(from, null)
+    if (failed()) return
+    await wear(to, mine)
+    if (failed()) return
+    if (theirs) await wear(from, theirs)
+    if (!failed()) {
+      onPick(to === 'boss' ? null : to)
+      haptic.light()
+      sfx.tap()
+    }
+  }
   const gunDrag = useLoadoutDrag<CatCode | 'boss'>(
-    (_code, target) => !busy && (target === 'unequip' || target.startsWith('gear:')),
-    (code) => void takeOff(code),
+    (code, target) =>
+      !busy &&
+      (target === 'unequip' ||
+        target.startsWith('gear:') ||
+        (target.startsWith('wearer:') && target !== `wearer:${code}`)),
+    (code, target) =>
+      void (target.startsWith('wearer:')
+        ? moveGun(code, target.slice(7) as CatCode | 'boss')
+        : takeOff(code)),
     { anyDirection: true },
   )
+  // 무기를 다른 무기 칸 위로 끌고 있다: 놓으면 옮겨 끼운다(빼지 않는다).
+  const gunOverWearer = gunDrag.drag?.over?.startsWith('wearer:')
+    ? gunDrag.drag.over.slice(7)
+    : null
   const weaponOf = (c: Cat) => company.weapons?.find((w) => same(w, c.weapon)) ?? DEFAULT_WEAPON
   const draggedCat = (idle?.cats ?? []).find((c) => c.code === gunDrag.drag?.item)
   const draggedGun =
@@ -212,13 +259,13 @@ export function IdleCats({
   const gunSlot = (code: CatCode | null, name: string, held: Weapon, bare: boolean) => (
     <button
       type="button"
-      className={`idle-gun-slot ${bare ? 'is-bare' : ''} ${gearOpen && picked === code ? 'is-picked' : ''} ${bare ? '' : 'is-held'} ${gunDrag.drag?.item === (code ?? 'boss') ? 'is-lifted' : ''}`}
+      className={`idle-gun-slot ${bare ? 'is-bare' : ''} ${gearOpen && picked === code ? 'is-picked' : ''} ${bare ? '' : 'is-held'} ${gunDrag.drag?.item === (code ?? 'boss') ? 'is-lifted' : ''} ${gunDrag.drag && gunDrag.drag.item !== (code ?? 'boss') ? 'is-drop-ready' : ''} ${gunOverWearer === (code ?? 'boss') ? 'is-drop-over' : ''}`}
       data-testid="gun-slot"
       data-code={code ?? 'boss'}
       data-kind={held.kind}
       data-grade={held.grade}
       data-loadout-target={`wearer:${code ?? 'boss'}`}
-      aria-label={`${name}의 무기 ${bare ? '기본 권총' : `${held.name} ${held.gradeName}`} · 눌러서 바꾸기${bare ? '' : ' · 아래로 끌어 빼기'}`}
+      aria-label={`${name}의 무기 ${bare ? '기본 권총' : `${held.name} ${held.gradeName}`} · 눌러서 바꾸기${bare ? '' : ' · 옆 칸으로 끌어 옮기기 · 아래로 끌어 빼기'}`}
       // 기본 권총은 뺄 수 없다. 사장냥의 무기도 고양이와 같이 뺀다 (585번).
       onPointerDown={!bare && !busy ? gunDrag.down(code ?? 'boss') : undefined}
       onClick={(event) => {
@@ -373,13 +420,17 @@ export function IdleCats({
       </div>
       {/* 무기를 집어 이 아래 어디에든 내려놓으면 뺀다 (575번). 틀만 두르고 배치는 바꾸지 않는다(display: contents). */}
       <div
-        className={`loadout-unequip ${gunDrag.drag ? 'is-drop-ready' : ''} ${gunDrag.drag?.over ? 'is-drop-over' : ''}`}
+        className={`loadout-unequip ${gunDrag.drag ? 'is-drop-ready' : ''} ${gunDrag.drag?.over && !gunOverWearer ? 'is-drop-over' : ''}`}
         data-loadout-target="unequip"
         data-testid="unequip-zone"
       >
         {gunDrag.drag && (
           <p className="loadout-unequip-hint" role="status" data-testid="unequip-hint">
-            {gunDrag.drag.over ? '놓으면 무기를 빼요' : '아래로 내려놓으면 무기를 빼요'}
+            {gunOverWearer
+              ? '놓으면 이 칸으로 무기를 옮겨요'
+              : gunDrag.drag.over
+                ? '놓으면 무기를 빼요'
+                : '옆 칸에 놓으면 옮기고, 아래로 내려놓으면 빼요'}
           </p>
         )}
         <article
