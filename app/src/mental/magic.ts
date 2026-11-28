@@ -364,6 +364,41 @@ export function densest<T extends Point>(list: readonly T[], radius: number): T 
   return best
 }
 
+/**
+ * 메테오처럼 떨어지는 마법의 과녁 여럿 (709번): 한 번에 떨어지는 운석마다 다른 자리를 고른다. 이미 고른 자리와 최근에 떨어진 자리(avoid)에서 반지름보다
+ * 먼 곳을 먼저 고르고, 그 가운데 밀집도가 가장 높은 것의 절반 이상인 곳에서 무작위로 고른다. 먼 곳이 없으면 아직 고르지 않은 곳을, 그것도 없으면 고른 곳을
+ * 다시 쓴다. 전에는 가장 밀집한 한 곳(densest)에 모든 운석이 떨어져 같은 자리만 맞았다.
+ */
+export function fallTargets<T extends Point>(
+  list: readonly T[],
+  count: number,
+  radius: number,
+  avoid: readonly Point[] = [],
+  random: () => number = Math.random,
+): T[] {
+  if (list.length === 0 || count <= 0) return []
+  const r2 = radius * radius
+  const density = new Map<T, number>()
+  for (const p of list) {
+    let n = 0
+    for (const o of list) if (o !== p && dist2(p, o) <= r2) n++
+    density.set(p, n)
+  }
+  const picked: T[] = []
+  const blocked: Point[] = [...avoid]
+  for (let k = 0; k < count; k++) {
+    let pool = list.filter((p) => !picked.includes(p) && blocked.every((b) => dist2(p, b) > r2))
+    if (pool.length === 0) pool = list.filter((p) => !picked.includes(p))
+    if (pool.length === 0) pool = [...picked]
+    const most = Math.max(...pool.map((p) => density.get(p) ?? 0))
+    const good = pool.filter((p) => (density.get(p) ?? 0) >= most / 2)
+    const p = good[Math.min(good.length - 1, Math.floor(random() * good.length))]
+    picked.push(p)
+    blocked.push(p)
+  }
+  return picked
+}
+
 /** 번개의 과녁: 체력이 가장 많이 남은 적(보스·투기를 먼저). 같으면 시전자에게 가까운 쪽. skip에 든 적은 뺀다. */
 export function strongest<T extends Point & { hp: number }>(
   list: readonly T[],

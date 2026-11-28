@@ -3,6 +3,7 @@ import {
   chainTargets,
   densest,
   earthStats,
+  fallTargets,
   lightningPlan,
   lightningStats,
   MAGIC_MAX_LEVEL,
@@ -104,6 +105,29 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
     clock.ready('water', 9.36)
     expect(clock.due('water', 1, 9.2)).toBe(false)
     expect(clock.due('water', 1, 9.36)).toBe(true)
+  })
+
+  it('메테오류는 운석마다 다른 자리를 치고, 최근에 떨어진 자리를 피한다 (709번)', () => {
+    // 매도벽 한 줄처럼 고르게 늘어선 칸 여섯.
+    const row = Array.from({ length: 6 }, (_, i) => ({ x: 30 + i * 60, y: 100 }))
+    const picks = fallTargets(row, 3, 50, [], () => 0)
+    expect(new Set(picks).size).toBe(3)
+    for (const p of picks)
+      for (const q of picks) if (p !== q) expect(Math.abs(p.x - q.x)).toBeGreaterThan(50)
+    // 최근에 떨어진 자리 근처는 피한다.
+    const next = fallTargets(row, 1, 50, picks, () => 0)
+    expect(picks).not.toContain(next[0])
+    // 과녁이 운석보다 적으면 고른 자리를 다시 쓴다.
+    expect(fallTargets(row.slice(0, 2), 4, 50, [], () => 0)).toHaveLength(4)
+    expect(fallTargets([], 3, 50)).toEqual([])
+    // 밀집도가 절반도 안 되는 외딴 자리보다 몰린 곳을 먼저 고른다.
+    const lone = { x: 900, y: 0 }
+    const crowd = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 20, y: 0 },
+    ]
+    expect(fallTargets([lone, ...crowd], 1, 50, [], () => 0)[0]).not.toBe(lone)
   })
 
   it('과녁: 물은 가장 가까운 적, 불은 가장 몰린 적, 번개는 체력이 가장 많은 적', () => {
