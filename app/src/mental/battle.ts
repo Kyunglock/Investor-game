@@ -2703,7 +2703,7 @@ class BattleScene extends Phaser.Scene {
       )
       const hit = targets.sort((a, b) => b.y - a.y)[0]
       if (!hit) return damage
-      this.glow(x, hit.y, 0xffbb79, 28, 180)
+      if (!this.isVaultGuardian(hit)) this.glow(x, hit.y, 0xffbb79, 28, 180)
       // 매수 주문과 매도 물량은 서로 수량만큼 상쇄한다: 남은 매수는 계속 날아간다. 허매도는 수량 없이 사라지고, 몬스터·벽은 매수를 다 받는다.
       if (hit.kind === 'fake') {
         this.hit(hit, hit.hp, -Math.PI / 2, 'bullet')
@@ -4741,7 +4741,7 @@ class BattleScene extends Phaser.Scene {
         if (wall && !sweep.stamped) {
           sweep.stamped = true
           this.auroraWallContact(wall.y)
-        } else {
+        } else if (!this.isVaultGuardian(target)) {
           this.auroraFlare(enemy.x, enemy.y, 24, 115)
         }
         this.hit(target, sweep.damage, -Math.PI / 2, 'auroraNight', true)
@@ -4953,7 +4953,7 @@ class BattleScene extends Phaser.Scene {
       if (this.opts.idle && !this.reducedMotion && s.hitList.length === 0)
         this.ring(e.x, e.y, s.color, Math.min(30, 16 + s.level * 2), 220)
       s.hitList.push(e)
-      this.waterFx.explode(this.fx(2 + tier), e.x, e.y)
+      if (!this.isVaultGuardian(e)) this.waterFx.explode(this.fx(2 + tier), e.x, e.y)
       this.waterHit(e, st, angle, false, s.spell)
     }
   }
@@ -4961,15 +4961,18 @@ class BattleScene extends Phaser.Scene {
   /** 물방울이 처음 맞은 적에서 터진다: 둘레의 적이 모두 젖는다. */
   private waterSplash(s: WaterShot, st: WaterStats, x: number, y: number) {
     this.endWater(s)
-    // 터지는 빛깔은 마법의 색을 따른다 (563번).
-    const look =
-      s.spell === 'water' || s.spell === 'ice' || s.spell === 'wind' ? null : SPELLBOOK[s.spell]
-    if (s.spell === 'fire') {
-      const bloom = this.rings[this.ringIndex++ % this.rings.length].setTexture('magic-fire-bloom')
-      this.flare(bloom, x, y, 0xffffff, 0.3, st.splash / 32, this.reducedMotion ? 160 : 310)
-    } else this.ring(x, y, look ? hexColor(look.colors.mid) : 0x6cc0ff, st.splash, 260)
-    this.glow(x, y, look ? hexColor(look.colors.light) : 0xbfe8ff, st.splash * 0.8, 200, 0.6)
-    if (!look) this.waterFx.explode(this.fx(10), x, y)
+    if (!this.opts.vault?.score) {
+      // 터지는 빛깔은 마법의 색을 따른다 (563번).
+      const look =
+        s.spell === 'water' || s.spell === 'ice' || s.spell === 'wind' ? null : SPELLBOOK[s.spell]
+      if (s.spell === 'fire') {
+        const bloom =
+          this.rings[this.ringIndex++ % this.rings.length].setTexture('magic-fire-bloom')
+        this.flare(bloom, x, y, 0xffffff, 0.3, st.splash / 32, this.reducedMotion ? 160 : 310)
+      } else this.ring(x, y, look ? hexColor(look.colors.mid) : 0x6cc0ff, st.splash, 260)
+      this.glow(x, y, look ? hexColor(look.colors.light) : 0xbfe8ff, st.splash * 0.8, 200, 0.6)
+      if (!look) this.waterFx.explode(this.fx(10), x, y)
+    }
     const angle = Math.atan2(s.dy, s.dx)
     for (const e of this.magicTargets(true)) {
       if (this.areaDistance(e, x, y) <= st.splash) this.waterHit(e, st, angle, true, s.spell)
@@ -5085,35 +5088,37 @@ class BattleScene extends Phaser.Scene {
   private meteorImpact(s: MeteorShot) {
     const { tx: x, ty: y, level, spell } = s
     const st = fallStats(spell, level)
-    const look = spell === 'meteor' ? null : SPELLBOOK[spell]
-    this.ring(x, y, look ? hexColor(look.colors.mid) : 0xff9a78, st.radius, 380)
-    if (!this.reducedMotion)
-      this.glow(x, y, look ? hexColor(look.colors.light) : 0xffc49a, st.radius, 240, 0.7)
-    // 돌 파편과 먼지는 운석과 폭탄만 낸다.
-    if (spell === 'meteor' || spell === 'bomb') {
-      this.rockFx.explode(this.fx(10 + level * 3), x, y)
-      this.dustFx.explode(this.fx(8 + level * 2), x, y)
+    if (!this.opts.vault?.score) {
+      const look = spell === 'meteor' ? null : SPELLBOOK[spell]
+      this.ring(x, y, look ? hexColor(look.colors.mid) : 0xff9a78, st.radius, 380)
+      if (!this.reducedMotion)
+        this.glow(x, y, look ? hexColor(look.colors.light) : 0xffc49a, st.radius, 240, 0.7)
+      // 돌 파편과 먼지는 운석과 폭탄만 낸다.
+      if (spell === 'meteor' || spell === 'bomb') {
+        this.rockFx.explode(this.fx(10 + level * 3), x, y)
+        this.dustFx.explode(this.fx(8 + level * 2), x, y)
+      }
+      this.tweens.killTweensOf(s.crater)
+      s.crater
+        .setTexture(
+          spell === 'meteor'
+            ? 'magic-paw-print'
+            : spell === 'bomb'
+              ? 'magic-scorch'
+              : spellKey(spell),
+        )
+        .setTint(spell === 'bomb' ? 0x705d72 : 0xffffff)
+        .setPosition(x, y)
+        .setDisplaySize(st.radius * 1.5, st.radius * (spell === 'meteor' ? 1.05 : 0.65))
+        .setAlpha(spell === 'meteor' ? 0.95 : 0.5)
+        .setVisible(true)
+      this.tweens.add({
+        targets: s.crater,
+        alpha: 0,
+        duration: 900,
+        onComplete: () => s.crater.setVisible(false),
+      })
     }
-    this.tweens.killTweensOf(s.crater)
-    s.crater
-      .setTexture(
-        spell === 'meteor'
-          ? 'magic-paw-print'
-          : spell === 'bomb'
-            ? 'magic-scorch'
-            : spellKey(spell),
-      )
-      .setTint(spell === 'bomb' ? 0x705d72 : 0xffffff)
-      .setPosition(x, y)
-      .setDisplaySize(st.radius * 1.5, st.radius * (spell === 'meteor' ? 1.05 : 0.65))
-      .setAlpha(spell === 'meteor' ? 0.95 : 0.5)
-      .setVisible(true)
-    this.tweens.add({
-      targets: s.crater,
-      alpha: 0,
-      duration: 900,
-      onComplete: () => s.crater.setVisible(false),
-    })
     this.playSound('boom')
     // 범위 안의 뒤쪽 매도벽도 맞는다. 묶인 벽은 운석당 한 번만 맞는다.
     for (const e of [...this.magicTargets(true)]) {
@@ -5238,7 +5243,7 @@ class BattleScene extends Phaser.Scene {
           this.damageStats.rams++
         }
         s.hitList.push(e)
-        this.rockFx.explode(this.fx(3 + tier * 2), e.x, e.y)
+        if (!this.isVaultGuardian(e)) this.rockFx.explode(this.fx(3 + tier * 2), e.x, e.y)
         if (!e.boss) e.setX(Phaser.Math.Clamp(e.x + (e.x < s.x ? -1 : 1) * 26, 16, w - 16))
         this.hit(e, dmg, -Math.PI / 2, 'siege')
       }
@@ -5391,32 +5396,34 @@ class BattleScene extends Phaser.Scene {
     st: LightningStats,
     from: { x: number; y: number },
   ) {
-    const width = 4
-    const g = this.bolts[this.boltIndex++ % this.bolts.length]
-    this.tweens.killTweensOf(g)
-    g.clear().setAlpha(1).setVisible(true)
-    // 시전한 고양이에서 첫 대상까지 가는 가는 줄기: 본 낙뢰보다 훨씬 가늘게, 곁가지 없이. 어디서 쏜 번개인지 보이게만 한다.
-    this.drawBolt(g, from.x, from.y, target.x, target.y - 28, 2.4, 0)
-    this.drawBolt(g, target.x, target.y - 28, target.x, target.y, width, 0)
     let prev = target
-    for (const o of chain) {
-      this.drawBolt(g, prev.x, prev.y, o.x, o.y, width * 0.7, 0)
-      this.drawLightningImpact(g, o.x, o.y, 11)
-      prev = o
+    if (!this.isVaultGuardian(target)) {
+      const width = 4
+      const g = this.bolts[this.boltIndex++ % this.bolts.length]
+      this.tweens.killTweensOf(g)
+      g.clear().setAlpha(1).setVisible(true)
+      // 시전한 고양이에서 첫 대상까지 가는 가는 줄기: 본 낙뢰보다 훨씬 가늘게, 곁가지 없이. 어디서 쏜 번개인지 보이게만 한다.
+      this.drawBolt(g, from.x, from.y, target.x, target.y - 28, 2.4, 0)
+      this.drawBolt(g, target.x, target.y - 28, target.x, target.y, width, 0)
+      for (const o of chain) {
+        this.drawBolt(g, prev.x, prev.y, o.x, o.y, width * 0.7, 0)
+        this.drawLightningImpact(g, o.x, o.y, 11)
+        prev = o
+      }
+      this.drawLightningImpact(g, target.x, target.y, 19)
+      this.glow(target.x, target.y, 0xfff27a, 42, 360)
+      this.ring(target.x, target.y, 0xffe94d, 34, 360)
+      this.boltFx.explode(this.fx(10), target.x, target.y)
+      // 배속이 트윈 시계를 바꾸므로 시전 순간의 배율로 보정한다. 줄기를 0.7초 보여 준 뒤 한 번만 흐려진다.
+      this.tweens.add({
+        targets: g,
+        alpha: 0,
+        delay: 700 * this.simSpeed,
+        duration: (this.reducedMotion ? 300 : 550) * this.simSpeed,
+        ease: 'Quad.easeIn',
+        onComplete: () => g.setVisible(false),
+      })
     }
-    this.drawLightningImpact(g, target.x, target.y, 19)
-    this.glow(target.x, target.y, 0xfff27a, 42, 360)
-    this.ring(target.x, target.y, 0xffe94d, 34, 360)
-    this.boltFx.explode(this.fx(10), target.x, target.y)
-    // 배속이 트윈 시계를 바꾸므로 시전 순간의 배율로 보정한다. 줄기를 0.7초 보여 준 뒤 한 번만 흐려진다.
-    this.tweens.add({
-      targets: g,
-      alpha: 0,
-      delay: 700 * this.simSpeed,
-      duration: (this.reducedMotion ? 300 : 550) * this.simSpeed,
-      ease: 'Quad.easeIn',
-      onComplete: () => g.setVisible(false),
-    })
     const dmg = st.damage * this.attackDamage
     this.hit(target, dmg, Math.PI / 2, 'lightning')
     prev = target
