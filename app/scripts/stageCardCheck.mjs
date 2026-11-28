@@ -162,7 +162,7 @@ try {
     await expect(pick.locator('[data-card=cat]')).toContainText(`${first.name} 출전`)
     await expect(pick.locator('[data-card=cat] .idle-cat-face')).toHaveAttribute(faceAttr, portrait)
     await expect(pick.locator('[data-card=cat]')).toContainText(
-      `고유 스킬 ${first.skills.map((s) => s.name).join('·')} Lv.1`,
+      `고유 스킬 ${first.skills.map((s) => s.name).join('·')} ★☆☆☆☆`,
     )
     await page.screenshot({ path: `/tmp/stage-cards-${width}.png` })
     await pick.locator('[data-card=cat]').click()
@@ -182,8 +182,8 @@ try {
       window.__mentalLevelUp()
     })
     await expect(pick).toBeVisible({ timeout: 15000 })
-    await expect(pick.locator('[data-card=cat-skill]')).toContainText(`${first.name} 스킬 강화`)
-    await expect(pick.locator('[data-card=cat-skill]')).toContainText('Lv.1 → Lv.2')
+    await expect(pick.locator('[data-card=cat-skill]')).toContainText(`${first.name} 강화`)
+    await expect(pick.locator('[data-card=cat-skill]')).toContainText('★☆☆☆☆ → ★★☆☆☆')
     await expect(pick.locator('[data-card=cat]')).toContainText('하늘냥 출전')
     for (const skill of first.skills)
       await expect(

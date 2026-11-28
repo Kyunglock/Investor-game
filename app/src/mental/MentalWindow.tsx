@@ -53,6 +53,7 @@ import {
   stageCatCard,
   stageSkillCard,
   stageSkillTargets,
+  starText,
 } from './cards'
 import { COMMON_ENEMIES } from './enemies'
 import { FirstClear } from './FirstClear'
@@ -713,7 +714,7 @@ const CARD_ROLES: Record<Card['code'], string> = {
   cat: '동료',
   'cat-magic': '동료 마법',
   'cat-up': '동료 마법',
-  'cat-skill': '동료 스킬',
+  'cat-skill': '고양이 강화',
   barrage: '사장냥 스킬',
   rally: '사장냥 스킬',
   fortify: '사장냥 스킬',
@@ -1027,9 +1028,12 @@ function CardPick({
                     <span className="stage-card-name">{c.name}</span>
                     {c.level && (
                       <span className="stage-card-level" data-testid="card-level">
-                        {c.level.from === 0
-                          ? `새 마법 · Lv.${c.level.to}`
-                          : `Lv.${c.level.from} → Lv.${c.level.to}`}
+                        {c.code === 'cat-skill'
+                          ? // 고양이 강화 (717번)는 레벨 숫자 대신 별로 적는다.
+                            `${starText(c.level.from)} → ${starText(c.level.to)}`
+                          : c.level.from === 0
+                            ? `새 마법 · Lv.${c.level.to}`
+                            : `Lv.${c.level.from} → Lv.${c.level.to}`}
                       </span>
                     )}
                     {c.awakening && (
@@ -1416,9 +1420,11 @@ function Battle({
                       ? `함께 싸우는 고양이 ${same.length}마리`
                       : top.code === 'cat-magic'
                         ? `마법을 쓰는 고양이 ${same.length}마리`
-                        : top.level
-                          ? `${top.name} Lv.${top.level.to}`
-                          : `${top.name} ${same.length}장`
+                        : top.code === 'cat-skill' && top.level
+                          ? `${top.name} ${starText(top.level.to)}`
+                          : top.level
+                            ? `${top.name} Lv.${top.level.to}`
+                            : `${top.name} ${same.length}장`
                   return (
                     <span
                       key={key}
@@ -1428,7 +1434,11 @@ function Battle({
                       aria-label={label}
                     >
                       <StageSkillIcon card={top} />
-                      <small>{top.level?.to ?? same.length}</small>
+                      <small>
+                        {top.code === 'cat-skill' && top.level
+                          ? `★${top.level.to}`
+                          : (top.level?.to ?? same.length)}
+                      </small>
                     </span>
                   )
                 })}
