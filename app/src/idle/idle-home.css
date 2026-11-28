@@ -2715,3 +2715,24 @@
   color: #fff7c2;
   font-size: 22px;
 }
+/* 일일·주간 퀘스트 탭 (707번): 탭마다 받을 퀘스트 수를 빨간 숫자로 단다. */
+.idle-pass-tabs {
+  margin-top: 12px;
+}
+.idle-pass-tab {
+  gap: 5px;
+  font-weight: 700;
+}
+.idle-pass-tab-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1.5px solid #fff6db;
+  border-radius: 9px;
+  background: #e47353;
+  color: #fff;
+  font:
+    700 11px / 15px "Noto Sans KR",
+    sans-serif;
+  text-align: center;
+}

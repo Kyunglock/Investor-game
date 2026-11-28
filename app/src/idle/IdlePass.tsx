@@ -126,6 +126,14 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
     }
   }
   const progress = stepProgress(pass)
+  // 일일·주간 퀘스트 탭 (707번): 열면 받을 것이 있는 첫 탭, 없으면 일일 탭이다. 탭마다 받을 퀘스트 수를 숫자로 단다.
+  const groups = missionGroups(pass.missions)
+  const readyCount = (period: string) =>
+    groups.find((g) => g.period === period)?.missions.filter((m) => m.ready > 0).length ?? 0
+  const [period, setPeriod] = useState<'day' | 'week'>(
+    () => groups.find((g) => g.missions.some((m) => m.ready > 0))?.period ?? 'day',
+  )
+  const shown = groups.filter((g) => g.period === period)
   return (
     <Sheet title="시즌패스" onClose={onClose} testId="pass" className="idle-sheet idle-pass-sheet">
       <p className="idle-pass-season">
@@ -184,8 +192,46 @@ function PassSheet({ company, onClose }: { company: Company; onClose: () => void
           모두 받기 <small className="idle-pass-all-count">{pass.claimable}개</small>
         </button>
       )}
+      {groups.length > 1 && (
+        <div
+          className="idle-gacha-kinds idle-pass-tabs"
+          role="tablist"
+          aria-label="퀘스트"
+          data-testid="pass-quest-tabs"
+        >
+          {groups.map((group) => {
+            const ready = readyCount(group.period)
+            return (
+              <button
+                key={group.period}
+                type="button"
+                role="tab"
+                className="idle-gacha-kind idle-pass-tab"
+                aria-selected={period === group.period}
+                aria-label={ready > 0 ? `${group.title} 받을 것 ${ready}개` : group.title}
+                data-testid={`pass-tab-${group.period}`}
+                onClick={() => {
+                  sfx.tap()
+                  setPeriod(group.period)
+                }}
+              >
+                {group.title}
+                {ready > 0 && (
+                  <b
+                    className="idle-pass-tab-count"
+                    data-testid="pass-tab-count"
+                    aria-hidden="true"
+                  >
+                    {ready}
+                  </b>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
       {/* 일일·주간 퀘스트 (643번): 주기마다 한 번, 목표에 닿으면 포인트를 눌러서 받는다 (572번). 주기가 바뀌면 처음부터 센다. */}
-      {missionGroups(pass.missions).map((group) => {
+      {(shown.length > 0 ? shown : groups.slice(0, 1)).map((group) => {
         const ready = group.missions.filter((mission) => mission.ready > 0)
         const readyPoints = ready.reduce((sum, mission) => sum + mission.ready, 0)
         return (
