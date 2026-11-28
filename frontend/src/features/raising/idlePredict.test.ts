@@ -213,7 +213,7 @@ describe('the screen breaks the wall first (decisions.md 532)', () => {
     // One hit through wall 49 and far into the boss: the screen halts there, before the server.
     p.add(bullet(49, curve(49) + curve(50) + 30), 1000)
     expect(p.view(s, 1000)).toMatchObject({ wall: 50, circuitSeconds: 4 })
-    expect(p.view(s, 2000).circuitSeconds).toBe(2)
+    expect(p.view(s, 2000).circuitSeconds).toBe(2.5)
     // It does not run out before the server has halted too.
     expect(p.view(s, 9000).circuitSeconds).toBeGreaterThan(0)
     // The server's halt, then the boss breaks with what waited on it.
@@ -259,14 +259,34 @@ describe('the screen breaks the wall first (decisions.md 532)', () => {
   it('does not halt again for the last moments of a halt that ran out here', () => {
     const p = new IdlePredictor(curve)
     expect(p.view(server(6, 0, 1, [0, 0], 4), 0).circuitSeconds).toBe(4)
-    expect(p.view(server(6, 0, 2, [0, 0], 2), 1000).circuitSeconds).toBe(2)
-    expect(p.view(server(6, 0, 2, [0, 0], 2), 2000).circuitSeconds).toBe(0)
+    expect(p.view(server(6, 0, 2, [0, 0], 1.5), 1000).circuitSeconds).toBe(1.5)
+    expect(p.view(server(6, 0, 2, [0, 0], 1.5), 2000).circuitSeconds).toBe(0)
     // An answer made just before the server's halt ended arrives after the screen went on.
     expect(p.view(server(6, 0, 3, [0, 0], 0.2), 2050).circuitSeconds).toBe(0)
     // A halt that really is still on (the heartbeat stood still) stops the screen again.
     expect(p.view(server(6, 0, 4, [0, 0], 3), 2100).circuitSeconds).toBe(3)
     // The next circuit wall halts as usual.
     expect(p.view(server(16, 0, 9, [0, 0], 0.5), 9000).circuitSeconds).toBe(0.5)
+  })
+
+  it('counts the halt down at the server speed, so it halts only once (1.5배속)', () => {
+    const p = new IdlePredictor(curve)
+    // The server halts for 4 game seconds at 1.5 game seconds per real second: 2.67 real seconds.
+    // Each heartbeat answers a second later, after 200ms on the way.
+    let last = Infinity
+    let ranOut = false
+    for (let beat = 0; beat <= 4; beat++) {
+      const left = Math.max(0, 4 - beat * 1.5)
+      const s = server(50, 0, beat + 1, [0, 0], left, { cleared: 49, epoch: 1 })
+      for (let t = beat * 1000 + 200; t < (beat + 1) * 1000 + 200; t += 50) {
+        const shown = p.view(s, t).circuitSeconds
+        if (ranOut) expect(shown).toBe(0)
+        else expect(shown).toBeLessThanOrEqual(last)
+        if (shown <= 0) ranOut = true
+        last = shown
+      }
+    }
+    expect(ranOut).toBe(true)
   })
 
   it('does not break walls while the server is halted', () => {

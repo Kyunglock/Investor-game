@@ -247,3 +247,12 @@
   border-style: solid;
   background: #ffd9bd;
 }
+
+/* 무기 옮겨 끼우기 (716번): 무기를 집으면 다른 무기 칸이 놓을 자리로 밝아지고, 그 위에 오면 테두리가 선다. */
+.idle-gun-slot.is-drop-ready {
+  box-shadow: 0 0 0 2px #f6c86a88;
+}
+.idle-gun-slot.is-drop-over {
+  box-shadow: 0 0 0 3px #e0652c;
+  transform: scale(1.05);
+}
