@@ -108,10 +108,10 @@ class IdleEngine {
   private static final int BARRAGE_SHOTS = 40;
   // One barrage order is a plain buy order (601): it was three times one before.
   private static final double BARRAGE_POWER = 1;
-  // 매수 주문 한 장 (710번) = 그 벽의 매도 주문 한 장과 같은 수량이다: 매도 주문 SELL_ORDER_SHARES주 × 매도 물량 세기 SELL_POWER ×
-  // 그 벽의 물량 배율(threat). 강화도 팀의 덤도 없다. 앱 mental/enemies.ts ORDERS.order.shares, assault.ts
+  // 매수 주문 한 장 (710·711번) = 그 벽의 시장가 매도 한 장과 같은 수량이다: 시장가 SELL_ORDER_SHARES주 × 매도 물량 세기 SELL_POWER ×
+  // 그 벽의 물량 배율(threat). 강화도 팀의 덤도 없다. 앱 mental/enemies.ts ORDERS.market.shares, assault.ts
   // IDLE_SELL_POWER와 같다.
-  private static final double SELL_ORDER_SHARES = 20;
+  private static final double SELL_ORDER_SHARES = 40;
   private static final double SELL_POWER = 6;
   // The buy wall answers every sell order with two buy orders, a pair every 0.15 game seconds at
   // the fastest (buyWall.ts shotSeconds - shotJitter).
@@ -935,8 +935,8 @@ class IdleEngine {
   static final double SHARES_PER_HP = 30;
 
   /**
-   * 매수 주문 한 장의 피해 (710번): wall번째 벽 앞의 매도 주문 한 장과 같은 수량이다(앱 orderHp('order', 물량 배율 × 매도 물량 세기)). 벽이
-   * 깊어지면 매도 주문과 함께 커진다. 매수벽 공격 강화와 팀 화력의 덤(514·573·638·689번)은 없앴다.
+   * 매수 주문 한 장의 피해 (710·711번): wall번째 벽 앞의 시장가 매도 한 장과 같은 수량이다(앱 orderHp('market', 물량 배율 × 매도 물량
+   * 세기)). 벽이 깊어지면 매도 주문과 함께 커진다. 매수벽 공격 강화와 팀 화력의 덤(514·573·638·689번)은 없앴다.
    */
   static double buyOrder(long wall) {
     return Math.max(1, Math.round(SELL_ORDER_SHARES * threat(wall) * SELL_POWER)) / SHARES_PER_HP;

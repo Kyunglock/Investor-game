@@ -20,11 +20,11 @@ export const BUY_WALL = {
 } as const
 
 /**
- * 자동 전투의 매수 주문 한 장의 피해 (710번): 그 벽의 매도 주문 한 장과 같은 수량이다. sellScale은 매도 물량의 수량 배율(물량 배율 × 매도 물량
+ * 자동 전투의 매수 주문 한 장의 피해 (710·711번): 그 벽의 시장가 매도 한 장과 같은 수량이다(매도 주문의 두 배). sellScale은 매도 물량의 수량 배율(물량 배율 × 매도 물량
  * 세기)이다. 매수벽 공격 강화와 팀 화력의 덤(514·573·638·689번)은 없앴다. 서버 IdleEngine.buyOrder와 같다.
  */
 export function idleBuyOrderDamage(sellScale: number) {
-  return orderHp('order', sellScale)
+  return orderHp('market', sellScale)
 }
 
 /** 매수 티켓은 양쪽에 40%씩, 가운데에 20%. 각 영역 안에서도 위치를 무작위로 정한다. */
