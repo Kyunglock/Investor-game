@@ -13,7 +13,7 @@ export function drawGuardianBreath(
   strength: number,
 ) {
   fire.clear()
-  const radius = 3 + 14 * strength
+  const radius = 2 + 7 * strength
   fire.fillStyle(0xff7022, 0.34 * strength).fillCircle(mouthX, mouthY, radius * 1.55)
   fire.fillStyle(0xffbc43, strength).fillCircle(mouthX, mouthY, radius)
   fire.fillStyle(0xfff6c6, strength).fillCircle(mouthX, mouthY, radius * 0.54)

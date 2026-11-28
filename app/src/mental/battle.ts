@@ -164,6 +164,7 @@ import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import { drawGuardianBreath } from './guardianBreath'
+import { createGuardianJaw, poseGuardianJaw } from './guardianJaw'
 import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
 import { BULLET_W, bulletHitbox } from './hitbox'
 import { IDLE_PIERCE, IDLE_PIERCE_FLOOR, idlePierceHits, idlePierceReach } from './idlePierce'
@@ -695,6 +696,7 @@ class BattleScene extends Phaser.Scene {
   private lastTrickle = 0
   /** 마지막 보스와 마지막으로 졸개를 부른 때(초). */
   private bossEnemy: Enemy | null = null
+  private guardianJaw?: Phaser.GameObjects.Image
   private guardianFire?: Phaser.GameObjects.Graphics
   private breathTarget = { x: 0, y: 0 }
   private lastSummon = 0
@@ -2159,6 +2161,7 @@ class BattleScene extends Phaser.Scene {
       }
     } else {
       e.setTexture('vault-guard')
+      this.guardianJaw = createGuardianJaw(this)
       this.placeGuardian(e)
       e.body?.setSize(e.width * 0.92, e.height * 0.72, true)
     }
@@ -2205,6 +2208,7 @@ class BattleScene extends Phaser.Scene {
     const firing = this.guardianFire && age < 0.63
     if (!charge && !firing) {
       if (this.guardianFire) {
+        this.guardianJaw?.setVisible(false)
         this.guardianFire.destroy()
         this.guardianFire = undefined
         this.placeGuardian(boss)
@@ -2219,10 +2223,16 @@ class BattleScene extends Phaser.Scene {
     const thrust = firing ? (1 - jet) ** 2 : -charge * charge + 2 * reach
     boss.y += boss.displayHeight * 0.085 * thrust
     const target = firing ? this.breathTarget : { x, y }
+    const open = firing
+      ? 1 - Phaser.Math.SmoothStep(jet, 0.62, 1)
+      : Phaser.Math.SmoothStep(charge, 0, 0.72)
+    const mouthY = this.guardianJaw
+      ? poseGuardianJaw(this.guardianJaw, boss, open)
+      : boss.y + boss.displayHeight * 0.39
     drawGuardianBreath(
       this.guardianFire,
       boss.x,
-      boss.y + boss.displayHeight * 0.39,
+      mouthY,
       target.x,
       target.y,
       charge,
@@ -5808,7 +5818,11 @@ class BattleScene extends Phaser.Scene {
     const w = Phaser.Math.Clamp(boss.displayWidth * 0.9, 70, 150)
     const h = 8
     const x = boss.x - w / 2
-    const y = boss.y + boss.displayHeight / 2 + 4
+    const foot = boss.y + boss.displayHeight / 2
+    const y =
+      (this.guardianJaw?.visible
+        ? Math.max(foot, this.guardianJaw.y + this.guardianJaw.displayHeight)
+        : foot) + 4
     if (boss.wallBoss)
       this.wallBossLabel?.setText(boss.wallBoss.name).setPosition(boss.x, y + h + 2)
     // 피해량을 겨루는 보스전 (692번): 수호냥은 체력이 줄지 않으니 다음 등급까지 찬 만큼을 금빛으로 보인다. 등급을 모르면 막대를 그리지 않는다.
