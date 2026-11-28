@@ -146,6 +146,7 @@ jobs:
           APP_URL=http://localhost:5182/app/ node ../app/scripts/bossRestCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/auroraBehindCheck.mjs
           APP_URL=http://localhost:5182/app/ node ../app/scripts/achievementsCheck.mjs
+          APP_URL=http://localhost:5182/app/ node ../app/scripts/buyPatternCheck.mjs
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

@@ -2743,3 +2743,44 @@
     sans-serif;
   text-align: center;
 }
+/* 매수 티켓 패턴 (712번): 출전 탭의 고양이 목록 위에서 고른다. */
+.buy-pattern {
+  margin: 10px 0 2px;
+  padding: 8px 10px 9px;
+  border: 1.5px solid #e6c98e;
+  border-radius: 12px;
+  background: #fff6de;
+}
+.buy-pattern > legend {
+  padding: 0 6px;
+  color: #6b4322;
+  font-size: 12px;
+  font-weight: 700;
+}
+.buy-pattern-options {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+.buy-pattern-options > button {
+  min-height: 34px;
+  padding: 0 2px;
+  border: 1.5px solid #dcbd85;
+  border-radius: 9px;
+  background: #fffaf0;
+  color: #94703c;
+  font-size: 12px;
+  font-weight: 700;
+}
+.buy-pattern-options > button[aria-pressed="true"] {
+  border-color: #d9612b;
+  background: linear-gradient(#ffb25a, #f08a2c);
+  box-shadow: 0 1px 0 #b8581c;
+  color: #fff;
+}
+.buy-pattern-note {
+  display: block;
+  margin-top: 6px;
+  color: #8f7448;
+  font-size: 11px;
+}

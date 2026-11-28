@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
+import { BUY_PATTERNS, type BuyPattern, loadBuyPattern, saveBuyPattern } from '../mental/buyPattern'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
@@ -45,6 +46,8 @@ export function IdleCats({
   onTab: (tab: LoadoutTab) => void
 }) {
   const gearOpen = tab === '무기'
+  // 매수 주문이 날아가는 패턴 (712번): 이 기기에 저장하고, 전투는 다음 주문부터 따른다.
+  const [buyPattern, setBuyPattern] = useState<BuyPattern>(loadBuyPattern)
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   // 고른 고양이. null이면 사장냥이다.
@@ -501,6 +504,31 @@ export function IdleCats({
           <CatGear company={company} wearer={cat} onSelect={onPick} />
         ) : (
           <>
+            <fieldset className="buy-pattern" data-testid="buy-pattern">
+              <legend>매수 티켓 패턴</legend>
+              <div className="buy-pattern-options">
+                {BUY_PATTERNS.map((p) => (
+                  <button
+                    key={p.code}
+                    type="button"
+                    aria-pressed={buyPattern === p.code}
+                    data-testid="buy-pattern-option"
+                    data-code={p.code}
+                    title={p.note}
+                    onClick={() => {
+                      sfx.tap()
+                      saveBuyPattern(p.code)
+                      setBuyPattern(p.code)
+                    }}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+              <small className="buy-pattern-note">
+                {BUY_PATTERNS.find((p) => p.code === buyPattern)?.note}
+              </small>
+            </fieldset>
             <p className="loadout-hint" aria-live="polite">
               {drag?.over
                 ? drag.over.startsWith('slot:empty')
