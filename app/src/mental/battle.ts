@@ -50,6 +50,7 @@ import {
   bakeOrders,
   bakeSkillMarks,
   bakeStage,
+  bakeWallBoss,
   CELL_CRACKS,
   cellKey,
   DPR,
@@ -65,6 +66,7 @@ import {
   spellKey,
   WALL_H,
   WALL_LABEL_STYLE,
+  wallBossKey,
 } from './art'
 import {
   ASSAULT_BOSS,
@@ -98,6 +100,7 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
+import wallBossSheet from './assets/wall-bosses.webp'
 import {
   BUY_WALL,
   BuyLossNote,
@@ -198,6 +201,7 @@ import {
   SPELLBOOK,
 } from './spellbook'
 import { wallOffset } from './stageArt'
+import { wallBoss } from './wallBoss'
 import { WallFlight } from './wallFlight'
 import {
   IDLE_RAID,
@@ -425,6 +429,7 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   kbx: number
   kby: number
   born: number
+  wallBoss: ReturnType<typeof wallBoss>
   stageVariant: boolean
   walkOffset: number
   look: number
@@ -766,6 +771,7 @@ class BattleScene extends Phaser.Scene {
   private climbed = 0
   private book: Phaser.GameObjects.Graphics | null = null
   /** 공격 판의 큰손 체력 막대 (457번): 위 HUD가 아니라 보스 바로 아래에 붙어 따라다닌다. */
+  private wallBossLabel?: Phaser.GameObjects.Text
   private bossBar: Phaser.GameObjects.Graphics | null = null
   private ladder: Phaser.GameObjects.Graphics | null = null
   private speedLines: Phaser.GameObjects.Image[] = []
@@ -1033,6 +1039,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   preload() {
+    if (this.opts.idle) this.load.image('wall-boss-sheet', wallBossSheet)
     if (this.opts.vault) this.load.image('vault-guard', this.opts.vault.guardianArt)
     this.load.on('progress', (value: number) => this.opts.onProgress?.(value))
     for (const [key, url] of Object.entries(STAGE_ASSETS)) this.load.image(`art-${key}`, url)
@@ -1040,7 +1047,10 @@ class BattleScene extends Phaser.Scene {
 
   create() {
     this.applySpeed()
-    if (Object.keys(STAGE_ASSETS).some((key) => !this.textures.exists(`art-${key}`))) {
+    if (
+      (this.opts.idle && !this.textures.exists('wall-boss-sheet')) ||
+      Object.keys(STAGE_ASSETS).some((key) => !this.textures.exists(`art-${key}`))
+    ) {
       this.over = true
       this.opts.onError?.('전장 그림을 불러오지 못했어요. 다시 시도해주세요.')
       return
@@ -1670,6 +1680,19 @@ class BattleScene extends Phaser.Scene {
     this.add.rectangle(0, 0, 4000, 4000, 0xe8b877, 0.04).setOrigin(0).setDepth(0.5)
     this.book = this.add.graphics().setDepth(1)
     this.bossBar = this.add.graphics().setDepth(8.6)
+    if (this.opts.idle) {
+      this.wallBossLabel = this.add
+        .text(0, 0, '', {
+          fontFamily: 'Jua, sans-serif',
+          fontSize: '12px',
+          color: '#fff4ce',
+          stroke: '#302643',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(8.7)
+        .setVisible(false)
+    }
     this.ladder = this.add.graphics().setDepth(8)
     if (!this.reducedMotion) {
       for (let i = 0; i < 9; i++) {
@@ -2122,8 +2145,15 @@ class BattleScene extends Phaser.Scene {
     this.bossMax = mid ? spec.midBossHp : spec.bossHp
     e.hp = this.bossMax
     e.maxHp = this.bossMax
-    if (wall) e.setScale(unitK('whale') * (mid ? 0.8 : 1))
-    else {
+    if (wall) {
+      e.setScale(unitK('whale') * (mid ? 0.8 : 1))
+      e.wallBoss = this.opts.idle ? wallBoss(this.idleWall) : null
+      const tile = e.wallBoss?.tile
+      if (tile != null) {
+        bakeWallBoss(this, tile)
+        e.setTexture(wallBossKey(tile, 0))
+      }
+    } else {
       e.setTexture('vault-guard')
       this.placeGuardian(e)
       e.body?.setSize(e.width * 0.92, e.height * 0.72, true)
@@ -2137,7 +2167,7 @@ class BattleScene extends Phaser.Scene {
       wall
         ? mid
           ? `${MID_BOSS_NAME} 등장! 중간 매도벽`
-          : `${ASSAULT_BOSS.name} 등장!! 대량 매도벽`
+          : `${e.wallBoss?.name ?? ASSAULT_BOSS.name} 등장!! 대량 매도벽`
         : spec.name,
       '#ff4f6d',
     )
@@ -2927,7 +2957,14 @@ class BattleScene extends Phaser.Scene {
     return {
       ...this.marketStats,
       arena: { front: this.bg?.frame.name, back: this.bg2?.frame.name },
-      boss: this.bossEnemy?.active ? { hp: this.bossEnemy.hp, maxHp: this.bossEnemy.maxHp } : null,
+      boss: this.bossEnemy?.active
+        ? {
+            hp: this.bossEnemy.hp,
+            maxHp: this.bossEnemy.maxHp,
+            texture: this.bossEnemy.texture.key,
+            name: this.bossEnemy.wallBoss?.name,
+          }
+        : null,
       simSpeed: this.simSpeed,
       /** 절전 모드 (607번): 전장을 그리고 있는가, 그리고 도는 빈도의 제한(0이면 없다). */
       drawing: this.cameras.main.visible,
@@ -3089,6 +3126,7 @@ class BattleScene extends Phaser.Scene {
       return null
     }
     e.cell = null
+    e.wallBoss = null
     e.blocker = false
     e.boss = false
     e.wallPushUntil = 0
@@ -5674,7 +5712,9 @@ class BattleScene extends Phaser.Scene {
             : null,
       boss: this.bossEnemy
         ? {
-            name: this.assault ? (this.bossMid ? MID_BOSS_NAME : ASSAULT_BOSS.name) : BOSS.name,
+            name:
+              this.bossEnemy.wallBoss?.name ??
+              (this.assault ? (this.bossMid ? MID_BOSS_NAME : ASSAULT_BOSS.name) : BOSS.name),
             hp: Math.max(0, this.bossEnemy.hp) / this.bossMax,
           }
         : null,
@@ -5711,11 +5751,14 @@ class BattleScene extends Phaser.Scene {
     if (!g) return
     g.clear()
     const boss = this.bossEnemy
+    this.wallBossLabel?.setVisible(Boolean(boss?.active && !boss.dying && boss.wallBoss))
     if (!this.assault || !boss?.active || boss.dying) return
     const w = Phaser.Math.Clamp(boss.displayWidth * 0.9, 70, 150)
     const h = 8
     const x = boss.x - w / 2
     const y = boss.y + boss.displayHeight / 2 + 4
+    if (boss.wallBoss)
+      this.wallBossLabel?.setText(boss.wallBoss.name).setPosition(boss.x, y + h + 2)
     // 피해량을 겨루는 보스전 (692번): 수호냥은 체력이 줄지 않으니 다음 등급까지 찬 만큼을 금빛으로 보인다. 등급을 모르면 막대를 그리지 않는다.
     const score = this.opts.vault?.score
     if (score) {
@@ -6168,7 +6211,10 @@ class BattleScene extends Phaser.Scene {
         : walkFrame(e.kind, this.elapsed - e.born, e.walkOffset, this.reducedMotion)
       if (frame !== e.look) {
         e.look = frame
-        e.setTexture(enemyKey(e.kind, frame, e.stageVariant))
+        const tile = e.wallBoss?.tile
+        e.setTexture(
+          tile != null ? wallBossKey(tile, frame) : enemyKey(e.kind, frame, e.stageVariant),
+        )
       }
     }
     for (const child of this.bullets.getChildren()) {
