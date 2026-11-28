@@ -1383,16 +1383,16 @@ class IdleEngineTest {
 
   @Test
   void buyOrdersMatchTheSellOrdersOfTheirWall() {
-    // 710번: 매수 주문 한 장 = 그 벽의 매도 주문 한 장(20주 × 매도 물량 세기 6 × 물량 배율).
+    // 710·711번: 매수 주문 한 장 = 그 벽의 시장가 매도 한 장(40주 × 매도 물량 세기 6 × 물량 배율).
     start(1);
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
-    assertThat(IdleEngine.buyOrder(1)).as("첫 벽: 120주").isCloseTo(120 / 30.0, offset(1e-9));
+    assertThat(IdleEngine.buyOrder(1)).as("첫 벽: 240주").isCloseTo(240 / 30.0, offset(1e-9));
     // The order scale follows the wall's health (653): d = 99, health 208.0097 × (1 + 396 ÷ 724) =
     // 321.78, 1 + 321.78 / 380 = 1.847, two digits 1.8.
     assertThat(IdleEngine.threat(100)).isEqualTo(1.8);
-    double order = 216 / 30.0;
+    double order = 432 / 30.0;
     assertThat(IdleEngine.buyOrder(100))
-        .as("벽 100: 120주 × 1.8 = 216주")
+        .as("벽 100: 240주 × 1.8 = 432주")
         .isCloseTo(order, offset(1e-9));
     assertThat(IdleEngine.buyOrder(5001)).as("깊은 벽일수록 매도 주문과 함께 커진다").isGreaterThan(order);
     state.idle.wall = 100;

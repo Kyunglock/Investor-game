@@ -149,16 +149,16 @@ describe('매수벽 붕괴 밀어내기 (#699)', () => {
   })
 })
 
-describe('자동 전투의 매수 주문 피해 (710번)', () => {
-  it('그 벽의 매도 주문 한 장과 같은 수량이다: 20주 × 매도 물량 세기 × 물량 배율', () => {
-    // 첫 벽(물량 배율 1): 매도 주문 120주, 매수 주문도 120주.
+describe('자동 전투의 매수 주문 피해 (710·711번)', () => {
+  it('그 벽의 시장가 매도 한 장과 같은 수량이다: 40주 × 매도 물량 세기 × 물량 배율', () => {
+    // 첫 벽(물량 배율 1): 시장가 240주, 매수 주문도 240주.
     expect(sharesOf(idleBuyOrderDamage(IDLE_SELL_POWER))).toBe(
-      orderShares('order', IDLE_SELL_POWER),
+      orderShares('market', IDLE_SELL_POWER),
     )
-    expect(sharesOf(idleBuyOrderDamage(IDLE_SELL_POWER))).toBe(120)
-    // 벽 100(물량 배율 1.8): 216주. 서버 IdleEngine.buyOrder(100)과 같다.
-    expect(sharesOf(idleBuyOrderDamage(1.8 * IDLE_SELL_POWER))).toBe(216)
-    expect(idleBuyOrderDamage(1.8 * IDLE_SELL_POWER)).toBeCloseTo(216 / SHARES_PER_HP)
+    expect(sharesOf(idleBuyOrderDamage(IDLE_SELL_POWER))).toBe(240)
+    // 벽 100(물량 배율 1.8): 432주. 서버 IdleEngine.buyOrder(100)과 같다.
+    expect(sharesOf(idleBuyOrderDamage(1.8 * IDLE_SELL_POWER))).toBe(432)
+    expect(idleBuyOrderDamage(1.8 * IDLE_SELL_POWER)).toBeCloseTo(432 / SHARES_PER_HP)
   })
 
   it('손절은 지금 체력의 절반을 버리고, 벽은 무너지지 않는다 (591번)', () => {
