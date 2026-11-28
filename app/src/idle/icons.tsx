@@ -111,6 +111,13 @@ const SHAPES = {
       <path d="M12 1.5v2.4m0 16.2v2.4M1.5 12h2.4m16.2 0h2.4" />
     </>
   ),
+  // 업적 (708번): 손잡이가 달린 우승컵과 받침.
+  trophy: (
+    <>
+      <path d="M7 3.5h10v5a5 5 0 0 1-10 0Z" fill="currentColor" fillOpacity=".28" />
+      <path d="M7 3.5h10v5a5 5 0 0 1-10 0Zm0 1.5H4v1.5A3.5 3.5 0 0 0 7.5 10M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5M12 13.5V17m-4 3.5h8l-1-3.5H9Z" />
+    </>
+  ),
   lock: (
     <>
       <rect x="5" y="11" width="14" height="10" rx="2.5" fill="currentColor" fillOpacity=".28" />

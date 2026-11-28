@@ -26,6 +26,7 @@ import { BossReward } from './BossReward'
 import { CatInfoCard } from './CatInfoCard'
 import { FishIcon } from './FishIcon'
 import { GrowthIcon } from './GrowthIcon'
+import { IdleAchievements } from './IdleAchievements'
 import { IdleActives } from './IdleActives'
 import { IdleAttendance } from './IdleAttendance'
 import { IdleBattleStats } from './IdleBattleStats'
@@ -369,6 +370,8 @@ export function IdleHome({
           </header>
           {/* 전투 통계 (645번): 오른쪽 스킬 줄 위. 위 줄은 320px 화면에서 벽 번호가 잘려 자리가 없다. */}
           <IdleBattleStats company={company} />
+          {/* 업적 (708번): 전투 통계 단추 바로 위. */}
+          <IdleAchievements company={company} />
           {idle?.rebirth && (
             <button
               type="button"

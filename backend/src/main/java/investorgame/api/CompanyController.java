@@ -282,6 +282,26 @@ class CompanyController {
 
   record PassMissionClaimRequest(String code) {}
 
+  /** 업적 보상을 받는다 (decisions.md 708번). code가 없으면 받을 수 있는 것을 모두 받는다. */
+  @PostMapping("/achievements/claim")
+  CompanyView claimAchievement(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody(required = false) AchievementClaimRequest request) {
+    UUID sessionId = cookies.requirePlayer(token);
+    String code = request == null ? null : request.code();
+    CompanyView company = companies.claimAchievement(sessionId, code);
+    PLAY.info(
+        "company-achievement-claim session={} company={} code={} diamonds={} ip={}",
+        sessionId,
+        company.companyId(),
+        code,
+        company.achievements().lastDiamonds(),
+        ClientIp.current());
+    return company;
+  }
+
+  record AchievementClaimRequest(String code) {}
+
   /** 오늘의 출석 보상을 받는다 (decisions.md 528번). 하루에 한 번이고 오늘 이미 받았으면 400. */
   @PostMapping("/attendance")
   CompanyView attend(@CookieValue(name = SessionCookies.NAME, required = false) String token) {

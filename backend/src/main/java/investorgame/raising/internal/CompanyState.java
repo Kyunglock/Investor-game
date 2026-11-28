@@ -277,6 +277,15 @@ class CompanyState {
   /** 이번 주기에 퀘스트마다 센 수 (570·643번): 미션 코드 → 수. 주기(오늘·이번 주)나 시즌이 바뀌면 비운다. */
   Map<String, Long> passMissions = new LinkedHashMap<>();
 
+  /** 업적의 누적 기록 (708번): 시즌패스 미션과 같은 때에 쌓고 지우지 않는다(뽑기·합성·강화·스테이지). 없던 저장은 0부터 센다. */
+  Map<String, Long> lifetime = new LinkedHashMap<>();
+
+  /** 업적마다 받은 단계 수 (708번). */
+  Map<String, Integer> achieved = new LinkedHashMap<>();
+
+  /** 마지막으로 받은 업적 다이아 (708번). 화면이 한 줄로 알린다. */
+  long lastAchievementDiamonds;
+
   /** 이번 주기에 퀘스트의 포인트를 받았는지 (572·643번): 미션 코드 → 1. 닿았지만 아직 받지 않은 포인트는 눌러서 받는다. */
   Map<String, Long> passMissionTaken = new LinkedHashMap<>();
 
