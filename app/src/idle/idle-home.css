@@ -2743,44 +2743,71 @@
     sans-serif;
   text-align: center;
 }
-/* 매수 티켓 패턴 (712번): 출전 탭의 고양이 목록 위에서 고른다. */
+/* 매수 티켓 탭 (712번): 패턴마다 날아가는 모양을 작은 그림으로 보이고 고른다. 출전 칸은 숨긴다. */
+.idle-team-line[hidden],
+.idle-cat-field-row[hidden] {
+  display: none;
+}
 .buy-pattern {
-  margin: 10px 0 2px;
-  padding: 8px 10px 9px;
-  border: 1.5px solid #e6c98e;
-  border-radius: 12px;
-  background: #fff6de;
+  margin-top: 8px;
 }
-.buy-pattern > legend {
-  padding: 0 6px;
-  color: #6b4322;
-  font-size: 12px;
-  font-weight: 700;
-}
-.buy-pattern-options {
+.buy-pattern-list {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
 }
-.buy-pattern-options > button {
-  min-height: 34px;
-  padding: 0 2px;
+.buy-pattern-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 4px 7px;
   border: 1.5px solid #dcbd85;
-  border-radius: 9px;
+  border-radius: 12px;
   background: #fffaf0;
-  color: #94703c;
-  font-size: 12px;
-  font-weight: 700;
+  color: #6b4322;
 }
-.buy-pattern-options > button[aria-pressed="true"] {
-  border-color: #d9612b;
-  background: linear-gradient(#ffb25a, #f08a2c);
-  box-shadow: 0 1px 0 #b8581c;
-  color: #fff;
+.buy-pattern-card[aria-pressed="true"] {
+  border-color: #e0652c;
+  background: #fff0d6;
+  box-shadow: 0 0 0 2px #f6a04a66;
+}
+.buy-pattern-preview {
+  width: 100%;
+  border-radius: 8px;
+  background: #f3e3c0;
+}
+.buy-pattern-wall {
+  fill: #e0564b;
+}
+.buy-pattern-ticket {
+  fill: #ff8f7a;
+  stroke: #b9382f;
+  stroke-width: 1;
+}
+.buy-pattern-name {
+  font-size: 13px;
 }
 .buy-pattern-note {
-  display: block;
-  margin-top: 6px;
   color: #8f7448;
-  font-size: 11px;
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: center;
+  word-break: keep-all;
+}
+.buy-pattern-on {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 1px 5px;
+  border-radius: 7px;
+  background: #e0652c;
+  color: #fff;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
 }
